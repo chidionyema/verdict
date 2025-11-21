@@ -32,7 +32,7 @@ export default function AdminPage() {
           .from('profiles')
           .select('is_admin')
           .eq('id', user.id)
-          .single();
+          .single() as { data: { is_admin: boolean } | null };
 
         if (profile?.is_admin) {
           setIsAdmin(true);
@@ -48,19 +48,33 @@ export default function AdminPage() {
 
   const fetchFlaggedItems = async () => {
     try {
+      interface RequestItem {
+        id: string;
+        created_at: string;
+        flagged_reason: string | null;
+        category: string;
+        context: string;
+      }
+      interface ResponseItem {
+        id: string;
+        created_at: string;
+        flagged_reason: string | null;
+        feedback: string;
+      }
+
       // Fetch flagged requests
       const { data: requests } = await supabase
         .from('verdict_requests')
         .select('id, created_at, flagged_reason, category, context')
         .eq('is_flagged', true)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false }) as { data: RequestItem[] | null };
 
       // Fetch flagged responses
       const { data: responses } = await supabase
         .from('verdict_responses')
         .select('id, created_at, flagged_reason, feedback')
         .eq('is_flagged', true)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false }) as { data: ResponseItem[] | null };
 
       const items: FlaggedItem[] = [
         ...(requests || []).map((r) => ({ ...r, type: 'request' as const })),

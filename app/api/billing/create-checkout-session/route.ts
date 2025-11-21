@@ -35,22 +35,23 @@ export async function POST(request: NextRequest) {
         .from('profiles')
         .select('credits')
         .eq('id', user.id)
-        .single();
+        .single() as { data: { credits: number } | null };
 
       // Add credits
-      await serviceClient
-        .from('profiles')
-        .update({ credits: (profile?.credits || 0) + pkg.credits })
+      await (serviceClient
+        .from('profiles') as ReturnType<typeof serviceClient.from>)
+        .update({ credits: (profile?.credits || 0) + pkg.credits } as Record<string, unknown>)
         .eq('id', user.id);
 
       // Create transaction record
-      await serviceClient.from('transactions').insert({
-        user_id: user.id,
-        type: 'purchase',
-        credits_delta: pkg.credits,
-        amount_cents: pkg.price_cents,
-        status: 'completed',
-      });
+      await (serviceClient.from('transactions') as ReturnType<typeof serviceClient.from>)
+        .insert({
+          user_id: user.id,
+          type: 'purchase',
+          credits_delta: pkg.credits,
+          amount_cents: pkg.price_cents,
+          status: 'completed',
+        } as Record<string, unknown>);
 
       return NextResponse.json({
         demo: true,
@@ -89,14 +90,15 @@ export async function POST(request: NextRequest) {
 
     // Create pending transaction
     const serviceClient = createServiceClient();
-    await serviceClient.from('transactions').insert({
-      user_id: user.id,
-      stripe_session_id: session.id,
-      type: 'purchase',
-      credits_delta: pkg.credits,
-      amount_cents: pkg.price_cents,
-      status: 'pending',
-    });
+    await (serviceClient.from('transactions') as ReturnType<typeof serviceClient.from>)
+      .insert({
+        user_id: user.id,
+        stripe_session_id: session.id,
+        type: 'purchase',
+        credits_delta: pkg.credits,
+        amount_cents: pkg.price_cents,
+        status: 'pending',
+      } as Record<string, unknown>);
 
     return NextResponse.json({ checkout_url: session.url });
   } catch (error) {
