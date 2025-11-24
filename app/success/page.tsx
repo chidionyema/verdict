@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { CheckCircle, Clock, Star, TrendingUp } from 'lucide-react';
 import OutcomePrediction from '@/components/OutcomePrediction';
@@ -8,7 +8,7 @@ import ViralGrowthHub from '@/components/ViralGrowthHub';
 import QualityScoring from '@/components/QualityScoring';
 import { RealTimeWaitingStatus } from '@/components/request/RealTimeWaitingStatus';
 
-export default function SuccessPage() {
+function SuccessContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [requestData, setRequestData] = useState<any>(null);
@@ -157,5 +157,17 @@ export default function SuccessPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SuccessPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <p className="text-gray-500">Loading...</p>
+      </div>
+    }>
+      <SuccessContent />
+    </Suspense>
   );
 }
