@@ -20,7 +20,7 @@ const TEMPLATES: Record<string, ResponseTemplate[]> = {
     },
     {
       starter: 'Have you considered…',
-      example: 'Have you considered what you'd regret more in 5 years - trying and possibly failing, or never trying at all?',
+      example: 'Have you considered what you\'d regret more in 5 years - trying and possibly failing, or never trying at all?',
     },
     {
       starter: 'One thing that helped me decide was…',

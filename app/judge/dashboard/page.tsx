@@ -1,17 +1,103 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useStore } from '@/lib/store';
-import { DollarSign, TrendingUp, Clock, Award, ArrowRight, History } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
+import { DollarSign, TrendingUp, Clock, Award, ArrowRight, History, RefreshCw } from 'lucide-react';
 
 export default function JudgeDashboard() {
   const router = useRouter();
   const availableRequests = useStore((state) => state.availableRequests);
+  const setAvailableRequests = useStore((state) => state.setAvailableRequests);
   const [earnings] = useState(47.5);
   const [qualityScore] = useState(4.6);
   const [totalVerdicts] = useState(95);
+  const [loading, setLoading] = useState(true);
+  const [lastFetch, setLastFetch] = useState<Date | null>(null);
+  const [secondsAgo, setSecondsAgo] = useState(0);
+
+  // Fetch available requests
+  const fetchRequests = useCallback(async () => {
+    try {
+      const res = await fetch('/api/judge/queue?limit=20');
+      if (!res.ok) throw new Error('Failed to fetch requests');
+
+      const data = await res.json();
+
+      // Transform API response to match store format
+      const transformedRequests = (data.requests || []).map((req: any) => ({
+        id: req.id,
+        mediaUrl: req.media_url || req.text_content || '',
+        mediaType: req.media_type === 'photo' ? 'image' : 'text',
+        category: req.category,
+        context: req.context,
+        status: req.status,
+        verdicts: [],
+        createdAt: new Date(req.created_at),
+      }));
+
+      setAvailableRequests(transformedRequests);
+      setLastFetch(new Date());
+    } catch (error) {
+      console.error('Failed to fetch requests:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [setAvailableRequests]);
+
+  // Initial fetch on mount
+  useEffect(() => {
+    fetchRequests();
+  }, [fetchRequests]);
+
+  // Set up polling for new requests (every 5 seconds)
+  useEffect(() => {
+    const pollInterval = setInterval(() => {
+      fetchRequests();
+    }, 5000);
+
+    return () => clearInterval(pollInterval);
+  }, [fetchRequests]);
+
+  // Set up Supabase Realtime subscription for instant updates
+  useEffect(() => {
+    const supabase = createClient();
+
+    const channel = supabase
+      .channel('judge-requests')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'verdict_requests',
+          filter: 'status=in.("in_progress","pending")',
+        },
+        () => {
+          // New request created - fetch immediately
+          fetchRequests();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'verdict_requests',
+        },
+        () => {
+          // Request updated (might be closed) - refresh list
+          fetchRequests();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchRequests]);
 
   return (
     <div className="min-h-screen bg-gray-50 py-12">
@@ -81,18 +167,50 @@ export default function JudgeDashboard() {
         {/* Available Requests */}
         <div className="bg-white rounded-lg shadow">
           <div className="p-6 border-b">
-            <h2 className="text-xl font-semibold">Available Requests</h2>
-            <p className="text-sm text-gray-500 mt-1">
-              Help people with life decisions and earn $0.40-0.50 each
-            </p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-semibold">Available Requests</h2>
+                <p className="text-sm text-gray-500 mt-1">
+                  Help people with life decisions and earn $0.40-0.50 each
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                {lastFetch && (
+                  <span className="text-xs text-gray-400">
+                    Updated {Math.floor((Date.now() - lastFetch.getTime()) / 1000)}s ago
+                  </span>
+                )}
+                <button
+                  onClick={fetchRequests}
+                  className="flex items-center gap-2 px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition"
+                  title="Refresh now"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Refresh
+                </button>
+              </div>
+            </div>
+            <div className="mt-3 flex items-center gap-2 text-xs">
+              <div className="flex items-center gap-1">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span className="text-green-600 font-medium">Live updates enabled</span>
+              </div>
+              <span className="text-gray-400">•</span>
+              <span className="text-gray-500">Auto-refreshing every 5s</span>
+            </div>
           </div>
           <div className="p-6">
-            {availableRequests.length === 0 ? (
+            {loading ? (
+              <div className="text-center py-12">
+                <RefreshCw className="h-12 w-12 text-gray-300 mx-auto mb-4 animate-spin" />
+                <p className="text-gray-500">Loading requests...</p>
+              </div>
+            ) : availableRequests.length === 0 ? (
               <div className="text-center py-12">
                 <Clock className="h-12 w-12 text-gray-300 mx-auto mb-4" />
                 <p className="text-gray-500">No requests available right now.</p>
                 <p className="text-gray-400 text-sm mt-2">
-                  New requests come in every few seconds. Stay online!
+                  New requests will appear automatically when they arrive!
                 </p>
               </div>
             ) : (
