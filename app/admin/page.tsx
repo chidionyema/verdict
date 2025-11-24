@@ -188,10 +188,10 @@ export default function AdminDashboard() {
             
             <StatCard
               title="Moderation Queue"
-              value={stats.moderation.pending_reports}
-              subtitle={`${stats.moderation.flagged_content} flagged items`}
+              value={stats?.moderation?.pending_reports ?? 0}
+              subtitle={`${stats?.moderation?.flagged_content ?? 0} flagged items`}
               icon={AlertTriangle}
-              color={stats.moderation.pending_reports > 0 ? "#ef4444" : "#f59e0b"}
+              color={(stats?.moderation?.pending_reports ?? 0) > 0 ? "#ef4444" : "#f59e0b"}
             />
             
             <StatCard
@@ -279,12 +279,12 @@ export default function AdminDashboard() {
           <div className="bg-white rounded-lg shadow-lg p-6">
             <h3 className="font-semibold text-gray-900 mb-4">Recent Alerts</h3>
             <div className="space-y-3">
-              {stats?.moderation.pending_reports > 0 && (
+              {(stats?.moderation?.pending_reports ?? 0) > 0 && (
                 <div className="flex items-center p-3 bg-red-50 rounded-lg">
                   <AlertTriangle className="h-5 w-5 text-red-500 mr-3" />
                   <div className="flex-1">
                     <p className="text-sm font-medium text-red-800">
-                      {stats.moderation.pending_reports} pending content reports
+                      {stats?.moderation?.pending_reports ?? 0} pending content reports
                     </p>
                     <p className="text-xs text-red-600">Requires moderation action</p>
                   </div>
@@ -297,12 +297,12 @@ export default function AdminDashboard() {
                 </div>
               )}
               
-              {stats?.moderation.suspended_users > 0 && (
+              {(stats?.moderation?.suspended_users ?? 0) > 0 && (
                 <div className="flex items-center p-3 bg-yellow-50 rounded-lg">
                   <UserCheck className="h-5 w-5 text-yellow-500 mr-3" />
                   <div className="flex-1">
                     <p className="text-sm font-medium text-yellow-800">
-                      {stats.moderation.suspended_users} suspended users
+                      {stats?.moderation?.suspended_users ?? 0} suspended users
                     </p>
                     <p className="text-xs text-yellow-600">May require review</p>
                   </div>
