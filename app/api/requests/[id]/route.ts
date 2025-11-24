@@ -124,9 +124,9 @@ export async function PATCH(
       updateData.is_flagged = true;
       updateData.flagged_reason = reason || 'Flagged by user';
     } else if (action === 'cancel') {
-      if (verdictRequest.status !== 'open') {
+      if (verdictRequest.status !== 'in_progress' && verdictRequest.status !== 'pending') {
         return NextResponse.json(
-          { error: 'Can only cancel open requests' },
+          { error: 'Can only cancel requests that are in progress' },
           { status: 400 }
         );
       }

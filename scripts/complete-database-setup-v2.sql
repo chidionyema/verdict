@@ -955,6 +955,21 @@ DROP POLICY IF EXISTS "users_own_completion_steps" ON profile_completion_steps;
 DROP POLICY IF EXISTS "users_own_quality_ratings" ON verdict_quality_ratings;
 
 -- Core policies
+-- Profile policies (includes fixes from migration 017)
+CREATE POLICY "Users can insert own profile" ON profiles
+  FOR INSERT
+  WITH CHECK (auth.uid() = id);
+
+CREATE POLICY "Users can check profile existence" ON profiles
+  FOR SELECT
+  USING (auth.uid() IS NOT NULL AND id = auth.uid());
+
+CREATE POLICY "Users can update own profile" ON profiles
+  FOR UPDATE
+  USING (auth.uid() = id)
+  WITH CHECK (auth.uid() = id);
+
+-- Legacy policy for backward compatibility
 CREATE POLICY "users_own_profile" ON profiles
   FOR ALL USING (auth.uid() = id);
 
@@ -1229,6 +1244,80 @@ INSERT INTO judge_tiers (name, min_rating, min_verdicts, earnings_multiplier) VA
   ('Gold', 4.5, 200, 1.25),
   ('Platinum', 4.8, 500, 1.5)
 ON CONFLICT DO NOTHING;
+
+-- =====================================================
+-- STORAGE POLICIES (Bucket: requests)
+-- =====================================================
+-- Requires an existing storage bucket named 'requests'
+-- These policies allow authenticated users to upload files inside their own folder
+-- and allow public/ authenticated users to read files for judge viewing
+
+DROP POLICY IF EXISTS "Allow authenticated uploads to own folder" ON storage.objects;
+CREATE POLICY "Allow authenticated uploads to own folder"
+  ON storage.objects
+  FOR INSERT
+  TO authenticated
+  WITH CHECK (
+    bucket_id = 'requests'
+    AND (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+DROP POLICY IF EXISTS "Allow authenticated updates to own files" ON storage.objects;
+CREATE POLICY "Allow authenticated updates to own files"
+  ON storage.objects
+  FOR UPDATE
+  TO authenticated
+  USING (
+    bucket_id = 'requests'
+    AND (storage.foldername(name))[1] = auth.uid()::text
+  )
+  WITH CHECK (
+    bucket_id = 'requests'
+    AND (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+DROP POLICY IF EXISTS "Allow authenticated deletes to own files" ON storage.objects;
+CREATE POLICY "Allow authenticated deletes to own files"
+  ON storage.objects
+  FOR DELETE
+  TO authenticated
+  USING (
+    bucket_id = 'requests'
+    AND (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+DROP POLICY IF EXISTS "Allow public read access" ON storage.objects;
+CREATE POLICY "Allow public read access"
+  ON storage.objects
+  FOR SELECT
+  TO public
+  USING (bucket_id = 'requests');
+
+DROP POLICY IF EXISTS "Allow authenticated read access" ON storage.objects;
+CREATE POLICY "Allow authenticated read access"
+  ON storage.objects
+  FOR SELECT
+  TO authenticated
+  USING (bucket_id = 'requests');
+
+-- =====================================================
+-- RLS POLICY FIXES
+-- =====================================================
+-- Ensure judges can see in-progress requests in their queue
+
+DROP POLICY IF EXISTS "Judges can view open requests" ON public.verdict_requests;
+CREATE POLICY "Judges can view in_progress requests"
+  ON public.verdict_requests FOR SELECT
+  USING (
+    auth.uid() != user_id
+    AND (status = 'in_progress' OR status = 'pending')
+    AND deleted_at IS NULL
+    AND EXISTS (
+      SELECT 1
+      FROM public.profiles
+      WHERE id = auth.uid() AND is_judge = true
+    )
+  );
 
 -- =====================================================
 -- VERIFICATION

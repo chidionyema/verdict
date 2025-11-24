@@ -4,6 +4,7 @@ import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store';
 import { Clock, DollarSign, Send, ArrowLeft } from 'lucide-react';
+import { ResponseTemplates } from '@/components/judge/ResponseTemplates';
 
 export default function VerdictSubmissionPage({
   params,
@@ -16,12 +17,14 @@ export default function VerdictSubmissionPage({
   const claimRequest = useStore((state) => state.claimRequest);
 
   const [rating, setRating] = useState(7);
-  const [feedback, setFeedback] = useState('');
+  const [advice, setAdvice] = useState('');
+  const [reasoning, setReasoning] = useState('');
   const [tone, setTone] = useState<'honest' | 'constructive' | 'encouraging'>(
     'constructive'
   );
   const [timeRemaining, setTimeRemaining] = useState(90);
   const [submitting, setSubmitting] = useState(false);
+  const [showExample, setShowExample] = useState(true);
 
   const request = availableRequests.find((r) => r.id === id);
 
@@ -32,25 +35,60 @@ export default function VerdictSubmissionPage({
     }
   }, [timeRemaining]);
 
+  const totalLength = advice.length + reasoning.length;
+
   const calculateEarnings = () => {
     let base = 0.5;
     const speedBonus = timeRemaining > 60 ? 0.25 : 0;
-    const qualityBonus = feedback.length > 100 ? 0.15 : 0;
+    const qualityBonus = totalLength > 300 ? 0.15 : 0;
     return (base + speedBonus + qualityBonus).toFixed(2);
   };
 
-  const handleSubmit = () => {
-    if (feedback.length < 50) {
-      alert('Please provide at least 50 characters of feedback');
+  const handleSubmit = async () => {
+    if (advice.length < 50) {
+      alert('Please provide at least 50 characters in your advice section');
+      return;
+    }
+    if (reasoning.length < 20) {
+      alert('Please provide at least 20 characters explaining your reasoning');
       return;
     }
 
     setSubmitting(true);
 
-    setTimeout(() => {
+    try {
+      // Combine advice and reasoning for storage
+      const combinedFeedback = `${advice}\n\nReasoning: ${reasoning}`;
+
+      // Submit verdict to API
+      const response = await fetch('/api/judge/respond', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          request_id: id,
+          rating: rating,
+          feedback: combinedFeedback,
+          tone: tone,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        alert(error.error || 'Failed to submit verdict');
+        setSubmitting(false);
+        return;
+      }
+
+      // Success - remove from available requests and redirect
       claimRequest(id);
-      router.push('/judge/dashboard');
-    }, 1000);
+      router.push('/judge/dashboard?success=true');
+    } catch (error) {
+      console.error('Submit error:', error);
+      alert('Failed to submit verdict. Please try again.');
+      setSubmitting(false);
+    }
   };
 
   if (!request) {
@@ -184,24 +222,77 @@ export default function VerdictSubmissionPage({
               </div>
             </div>
 
-            {/* Feedback Text */}
+            {/* Example (shown once) */}
+            {showExample && (
+              <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-start justify-between mb-2">
+                  <p className="text-sm font-semibold text-blue-800">
+                    💡 Example of good advice:
+                  </p>
+                  <button
+                    onClick={() => setShowExample(false)}
+                    className="text-blue-600 hover:text-blue-800 text-xs"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+                <div className="text-sm text-blue-700 space-y-2">
+                  <div>
+                    <strong>Advice:</strong> "I would take the startup job. Early in your career, the learning and growth opportunities matter more than salary security."
+                  </div>
+                  <div>
+                    <strong>Reasoning:</strong> "I made a similar choice 5 years ago and the experience accelerated my career significantly. The equity could also pay off long-term."
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Response Templates */}
+            <ResponseTemplates
+              category={request.category}
+              onInsert={(text) => setAdvice(advice + text)}
+              className="mb-6"
+            />
+
+            {/* Advice Section */}
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Your Feedback (min 50 characters)
+                Your advice: What would you do and why?
               </label>
               <textarea
-                value={feedback}
-                onChange={(e) => setFeedback(e.target.value)}
-                placeholder="Provide specific, helpful feedback based on the context..."
+                value={advice}
+                onChange={(e) => setAdvice(e.target.value)}
+                placeholder="Share your perspective on what decision you would make and your main reasoning..."
                 className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                rows={5}
+                rows={4}
               />
               <p
                 className={`text-sm mt-1 ${
-                  feedback.length < 50 ? 'text-red-500' : 'text-gray-500'
+                  advice.length < 50 ? 'text-red-500' : advice.length > 200 ? 'text-green-600' : 'text-blue-600'
                 }`}
               >
-                {feedback.length}/500 characters
+                {advice.length}/500 characters {advice.length < 50 ? '(min 50)' : advice.length > 200 ? '✓ Great detail' : '✓ Good start'}
+              </p>
+            </div>
+
+            {/* Reasoning Section */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Your reasoning: Based on my experience...
+              </label>
+              <textarea
+                value={reasoning}
+                onChange={(e) => setReasoning(e.target.value)}
+                placeholder="Explain why based on your personal experience, observations, or expertise..."
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                rows={3}
+              />
+              <p
+                className={`text-sm mt-1 ${
+                  reasoning.length < 20 ? 'text-red-500' : reasoning.length > 100 ? 'text-green-600' : 'text-blue-600'
+                }`}
+              >
+                {reasoning.length}/300 characters {reasoning.length < 20 ? '(min 20)' : reasoning.length > 100 ? '✓ Excellent' : '✓'}
               </p>
             </div>
 
@@ -213,16 +304,19 @@ export default function VerdictSubmissionPage({
               <p className="text-xs text-green-600 mt-1">
                 Base: $0.50 + Speed bonus:{' '}
                 {timeRemaining > 60 ? '$0.25' : '$0.00'} + Quality bonus:{' '}
-                {feedback.length > 100 ? '$0.15' : '$0.00'}
+                {totalLength > 300 ? '$0.15' : '$0.00'}
+              </p>
+              <p className="text-xs text-gray-600 mt-2">
+                💡 More detail = better help (and possibly better ratings!)
               </p>
             </div>
 
             {/* Submit Button */}
             <button
               onClick={handleSubmit}
-              disabled={feedback.length < 50 || submitting}
+              disabled={advice.length < 50 || reasoning.length < 20 || submitting}
               className={`w-full py-3 rounded-lg font-semibold transition flex items-center justify-center cursor-pointer ${
-                feedback.length < 50 || submitting
+                advice.length < 50 || reasoning.length < 20 || submitting
                   ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                   : 'bg-indigo-600 text-white hover:bg-indigo-700'
               }`}

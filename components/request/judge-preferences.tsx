@@ -226,7 +226,7 @@ export function JudgePreferences({
                     key={mode.id}
                     variant={isSelected ? "default" : "outline"}
                     onClick={() => setPreferences({ ...preferences, priority_mode: mode.id as any })}
-                    className={`p-4 h-auto text-left ${
+                    className={`p-4 h-auto text-left flex flex-col items-start gap-1 whitespace-normal break-words ${
                       isSelected ? `bg-${mode.color}-600 text-white` : ''
                     }`}
                   >

@@ -1,0 +1,18 @@
+# Allow all search engines to crawl the site
+User-agent: *
+Allow: /
+
+# Disallow private/sensitive areas
+Disallow: /api/
+Disallow: /dashboard
+Disallow: /judge/
+Disallow: /requests/
+Disallow: /account
+Disallow: /success
+
+# Allow public pages
+Allow: /
+Allow: /start
+
+# Sitemap location
+Sitemap: https://yourapp.com/sitemap.xml

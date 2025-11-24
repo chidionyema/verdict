@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useStore } from '@/lib/store';
-import { DollarSign, TrendingUp, Clock, Award, ArrowRight } from 'lucide-react';
+import { DollarSign, TrendingUp, Clock, Award, ArrowRight, History } from 'lucide-react';
 
 export default function JudgeDashboard() {
   const router = useRouter();
@@ -17,9 +18,18 @@ export default function JudgeDashboard() {
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Judge Dashboard</h1>
-          <span className="px-4 py-2 bg-green-100 text-green-700 rounded-full text-sm font-medium">
-            Online
-          </span>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/judge/history"
+              className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium"
+            >
+              <History className="h-4 w-4" />
+              My Verdicts
+            </Link>
+            <span className="px-4 py-2 bg-green-100 text-green-700 rounded-full text-sm font-medium">
+              Online
+            </span>
+          </div>
         </div>
 
         {/* Stats Grid */}
@@ -29,6 +39,9 @@ export default function JudgeDashboard() {
               <div>
                 <p className="text-sm text-gray-600">Today&apos;s Earnings</p>
                 <p className="text-2xl font-bold">${earnings.toFixed(2)}</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  ≈ {Math.floor(earnings / 2.5)} coffees
+                </p>
               </div>
               <DollarSign className="h-8 w-8 text-green-500" />
             </div>
@@ -70,7 +83,7 @@ export default function JudgeDashboard() {
           <div className="p-6 border-b">
             <h2 className="text-xl font-semibold">Available Requests</h2>
             <p className="text-sm text-gray-500 mt-1">
-              Click on a request to submit your verdict
+              Help people with life decisions and earn $0.40-0.50 each
             </p>
           </div>
           <div className="p-6">

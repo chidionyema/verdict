@@ -72,6 +72,19 @@ export async function POST(request: NextRequest) {
         });
       }
       
+      // RLS policy violation - storage bucket exists but policies aren't set up
+      if (uploadError.message?.includes('row-level security policy') || 
+          uploadError.message?.includes('violates') ||
+          uploadError.message?.includes('permission denied')) {
+        return NextResponse.json(
+          { 
+            error: 'Storage permissions not configured. Please set up storage bucket policies in Supabase Dashboard.',
+            details: 'See SUPABASE_STORAGE_SETUP.md for instructions, or run migration 018_storage_policies.sql'
+          },
+          { status: 403 }
+        );
+      }
+      
       return NextResponse.json(
         { error: `Upload failed: ${uploadError.message}` },
         { status: 500 }

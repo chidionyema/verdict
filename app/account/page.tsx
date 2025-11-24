@@ -132,6 +132,28 @@ export default function AccountPage() {
           </div>
 
           <h3 className="font-medium text-gray-900 mb-4">Buy More Credits</h3>
+
+          {/* Value Comparison */}
+          <div className="mb-6 p-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg border border-indigo-200">
+            <p className="text-sm text-gray-700 mb-2">
+              <span className="font-semibold">Compare:</span>
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm">
+              <div>
+                <span className="text-gray-600">Therapist:</span>{' '}
+                <span className="font-semibold text-gray-900">$200/hour</span>
+              </div>
+              <div>
+                <span className="text-gray-600">Career coach:</span>{' '}
+                <span className="font-semibold text-gray-900">$150/hour</span>
+              </div>
+              <div>
+                <span className="text-indigo-600 font-semibold">Verdict:</span>{' '}
+                <span className="font-bold text-indigo-700">$4.99 for 10 perspectives</span>
+              </div>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {Object.entries(CREDIT_PACKAGES).map(([id, pkg]) => (
               <div

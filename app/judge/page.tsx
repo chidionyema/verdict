@@ -20,6 +20,7 @@ interface QueueRequest {
 export default function JudgeDashboardPage() {
   const router = useRouter();
   const supabase = createClient();
+  const judgeRedirectPath = '/judge/qualify';
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [queue, setQueue] = useState<QueueRequest[]>([]);
@@ -110,13 +111,23 @@ export default function JudgeDashboardPage() {
           </p>
           <div className="space-y-3">
             <button
-              onClick={() => router.push('/auth/signup')}
+              onClick={() => {
+                if (typeof window !== 'undefined') {
+                  sessionStorage.setItem('verdict_redirect_to', judgeRedirectPath);
+                }
+                router.push(`/auth/signup?redirect=${encodeURIComponent(judgeRedirectPath)}`);
+              }}
               className="w-full bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 transition"
             >
               Sign Up to Judge
             </button>
             <button
-              onClick={() => router.push('/auth/login')}
+              onClick={() => {
+                if (typeof window !== 'undefined') {
+                  sessionStorage.setItem('verdict_redirect_to', judgeRedirectPath);
+                }
+                router.push(`/auth/login?redirect=${encodeURIComponent(judgeRedirectPath)}`);
+              }}
               className="w-full bg-gray-100 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-200 transition"
             >
               Sign In

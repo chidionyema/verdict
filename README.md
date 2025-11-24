@@ -2,6 +2,28 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
+### Environment setup
+
+Copy `env.example` to `.env.local` and fill in your Supabase and Stripe credentials:
+
+```bash
+cp env.example .env.local
+```
+
+The app requires valid values for:
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `STRIPE_SECRET_KEY`
+- `STRIPE_WEBHOOK_SECRET`
+
+You can find the Supabase keys in your project's **Settings → API** page.
+
+Other variables in `env.example` already contain sensible local defaults but can be adjusted to match your deployment URLs.
+
+### Development server
+
 First, run the development server:
 
 ```bash

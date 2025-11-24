@@ -49,6 +49,7 @@ interface StoreState {
 
   // Judge state
   availableRequests: VerdictRequest[];
+  setAvailableRequests: (requests: VerdictRequest[]) => void;
   addAvailableRequest: (request: VerdictRequest) => void;
   claimRequest: (requestId: string) => void;
 }
@@ -77,6 +78,7 @@ export const useStore = create<StoreState>((set) => ({
   setUploadedMedia: (media) => set({ uploadedMedia: media }),
 
   availableRequests: [],
+  setAvailableRequests: (requests) => set({ availableRequests: requests }),
   addAvailableRequest: (request) =>
     set((state) => ({
       availableRequests: [...state.availableRequests, request],

@@ -11,6 +11,8 @@ import {
 import type { VerdictRequest, VerdictResponse } from '@/lib/database.types';
 import ReportContentButton from '@/components/ReportContentButton';
 import VerdictRatingModal from '@/components/VerdictRatingModal';
+import { VerdictSummary } from '@/components/request/VerdictSummary';
+import { ThankJudgesButton } from '@/components/request/ThankJudgesButton';
 
 interface VerdictWithNumber extends VerdictResponse {
   judge_number: number;
@@ -448,6 +450,15 @@ export default function RequestDetailPage({
 
           {/* Verdicts List */}
           <div className="lg:col-span-2">
+            {/* Enhanced Verdict Summary */}
+            {verdicts.length > 0 && (
+              <VerdictSummary
+                verdicts={verdicts}
+                category={request.category}
+                className="mb-6"
+              />
+            )}
+
             {verdicts.length > 0 && (
               <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
                 <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
@@ -653,10 +664,19 @@ export default function RequestDetailPage({
                 Request Complete!
               </h3>
               <p className="text-gray-600 mb-6 leading-relaxed">
-                You've received {verdicts.length} expert verdict{verdicts.length !== 1 ? 's' : ''} with an average rating of {averageRating.toFixed(1)}/10. 
+                You've received {verdicts.length} expert verdict{verdicts.length !== 1 ? 's' : ''} with an average rating of {averageRating.toFixed(1)}/10.
                 Ready to get feedback on something else?
               </p>
-              
+
+              {/* Thank Judges Button */}
+              <div className="mb-8">
+                <ThankJudgesButton
+                  requestId={request.id}
+                  judgeCount={verdicts.length}
+                  onSuccess={() => alert('Your appreciation has been sent to all judges!')}
+                />
+              </div>
+
               <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
                 <Link
                   href="/start"

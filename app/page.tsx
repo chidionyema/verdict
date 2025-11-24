@@ -5,6 +5,7 @@ import { HeroSection } from '@/components/landing/hero-section';
 import { FeaturesComparison } from '@/components/landing/features-comparison';
 import { SocialProofSection } from '@/components/landing/social-proof-section';
 import { InteractiveDemo } from '@/components/landing/interactive-demo';
+import { FeatureDiscoveryBanner } from '@/components/discovery/FeatureDiscoveryBanner';
 import { Clock, Shield, CheckCircle, Eye, Star } from 'lucide-react';
 
 export default function HomePage() {
@@ -12,6 +13,9 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen">
+      {/* Feature Discovery Banner */}
+      <FeatureDiscoveryBanner />
+
       {/* Hero Section */}
       <HeroSection />
       

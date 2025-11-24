@@ -1,14 +1,16 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { CheckCircle, Clock, Star, TrendingUp } from 'lucide-react';
 import OutcomePrediction from '@/components/OutcomePrediction';
 import ViralGrowthHub from '@/components/ViralGrowthHub';
 import QualityScoring from '@/components/QualityScoring';
+import { RealTimeWaitingStatus } from '@/components/request/RealTimeWaitingStatus';
 
 export default function SuccessPage() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [requestData, setRequestData] = useState<any>(null);
   const [showAnalytics, setShowAnalytics] = useState(false);
 
@@ -17,18 +19,26 @@ export default function SuccessPage() {
     const category = searchParams.get('category') || 'appearance';
     const mediaType = searchParams.get('mediaType') || 'photo';
     const context = searchParams.get('context') || '';
-    
+    const requestId = searchParams.get('requestId') || 'req_' + Date.now();
+
     setRequestData({
       category,
       mediaType,
       context,
-      requestId: 'req_' + Date.now(),
+      requestId,
       estimatedRating: 8.5
     });
 
     // Show analytics after a brief moment
     setTimeout(() => setShowAnalytics(true), 2000);
   }, [searchParams]);
+
+  const handleRequestComplete = () => {
+    // Redirect to request detail page when complete
+    if (requestData?.requestId) {
+      router.push(`/requests/${requestData.requestId}`);
+    }
+  };
 
   if (!requestData) return null;
 
@@ -48,39 +58,14 @@ export default function SuccessPage() {
           </p>
         </div>
 
-        {/* Status Timeline */}
-        <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">What happens next</h2>
-          <div className="space-y-4">
-            <div className="flex items-center gap-4">
-              <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center">
-                <CheckCircle className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <p className="font-medium text-gray-900">Request received</p>
-                <p className="text-sm text-gray-600">Just now</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center animate-pulse">
-                <Clock className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <p className="font-medium text-gray-900">Expert review in progress</p>
-                <p className="text-sm text-gray-600">Usually takes 15-30 minutes</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-                <Star className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <p className="font-medium text-gray-600">Detailed verdict delivered</p>
-                <p className="text-sm text-gray-500">You'll get an email notification</p>
-              </div>
-            </div>
-          </div>
-        </div>
+        {/* Real-Time Waiting Status */}
+        <RealTimeWaitingStatus
+          requestId={requestData.requestId}
+          targetCount={10}
+          initialCount={0}
+          onComplete={handleRequestComplete}
+          className="mb-8"
+        />
 
         {/* Analytics Section - Shows after delay */}
         {showAnalytics && (

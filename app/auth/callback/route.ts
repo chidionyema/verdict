@@ -7,6 +7,7 @@ const errorRedirect = (requestUrl: URL, message = 'auth') =>
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get('code');
+  const redirectParam = requestUrl.searchParams.get('redirect');
 
   if (!code) {
     return errorRedirect(requestUrl, 'missing_code');
@@ -24,6 +25,14 @@ export async function GET(request: NextRequest) {
     return errorRedirect(requestUrl, 'no_user');
   }
 
+  const getSafeRedirect = (path?: string | null) => {
+    if (!path) return null;
+    if (!path.startsWith('/')) return null;
+    return path;
+  };
+
+  const safeRedirect = getSafeRedirect(redirectParam);
+
   try {
     // Check if this is a new user by looking at their profile
     const { data: profile } = await supabase
@@ -32,6 +41,11 @@ export async function GET(request: NextRequest) {
       .eq('id', data.user.id)
       .single();
     
+    // If caller provided an explicit redirect (e.g. judge qualification), honor it
+    if (safeRedirect) {
+      return NextResponse.redirect(new URL(safeRedirect, requestUrl.origin));
+    }
+
     // If it's a new user (no profile or onboarding not completed), redirect to welcome
     if (!profile || !profile.onboarding_completed) {
       return NextResponse.redirect(new URL('/welcome', requestUrl.origin));

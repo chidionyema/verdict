@@ -188,7 +188,7 @@ export async function POST(request: NextRequest) {
         media_url: media_type === 'photo' ? media_url : null,
         text_content: media_type === 'text' ? text_content : null,
         context,
-        status: 'pending',
+        status: 'in_progress', // Changed from 'pending' to 'in_progress' so judges can see it
         target_verdict_count: 10,
         received_verdict_count: 0,
       })

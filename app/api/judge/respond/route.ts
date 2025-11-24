@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate request state
-    if (verdictRequest.status !== 'open') {
+    if (verdictRequest.status !== 'in_progress' && verdictRequest.status !== 'pending') {
       return NextResponse.json(
         { error: 'Request is no longer accepting verdicts' },
         { status: 400 }

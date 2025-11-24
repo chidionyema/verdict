@@ -14,12 +14,15 @@ import PersonalizationEngine from '@/components/PersonalizationEngine';
 import QualityScoring from '@/components/QualityScoring';
 import ViralGrowthHub from '@/components/ViralGrowthHub';
 import { JudgePreferences } from '@/components/request/judge-preferences';
+import { TrustBadge, TrustBadgeGroup } from '@/components/shared/TrustBadge';
+import { EncouragingCounter } from '@/components/shared/EncouragingCounter';
+import { DecisionFramingHelper } from '@/components/request/DecisionFramingHelper';
 
 const categories = [
   { id: 'appearance', label: 'Appearance', icon: Heart, description: 'Dating, events, professional looks' },
   { id: 'profile', label: 'Profile', icon: Briefcase, description: 'Resume, LinkedIn, dating profiles' },
   { id: 'writing', label: 'Writing', icon: FileText, description: 'Emails, messages, content' },
-  { id: 'decision', label: 'Decision', icon: HelpCircle, description: 'Life choices, purchases' },
+  { id: 'decision', label: 'Decision', icon: HelpCircle, description: 'Job offers, relationships, life choices' },
 ];
 
 // Mock judge data (replace with real data from API)
@@ -80,6 +83,7 @@ export default function StartPage() {
   const [textContent, setTextContent] = useState('');
   const [category, setCategory] = useState('');
   const [subcategory, setSubcategory] = useState('');
+  const [title, setTitle] = useState('');
   const [context, setContext] = useState('');
   const [uploading, setUploading] = useState(false);
   const [judgePreferences, setJudgePreferences] = useState(null);
@@ -99,6 +103,7 @@ export default function StartPage() {
           setTextContent(parsed.textContent || '');
           setCategory(parsed.category || '');
           setSubcategory(parsed.subcategory || '');
+          setTitle(parsed.title || '');
           setContext(parsed.context || '');
           
           // Restore file if it exists
@@ -182,6 +187,7 @@ export default function StartPage() {
         textContent: mediaType === 'text' ? textContent : null,
         category,
         subcategory,
+        title,
         context,
       }));
       router.push('/auth/signup?redirect=/start/submit');
@@ -228,6 +234,9 @@ export default function StartPage() {
         setUploading(false);
       }
 
+      // Combine title and context for storage
+      const fullContext = title ? `${title}\n\n${context}` : context;
+
       // Create request
       const res = await fetch('/api/requests', {
         method: 'POST',
@@ -238,7 +247,7 @@ export default function StartPage() {
           media_type: mediaType,
           media_url: mediaUrl,
           text_content: mediaType === 'text' ? textContent : null,
-          context,
+          context: fullContext,
           judge_preferences: judgePreferences,
         }),
       });
@@ -304,10 +313,10 @@ export default function StartPage() {
               {/* Simple, focused start */}
               <div className="text-center mb-8">
                 <h2 className="text-3xl font-bold text-gray-900 mb-3">
-                  Get expert feedback in minutes
+                  Life's tough decisions made clearer in 10 minutes
                 </h2>
                 <p className="text-gray-600 text-lg">
-                  Upload a photo or share your text for professional insights
+                  Get 10 human perspectives on your photos, text, or decisions
                 </p>
               </div>
 
@@ -547,8 +556,19 @@ export default function StartPage() {
                 <p className="text-sm text-gray-500 mb-2">
                   {mediaType === 'photo' ? 'Photo' : 'Text'} ready ✓ • {category} feedback selected ✓ • Judges selected ✓
                 </p>
-                <h2 className="text-2xl font-bold text-gray-900">Add context for better feedback</h2>
-                <p className="text-gray-600 mt-2">Help experts understand your specific situation</p>
+                <h2 className="text-2xl font-bold text-gray-900">
+                  {category === 'decision' ? 'Explain your situation' : 'Add context for better feedback'}
+                </h2>
+                <p className="text-gray-600 mt-2">
+                  {category === 'decision'
+                    ? 'The more detail you provide, the better advice you\'ll receive'
+                    : 'Help experts understand your specific situation'}
+                </p>
+              </div>
+
+              {/* Trust Badges */}
+              <div className="mb-6">
+                <TrustBadgeGroup className="justify-center" />
               </div>
 
               {/* Subcategory */}
@@ -575,32 +595,41 @@ export default function StartPage() {
                 </div>
               )}
 
+              {/* Decision Framing Helper */}
+              <DecisionFramingHelper
+                category={category}
+                title={title}
+                onTitleChange={setTitle}
+                className="mb-8"
+              />
+
               {/* Context Input - Focused and Clear */}
               <div className="mb-8">
                 <label className="block text-lg font-medium text-gray-900 mb-3">
-                  What's this for?
+                  {category === 'decision' ? 'Explain your situation' : 'Additional context'}
                 </label>
+                {category === 'decision' && (
+                  <p className="text-sm text-gray-600 mb-3">
+                    Include: What's at stake, your concerns, timeline, constraints, and what you've already considered
+                  </p>
+                )}
                 <textarea
                   value={context}
                   onChange={(e) => setContext(e.target.value)}
-                  placeholder={`e.g., "${category === 'appearance' ? 'Job interview at a tech startup next week' : 
+                  placeholder={`e.g., "${category === 'appearance' ? 'Job interview at a tech startup next week' :
                     category === 'profile' ? 'Updating LinkedIn for career change to marketing' :
                     category === 'writing' ? 'Follow-up email to potential client after meeting' :
-                    'Choosing between two apartments in different neighborhoods'
+                    'Should I take the startup job offer or stay at my stable corporate position? The startup offers equity but lower salary. I have a mortgage and two kids. Need to decide by Friday.'
                   }"`}
                   className="w-full p-4 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-lg"
-                  rows={5}
+                  rows={category === 'decision' ? 6 : 5}
                 />
-                <div className="flex justify-between items-center mt-3">
-                  <p className={`text-sm ${context.length < 20 ? 'text-red-500' : 'text-gray-500'}`}>
-                    {context.length}/500 characters {context.length < 20 ? '(minimum 20)' : '✓'}
-                  </p>
-                  {context.length >= 20 && (
-                    <p className="text-sm text-green-600 font-medium">
-                      Context looks good!
-                    </p>
-                  )}
-                </div>
+                <EncouragingCounter
+                  count={context.length}
+                  min={20}
+                  max={500}
+                  className="mt-3"
+                />
               </div>
 
               {/* Show simple context quality tip only after good length */}

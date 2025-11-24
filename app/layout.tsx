@@ -15,8 +15,40 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Verdict - Honest Feedback Platform",
-  description: "Get real opinions in minutes",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'),
+  title: {
+    default: "Verdict - Get Wisdom from Real People in Minutes",
+    template: "%s | Verdict",
+  },
+  description: "Life's tough decisions made clearer. Get honest feedback from 10 real people in just minutes. Career choices, relationships, life decisions - ask anything.",
+  keywords: ["decision help", "life advice", "honest feedback", "crowd wisdom", "career advice", "relationship advice", "life decisions", "anonymous feedback"],
+  authors: [{ name: "Verdict" }],
+  creator: "Verdict",
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: "/",
+    title: "Verdict - Get Wisdom from Real People in Minutes",
+    description: "Life's tough decisions made clearer. Get honest feedback from 10 real people in just minutes.",
+    siteName: "Verdict",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Verdict - Get Wisdom from Real People in Minutes",
+    description: "Life's tough decisions made clearer. Get honest feedback from 10 real people in just minutes.",
+    creator: "@verdict",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
 };
 
 export default function RootLayout({

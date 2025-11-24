@@ -175,6 +175,13 @@ export default function JudgeQualificationPage() {
       if (!demographicsRes.ok) {
         const errorData = await demographicsRes.json();
         console.error('Demographics API error:', errorData);
+
+        // Check if it's a database setup issue
+        if (errorData.instructions) {
+          alert(`Database Setup Required:\n\n${errorData.details}\n\nPlease contact your administrator to run the database migration:\n${errorData.migrationFile}`);
+          throw new Error(errorData.error);
+        }
+
         throw new Error(`Failed to save demographics: ${errorData.error || 'Unknown error'}`);
       }
 
@@ -224,8 +231,15 @@ export default function JudgeQualificationPage() {
           
           <h2 className="text-2xl font-bold text-gray-900">Become a Judge</h2>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Help others get honest, constructive feedback while earning credits. Our judges maintain high quality standards and contribute to a positive community.
+            Your life experience helps others (and pays). You don't need to be an expert, just share your perspective.
           </p>
+
+          {/* Confidence Building Message */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-xl mx-auto mt-4">
+            <p className="text-blue-800 text-sm">
+              <strong>Remember:</strong> Seekers value diverse viewpoints. Your unique experience and honest opinion are exactly what people need.
+            </p>
+          </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
             <div className="bg-white rounded-lg p-6 shadow-sm">

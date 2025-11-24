@@ -35,7 +35,11 @@ export default function GoogleOAuthButton({
     setError(null);
     
     try {
-      const callbackUrl = getRedirectUrl();
+      const callbackUrl = new URL(getRedirectUrl());
+      
+      if (redirectTo) {
+        callbackUrl.searchParams.set('redirect', redirectTo);
+      }
       
       // Store redirectTo in sessionStorage to retrieve after OAuth
       if (redirectTo && typeof window !== 'undefined') {
@@ -45,7 +49,7 @@ export default function GoogleOAuthButton({
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: callbackUrl,
+          redirectTo: callbackUrl.toString(),
           queryParams: {
             access_type: 'offline',
             prompt: 'consent',

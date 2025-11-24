@@ -29,11 +29,12 @@ const SOCIAL_PROOF_STATS = [
 ];
 
 const USE_CASES = [
-  "Does this outfit actually look good?",
-  "Is my dating profile attractive?", 
-  "Should I take this job offer?",
+  "Should I take the startup job offer?",
+  "Is my dating profile attractive?",
+  "Should I move to a new city?",
+  "Does this outfit work for the interview?",
+  "Should I confront my roommate?",
   "Is this business idea worth pursuing?",
-  "Does this haircut suit my face?",
 ];
 
 export function HeroSection() {

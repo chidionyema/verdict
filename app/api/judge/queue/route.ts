@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
 
     const excludeIds = respondedRequestIds?.map((r) => r.request_id) || [];
 
-    // Fetch open requests
+    // Fetch open requests (in_progress means waiting for judges)
     let query = supabase
       .from('verdict_requests')
       .select(`
@@ -54,10 +54,9 @@ export async function GET(request: NextRequest) {
         target_verdict_count,
         received_verdict_count
       `)
-      .eq('status', 'open')
+      .in('status', ['in_progress', 'pending']) // Accept both 'in_progress' (new) and 'pending' (legacy)
       .neq('user_id', user.id) // Exclude own requests
       .is('deleted_at', null)
-      .is('is_flagged', false)
       .order('created_at', { ascending: true }) // Oldest first
       .limit(limit);
 

@@ -6,6 +6,8 @@ import { createClient } from '@/lib/supabase/client';
 import { Plus, Image, FileText, Clock, CheckCircle, XCircle, Search, Filter, SortAsc, SortDesc } from 'lucide-react';
 import type { VerdictRequest, Profile } from '@/lib/database.types';
 import Breadcrumb from '@/components/Breadcrumb';
+import { FeatureDiscoveryBanner } from '@/components/discovery/FeatureDiscoveryBanner';
+import { RetentionDiscountBanner } from '@/components/retention/RetentionDiscountBanner';
 
 type FilterStatus = 'all' | 'open' | 'in_progress' | 'closed' | 'cancelled';
 type SortBy = 'newest' | 'oldest' | 'status' | 'progress';
@@ -167,10 +169,22 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
-      <div className="max-w-6xl mx-auto px-4">
-        {/* Breadcrumb */}
-        <Breadcrumb className="mb-6" />
+    <div className="min-h-screen bg-gray-50">
+      {/* Feature Discovery Banner */}
+      <FeatureDiscoveryBanner />
+
+      {/* Retention Discount Banner */}
+      {profile && (
+        <RetentionDiscountBanner
+          userId={profile.id}
+          hasCompletedRequest={requests.some(r => r.status === 'closed')}
+        />
+      )}
+
+      <div className="py-12">
+        <div className="max-w-6xl mx-auto px-4">
+          {/* Breadcrumb */}
+          <Breadcrumb className="mb-6" />
         
         {/* Header */}
         <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center mb-8 gap-4">
@@ -440,6 +454,7 @@ export default function DashboardPage() {
             </div>
           </>
         )}
+        </div>
       </div>
     </div>
   );
