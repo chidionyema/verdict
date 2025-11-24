@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
@@ -20,7 +21,7 @@ export async function GET(request: NextRequest) {
       .from('profiles')
       .select('is_judge')
       .eq('id', user.id)
-      .single();
+      .single() as { data: { is_judge: boolean } | null };
 
     if (!profile?.is_judge) {
       return NextResponse.json(

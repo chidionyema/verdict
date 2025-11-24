@@ -5,12 +5,61 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Upload, Image, FileText, Briefcase, Heart, Palette, HelpCircle } from 'lucide-react';
 import type { User } from '@supabase/supabase-js';
+import SocialProofCarousel from '@/components/SocialProofCarousel';
+import JudgePreview from '@/components/JudgePreview';
+import SmartMessageBanner from '@/components/SmartMessageBanner';
+import OutcomePrediction from '@/components/OutcomePrediction';
+import SmartContextAnalyzer from '@/components/SmartContextAnalyzer';
+import PersonalizationEngine from '@/components/PersonalizationEngine';
+import QualityScoring from '@/components/QualityScoring';
+import ViralGrowthHub from '@/components/ViralGrowthHub';
+import { JudgePreferences } from '@/components/request/judge-preferences';
 
 const categories = [
   { id: 'appearance', label: 'Appearance', icon: Heart, description: 'Dating, events, professional looks' },
   { id: 'profile', label: 'Profile', icon: Briefcase, description: 'Resume, LinkedIn, dating profiles' },
   { id: 'writing', label: 'Writing', icon: FileText, description: 'Emails, messages, content' },
   { id: 'decision', label: 'Decision', icon: HelpCircle, description: 'Life choices, purchases' },
+];
+
+// Mock judge data (replace with real data from API)
+const mockJudges = [
+  {
+    id: '1',
+    name: 'Sarah Chen',
+    avatar: 'https://images.unsplash.com/photo-1494790108755-2616b612b192?w=150&h=150&fit=crop&crop=face',
+    specialty: 'Style Expert',
+    credentials: '10+ years fashion industry',
+    rating: 4.9,
+    verdictCount: 1247,
+    responseTime: '2 hours',
+    expertise: ['Professional Style', 'Color Analysis', 'Body Type'],
+    successRate: 94
+  },
+  {
+    id: '2',
+    name: 'Marcus Williams',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face',
+    specialty: 'Career Coach',
+    credentials: 'MBA, Executive Coach',
+    rating: 4.8,
+    verdictCount: 892,
+    responseTime: '1 hour',
+    expertise: ['Interview Prep', 'Leadership', 'Personal Brand'],
+    successRate: 91
+  },
+  {
+    id: '3',
+    name: 'Emma Rodriguez',
+    avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face',
+    specialty: 'Dating Expert',
+    credentials: 'Psychology PhD, 5+ years',
+    rating: 4.9,
+    verdictCount: 2156,
+    responseTime: '30 min',
+    expertise: ['Dating Photos', 'Profile Writing', 'Communication'],
+    successRate: 96
+  }
 ];
 
 const subcategories: Record<string, string[]> = {
@@ -33,12 +82,43 @@ export default function StartPage() {
   const [subcategory, setSubcategory] = useState('');
   const [context, setContext] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [judgePreferences, setJudgePreferences] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
       setUser(user);
+      
+      // Restore draft if user just signed up
+      const draft = sessionStorage.getItem('draftRequest');
+      if (draft && user) {
+        try {
+          const parsed = JSON.parse(draft);
+          setMediaType(parsed.mediaType || 'photo');
+          setTextContent(parsed.textContent || '');
+          setCategory(parsed.category || '');
+          setSubcategory(parsed.subcategory || '');
+          setContext(parsed.context || '');
+          
+          // Restore file if it exists
+          const pendingFile = (window as Window & { pendingFile?: File }).pendingFile;
+          if (pendingFile) {
+            setPreviewUrl(URL.createObjectURL(pendingFile));
+          }
+          
+          // Auto-advance to the appropriate step
+          if (parsed.category) {
+            setStep(3); // Go to final step
+          } else if (parsed.mediaType === 'text' && parsed.textContent) {
+            setStep(2); // Go to category selection
+          } else if (parsed.mediaType === 'photo' && pendingFile) {
+            setStep(2); // Go to category selection
+          }
+        } catch (e) {
+          console.error('Failed to restore draft:', e);
+        }
+      }
     });
   }, [supabase.auth]);
 
@@ -137,8 +217,14 @@ export default function StartPage() {
           throw new Error(data.error || 'Upload failed');
         }
 
-        const { url } = await uploadRes.json();
-        mediaUrl = url;
+        const uploadData = await uploadRes.json();
+        mediaUrl = uploadData.url;
+        
+        // Show warning if storage is not properly configured
+        if (uploadData.warning) {
+          console.warn('Upload warning:', uploadData.warning);
+        }
+        
         setUploading(false);
       }
 
@@ -153,12 +239,14 @@ export default function StartPage() {
           media_url: mediaUrl,
           text_content: mediaType === 'text' ? textContent : null,
           context,
+          judge_preferences: judgePreferences,
         }),
       });
 
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || 'Failed to create request');
+        console.error('API Error Details:', data);
+        throw new Error(data.details || data.error || 'Failed to create request');
       }
 
       const { request } = await res.json();
@@ -168,8 +256,9 @@ export default function StartPage() {
       sessionStorage.removeItem('pendingFile');
       sessionStorage.removeItem('draftRequest');
 
-      // Redirect to request page
-      router.push(`/requests/${request.id}`);
+      // Redirect to success page with context
+      const successUrl = `/success?category=${encodeURIComponent(category)}&mediaType=${encodeURIComponent(mediaType)}&context=${encodeURIComponent(context)}&requestId=${encodeURIComponent(request.id || 'unknown')}`;
+      router.push(successUrl);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong');
       setSubmitting(false);
@@ -178,10 +267,11 @@ export default function StartPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 py-12">
+      <SmartMessageBanner currentStep={step} category={category} />
       <div className="max-w-3xl mx-auto px-4">
         {/* Progress */}
         <div className="flex items-center justify-center mb-8">
-          {[1, 2, 3].map((s) => (
+          {[1, 2, 3, 4].map((s) => (
             <div key={s} className="flex items-center">
               <div
                 className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold ${
@@ -190,9 +280,9 @@ export default function StartPage() {
               >
                 {s}
               </div>
-              {s < 3 && (
+              {s < 4 && (
                 <div
-                  className={`w-16 h-1 mx-2 ${
+                  className={`w-12 h-1 mx-2 ${
                     step > s ? 'bg-indigo-600' : 'bg-gray-200'
                   }`}
                 />
@@ -211,9 +301,26 @@ export default function StartPage() {
           {/* Step 1: Upload */}
           {step === 1 && (
             <>
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">
+              {/* Simple, focused start */}
+              <div className="text-center mb-8">
+                <h2 className="text-3xl font-bold text-gray-900 mb-3">
+                  Get expert feedback in minutes
+                </h2>
+                <p className="text-gray-600 text-lg">
+                  Upload a photo or share your text for professional insights
+                </p>
+              </div>
+
+              {/* Social Proof - Only show after media type selection */}
+              {(mediaType === 'photo' && previewUrl) || (mediaType === 'text' && textContent.length > 20) ? (
+                <div className="mb-6">
+                  <SocialProofCarousel />
+                </div>
+              ) : null}
+
+              <h3 className="text-xl font-semibold text-gray-800 mb-4">
                 What would you like feedback on?
-              </h2>
+              </h3>
 
               <div className="flex space-x-4 mb-8">
                 <button
@@ -265,6 +372,19 @@ export default function StartPage() {
                   >
                     {previewUrl ? 'Change Photo' : 'Choose Photo'}
                   </label>
+                  
+                  {/* Show next step preview when ready */}
+                  {previewUrl && (
+                    <div className="mt-6 p-4 bg-green-50 rounded-lg border border-green-200">
+                      <div className="flex items-center gap-2 text-green-800">
+                        <div className="w-2 h-2 bg-green-600 rounded-full"></div>
+                        <span className="font-medium">Photo uploaded successfully!</span>
+                      </div>
+                      <p className="text-sm text-green-700 mt-1">
+                        Next: Choose what type of feedback you'd like
+                      </p>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div>
@@ -275,6 +395,20 @@ export default function StartPage() {
                     className="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                     rows={6}
                   />
+                  
+                  {/* Show next step preview when ready */}
+                  {textContent.length >= 50 && (
+                    <div className="mt-6 p-4 bg-green-50 rounded-lg border border-green-200">
+                      <div className="flex items-center gap-2 text-green-800">
+                        <div className="w-2 h-2 bg-green-600 rounded-full"></div>
+                        <span className="font-medium">Text looks good!</span>
+                      </div>
+                      <p className="text-sm text-green-700 mt-1">
+                        Ready for the next step: Choose your feedback type
+                      </p>
+                    </div>
+                  )}
+                  
                   <div className="flex justify-between items-center mt-4">
                     <span className={`text-sm ${textContent.length < 50 ? 'text-red-500' : 'text-gray-500'}`}>
                       {textContent.length}/500 characters
@@ -299,49 +433,136 @@ export default function StartPage() {
           {/* Step 2: Category */}
           {step === 2 && (
             <>
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">What type of feedback?</h2>
-              <div className="grid grid-cols-2 gap-4">
+              {/* Progress Indicator */}
+              <div className="text-center mb-6">
+                <p className="text-sm text-gray-500 mb-2">
+                  {mediaType === 'photo' ? 'Photo uploaded' : 'Text ready'} ✓
+                </p>
+                <h2 className="text-2xl font-bold text-gray-900">Choose your feedback type</h2>
+                <p className="text-gray-600 mt-2">Select the area where you'd like expert guidance</p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 {categories.map((cat) => {
                   const Icon = cat.icon;
+                  const isSelected = category === cat.id;
+                  
                   return (
-                    <button
-                      key={cat.id}
-                      onClick={() => handleCategorySelect(cat.id)}
-                      className="p-4 rounded-lg border-2 border-gray-200 hover:border-indigo-500 transition cursor-pointer text-left"
-                    >
-                      <Icon className="h-8 w-8 mb-2 text-indigo-600" />
-                      <h4 className="font-semibold">{cat.label}</h4>
-                      <p className="text-sm text-gray-600 mt-1">{cat.description}</p>
-                    </button>
+                    <div key={cat.id} className="relative">
+                      <button
+                        onClick={() => setCategory(cat.id)}
+                        className={`w-full p-6 rounded-xl border-2 transition-all cursor-pointer text-left ${
+                          isSelected 
+                            ? 'border-indigo-500 bg-indigo-50 shadow-md' 
+                            : 'border-gray-200 hover:border-indigo-300 hover:bg-gray-50'
+                        }`}
+                      >
+                        <div className="flex items-start gap-4">
+                          <Icon className={`h-8 w-8 mt-1 ${isSelected ? 'text-indigo-600' : 'text-gray-600'}`} />
+                          <div>
+                            <h4 className={`font-semibold text-lg ${isSelected ? 'text-indigo-900' : 'text-gray-900'}`}>
+                              {cat.label}
+                            </h4>
+                            <p className={`text-sm mt-1 ${isSelected ? 'text-indigo-700' : 'text-gray-600'}`}>
+                              {cat.description}
+                            </p>
+                            {isSelected && (
+                              <div className="mt-3 p-3 bg-white rounded-lg border border-indigo-200">
+                                <p className="text-sm text-indigo-800 font-medium">✓ Selected</p>
+                                <p className="text-xs text-indigo-600 mt-1">Our {cat.label.toLowerCase()} experts are ready</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </button>
+                    </div>
                   );
                 })}
               </div>
-              <button
-                onClick={() => setStep(1)}
-                className="mt-6 text-gray-500 hover:text-gray-700 cursor-pointer"
-              >
-                Back
-              </button>
+
+              {/* Show judge preview after category selection */}
+              {category && (
+                <div className="mb-6 p-4 bg-gray-50 rounded-xl border">
+                  <h4 className="font-semibold text-gray-900 mb-3 text-center">
+                    Your {category} expert will be:
+                  </h4>
+                  <JudgePreview judges={mockJudges} category={category} />
+                </div>
+              )}
+
+              <div className="flex justify-between">
+                <button
+                  onClick={() => setStep(1)}
+                  className="flex items-center gap-2 px-4 py-2 text-gray-500 hover:text-gray-700 transition"
+                >
+                  ← Back to upload
+                </button>
+                {category && (
+                  <button
+                    onClick={() => setStep(3)}
+                    className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium"
+                  >
+                    Choose judges →
+                  </button>
+                )}
+              </div>
             </>
           )}
 
-          {/* Step 3: Context */}
+          {/* Step 3: Judge Selection */}
           {step === 3 && (
             <>
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Add context</h2>
+              <div className="text-center mb-6">
+                <p className="text-sm text-gray-500 mb-2">
+                  {mediaType === 'photo' ? 'Photo' : 'Text'} ready ✓ • {category} feedback selected ✓
+                </p>
+                <h2 className="text-2xl font-bold text-gray-900">Choose Your Judges</h2>
+                <p className="text-gray-600 mt-2">Select the type of people you want feedback from</p>
+              </div>
+
+              <JudgePreferences 
+                category={category}
+                onPreferencesChange={(prefs) => {
+                  setJudgePreferences(prefs);
+                  setStep(4);
+                }}
+              />
+
+              <div className="flex justify-between mt-6">
+                <button
+                  onClick={() => setStep(2)}
+                  className="flex items-center gap-2 px-4 py-2 text-gray-500 hover:text-gray-700 transition"
+                >
+                  ← Back to category
+                </button>
+              </div>
+            </>
+          )}
+
+          {/* Step 4: Context */}
+          {step === 4 && (
+            <>
+              {/* Progress Summary */}
+              <div className="text-center mb-6">
+                <p className="text-sm text-gray-500 mb-2">
+                  {mediaType === 'photo' ? 'Photo' : 'Text'} ready ✓ • {category} feedback selected ✓ • Judges selected ✓
+                </p>
+                <h2 className="text-2xl font-bold text-gray-900">Add context for better feedback</h2>
+                <p className="text-gray-600 mt-2">Help experts understand your specific situation</p>
+              </div>
 
               {/* Subcategory */}
               {subcategories[category] && (
                 <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Subcategory (optional)
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    More specific area (optional)
                   </label>
                   <div className="flex flex-wrap gap-2">
                     {subcategories[category].map((sub) => (
                       <button
                         key={sub}
                         onClick={() => setSubcategory(sub)}
-                        className={`px-4 py-2 rounded-full text-sm font-medium transition cursor-pointer ${
+                        className={`px-4 py-2 rounded-full text-sm font-medium transition cursor-pointer capitalize ${
                           subcategory === sub
                             ? 'bg-indigo-600 text-white'
                             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -354,47 +575,88 @@ export default function StartPage() {
                 </div>
               )}
 
-              {/* Context */}
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  What&apos;s this for? (helps judges give relevant feedback)
+              {/* Context Input - Focused and Clear */}
+              <div className="mb-8">
+                <label className="block text-lg font-medium text-gray-900 mb-3">
+                  What's this for?
                 </label>
                 <textarea
                   value={context}
                   onChange={(e) => setContext(e.target.value)}
-                  placeholder="e.g., 'Job interview at a tech company' or 'First date at a coffee shop'"
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  rows={3}
+                  placeholder={`e.g., "${category === 'appearance' ? 'Job interview at a tech startup next week' : 
+                    category === 'profile' ? 'Updating LinkedIn for career change to marketing' :
+                    category === 'writing' ? 'Follow-up email to potential client after meeting' :
+                    'Choosing between two apartments in different neighborhoods'
+                  }"`}
+                  className="w-full p-4 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-lg"
+                  rows={5}
                 />
-                <p className="text-sm text-gray-500 mt-1">
-                  {context.length}/500 characters (minimum 20)
-                </p>
+                <div className="flex justify-between items-center mt-3">
+                  <p className={`text-sm ${context.length < 20 ? 'text-red-500' : 'text-gray-500'}`}>
+                    {context.length}/500 characters {context.length < 20 ? '(minimum 20)' : '✓'}
+                  </p>
+                  {context.length >= 20 && (
+                    <p className="text-sm text-green-600 font-medium">
+                      Context looks good!
+                    </p>
+                  )}
+                </div>
               </div>
 
-              <div className="flex justify-between">
+              {/* Show simple context quality tip only after good length */}
+              {context.length >= 20 && context.length < 80 && (
+                <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <p className="text-blue-800 text-sm font-medium mb-1">💡 Tip for better feedback</p>
+                  <p className="text-blue-700 text-sm">
+                    Add more details about your goal, audience, or timeline for more specific advice.
+                  </p>
+                </div>
+              )}
+
+              {/* Personalization Engine - Show after context is ready */}
+              {context.length >= 40 && (
+                <div className="mb-8">
+                  <PersonalizationEngine 
+                    category={category}
+                    mediaType={mediaType}
+                    context={context}
+                  />
+                </div>
+              )}
+
+              <div className="flex justify-between items-center">
                 <button
-                  onClick={() => setStep(2)}
-                  className="text-gray-500 hover:text-gray-700 cursor-pointer"
+                  onClick={() => setStep(3)}
+                  className="flex items-center gap-2 px-4 py-2 text-gray-500 hover:text-gray-700 transition"
                 >
-                  Back
+                  ← Back to judges
                 </button>
-                <button
-                  onClick={handleSubmit}
-                  disabled={submitting || context.length < 20}
-                  className={`px-8 py-3 rounded-lg font-semibold transition cursor-pointer ${
-                    submitting || context.length < 20
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      : 'bg-indigo-600 text-white hover:bg-indigo-700'
-                  }`}
-                >
-                  {submitting
-                    ? uploading
-                      ? 'Uploading...'
-                      : 'Creating...'
-                    : user
-                    ? 'Get 10 Verdicts'
-                    : 'Sign up to continue'}
-                </button>
+                
+                <div className="flex items-center gap-4">
+                  {context.length >= 20 && !submitting && (
+                    <div className="text-right">
+                      <p className="text-sm text-gray-600">Ready to submit</p>
+                      <p className="text-xs text-gray-500">Get feedback in ~30 minutes</p>
+                    </div>
+                  )}
+                  <button
+                    onClick={handleSubmit}
+                    disabled={submitting || context.length < 20}
+                    className={`px-8 py-3 rounded-xl font-semibold transition cursor-pointer text-lg ${
+                      submitting || context.length < 20
+                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg'
+                    }`}
+                  >
+                    {submitting
+                      ? uploading
+                        ? 'Uploading...'
+                        : 'Creating request...'
+                      : user
+                      ? `Get ${category} feedback`
+                      : 'Sign up & get feedback'}
+                  </button>
+                </div>
               </div>
             </>
           )}

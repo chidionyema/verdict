@@ -6,6 +6,28 @@ export async function middleware(request: NextRequest) {
     request,
   });
 
+  // Add security headers
+  supabaseResponse.headers.set('X-DNS-Prefetch-Control', 'on');
+  supabaseResponse.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
+  supabaseResponse.headers.set('X-Frame-Options', 'DENY');
+  supabaseResponse.headers.set('X-Content-Type-Options', 'nosniff');
+  supabaseResponse.headers.set('Referrer-Policy', 'origin-when-cross-origin');
+  
+  // Add performance headers
+  supabaseResponse.headers.set('X-Response-Time', Date.now().toString());
+  
+  // Add cache headers for static assets
+  if (request.nextUrl.pathname.startsWith('/_next/static/')) {
+    supabaseResponse.headers.set('Cache-Control', 'public, max-age=31536000, immutable');
+  }
+  
+  // Add CORS headers for API routes
+  if (request.nextUrl.pathname.startsWith('/api/')) {
+    supabaseResponse.headers.set('Access-Control-Allow-Origin', process.env.NEXT_PUBLIC_APP_URL || '*');
+    supabaseResponse.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    supabaseResponse.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  }
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -21,6 +43,15 @@ export async function middleware(request: NextRequest) {
           supabaseResponse = NextResponse.next({
             request,
           });
+          
+          // Reapply headers after creating new response
+          supabaseResponse.headers.set('X-DNS-Prefetch-Control', 'on');
+          supabaseResponse.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
+          supabaseResponse.headers.set('X-Frame-Options', 'DENY');
+          supabaseResponse.headers.set('X-Content-Type-Options', 'nosniff');
+          supabaseResponse.headers.set('Referrer-Policy', 'origin-when-cross-origin');
+          supabaseResponse.headers.set('X-Response-Time', Date.now().toString());
+          
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options)
           );

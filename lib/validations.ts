@@ -9,7 +9,7 @@ export type Category = (typeof CATEGORIES)[number];
 export type Tone = (typeof TONES)[number];
 
 // Simple banned words list (expand as needed)
-const BANNED_WORDS = [
+const BANNED_WORDS: string[] = [
   // Add slurs and obviously inappropriate terms
   // Keeping minimal for MVP
 ];

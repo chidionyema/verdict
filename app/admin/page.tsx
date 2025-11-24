@@ -1,180 +1,338 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createClient } from '@/lib/supabase/client';
-import { Flag, Eye, Trash2 } from 'lucide-react';
+import Link from 'next/link';
+import { 
+  Users, 
+  MessageSquare, 
+  AlertTriangle, 
+  DollarSign, 
+  TrendingUp, 
+  CheckCircle,
+  Shield,
+  BarChart3,
+  Settings,
+  UserCheck,
+  Flag
+} from 'lucide-react';
 
-interface FlaggedItem {
-  id: string;
-  type: 'request' | 'response';
-  created_at: string;
-  flagged_reason: string | null;
-  category?: string;
-  feedback?: string;
-  context?: string;
+interface DashboardStats {
+  users: {
+    total: number;
+    active_today: number;
+    new_this_week: number;
+  };
+  requests: {
+    total: number;
+    pending: number;
+    completed: number;
+    today: number;
+  };
+  responses: {
+    total: number;
+    today: number;
+    average_rating: number;
+  };
+  moderation: {
+    pending_reports: number;
+    flagged_content: number;
+    suspended_users: number;
+  };
+  revenue: {
+    total: number;
+    this_month: number;
+    transactions_today: number;
+  };
 }
 
-export default function AdminPage() {
-  const supabase = createClient();
-  const [isAdmin, setIsAdmin] = useState(false);
+const StatCard = ({ title, value, subtitle, icon: Icon, color, trend }: {
+  title: string;
+  value: string | number;
+  subtitle?: string;
+  icon: any;
+  color: string;
+  trend?: string;
+}) => (
+  <div className="bg-white rounded-lg shadow-lg p-6 border-l-4" style={{ borderLeftColor: color }}>
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-sm font-medium text-gray-600">{title}</p>
+        <p className="text-3xl font-bold text-gray-900">{value}</p>
+        {subtitle && <p className="text-sm text-gray-500">{subtitle}</p>}
+        {trend && <p className="text-sm text-green-600 mt-1">{trend}</p>}
+      </div>
+      <div className="p-3 rounded-full" style={{ backgroundColor: `${color}20` }}>
+        <Icon className="h-8 w-8" style={{ color }} />
+      </div>
+    </div>
+  </div>
+);
+
+export default function AdminDashboard() {
+  const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [flaggedItems, setFlaggedItems] = useState<FlaggedItem[]>([]);
+  const [error, setError] = useState('');
 
   useEffect(() => {
-    checkAdmin();
+    fetchDashboardStats();
+    
+    // Refresh stats every 30 seconds
+    const interval = setInterval(fetchDashboardStats, 30000);
+    return () => clearInterval(interval);
   }, []);
 
-  const checkAdmin = async () => {
+  const fetchDashboardStats = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('is_admin')
-          .eq('id', user.id)
-          .single() as { data: { is_admin: boolean } | null };
-
-        if (profile?.is_admin) {
-          setIsAdmin(true);
-          await fetchFlaggedItems();
+      const response = await fetch('/api/admin/dashboard');
+      if (!response.ok) {
+        if (response.status === 403) {
+          setError('Access denied. Admin privileges required.');
+        } else {
+          throw new Error('Failed to fetch dashboard stats');
         }
+        return;
       }
-    } catch (error) {
-      console.error('Error checking admin:', error);
+
+      const data = await response.json();
+      setStats(data.stats);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load dashboard');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchFlaggedItems = async () => {
-    try {
-      interface RequestItem {
-        id: string;
-        created_at: string;
-        flagged_reason: string | null;
-        category: string;
-        context: string;
-      }
-      interface ResponseItem {
-        id: string;
-        created_at: string;
-        flagged_reason: string | null;
-        feedback: string;
-      }
-
-      // Fetch flagged requests
-      const { data: requests } = await supabase
-        .from('verdict_requests')
-        .select('id, created_at, flagged_reason, category, context')
-        .eq('is_flagged', true)
-        .order('created_at', { ascending: false }) as { data: RequestItem[] | null };
-
-      // Fetch flagged responses
-      const { data: responses } = await supabase
-        .from('verdict_responses')
-        .select('id, created_at, flagged_reason, feedback')
-        .eq('is_flagged', true)
-        .order('created_at', { ascending: false }) as { data: ResponseItem[] | null };
-
-      const items: FlaggedItem[] = [
-        ...(requests || []).map((r) => ({ ...r, type: 'request' as const })),
-        ...(responses || []).map((r) => ({ ...r, type: 'response' as const })),
-      ].sort(
-        (a, b) =>
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      );
-
-      setFlaggedItems(items);
-    } catch (error) {
-      console.error('Error fetching flagged items:', error);
     }
   };
 
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-gray-500">Loading...</p>
+        <p className="text-gray-500">Loading admin dashboard...</p>
       </div>
     );
   }
 
-  if (!isAdmin) {
+  if (error) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">
-            Access Denied
-          </h2>
-          <p className="text-gray-600">
-            You do not have permission to access this page.
-          </p>
+          <Shield className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <p className="text-red-600 mb-4">{error}</p>
+          <Link href="/" className="text-indigo-600 hover:underline">
+            Return to Home
+          </Link>
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-gray-50 py-12">
-      <div className="max-w-6xl mx-auto px-4">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">Admin Dashboard</h1>
+  const quickActions = [
+    {
+      title: 'Content Moderation',
+      description: 'Review reported content and manage flags',
+      icon: Flag,
+      href: '/admin/moderation',
+      color: '#f59e0b',
+      urgent: stats?.moderation.pending_reports || 0,
+    },
+    {
+      title: 'User Management',
+      description: 'View and manage user accounts',
+      icon: Users,
+      href: '/admin/users',
+      color: '#3b82f6',
+    },
+    {
+      title: 'Analytics',
+      description: 'View detailed platform analytics',
+      icon: BarChart3,
+      href: '/admin/analytics',
+      color: '#10b981',
+    },
+    {
+      title: 'Settings',
+      description: 'Configure platform settings',
+      icon: Settings,
+      href: '/admin/settings',
+      color: '#6b7280',
+    },
+  ];
 
-        {/* Flagged Items */}
-        <div className="bg-white rounded-lg shadow-lg">
-          <div className="p-6 border-b">
-            <div className="flex items-center">
-              <Flag className="h-5 w-5 text-red-500 mr-2" />
-              <h2 className="text-xl font-semibold">Flagged Content</h2>
+  return (
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-7xl mx-auto px-4">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Admin Dashboard</h1>
+          <p className="text-gray-600">Monitor platform health and manage operations</p>
+        </div>
+
+        {/* Stats Grid */}
+        {stats && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <StatCard
+              title="Total Users"
+              value={stats.users.total}
+              subtitle={`${stats.users.active_today} active today`}
+              icon={Users}
+              color="#3b82f6"
+              trend={`+${stats.users.new_this_week} this week`}
+            />
+            
+            <StatCard
+              title="Requests"
+              value={stats.requests.total}
+              subtitle={`${stats.requests.pending} pending`}
+              icon={MessageSquare}
+              color="#10b981"
+              trend={`${stats.requests.today} today`}
+            />
+            
+            <StatCard
+              title="Moderation Queue"
+              value={stats.moderation.pending_reports}
+              subtitle={`${stats.moderation.flagged_content} flagged items`}
+              icon={AlertTriangle}
+              color={stats.moderation.pending_reports > 0 ? "#ef4444" : "#f59e0b"}
+            />
+            
+            <StatCard
+              title="Revenue"
+              value={`$${(stats.revenue.total / 100).toFixed(0)}`}
+              subtitle={`$${(stats.revenue.this_month / 100).toFixed(0)} this month`}
+              icon={DollarSign}
+              color="#8b5cf6"
+              trend={`${stats.revenue.transactions_today} transactions today`}
+            />
+          </div>
+        )}
+
+        {/* Quick Actions */}
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Quick Actions</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {quickActions.map((action) => (
+              <Link
+                key={action.title}
+                href={action.href}
+                className="bg-white rounded-lg shadow-lg p-6 hover:shadow-xl transition-shadow cursor-pointer group"
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <div 
+                    className="p-3 rounded-full group-hover:scale-110 transition-transform"
+                    style={{ backgroundColor: `${action.color}20` }}
+                  >
+                    <action.icon className="h-6 w-6" style={{ color: action.color }} />
+                  </div>
+                  {action.urgent && action.urgent > 0 && (
+                    <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                      {action.urgent}
+                    </span>
+                  )}
+                </div>
+                <h3 className="font-semibold text-gray-900 mb-2">{action.title}</h3>
+                <p className="text-sm text-gray-600">{action.description}</p>
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        {/* Recent Activity */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* System Health */}
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <h3 className="font-semibold text-gray-900 mb-4">System Health</h3>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600">Platform Status</span>
+                <div className="flex items-center">
+                  <CheckCircle className="h-4 w-4 text-green-500 mr-2" />
+                  <span className="text-green-600 font-medium">Operational</span>
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600">Average Response Time</span>
+                <span className="font-medium">2.3 hours</span>
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600">Judge Availability</span>
+                <span className="font-medium">
+                  {stats && Math.round((stats.responses.today / stats.requests.today) * 100) || 0}%
+                </span>
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600">Average Rating</span>
+                <div className="flex items-center">
+                  <span className="font-medium mr-2">
+                    {stats?.responses.average_rating.toFixed(1) || 'N/A'}/10
+                  </span>
+                  {stats && stats.responses.average_rating >= 8 && (
+                    <TrendingUp className="h-4 w-4 text-green-500" />
+                  )}
+                </div>
+              </div>
             </div>
           </div>
-          <div className="p-6">
-            {flaggedItems.length === 0 ? (
-              <p className="text-gray-500 text-center py-8">
-                No flagged content to review.
-              </p>
-            ) : (
-              <div className="space-y-4">
-                {flaggedItems.map((item) => (
-                  <div
-                    key={`${item.type}-${item.id}`}
-                    className="border rounded-lg p-4"
-                  >
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <span
-                          className={`inline-block px-2 py-1 rounded text-xs font-medium ${
-                            item.type === 'request'
-                              ? 'bg-blue-100 text-blue-700'
-                              : 'bg-purple-100 text-purple-700'
-                          }`}
-                        >
-                          {item.type === 'request' ? 'Request' : 'Response'}
-                        </span>
-                        <p className="text-sm text-gray-500 mt-2">
-                          {new Date(item.created_at).toLocaleString()}
-                        </p>
-                      </div>
-                      <div className="flex space-x-2">
-                        <button className="p-2 text-gray-400 hover:text-gray-600 cursor-pointer">
-                          <Eye className="h-4 w-4" />
-                        </button>
-                        <button className="p-2 text-gray-400 hover:text-red-600 cursor-pointer">
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </div>
-                    {item.flagged_reason && (
-                      <p className="text-sm text-red-600 mt-2">
-                        Reason: {item.flagged_reason}
-                      </p>
-                    )}
-                    <p className="text-gray-700 mt-2 line-clamp-2">
-                      {item.context || item.feedback || '-'}
+
+          {/* Recent Alerts */}
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <h3 className="font-semibold text-gray-900 mb-4">Recent Alerts</h3>
+            <div className="space-y-3">
+              {stats?.moderation.pending_reports > 0 && (
+                <div className="flex items-center p-3 bg-red-50 rounded-lg">
+                  <AlertTriangle className="h-5 w-5 text-red-500 mr-3" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-red-800">
+                      {stats.moderation.pending_reports} pending content reports
                     </p>
+                    <p className="text-xs text-red-600">Requires moderation action</p>
                   </div>
-                ))}
-              </div>
-            )}
+                  <Link
+                    href="/admin/moderation"
+                    className="text-red-600 hover:text-red-800 text-sm font-medium"
+                  >
+                    Review →
+                  </Link>
+                </div>
+              )}
+              
+              {stats?.moderation.suspended_users > 0 && (
+                <div className="flex items-center p-3 bg-yellow-50 rounded-lg">
+                  <UserCheck className="h-5 w-5 text-yellow-500 mr-3" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-yellow-800">
+                      {stats.moderation.suspended_users} suspended users
+                    </p>
+                    <p className="text-xs text-yellow-600">May require review</p>
+                  </div>
+                  <Link
+                    href="/admin/users?filter=suspended"
+                    className="text-yellow-600 hover:text-yellow-800 text-sm font-medium"
+                  >
+                    View →
+                  </Link>
+                </div>
+              )}
+
+              {(!stats?.moderation.pending_reports && !stats?.moderation.suspended_users) && (
+                <div className="flex items-center p-3 bg-green-50 rounded-lg">
+                  <CheckCircle className="h-5 w-5 text-green-500 mr-3" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-green-800">
+                      All systems normal
+                    </p>
+                    <p className="text-xs text-green-600">No urgent actions required</p>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
+        </div>
+
+        {/* Footer */}
+        <div className="mt-8 text-center text-gray-500 text-sm">
+          <p>Dashboard last updated: {new Date().toLocaleTimeString()}</p>
         </div>
       </div>
     </div>

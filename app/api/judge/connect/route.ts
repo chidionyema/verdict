@@ -1,0 +1,246 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@/lib/supabase/server';
+import Stripe from 'stripe';
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: '2024-06-20',
+});
+
+export async function GET(request: NextRequest) {
+  try {
+    const supabase = createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Verify user is a judge
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('is_judge, email, full_name')
+      .eq('id', user.id)
+      .single();
+
+    if (!profile?.is_judge) {
+      return NextResponse.json({ error: 'Access denied. Judge account required.' }, { status: 403 });
+    }
+
+    // Check if already has connect account
+    const { data: existingAccount } = await supabase
+      .from('judge_payout_accounts')
+      .select('*')
+      .eq('judge_id', user.id)
+      .single();
+
+    if (existingAccount) {
+      // Return existing account info
+      try {
+        const account = await stripe.accounts.retrieve(existingAccount.stripe_account_id);
+        return NextResponse.json({
+          account: existingAccount,
+          stripe_account: {
+            id: account.id,
+            details_submitted: account.details_submitted,
+            charges_enabled: account.charges_enabled,
+            payouts_enabled: account.payouts_enabled,
+            verification: account.requirements,
+          },
+        });
+      } catch (stripeError) {
+        console.warn('Failed to fetch Stripe account:', stripeError);
+        return NextResponse.json({ account: existingAccount });
+      }
+    }
+
+    return NextResponse.json({ 
+      account: null,
+      message: 'No payout account found. Use POST to create one.',
+    });
+
+  } catch (error) {
+    console.error('Connect account fetch error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const supabase = createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Verify user is a judge
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('is_judge, email, full_name')
+      .eq('id', user.id)
+      .single();
+
+    if (!profile?.is_judge) {
+      return NextResponse.json({ error: 'Access denied. Judge account required.' }, { status: 403 });
+    }
+
+    // Check if already has connect account
+    const { data: existingAccount } = await supabase
+      .from('judge_payout_accounts')
+      .select('*')
+      .eq('judge_id', user.id)
+      .single();
+
+    if (existingAccount) {
+      return NextResponse.json({ 
+        error: 'Payout account already exists',
+        account: existingAccount,
+      }, { status: 400 });
+    }
+
+    try {
+      // Create Stripe Connect Express account
+      const account = await stripe.accounts.create({
+        type: 'express',
+        country: 'US', // TODO: Make this configurable
+        email: profile.email,
+        business_profile: {
+          name: profile.full_name || undefined,
+          product_description: 'Verdict judging services',
+        },
+        capabilities: {
+          card_payments: { requested: true },
+          transfers: { requested: true },
+        },
+        metadata: {
+          judge_id: user.id,
+          platform: 'verdict',
+        },
+      });
+
+      // Create onboarding link
+      const accountLink = await stripe.accountLinks.create({
+        account: account.id,
+        refresh_url: `${process.env.NEXT_PUBLIC_APP_URL}/judge/earnings?setup=refresh`,
+        return_url: `${process.env.NEXT_PUBLIC_APP_URL}/judge/earnings?setup=complete`,
+        type: 'account_onboarding',
+      });
+
+      // Save account to database
+      const { data: payoutAccount, error: dbError } = await supabase
+        .from('judge_payout_accounts')
+        .insert({
+          judge_id: user.id,
+          stripe_account_id: account.id,
+          account_type: 'express',
+          charges_enabled: account.charges_enabled,
+          payouts_enabled: account.payouts_enabled,
+          details_submitted: account.details_submitted,
+          country: 'US',
+          onboarding_link: accountLink.url,
+          onboarding_expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24 hours
+        })
+        .select()
+        .single();
+
+      if (dbError) {
+        console.error('Error saving payout account:', dbError);
+        // Clean up Stripe account if database save fails
+        await stripe.accounts.del(account.id);
+        return NextResponse.json({ error: 'Failed to save payout account' }, { status: 500 });
+      }
+
+      return NextResponse.json({
+        account: payoutAccount,
+        onboarding_url: accountLink.url,
+        message: 'Payout account created. Please complete onboarding.',
+      });
+
+    } catch (stripeError: any) {
+      console.error('Stripe Connect account creation error:', stripeError);
+      return NextResponse.json({ 
+        error: 'Failed to create payout account',
+        details: stripeError.message,
+      }, { status: 500 });
+    }
+
+  } catch (error) {
+    console.error('Connect account creation error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  try {
+    const supabase = createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Get existing account
+    const { data: payoutAccount } = await supabase
+      .from('judge_payout_accounts')
+      .select('*')
+      .eq('judge_id', user.id)
+      .single();
+
+    if (!payoutAccount) {
+      return NextResponse.json({ error: 'Payout account not found' }, { status: 404 });
+    }
+
+    // Refresh account data from Stripe
+    const account = await stripe.accounts.retrieve(payoutAccount.stripe_account_id);
+
+    // Update database with latest info
+    const { error } = await supabase
+      .from('judge_payout_accounts')
+      .update({
+        charges_enabled: account.charges_enabled,
+        payouts_enabled: account.payouts_enabled,
+        details_submitted: account.details_submitted,
+        requirements: account.requirements,
+        verification_status: account.details_submitted ? 'verified' : 'pending',
+      })
+      .eq('id', payoutAccount.id);
+
+    if (error) {
+      console.error('Error updating payout account:', error);
+      return NextResponse.json({ error: 'Failed to update account' }, { status: 500 });
+    }
+
+    // Create new onboarding link if needed
+    let onboardingUrl = null;
+    if (!account.details_submitted) {
+      const accountLink = await stripe.accountLinks.create({
+        account: account.id,
+        refresh_url: `${process.env.NEXT_PUBLIC_APP_URL}/judge/earnings?setup=refresh`,
+        return_url: `${process.env.NEXT_PUBLIC_APP_URL}/judge/earnings?setup=complete`,
+        type: 'account_onboarding',
+      });
+      onboardingUrl = accountLink.url;
+    }
+
+    return NextResponse.json({
+      account: {
+        ...payoutAccount,
+        charges_enabled: account.charges_enabled,
+        payouts_enabled: account.payouts_enabled,
+        details_submitted: account.details_submitted,
+      },
+      onboarding_url: onboardingUrl,
+      stripe_account: {
+        id: account.id,
+        details_submitted: account.details_submitted,
+        charges_enabled: account.charges_enabled,
+        payouts_enabled: account.payouts_enabled,
+        verification: account.requirements,
+      },
+    });
+
+  } catch (error) {
+    console.error('Connect account refresh error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}

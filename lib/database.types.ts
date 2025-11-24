@@ -23,6 +23,8 @@ export interface Database {
           gender: 'male' | 'female' | 'nonbinary' | 'prefer_not_say' | null;
           avatar_url: string | null;
           credits: number;
+          onboarding_completed: boolean;
+          judge_qualification_date: string | null;
         };
         Insert: {
           id: string;
@@ -37,6 +39,8 @@ export interface Database {
           gender?: 'male' | 'female' | 'nonbinary' | 'prefer_not_say' | null;
           avatar_url?: string | null;
           credits?: number;
+          onboarding_completed?: boolean;
+          judge_qualification_date?: string | null;
         };
         Update: {
           id?: string;
@@ -51,6 +55,8 @@ export interface Database {
           gender?: 'male' | 'female' | 'nonbinary' | 'prefer_not_say' | null;
           avatar_url?: string | null;
           credits?: number;
+          onboarding_completed?: boolean;
+          judge_qualification_date?: string | null;
         };
       };
       verdict_requests: {

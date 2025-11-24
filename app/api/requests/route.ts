@@ -8,7 +8,10 @@ import {
 
 // GET /api/requests - List current user's requests
 export async function GET(request: NextRequest) {
+  const startTime = performance.now();
   try {
+    console.log('GET /api/requests: Starting...');
+    
     const supabase = await createClient();
 
     const {
@@ -17,39 +20,57 @@ export async function GET(request: NextRequest) {
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
+      console.log('GET /api/requests: Auth failed', authError?.message);
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    console.log('GET /api/requests: User authenticated:', user.id);
 
     const searchParams = request.nextUrl.searchParams;
     const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 50);
     const offset = parseInt(searchParams.get('offset') || '0');
 
+    console.log('GET /api/requests: Query params', { limit, offset });
+
     const { data: requests, error } = await supabase
       .from('verdict_requests')
-      .select('*')
+      .select('id, category, subcategory, media_type, media_url, text_content, context, status, target_verdict_count, received_verdict_count, created_at')
       .eq('user_id', user.id)
       .is('deleted_at', null)
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
 
+    console.log('GET /api/requests: Query result', { 
+      requestCount: requests?.length, 
+      error: error?.message 
+    });
+
     if (error) {
-      console.error('Fetch requests error:', error);
-      return NextResponse.json(
-        { error: 'Failed to fetch requests' },
-        { status: 500 }
-      );
+      console.error('GET /api/requests: Database error:', error);
+      return NextResponse.json({ 
+        error: 'Database error', 
+        details: error.message 
+      }, { status: 500 });
     }
 
-    return NextResponse.json({ requests });
+    console.log('GET /api/requests: Returning success with', requests?.length, 'requests');
+    const response = NextResponse.json({ requests: requests || [] });
+    response.headers.set('X-Response-Time', `${Math.round(performance.now() - startTime)}ms`);
+    return response;
+
   } catch (error) {
-    console.error('GET /api/requests error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error('GET /api/requests: Catch error:', error);
+    return NextResponse.json({ 
+      error: 'Internal server error',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
   }
 }
 
 // POST /api/requests - Create a new verdict request
 export async function POST(request: NextRequest) {
   try {
+
     const supabase = await createClient();
 
     const {
@@ -98,14 +119,39 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check user credits (for MVP, we give 3 free credits on signup)
-    const { data: profile } = await supabase
+    // Ensure profile exists and has credits
+    let { data: profile } = await supabase
       .from('profiles')
       .select('credits')
       .eq('id', user.id)
       .single();
 
-    if (!profile || profile.credits < 1) {
+    // Create profile if it doesn't exist (clean application-level approach)
+    if (!profile) {
+      const { data: newProfile, error: createError } = await supabase
+        .from('profiles')
+        .insert({
+          id: user.id,
+          email: user.email,
+          display_name: user.email?.split('@')[0] || 'User',
+          credits: 3,
+          is_judge: false,
+          is_admin: false
+        })
+        .select('credits')
+        .single();
+
+      if (createError) {
+        console.error('Profile creation error:', createError);
+        return NextResponse.json(
+          { error: 'Failed to create user profile' },
+          { status: 500 }
+        );
+      }
+      profile = newProfile;
+    }
+
+    if (profile.credits < 1) {
       return NextResponse.json(
         { error: 'Insufficient credits. Please purchase more.' },
         { status: 402 }
@@ -121,7 +167,12 @@ export async function POST(request: NextRequest) {
     if (creditError) {
       console.error('Credit deduction error:', creditError);
       return NextResponse.json(
-        { error: 'Failed to process request' },
+        { 
+          error: 'Failed to process request', 
+          details: creditError.message,
+          code: creditError.code,
+          hint: creditError.hint
+        },
         { status: 500 }
       );
     }
@@ -137,7 +188,7 @@ export async function POST(request: NextRequest) {
         media_url: media_type === 'photo' ? media_url : null,
         text_content: media_type === 'text' ? text_content : null,
         context,
-        status: 'open',
+        status: 'pending',
         target_verdict_count: 10,
         received_verdict_count: 0,
       })
@@ -156,6 +207,8 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    // No cache to invalidate
 
     return NextResponse.json({ request: newRequest }, { status: 201 });
   } catch (error) {
