@@ -40,9 +40,9 @@ export default function RequestDetailPage({
   useEffect(() => {
     fetchRequest();
 
-    // Poll for new verdicts if still open
+    // Poll for new verdicts if still in progress
     const interval = setInterval(() => {
-      if (request?.status === 'open') {
+      if (request?.status === 'in_progress' || request?.status === 'open') {
         fetchRequest();
       }
     }, 5000);
@@ -155,11 +155,11 @@ export default function RequestDetailPage({
             </Link>
             <div className="flex items-center gap-2">
               <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                request.status === 'open' ? 'bg-yellow-100 text-yellow-800' :
+                request.status === 'in_progress' || request.status === 'open' ? 'bg-yellow-100 text-yellow-800' :
                 request.status === 'closed' ? 'bg-green-100 text-green-800' :
                 'bg-gray-100 text-gray-800'
               }`}>
-                {request.status === 'open' ? 'In Progress' : 
+                {request.status === 'in_progress' || request.status === 'open' ? 'In Progress' : 
                  request.status === 'closed' ? 'Completed' : 'Cancelled'}
               </span>
             </div>
@@ -189,7 +189,7 @@ export default function RequestDetailPage({
             </div>
 
             <div className="flex items-center gap-3">
-              {request.status === 'open' && (
+              {(request.status === 'in_progress' || request.status === 'open') && (
                 <button
                   onClick={fetchRequest}
                   className="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-700 rounded-lg hover:bg-indigo-100 transition"
@@ -231,7 +231,7 @@ export default function RequestDetailPage({
         </div>
 
         {/* Progress */}
-        {request.status === 'open' && (
+        {(request.status === 'in_progress' || request.status === 'open') && (
           <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
             <div className="flex justify-between text-sm text-gray-600 mb-2">
               <span>
@@ -698,7 +698,7 @@ export default function RequestDetailPage({
         )}
 
         {/* Open Request Action */}
-        {request.status === 'open' && (
+        {(request.status === 'in_progress' || request.status === 'open') && (
           <div className="mt-12 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl p-8 border border-yellow-200 text-center">
             <Clock className="h-12 w-12 text-yellow-600 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-gray-900 mb-2">

@@ -4,9 +4,14 @@ import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
 import Stripe from 'stripe';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-06-20',
-});
+const getStripe = () => {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error('STRIPE_SECRET_KEY is not configured');
+  }
+  return new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: '2024-06-20',
+  });
+};
 
 const createPayoutSchema = z.object({
   amount_cents: z.number().min(1000), // Minimum $10 payout
@@ -171,7 +176,7 @@ export async function POST(request: NextRequest) {
 
     try {
       // Create Stripe transfer
-      const transfer = await stripe.transfers.create({
+      const transfer = await getStripe().transfers.create({
         amount: netAmount,
         currency: 'usd',
         destination: payoutAccount.stripe_account_id,

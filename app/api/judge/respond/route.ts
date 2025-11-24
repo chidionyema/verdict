@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
     // Increment received_verdict_count
     const newCount = verdictRequest.received_verdict_count + 1;
     const newStatus =
-      newCount >= verdictRequest.target_verdict_count ? 'closed' : 'open';
+      newCount >= verdictRequest.target_verdict_count ? 'closed' : 'in_progress';
 
     await supabase
       .from('verdict_requests')
@@ -139,6 +139,48 @@ export async function POST(request: NextRequest) {
         status: newStatus,
       })
       .eq('id', request_id);
+
+    // Create earnings record for the judge
+    const baseEarning = 0.50; // Base earning per verdict
+    const { error: earningsError } = await supabase
+      .from('judge_earnings')
+      .insert({
+        judge_id: user.id,
+        verdict_response_id: verdict.id,
+        amount: baseEarning,
+        payout_status: 'pending',
+      });
+
+    if (earningsError) {
+      console.error('Error creating earnings record:', earningsError);
+      // Don't fail the request if earnings creation fails, but log it
+    }
+
+    // Update verdict response with earning amount
+    await supabase
+      .from('verdict_responses')
+      .update({
+        judge_earning: baseEarning,
+      })
+      .eq('id', verdict.id);
+
+    // Create notification for the seeker
+    try {
+      await (supabase.rpc as any)('create_notification', {
+        target_user_id: verdictRequest.user_id,
+        notification_type: 'new_verdict',
+        notification_title: 'New verdict received!',
+        notification_message: `You've received a new verdict for your ${verdictRequest.category} request.`,
+        related_type: 'verdict_request',
+        related_id: request_id,
+        action_label: 'View Verdict',
+        action_url: `/requests/${request_id}`,
+        notification_priority: 'normal',
+      });
+    } catch (notifError) {
+      console.error('Error creating notification:', notifError);
+      // Don't fail if notification creation fails
+    }
 
     return NextResponse.json({ verdict }, { status: 201 });
   } catch (error) {

@@ -4,9 +4,14 @@ import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
 import Stripe from 'stripe';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-06-20',
-});
+const getStripe = () => {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error('STRIPE_SECRET_KEY is not configured');
+  }
+  return new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: '2024-06-20',
+  });
+};
 
 const cancelSubscriptionSchema = z.object({
   subscription_id: z.string().uuid(),
@@ -46,7 +51,7 @@ export async function GET(request: NextRequest) {
       subscriptions.map(async (sub) => {
         if (sub.status === 'active' || sub.status === 'trialing') {
           try {
-            const stripeSub = await stripe.subscriptions.retrieve(sub.stripe_subscription_id);
+            const stripeSub = await getStripe().subscriptions.retrieve(sub.stripe_subscription_id);
             return {
               ...sub,
               stripe_details: {
@@ -101,7 +106,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Cancel subscription in Stripe
-    const canceledSub = await stripe.subscriptions.update(subscription.stripe_subscription_id, {
+    const canceledSub = await getStripe().subscriptions.update(subscription.stripe_subscription_id, {
       cancel_at_period_end: !validated.cancel_immediately,
       ...(validated.cancel_immediately && { cancel_at: 'now' }),
     });
@@ -178,7 +183,7 @@ export async function PATCH(request: NextRequest) {
         }
 
         // Reactivate subscription in Stripe
-        result = await stripe.subscriptions.update(subscription.stripe_subscription_id, {
+        result = await getStripe().subscriptions.update(subscription.stripe_subscription_id, {
           cancel_at_period_end: false,
         });
 

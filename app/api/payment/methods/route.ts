@@ -4,9 +4,14 @@ import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
 import Stripe from 'stripe';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-06-20',
-});
+const getStripe = () => {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error('STRIPE_SECRET_KEY is not configured');
+  }
+  return new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: '2024-06-20',
+  });
+};
 
 const createPaymentMethodSchema = z.object({
   stripe_payment_method_id: z.string(),
@@ -66,7 +71,7 @@ export async function POST(request: NextRequest) {
     const validated = createPaymentMethodSchema.parse(body);
 
     // Get Stripe payment method details
-    const stripePaymentMethod = await stripe.paymentMethods.retrieve(
+    const stripePaymentMethod = await getStripe().paymentMethods.retrieve(
       validated.stripe_payment_method_id
     );
 
@@ -152,7 +157,7 @@ export async function DELETE(request: NextRequest) {
 
     // Detach from Stripe
     try {
-      await stripe.paymentMethods.detach(paymentMethod.stripe_payment_method_id);
+      await getStripe().paymentMethods.detach(paymentMethod.stripe_payment_method_id);
     } catch (stripeError) {
       console.warn('Failed to detach from Stripe:', stripeError);
       // Continue with deletion even if Stripe fails

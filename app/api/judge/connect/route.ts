@@ -3,9 +3,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import Stripe from 'stripe';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-06-20',
-});
+const getStripe = () => {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error('STRIPE_SECRET_KEY is not configured');
+  }
+  return new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: '2024-06-20',
+  });
+};
 
 export async function GET(request: NextRequest) {
   try {
@@ -37,7 +42,7 @@ export async function GET(request: NextRequest) {
     if (existingAccount) {
       // Return existing account info
       try {
-        const account = await stripe.accounts.retrieve(existingAccount.stripe_account_id);
+        const account = await getStripe().accounts.retrieve(existingAccount.stripe_account_id);
         return NextResponse.json({
           account: existingAccount,
           stripe_account: {
@@ -101,7 +106,7 @@ export async function POST(request: NextRequest) {
 
     try {
       // Create Stripe Connect Express account
-      const account = await stripe.accounts.create({
+      const account = await getStripe().accounts.create({
         type: 'express',
         country: 'US', // TODO: Make this configurable
         email: profile.email,
@@ -120,7 +125,7 @@ export async function POST(request: NextRequest) {
       });
 
       // Create onboarding link
-      const accountLink = await stripe.accountLinks.create({
+      const accountLink = await getStripe().accountLinks.create({
         account: account.id,
         refresh_url: `${process.env.NEXT_PUBLIC_APP_URL}/judge/earnings?setup=refresh`,
         return_url: `${process.env.NEXT_PUBLIC_APP_URL}/judge/earnings?setup=complete`,
@@ -147,7 +152,7 @@ export async function POST(request: NextRequest) {
       if (dbError) {
         console.error('Error saving payout account:', dbError);
         // Clean up Stripe account if database save fails
-        await stripe.accounts.del(account.id);
+        await getStripe().accounts.del(account.id);
         return NextResponse.json({ error: 'Failed to save payout account' }, { status: 500 });
       }
 
@@ -192,7 +197,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Refresh account data from Stripe
-    const account = await stripe.accounts.retrieve(payoutAccount.stripe_account_id);
+    const account = await getStripe().accounts.retrieve(payoutAccount.stripe_account_id);
 
     // Update database with latest info
     const { error } = await supabase
@@ -214,7 +219,7 @@ export async function PATCH(request: NextRequest) {
     // Create new onboarding link if needed
     let onboardingUrl = null;
     if (!account.details_submitted) {
-      const accountLink = await stripe.accountLinks.create({
+      const accountLink = await getStripe().accountLinks.create({
         account: account.id,
         refresh_url: `${process.env.NEXT_PUBLIC_APP_URL}/judge/earnings?setup=refresh`,
         return_url: `${process.env.NEXT_PUBLIC_APP_URL}/judge/earnings?setup=complete`,

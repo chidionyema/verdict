@@ -26,6 +26,13 @@ export default function JudgeDashboardPage() {
   const [queue, setQueue] = useState<QueueRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [toggling, setToggling] = useState(false);
+  const [stats, setStats] = useState({
+    verdicts_given: 0,
+    total_earnings: 0,
+    available_for_payout: 0,
+    average_quality_score: null as number | null,
+    recent_verdicts: 0,
+  });
 
   useEffect(() => {
     fetchData();
@@ -43,12 +50,19 @@ export default function JudgeDashboardPage() {
           .single() as { data: Profile | null };
         setProfile(profileData);
 
-        // Only fetch queue if judge
+        // Only fetch queue and stats if judge
         if (profileData?.is_judge) {
           const res = await fetch('/api/judge/queue');
           if (res.ok) {
             const { requests } = await res.json();
             setQueue(requests || []);
+          }
+
+          // Fetch judge stats
+          const statsRes = await fetch('/api/judge/stats');
+          if (statsRes.ok) {
+            const statsData = await statsRes.json();
+            setStats(statsData);
           }
         }
       }
@@ -222,8 +236,11 @@ export default function JudgeDashboardPage() {
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Earnings (Demo)</p>
-                <p className="text-2xl font-bold">$0.00</p>
+                <p className="text-sm text-gray-600">Total Earnings</p>
+                <p className="text-2xl font-bold">${stats.total_earnings.toFixed(2)}</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  ${stats.available_for_payout?.toFixed(2) || '0.00'} available
+                </p>
               </div>
               <DollarSign className="h-8 w-8 text-green-500" />
             </div>
@@ -232,7 +249,12 @@ export default function JudgeDashboardPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Quality Score</p>
-                <p className="text-2xl font-bold">-</p>
+                <p className="text-2xl font-bold">
+                  {stats.average_quality_score ? stats.average_quality_score.toFixed(1) : '-'}
+                </p>
+                {stats.average_quality_score && (
+                  <p className="text-xs text-gray-500 mt-1">Average rating</p>
+                )}
               </div>
               <Award className="h-8 w-8 text-indigo-500" />
             </div>
@@ -241,7 +263,12 @@ export default function JudgeDashboardPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Verdicts Given</p>
-                <p className="text-2xl font-bold">0</p>
+                <p className="text-2xl font-bold">{stats.verdicts_given}</p>
+                {stats.recent_verdicts > 0 && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    {stats.recent_verdicts} this week
+                  </p>
+                )}
               </div>
               <Clock className="h-8 w-8 text-blue-500" />
             </div>
@@ -314,6 +341,28 @@ export default function JudgeDashboardPage() {
                   ))}
                 </div>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* Past Verdicts Link */}
+        {profile?.is_judge && stats.verdicts_given > 0 && (
+          <div className="mt-8 bg-white rounded-lg shadow p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-1">
+                  View Your Past Verdicts
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Review all {stats.verdicts_given} verdict{stats.verdicts_given !== 1 ? 's' : ''} you've submitted
+                </p>
+              </div>
+              <button
+                onClick={() => router.push('/judge/my-verdicts')}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+              >
+                View All
+              </button>
             </div>
           </div>
         )}

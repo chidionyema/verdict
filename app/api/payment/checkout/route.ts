@@ -4,9 +4,14 @@ import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
 import Stripe from 'stripe';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-06-20',
-});
+const getStripe = () => {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error('STRIPE_SECRET_KEY is not configured');
+  }
+  return new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: '2024-06-20',
+  });
+};
 
 const checkoutSchema = z.object({
   type: z.enum(['credit_purchase', 'subscription']),
@@ -43,7 +48,7 @@ export async function POST(request: NextRequest) {
     // Create or get Stripe customer
     let customerId: string;
     
-    const existingCustomers = await stripe.customers.list({
+    const existingCustomers = await getStripe().customers.list({
       email: profile.email,
       limit: 1,
     });
@@ -51,7 +56,7 @@ export async function POST(request: NextRequest) {
     if (existingCustomers.data.length > 0) {
       customerId = existingCustomers.data[0].id;
     } else {
-      const customer = await stripe.customers.create({
+      const customer = await getStripe().customers.create({
         email: profile.email,
         name: profile.full_name || undefined,
         metadata: {
@@ -162,7 +167,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create Stripe Checkout Session
-    const session = await stripe.checkout.sessions.create(sessionConfig);
+    const session = await getStripe().checkout.sessions.create(sessionConfig);
 
     // Create transaction record
     await supabase

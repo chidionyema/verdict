@@ -76,12 +76,30 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { credits = 3 } = body;
+    const { credits = 3, action = 'add' } = body; // action can be 'add' or 'set'
+
+    // Get current credits
+    const { data: currentProfile, error: fetchError } = await supabase
+      .from('profiles')
+      .select('credits')
+      .eq('id', user.id)
+      .single();
+
+    if (fetchError || !currentProfile) {
+      return NextResponse.json({ 
+        error: 'Failed to fetch current credits', 
+        details: fetchError 
+      }, { status: 500 });
+    }
+
+    const newCredits = action === 'add' 
+      ? (currentProfile.credits || 0) + credits
+      : credits;
 
     // Update user's credits
-    const { data: updatedProfile, error: updateError } = await supabase
+    const { data: updatedProfile, error: updateError } = await (supabase
       .from('profiles')
-      .update({ credits: credits })
+      .update as any)({ credits: newCredits })
       .eq('id', user.id)
       .select()
       .single();
@@ -96,8 +114,12 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: `Credits updated to ${credits}`,
+      message: action === 'add' 
+        ? `Added ${credits} credits. New total: ${newCredits}` 
+        : `Credits set to ${newCredits}`,
       profile: updatedProfile,
+      previousCredits: currentProfile.credits,
+      newCredits: newCredits,
     });
 
   } catch (error) {

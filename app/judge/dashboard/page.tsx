@@ -1,10 +1,9 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useStore } from '@/lib/store';
-import { createClient } from '@/lib/supabase/client';
 import { DollarSign, TrendingUp, Clock, Award, ArrowRight, History, RefreshCw } from 'lucide-react';
 
 export default function JudgeDashboard() {
@@ -18,76 +17,145 @@ export default function JudgeDashboard() {
   const [lastFetch, setLastFetch] = useState<Date | null>(null);
   const [secondsAgo, setSecondsAgo] = useState(0);
   const [newRequestsCount, setNewRequestsCount] = useState(0);
+  const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
+  const previousCountRef = useRef(0);
+  const eventSourceRef = useRef<EventSource | null>(null);
 
-  // Fetch available requests
+  // Transform API response to match store format
+  const transformRequests = useCallback((requests: any[]) => {
+    return requests.map((req: any) => ({
+      id: req.id,
+      mediaUrl: req.media_url || req.text_content || '',
+      mediaType: (req.media_type === 'photo' ? 'image' : 'text') as 'image' | 'text',
+      category: req.category,
+      context: req.context,
+      status: (req.status === 'open' ? 'pending' : req.status === 'closed' ? 'completed' : req.status) as 'pending' | 'in_progress' | 'completed',
+      verdicts: [],
+      createdAt: new Date(req.created_at),
+    }));
+  }, []);
+
+  // Handle incoming SSE data
+  const handleSSEData = useCallback((requests: any[]) => {
+    const transformedRequests = transformRequests(requests);
+    
+    // Check if there are new requests
+    const previousCount = previousCountRef.current;
+    const newCount = transformedRequests.length;
+    if (newCount > previousCount && previousCount > 0) {
+      const diff = newCount - previousCount;
+      console.log(`[Judge Dashboard] 🎉 ${diff} NEW request(s) detected!`);
+      setNewRequestsCount(diff);
+      setTimeout(() => setNewRequestsCount(0), 3000);
+    }
+    previousCountRef.current = newCount;
+
+    setAvailableRequests(transformedRequests);
+    setLastFetch(new Date());
+    setLoading(false);
+    console.log('[Judge Dashboard] ✅ Store updated via SSE');
+  }, [setAvailableRequests, transformRequests]);
+
+  // Set up Server-Sent Events connection
+  useEffect(() => {
+    console.log('[Judge Dashboard] 🚀 Setting up SSE connection...');
+    setConnectionStatus('connecting');
+
+    let reconnectTimeout: NodeJS.Timeout | null = null;
+    let reconnectAttempts = 0;
+    const maxReconnectAttempts = 5;
+
+    const connectSSE = () => {
+      // Create EventSource connection
+      const eventSource = new EventSource('/api/judge/queue/stream');
+      eventSourceRef.current = eventSource;
+
+      // Handle connection open
+      eventSource.onopen = () => {
+        console.log('[Judge Dashboard] ✅ SSE connection opened');
+        setConnectionStatus('connected');
+        reconnectAttempts = 0; // Reset on successful connection
+      };
+
+      // Handle incoming messages
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          console.log('[Judge Dashboard] 📨 SSE message received:', data.type);
+
+          if (data.type === 'requests') {
+            handleSSEData(data.requests || []);
+          } else if (data.type === 'connected') {
+            console.log('[Judge Dashboard] 🔗 SSE:', data.message);
+            setConnectionStatus('connected');
+          } else if (data.type === 'heartbeat') {
+            // Heartbeat to keep connection alive
+            console.log('[Judge Dashboard] 💓 Heartbeat received');
+          }
+        } catch (error) {
+          console.error('[Judge Dashboard] ❌ Error parsing SSE data:', error);
+        }
+      };
+
+      // Handle errors
+      eventSource.onerror = (error) => {
+        console.error('[Judge Dashboard] ❌ SSE error:', error);
+        
+        if (eventSource.readyState === EventSource.CLOSED) {
+          setConnectionStatus('disconnected');
+          
+          // Attempt to reconnect if we haven't exceeded max attempts
+          if (reconnectAttempts < maxReconnectAttempts) {
+            reconnectAttempts++;
+            const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 10000); // Exponential backoff, max 10s
+            
+            console.log(`[Judge Dashboard] 🔄 Reconnecting SSE in ${delay}ms (attempt ${reconnectAttempts}/${maxReconnectAttempts})...`);
+            
+            reconnectTimeout = setTimeout(() => {
+              eventSource.close();
+              connectSSE();
+            }, delay);
+          } else {
+            console.error('[Judge Dashboard] ❌ Max reconnect attempts reached. Please refresh the page.');
+            setConnectionStatus('disconnected');
+          }
+        } else if (eventSource.readyState === EventSource.CONNECTING) {
+          setConnectionStatus('connecting');
+        }
+      };
+
+      return eventSource;
+    };
+
+    const eventSource = connectSSE();
+
+    // Cleanup on unmount
+    return () => {
+      console.log('[Judge Dashboard] 🧹 Cleaning up SSE connection');
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout);
+      }
+      eventSource.close();
+      eventSourceRef.current = null;
+    };
+  }, [handleSSEData]);
+
+  // Fallback: Manual refresh function
   const fetchRequests = useCallback(async () => {
     try {
-      console.log('[Judge Dashboard] Fetching requests...');
+      console.log('[Judge Dashboard] 🔄 Manual refresh...');
       const res = await fetch('/api/judge/queue?limit=20');
 
       if (!res.ok) {
-        const errorText = await res.text();
-        console.error('[Judge Dashboard] API error:', res.status, errorText);
         throw new Error(`Failed to fetch requests: ${res.status}`);
       }
 
       const data = await res.json();
-      console.log('[Judge Dashboard] Received data:', data);
-      console.log('[Judge Dashboard] Number of requests:', data.requests?.length || 0);
-
-      // Transform API response to match store format
-      const transformedRequests = (data.requests || []).map((req: any) => ({
-        id: req.id,
-        mediaUrl: req.media_url || req.text_content || '',
-        mediaType: req.media_type === 'photo' ? 'image' : 'text',
-        category: req.category,
-        context: req.context,
-        status: req.status,
-        verdicts: [],
-        createdAt: new Date(req.created_at),
-      }));
-
-      console.log('[Judge Dashboard] Transformed requests:', transformedRequests.length);
-
-      // Check if there are new requests
-      const previousCount = availableRequests.length;
-      const newCount = transformedRequests.length;
-      if (newCount > previousCount && previousCount > 0) {
-        const diff = newCount - previousCount;
-        console.log(`[Judge Dashboard] 🎉 ${diff} new requests detected!`);
-        setNewRequestsCount(diff);
-        // Clear notification after 3 seconds
-        setTimeout(() => setNewRequestsCount(0), 3000);
-      }
-
-      setAvailableRequests(transformedRequests);
-      setLastFetch(new Date());
-      console.log('[Judge Dashboard] ✅ Store updated');
+      handleSSEData(data.requests || []);
     } catch (error) {
-      console.error('[Judge Dashboard] ❌ Fetch error:', error);
-    } finally {
-      setLoading(false);
+      console.error('[Judge Dashboard] ❌ Manual refresh error:', error);
     }
-  }, [setAvailableRequests, availableRequests.length]);
-
-  // Initial fetch on mount
-  useEffect(() => {
-    fetchRequests();
-  }, [fetchRequests]);
-
-  // Set up polling for new requests (every 3 seconds for better UX)
-  useEffect(() => {
-    console.log('[Judge Dashboard] Setting up polling...');
-    const pollInterval = setInterval(() => {
-      console.log('[Judge Dashboard] 🔄 Polling tick...');
-      fetchRequests();
-    }, 3000); // Poll every 3 seconds
-
-    return () => {
-      console.log('[Judge Dashboard] Cleaning up polling interval');
-      clearInterval(pollInterval);
-    };
-  }, [fetchRequests]);
+  }, [handleSSEData]);
 
   // Update "seconds ago" counter every second
   useEffect(() => {
@@ -122,8 +190,18 @@ export default function JudgeDashboard() {
               <History className="h-4 w-4" />
               My Verdicts
             </Link>
-            <span className="px-4 py-2 bg-green-100 text-green-700 rounded-full text-sm font-medium">
-              Online
+            <span className={`px-4 py-2 rounded-full text-sm font-medium ${
+              connectionStatus === 'connected'
+                ? 'bg-green-100 text-green-700'
+                : connectionStatus === 'connecting'
+                ? 'bg-yellow-100 text-yellow-700'
+                : 'bg-red-100 text-red-700'
+            }`}>
+              {connectionStatus === 'connected' 
+                ? 'Online' 
+                : connectionStatus === 'connecting'
+                ? 'Connecting...'
+                : 'Offline'}
             </span>
           </div>
         </div>
@@ -202,11 +280,29 @@ export default function JudgeDashboard() {
             </div>
             <div className="mt-3 flex items-center gap-2 text-xs">
               <div className="flex items-center gap-1">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                <span className="text-green-600 font-medium">Auto-refresh enabled</span>
+                <div className={`w-2 h-2 rounded-full ${
+                  connectionStatus === 'connected' 
+                    ? 'bg-green-500 animate-pulse' 
+                    : connectionStatus === 'connecting'
+                    ? 'bg-yellow-500 animate-pulse'
+                    : 'bg-red-500'
+                }`}></div>
+                <span className={`font-medium ${
+                  connectionStatus === 'connected' 
+                    ? 'text-green-600' 
+                    : connectionStatus === 'connecting'
+                    ? 'text-yellow-600'
+                    : 'text-red-600'
+                }`}>
+                  {connectionStatus === 'connected' 
+                    ? 'Live updates enabled' 
+                    : connectionStatus === 'connecting'
+                    ? 'Connecting...'
+                    : 'Disconnected'}
+                </span>
               </div>
               <span className="text-gray-400">•</span>
-              <span className="text-gray-500">Checking every 3 seconds</span>
+              <span className="text-gray-500">Real-time via SSE</span>
             </div>
           </div>
           <div className="p-6">

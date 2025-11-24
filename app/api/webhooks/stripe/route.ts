@@ -4,9 +4,14 @@ import { createClient } from '@/lib/supabase/server';
 import Stripe from 'stripe';
 import { headers } from 'next/headers';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-06-20',
-});
+const getStripe = () => {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error('STRIPE_SECRET_KEY is not configured');
+  }
+  return new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: '2024-06-20',
+  });
+};
 
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
@@ -19,7 +24,7 @@ export async function POST(request: NextRequest) {
     let event: Stripe.Event;
 
     try {
-      event = stripe.webhooks.constructEvent(body, sig, endpointSecret);
+      event = getStripe().webhooks.constructEvent(body, sig, endpointSecret);
     } catch (err: any) {
       console.error('Webhook signature verification failed:', err.message);
       return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
@@ -148,7 +153,7 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice, supabase: 
   if (!invoice.subscription) return;
 
   // Handle subscription renewal
-  const subscription = await stripe.subscriptions.retrieve(invoice.subscription as string);
+  const subscription = await getStripe().subscriptions.retrieve(invoice.subscription as string);
   
   // Process subscription renewal
   await supabase.rpc('process_subscription_renewal', {
@@ -160,7 +165,7 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice, supabase: any
   if (!invoice.subscription) return;
 
   // Update subscription status
-  const subscription = await stripe.subscriptions.retrieve(invoice.subscription as string);
+  const subscription = await getStripe().subscriptions.retrieve(invoice.subscription as string);
   
   await supabase
     .from('subscriptions')
