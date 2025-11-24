@@ -48,7 +48,7 @@ CREATE TABLE IF NOT EXISTS verdict_requests (
   context TEXT,
   
   -- Request Settings
-  target_verdict_count INTEGER DEFAULT 10,
+  target_verdict_count INTEGER DEFAULT 3, -- Reduced to 3 for 40%+ profit margin
   received_verdict_count INTEGER DEFAULT 0,
   
   -- Status

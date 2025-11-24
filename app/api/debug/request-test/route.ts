@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
       text_content: 'Test request',
       context: 'Testing request creation',
       status: 'open',
-      target_verdict_count: 10,
+        target_verdict_count: 3, // Reduced to 3 for 40%+ profit margin (standard tier)
       received_verdict_count: 0,
     };
 

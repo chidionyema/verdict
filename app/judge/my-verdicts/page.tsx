@@ -68,8 +68,29 @@ export default function MyVerdictsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-gray-500">Loading...</p>
+      <div className="min-h-screen bg-gray-50 py-12">
+        <div className="max-w-6xl mx-auto px-4">
+          <div className="mb-8">
+            <div className="h-8 bg-gray-200 rounded w-64 animate-pulse mb-2" />
+            <div className="h-4 bg-gray-200 rounded w-48 animate-pulse" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="bg-white rounded-lg shadow p-6">
+                <div className="h-6 bg-gray-200 rounded w-24 animate-pulse mb-2" />
+                <div className="h-8 bg-gray-200 rounded w-32 animate-pulse" />
+              </div>
+            ))}
+          </div>
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-white rounded-lg shadow p-6">
+                <div className="h-4 bg-gray-200 rounded w-3/4 animate-pulse mb-4" />
+                <div className="h-20 bg-gray-200 rounded animate-pulse" />
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
@@ -81,15 +102,25 @@ export default function MyVerdictsPage() {
         <div className="mb-8">
           <Link
             href="/judge"
-            className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-4"
+            className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-4 min-h-[44px]"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Dashboard
+            Back to Judge Dashboard
           </Link>
-          <h1 className="text-3xl font-bold text-gray-900">My Verdicts</h1>
-          <p className="text-gray-600 mt-1">
-            Review all your submitted verdicts and earnings
-          </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">My Verdicts</h1>
+              <p className="text-gray-600 mt-1">
+                Review all your submitted verdicts, earnings, and impact
+              </p>
+            </div>
+            <Link
+              href="/judge"
+              className="px-6 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition font-medium shadow-lg min-h-[44px] flex items-center"
+            >
+              View Queue
+            </Link>
+          </div>
         </div>
 
         {/* Stats Summary */}
@@ -251,9 +282,9 @@ export default function MyVerdictsPage() {
                 <div className="mt-4 pt-4 border-t border-gray-100">
                   <Link
                     href={`/requests/${verdict.request_id}`}
-                    className="text-sm text-indigo-600 hover:text-indigo-800 font-medium"
+                    className="text-sm text-indigo-600 hover:text-indigo-800 font-medium inline-flex items-center gap-1 min-h-[44px]"
                   >
-                    View Original Request →
+                    View Request You Judged →
                   </Link>
                 </div>
               </div>

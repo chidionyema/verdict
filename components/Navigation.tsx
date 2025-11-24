@@ -163,19 +163,19 @@ export default function Navigation() {
                 {/* Navigation Links */}
                 <Link
                   href="/my-requests"
-                  className="text-gray-700 hover:text-indigo-600 transition"
+                  className="flex items-center text-gray-700 hover:text-indigo-600 transition min-h-[36px]"
                 >
                   My Requests
                 </Link>
                 <Link
                   href="/judge"
-                  className="text-gray-700 hover:text-indigo-600 transition"
+                  className="flex items-center text-gray-700 hover:text-indigo-600 transition min-h-[36px]"
                 >
                   Judge
                 </Link>
                 <Link
                   href="/account"
-                  className="flex items-center text-gray-700 hover:text-indigo-600 transition"
+                  className="flex items-center text-gray-700 hover:text-indigo-600 transition min-h-[36px]"
                 >
                   <User className="h-5 w-5 mr-1" />
                   Account

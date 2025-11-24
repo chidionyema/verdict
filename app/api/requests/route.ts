@@ -190,7 +190,7 @@ export async function POST(request: NextRequest) {
         text_content: media_type === 'text' ? text_content : null,
         context,
         status: 'in_progress', // Changed from 'pending' to 'in_progress' so judges can see it
-        target_verdict_count: 10,
+        target_verdict_count: 3, // Reduced to 3 for 40%+ profit margin (standard tier)
         received_verdict_count: 0,
       })
       .select()

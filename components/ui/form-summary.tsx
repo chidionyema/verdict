@@ -27,7 +27,7 @@ export function FormSummary({ data, onEdit, className = '' }: FormSummaryProps) 
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-medium text-gray-900">Your Request Summary</h3>
         <Badge variant="secondary" className="text-xs">
-          {data.targetVerdictCount || 10} verdicts
+          {data.targetVerdictCount || 3} verdicts
         </Badge>
       </div>
 

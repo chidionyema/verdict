@@ -91,7 +91,7 @@ export function HeroSection() {
                 "{USE_CASES[currentUseCase]}"
               </span>
               <br />
-              Get 10 brutally honest answers from strangers in minutes.
+              Get 3 expert verdicts from qualified judges in minutes.
             </p>
           </div>
 

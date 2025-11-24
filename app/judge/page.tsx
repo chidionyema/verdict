@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { DollarSign, Clock, Award, ArrowRight, ToggleLeft, ToggleRight } from 'lucide-react';
@@ -34,11 +34,7 @@ export default function JudgeDashboardPage() {
     recent_verdicts: 0,
   });
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       // Get profile
       const { data: { user } } = await supabase.auth.getUser();
@@ -71,7 +67,20 @@ export default function JudgeDashboardPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [supabase]);
+
+  useEffect(() => {
+    fetchData();
+
+    // Set up auto-refresh every 5 seconds
+    const interval = setInterval(() => {
+      if (profile?.is_judge) {
+        fetchData();
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [fetchData, profile?.is_judge]);
 
   const toggleJudge = async () => {
     if (!profile) return;
@@ -108,8 +117,29 @@ export default function JudgeDashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-gray-500">Loading...</p>
+      <div className="min-h-screen bg-gray-50 py-12">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="mb-8">
+            <div className="h-8 bg-gray-200 rounded w-64 animate-pulse mb-2" />
+            <div className="h-4 bg-gray-200 rounded w-48 animate-pulse" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-white rounded-lg shadow p-6">
+                <div className="h-6 bg-gray-200 rounded w-24 animate-pulse mb-2" />
+                <div className="h-8 bg-gray-200 rounded w-32 animate-pulse" />
+              </div>
+            ))}
+          </div>
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="h-6 bg-gray-200 rounded w-48 animate-pulse mb-4" />
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-24 bg-gray-200 rounded animate-pulse" />
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -288,19 +318,47 @@ export default function JudgeDashboardPage() {
         ) : (
           <div className="bg-white rounded-lg shadow">
             <div className="p-6 border-b">
-              <h2 className="text-xl font-semibold">Available Requests</h2>
-              <p className="text-sm text-gray-500 mt-1">
-                Click on a request to submit your verdict
-              </p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-semibold">Available Requests</h2>
+                  <p className="text-sm text-gray-500 mt-1">
+                    Click on a request to submit your verdict
+                  </p>
+                </div>
+                <button
+                  onClick={fetchData}
+                  className="flex items-center gap-2 px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition"
+                  title="Refresh now"
+                >
+                  <Clock className="h-4 w-4" />
+                  Refresh
+                </button>
+              </div>
+              <div className="mt-3 flex items-center gap-2 text-xs">
+                <div className="flex items-center gap-1">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  <span className="text-green-600 font-medium">Auto-refresh enabled</span>
+                </div>
+                <span className="text-gray-400">•</span>
+                <span className="text-gray-500">Updates every 5 seconds</span>
+              </div>
             </div>
             <div className="p-6">
               {queue.length === 0 ? (
                 <div className="text-center py-12">
-                  <Clock className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-500">No requests available right now.</p>
-                  <p className="text-gray-400 text-sm mt-2">
-                    Check back soon for new requests!
+                  <div className="w-24 h-24 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <Clock className="h-12 w-12 text-indigo-600" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                    No requests available right now
+                  </h3>
+                  <p className="text-gray-600 mb-4 max-w-md mx-auto">
+                    New requests appear here as users submit them. Check back soon!
                   </p>
+                  <div className="text-sm text-gray-500 space-y-1">
+                    <p>💡 Tip: Keep this page open to see new requests instantly</p>
+                    <p>⏱️ Requests typically appear within minutes</p>
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-4">

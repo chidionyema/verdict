@@ -93,7 +93,7 @@ export async function GET(request: NextRequest) {
                 received_verdict_count,
                 status
               `)
-              .in('status', ['in_progress', 'pending'])
+              .in('status', ['open', 'in_progress', 'pending'])
               .neq('user_id', user.id)
               .is('deleted_at', null)
               .order('created_at', { ascending: true })
@@ -111,11 +111,13 @@ export async function GET(request: NextRequest) {
             }
 
             // Send the requests
-            send(JSON.stringify({
+            const requestsData = {
               type: 'requests',
               requests: requests || [],
               timestamp: new Date().toISOString(),
-            }));
+            };
+            console.log('[SSE Stream] Sending requests:', requests?.length || 0);
+            send(JSON.stringify(requestsData));
           } catch (err) {
             console.error('Error in fetchAndSendRequests:', err);
           }

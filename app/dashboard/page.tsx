@@ -162,8 +162,25 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-gray-500">Loading...</p>
+      <div className="min-h-screen bg-gray-50 py-12">
+        <div className="max-w-6xl mx-auto px-4">
+          <div className="mb-8">
+            <div className="h-8 bg-gray-200 rounded w-64 animate-pulse mb-2" />
+            <div className="h-4 bg-gray-200 rounded w-48 animate-pulse" />
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="bg-white rounded-lg shadow-lg overflow-hidden">
+                <div className="h-40 bg-gray-200 animate-pulse" />
+                <div className="p-4 space-y-3">
+                  <div className="h-4 bg-gray-200 rounded w-3/4 animate-pulse" />
+                  <div className="h-4 bg-gray-200 rounded w-1/2 animate-pulse" />
+                  <div className="h-2 bg-gray-200 rounded w-full animate-pulse" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
@@ -321,19 +338,26 @@ export default function DashboardPage() {
         {/* Requests Grid */}
         {requests.length === 0 ? (
           <div className="bg-white rounded-lg shadow-lg p-12 text-center">
-            <FileText className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              No requests yet
+            <div className="w-24 h-24 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <FileText className="h-12 w-12 text-indigo-600" />
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">
+              Ready to get your first verdict?
             </h3>
-            <p className="text-gray-600 mb-6">
-              Create your first verdict request to get honest feedback
+            <p className="text-gray-600 mb-6 max-w-md mx-auto">
+              Upload a photo, share some text, or ask for advice on a decision. 
+              Get honest feedback from 10 real people in minutes.
             </p>
             <Link
               href="/start"
-              className="inline-block bg-indigo-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-indigo-700 transition"
+              className="inline-block bg-indigo-600 text-white px-8 py-4 rounded-xl font-semibold hover:bg-indigo-700 transition shadow-lg min-h-[48px]"
             >
-              Create Request
+              Create Your First Request
             </Link>
+            <div className="mt-6 space-y-1">
+              <p className="text-sm text-gray-500">✨ 3 free credits included</p>
+              <p className="text-sm text-gray-500">⏱️ Results in under 15 minutes</p>
+            </div>
           </div>
         ) : filteredAndSortedRequests.length === 0 ? (
           <div className="bg-white rounded-lg shadow-lg p-12 text-center">

@@ -211,8 +211,8 @@ async function seed() {
         text_content: `This is demo content for a ${category} request about ${subcategory}.`,
         context,
         status: isCompleted ? 'closed' : 'open',
-        target_verdict_count: 10,
-        received_verdict_count: isCompleted ? 10 : randomInt(0, 5),
+        target_verdict_count: 3, // Reduced to 3 for 40%+ profit margin
+        received_verdict_count: isCompleted ? 3 : randomInt(0, 2),
       })
       .select()
       .single();
@@ -243,7 +243,7 @@ async function seed() {
 
     if (!request) continue;
 
-    const numVerdicts = request.status === 'closed' ? 10 : request.received_verdict_count;
+    const numVerdicts = request.status === 'closed' ? 3 : request.received_verdict_count;
     const usedJudges = new Set<string>();
 
     for (let i = 0; i < numVerdicts; i++) {

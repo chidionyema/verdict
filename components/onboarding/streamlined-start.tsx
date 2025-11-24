@@ -57,7 +57,7 @@ const CATEGORIES = [
 export function StreamlinedStart() {
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<FormData>({
-    targetVerdictCount: 10
+    targetVerdictCount: 3 // Reduced to 3 for 40%+ profit margin (standard tier)
   });
   const [isLoading, setIsLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -205,7 +205,7 @@ export function StreamlinedStart() {
           Get Your Verdict
         </h1>
         <p className="text-gray-600">
-          Submit your content and get honest feedback from 10 qualified reviewers
+          Submit your content and get honest feedback from 3 expert judges
         </p>
       </div>
 
@@ -406,7 +406,7 @@ export function StreamlinedStart() {
                 <div className="text-sm text-blue-700 space-y-1">
                   <div className="flex items-center gap-2">
                     <Clock className="w-4 h-4" />
-                    <span>Get 10 verdicts in 2-4 hours</span>
+                    <span>Get 3 expert verdicts in 2-4 hours</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Shield className="w-4 h-4" />

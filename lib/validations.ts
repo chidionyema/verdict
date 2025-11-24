@@ -91,12 +91,24 @@ export function validateImageFile(file: File): { valid: boolean; error?: string 
 }
 
 // Credit packages
+// Updated pricing: $3.49/credit minimum for 40-45% profit margin
+// With 3 verdicts per request (standard tier), this yields ~37% profit margin
+// Tiered pricing: Basic (3), Standard (5), Premium (7) verdicts
 export const CREDIT_PACKAGES = {
-  starter: { credits: 5, price_cents: 499, name: 'Starter' },
-  popular: { credits: 10, price_cents: 899, name: 'Popular' },
-  value: { credits: 25, price_cents: 1999, name: 'Value' },
-  pro: { credits: 50, price_cents: 3499, name: 'Pro' },
+  starter: { credits: 5, price_cents: 1745, name: 'Starter' },    // $17.45 ($3.49/credit)
+  popular: { credits: 10, price_cents: 3490, name: 'Popular' },   // $34.90 ($3.49/credit)
+  value: { credits: 25, price_cents: 8725, name: 'Value' },        // $87.25 ($3.49/credit)
+  pro: { credits: 50, price_cents: 17450, name: 'Pro' },           // $174.50 ($3.49/credit)
 } as const;
+
+// Verdict tier definitions
+export const VERDICT_TIERS = {
+  basic: { verdicts: 3, name: 'Basic', description: '3 expert verdicts - Fast & affordable' },
+  standard: { verdicts: 5, name: 'Standard', description: '5 expert verdicts - Most popular' },
+  premium: { verdicts: 7, name: 'Premium', description: '7 expert verdicts - Comprehensive' },
+} as const;
+
+export type VerdictTier = keyof typeof VERDICT_TIERS;
 
 export type PackageId = keyof typeof CREDIT_PACKAGES;
 

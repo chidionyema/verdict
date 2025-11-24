@@ -148,6 +148,13 @@ export default function AdminDashboard() {
       color: '#10b981',
     },
     {
+      title: 'Financial Model',
+      description: 'Analyze unit economics and pricing',
+      icon: DollarSign,
+      href: '/admin/financial-model',
+      color: '#10b981',
+    },
+    {
       title: 'Settings',
       description: 'Configure platform settings',
       icon: Settings,

@@ -166,7 +166,7 @@ export function RealTimeWaitingStatus({
       {isComplete && (
         <div className="p-4 bg-green-50 rounded-lg border border-green-200">
           <p className="text-sm text-green-800 text-center">
-            ✓ All 10 verdicts delivered! You can now view your results.
+            ✓ All 3 verdicts delivered! You can now view your results.
           </p>
         </div>
       )}

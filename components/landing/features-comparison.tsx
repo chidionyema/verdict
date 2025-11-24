@@ -22,7 +22,7 @@ import {
 const COMPARISON_DATA = [
   {
     feature: "Get honest opinions",
-    verdict: { available: true, description: "10 anonymous verdicts from qualified judges" },
+    verdict: { available: true, description: "3 expert verdicts from qualified judges" },
     friends: { available: false, description: "Biased opinions to protect your feelings" },
     social: { available: false, description: "Filtered responses for social image" }
   },
@@ -81,7 +81,7 @@ const PAIN_POINTS = [
     icon: Clock,
     title: "Slow or no responses",
     problem: "Friends might ignore your request or take forever to respond",
-    solution: "Guaranteed 10 responses within hours, not days"
+    solution: "Guaranteed 3 expert responses within hours, not days"
   }
 ];
 

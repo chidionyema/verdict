@@ -61,7 +61,7 @@ function SuccessContent() {
         {/* Real-Time Waiting Status */}
         <RealTimeWaitingStatus
           requestId={requestData.requestId}
-          targetCount={10}
+          targetCount={3}
           initialCount={0}
           onComplete={handleRequestComplete}
           className="mb-8"

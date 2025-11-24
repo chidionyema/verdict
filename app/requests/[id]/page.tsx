@@ -13,9 +13,18 @@ import ReportContentButton from '@/components/ReportContentButton';
 import VerdictRatingModal from '@/components/VerdictRatingModal';
 import { VerdictSummary } from '@/components/request/VerdictSummary';
 import { ThankJudgesButton } from '@/components/request/ThankJudgesButton';
+import { toast } from '@/components/ui/toast';
+import { createClient } from '@/lib/supabase/client';
 
 interface VerdictWithNumber extends VerdictResponse {
   judge_number: number;
+}
+
+interface UserContext {
+  isSeeker: boolean;
+  isJudge: boolean;
+  userId: string | null;
+  myVerdictId: string | null; // If judge, their verdict ID for this request
 }
 
 export default function RequestDetailPage({
@@ -25,11 +34,18 @@ export default function RequestDetailPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
+  const supabase = createClient();
 
   const [request, setRequest] = useState<VerdictRequest | null>(null);
   const [verdicts, setVerdicts] = useState<VerdictWithNumber[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [userContext, setUserContext] = useState<UserContext>({
+    isSeeker: false,
+    isJudge: false,
+    userId: null,
+    myVerdictId: null,
+  });
   const [ratingModalOpen, setRatingModalOpen] = useState(false);
   const [selectedVerdictForRating, setSelectedVerdictForRating] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<'date' | 'rating' | 'helpful'>('date');
@@ -49,6 +65,53 @@ export default function RequestDetailPage({
 
     return () => clearInterval(interval);
   }, [id, request?.status]);
+
+  // Fetch user context after request is loaded
+  useEffect(() => {
+    if (request) {
+      fetchUserContext();
+    }
+  }, [request]);
+
+  const fetchUserContext = async () => {
+    if (!request) return;
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('is_judge')
+        .eq('id', user.id)
+        .single();
+
+      // Check if user is the request owner
+      const isSeeker = request.user_id === user.id;
+      const isJudge = profile?.is_judge || false;
+
+      // If judge, check if they've given a verdict for this request
+      let myVerdictId = null;
+      if (isJudge) {
+        const { data: myVerdict } = await supabase
+          .from('verdict_responses')
+          .select('id')
+          .eq('request_id', request.id)
+          .eq('judge_id', user.id)
+          .single();
+        myVerdictId = myVerdict?.id || null;
+      }
+
+      setUserContext({
+        isSeeker,
+        isJudge,
+        userId: user.id,
+        myVerdictId,
+      });
+    } catch (err) {
+      console.error('Error fetching user context:', err);
+    }
+  };
 
   const fetchRequest = async () => {
     try {
@@ -114,20 +177,63 @@ export default function RequestDetailPage({
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-gray-500">Loading...</p>
+      <div className="min-h-screen bg-gray-50 py-12">
+        <div className="max-w-6xl mx-auto px-4">
+          <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
+            <div className="h-8 bg-gray-200 rounded w-64 animate-pulse mb-4" />
+            <div className="h-4 bg-gray-200 rounded w-48 animate-pulse" />
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-1">
+              <div className="bg-white rounded-xl shadow-sm p-6">
+                <div className="h-64 bg-gray-200 rounded animate-pulse mb-4" />
+                <div className="space-y-2">
+                  <div className="h-4 bg-gray-200 rounded animate-pulse" />
+                  <div className="h-4 bg-gray-200 rounded w-3/4 animate-pulse" />
+                </div>
+              </div>
+            </div>
+            <div className="lg:col-span-2 space-y-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="bg-white rounded-xl shadow-sm p-6">
+                  <div className="flex items-start space-x-4 mb-4">
+                    <div className="h-12 w-12 bg-gray-200 rounded-full animate-pulse" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-4 bg-gray-200 rounded w-1/4 animate-pulse" />
+                      <div className="h-4 bg-gray-200 rounded w-full animate-pulse" />
+                      <div className="h-4 bg-gray-200 rounded w-3/4 animate-pulse" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
 
   if (error || !request) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-600 mb-4">{error}</p>
-          <Link href="/dashboard" className="text-indigo-600 hover:underline">
-            Back to Dashboard
-          </Link>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+        <div className="max-w-md w-full">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+            <div className="text-red-600 mb-4 text-lg font-semibold">{error || 'Request not found'}</div>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <button
+                onClick={fetchRequest}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium min-h-[44px]"
+              >
+                Try Again
+              </button>
+              <Link
+                href="/dashboard"
+                className="px-4 py-2 bg-white text-red-600 border border-red-300 rounded-lg hover:bg-red-50 transition font-medium min-h-[44px] flex items-center justify-center"
+              >
+                Back to Dashboard
+              </Link>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -146,13 +252,31 @@ export default function RequestDetailPage({
         {/* Enhanced Header */}
         <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
           <div className="flex items-center justify-between mb-4">
-            <Link
-              href="/my-requests"
-              className="flex items-center text-gray-600 hover:text-gray-900 transition"
-            >
-              <ArrowLeft className="h-5 w-5 mr-2" />
-              Back to My Requests
-            </Link>
+            {userContext.isSeeker ? (
+              <Link
+                href="/my-requests"
+                className="flex items-center text-gray-600 hover:text-gray-900 transition min-h-[44px]"
+              >
+                <ArrowLeft className="h-5 w-5 mr-2" />
+                Back to My Requests
+              </Link>
+            ) : userContext.isJudge ? (
+              <Link
+                href="/judge/my-verdicts"
+                className="flex items-center text-gray-600 hover:text-gray-900 transition min-h-[44px]"
+              >
+                <ArrowLeft className="h-5 w-5 mr-2" />
+                Back to My Verdicts
+              </Link>
+            ) : (
+              <Link
+                href="/judge"
+                className="flex items-center text-gray-600 hover:text-gray-900 transition min-h-[44px]"
+              >
+                <ArrowLeft className="h-5 w-5 mr-2" />
+                Back to Judge Dashboard
+              </Link>
+            )}
             <div className="flex items-center gap-2">
               <span className={`px-3 py-1 rounded-full text-sm font-medium ${
                 request.status === 'in_progress' || request.status === 'open' ? 'bg-yellow-100 text-yellow-800' :
@@ -283,7 +407,7 @@ export default function RequestDetailPage({
                 <p className="text-2xl font-bold text-green-900">{verdicts.length}</p>
                 <p className="text-green-700 text-sm">Total Verdicts</p>
                 <p className="text-xs text-green-600 mt-1">
-                  {verdicts.length >= 10 ? 'Comprehensive' : 'Growing'}
+                  {verdicts.length >= 3 ? 'Complete' : 'Growing'}
                 </p>
               </div>
               
@@ -365,7 +489,13 @@ export default function RequestDetailPage({
           <div className="lg:col-span-1">
             <div className="bg-white rounded-xl shadow-sm p-6 sticky top-6 border border-gray-100">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-gray-900">Your Submission</h3>
+                <h3 className="font-semibold text-gray-900">
+                  {userContext.isSeeker 
+                    ? 'Your Submission' 
+                    : userContext.isJudge 
+                    ? 'Request to Review' 
+                    : 'Submission'}
+                </h3>
                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                   request.media_type === 'photo' 
                     ? 'bg-blue-100 text-blue-700' 
@@ -379,7 +509,7 @@ export default function RequestDetailPage({
                 <div className="relative mb-4">
                   <img
                     src={request.media_url}
-                    alt="Your submission"
+                    alt={userContext.isSeeker ? "Your submission" : "Seeker's submission"}
                     className="w-full rounded-xl shadow-sm"
                   />
                   <div className="absolute top-3 right-3">
@@ -417,7 +547,7 @@ export default function RequestDetailPage({
 
                 <div className="py-2">
                   <span className="text-sm font-medium text-gray-600 block mb-2">Context</span>
-                  <p className="text-sm text-gray-900 leading-relaxed bg-gray-50 p-3 rounded-lg">
+                  <p className="text-sm text-gray-900 leading-relaxed bg-gray-50 p-3 rounded-lg break-words whitespace-pre-wrap max-w-full">
                     {request.context}
                   </p>
                 </div>
@@ -433,7 +563,14 @@ export default function RequestDetailPage({
               {/* Quick Actions */}
               <div className="mt-6 pt-4 border-t border-gray-100">
                 <div className="grid grid-cols-2 gap-3">
-                  <button className="flex items-center justify-center gap-2 px-3 py-2 bg-gray-50 text-gray-700 rounded-lg hover:bg-gray-100 transition text-sm">
+                  <button
+                    onClick={async () => {
+                      await navigator.clipboard.writeText(window.location.href);
+                      toast.success('Link copied to clipboard!');
+                    }}
+                    className="flex items-center justify-center gap-2 px-3 py-2 bg-gray-50 text-gray-700 rounded-lg hover:bg-gray-100 transition text-sm min-h-[44px]"
+                    aria-label="Copy link to this request"
+                  >
                     <Copy className="h-4 w-4" />
                     Copy Link
                   </button>
@@ -509,14 +646,32 @@ export default function RequestDetailPage({
                   <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <MessageSquare className="h-8 w-8 text-gray-400" />
                   </div>
-                  <h3 className="font-medium text-gray-900 mb-2">Waiting for verdicts</h3>
+                  <h3 className="font-medium text-gray-900 mb-2">
+                    {userContext.isSeeker 
+                      ? 'Waiting for verdicts' 
+                      : userContext.isJudge 
+                      ? 'No verdicts yet' 
+                      : 'Waiting for verdicts'}
+                  </h3>
                   <p className="text-gray-500 text-sm">
-                    Judges are reviewing your submission. New verdicts will appear here automatically.
+                    {userContext.isSeeker
+                      ? 'Judges are reviewing your submission. New verdicts will appear here automatically.'
+                      : userContext.isJudge
+                      ? 'Be the first to provide feedback on this request.'
+                      : 'Judges are reviewing this submission. New verdicts will appear here automatically.'}
                   </p>
-                  {request.status === 'open' && (
+                  {request.status === 'open' && userContext.isSeeker && (
                     <div className="mt-4 text-xs text-gray-400">
                       🔄 Checking for updates every 5 seconds
                     </div>
+                  )}
+                  {userContext.isJudge && request.status !== 'closed' && (
+                    <Link
+                      href={`/judge/requests/${request.id}`}
+                      className="inline-block mt-4 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium"
+                    >
+                      Provide Your Verdict
+                    </Link>
                   )}
                 </div>
               ) : filteredAndSortedVerdicts.length === 0 ? (
@@ -526,11 +681,23 @@ export default function RequestDetailPage({
                   <p className="text-gray-500 text-sm">Try adjusting your filter criteria</p>
                 </div>
               ) : (
-              filteredAndSortedVerdicts.map((verdict) => (
+              filteredAndSortedVerdicts.map((verdict) => {
+                const isMyVerdict = userContext.isJudge && verdict.id === userContext.myVerdictId;
+                return (
                 <div
                   key={verdict.id}
-                  className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow border border-gray-100 p-6"
+                  className={`bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow border p-6 ${
+                    isMyVerdict 
+                      ? 'border-indigo-300 bg-indigo-50/30' 
+                      : 'border-gray-100'
+                  }`}
                 >
+                  {isMyVerdict && (
+                    <div className="mb-3 px-3 py-1.5 bg-indigo-100 text-indigo-700 rounded-lg text-sm font-medium inline-flex items-center gap-2">
+                      <Award className="h-4 w-4" />
+                      Your Verdict
+                    </div>
+                  )}
                   <div className="flex justify-between items-start mb-4">
                     <div className="flex items-center space-x-4">
                       <div className="bg-gray-100 rounded-full p-3">
@@ -621,9 +788,13 @@ export default function RequestDetailPage({
 
                       {/* Copy Button */}
                       <button
-                        onClick={() => navigator.clipboard.writeText(verdict.feedback)}
-                        className="p-2 rounded-lg bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200 transition-colors"
+                        onClick={async () => {
+                          await navigator.clipboard.writeText(verdict.feedback);
+                          toast.success('Verdict copied to clipboard!');
+                        }}
+                        className="p-2 rounded-lg bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200 transition-colors min-h-[44px] min-w-[44px]"
                         title="Copy verdict text"
+                        aria-label="Copy verdict text"
                       >
                         <Copy className="h-4 w-4" />
                       </button>
@@ -647,7 +818,8 @@ export default function RequestDetailPage({
                     </div>
                   </div>
                 </div>
-              ))
+                );
+              })
             )}
             </div>
           </div>

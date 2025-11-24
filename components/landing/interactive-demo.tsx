@@ -69,7 +69,7 @@ const DEMO_STEPS: DemoStep[] = [
   {
     id: 2,
     title: "Qualified Judges Review",
-    description: "10 vetted reviewers anonymously evaluate your submission",
+    description: "3 expert judges anonymously evaluate your submission",
     duration: 3000,
     visual: (
       <div className="space-y-3">
@@ -115,7 +115,7 @@ const DEMO_STEPS: DemoStep[] = [
             <Badge className="bg-green-100 text-green-800">Great choice!</Badge>
           </div>
           <div className="space-y-2">
-            {DEMO_VERDICT_RESPONSES.slice(0, 2).map((verdict) => (
+            {DEMO_VERDICT_RESPONSES.map((verdict) => (
               <div key={verdict.id} className="text-sm bg-gray-50 rounded p-2">
                 <div className="flex items-center gap-2 mb-1">
                   <Avatar className="w-5 h-5">
@@ -127,7 +127,7 @@ const DEMO_STEPS: DemoStep[] = [
                 <p className="text-gray-700">{verdict.text}</p>
               </div>
             ))}
-            <p className="text-xs text-gray-500 text-center pt-2">+ 8 more detailed responses</p>
+            <p className="text-xs text-gray-500 text-center pt-2">All 3 expert responses shown</p>
           </div>
         </div>
       </div>

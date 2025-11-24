@@ -51,7 +51,7 @@ export default function WorldClassLandingPage() {
               </div>
               <h3 className="text-xl font-semibold mb-3">Lightning Fast</h3>
               <p className="text-gray-600">
-                Get 10 detailed verdicts in under 5 minutes. No waiting around for days.
+                Get 3 expert verdicts in under 5 minutes. No waiting around for days.
               </p>
             </div>
 

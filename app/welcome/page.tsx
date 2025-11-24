@@ -101,7 +101,7 @@ export default function WelcomePage() {
     {
       id: 'credits',
       title: 'You Have 3 Free Credits',
-      description: 'Each credit gets you 10 honest verdicts',
+      description: 'Each credit gets you 3 expert verdicts',
       completed: true,
     },
     {

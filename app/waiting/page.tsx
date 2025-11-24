@@ -26,7 +26,7 @@ export default function WaitingPage() {
 
     // Simulate verdicts arriving
     const verdictInterval = setInterval(() => {
-      if (verdictCountRef.current < 10) {
+      if (verdictCountRef.current < 3) {
         const newVerdict = generateMockVerdict(
           currentRequest.category,
           verdictCountRef.current
@@ -52,7 +52,7 @@ export default function WaitingPage() {
 
   if (!currentRequest) return null;
 
-  const progress = (currentRequest.verdicts.length / 10) * 100;
+  const progress = (currentRequest.verdicts.length / 3) * 100;
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
@@ -76,7 +76,7 @@ export default function WaitingPage() {
             {/* Progress Bar */}
             <div className="mb-8">
               <div className="flex justify-between text-sm text-gray-600 mb-2">
-                <span>{currentRequest.verdicts.length} of 10 verdicts</span>
+                <span>{currentRequest.verdicts.length} of 3 verdicts</span>
                 <span>{Math.round(progress)}%</span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-3">

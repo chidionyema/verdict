@@ -90,6 +90,7 @@ export default function StartPage() {
   const [judgePreferences, setJudgePreferences] = useState<JudgePreferencesType | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -317,7 +318,7 @@ export default function StartPage() {
                   Life's tough decisions made clearer in 10 minutes
                 </h2>
                 <p className="text-gray-600 text-lg">
-                  Get 10 human perspectives on your photos, text, or decisions
+                  Get 3 expert perspectives on your photos, text, or decisions
                 </p>
               </div>
 
@@ -606,7 +607,10 @@ export default function StartPage() {
 
               {/* Context Input - Focused and Clear */}
               <div className="mb-8">
-                <label className="block text-lg font-medium text-gray-900 mb-3">
+                <label 
+                  htmlFor="context-textarea"
+                  className="block text-lg font-medium text-gray-900 mb-3"
+                >
                   {category === 'decision' ? 'Explain your situation' : 'Additional context'}
                 </label>
                 {category === 'decision' && (
@@ -615,16 +619,40 @@ export default function StartPage() {
                   </p>
                 )}
                 <textarea
+                  id="context-textarea"
                   value={context}
-                  onChange={(e) => setContext(e.target.value)}
+                  onChange={(e) => {
+                    setContext(e.target.value);
+                    // Real-time validation
+                    if (e.target.value.length > 0 && e.target.value.length < 20) {
+                      setValidationErrors(prev => ({
+                        ...prev,
+                        context: 'Please provide at least 20 characters for better feedback'
+                      }));
+                    } else {
+                      setValidationErrors(prev => {
+                        const { context, ...rest } = prev;
+                        return rest;
+                      });
+                    }
+                  }}
                   placeholder={`e.g., "${category === 'appearance' ? 'Job interview at a tech startup next week' :
                     category === 'profile' ? 'Updating LinkedIn for career change to marketing' :
                     category === 'writing' ? 'Follow-up email to potential client after meeting' :
                     'Should I take the startup job offer or stay at my stable corporate position? The startup offers equity but lower salary. I have a mortgage and two kids. Need to decide by Friday.'
                   }"`}
-                  className="w-full p-4 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-lg"
+                  className={`w-full p-4 border-2 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-lg ${
+                    validationErrors.context ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : 'border-gray-300'
+                  }`}
                   rows={category === 'decision' ? 6 : 5}
+                  aria-invalid={!!validationErrors.context}
+                  aria-describedby={validationErrors.context ? 'context-error' : undefined}
                 />
+                {validationErrors.context && (
+                  <p id="context-error" className="text-sm text-red-600 mt-2" role="alert">
+                    {validationErrors.context}
+                  </p>
+                )}
                 <EncouragingCounter
                   count={context.length}
                   min={20}

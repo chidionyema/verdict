@@ -43,8 +43,8 @@ export default function HomePage() {
               </div>
               
               <div className="bg-white rounded-xl p-6 shadow-sm">
-                <h3 className="font-semibold text-lg mb-3 text-gray-900">What if I don't get 10 responses?</h3>
-                <p className="text-gray-600">We guarantee at least 8 quality responses within 24 hours, or you get a full refund. Most requests get 10+ responses within hours.</p>
+                <h3 className="font-semibold text-lg mb-3 text-gray-900">What if I don't get 3 responses?</h3>
+                <p className="text-gray-600">We guarantee all 3 expert responses within 24 hours, or you get a full refund. Most requests get all 3 responses within hours.</p>
               </div>
               
               <div className="bg-white rounded-xl p-6 shadow-sm">
@@ -74,7 +74,7 @@ export default function HomePage() {
                   <span className="text-indigo-600 font-bold">2</span>
                 </div>
                 <h4 className="font-semibold mb-2">Wait</h4>
-                <p className="text-gray-600 text-sm">10 judges review your submission</p>
+                <p className="text-gray-600 text-sm">3 expert judges review your submission</p>
               </div>
               <div className="text-center">
                 <div className="bg-indigo-100 rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-4">
@@ -119,7 +119,7 @@ export default function HomePage() {
               </div>
               
               <div className="mt-4 text-center">
-                <span className="text-xs text-gray-500">+ 7 more detailed responses</span>
+                <span className="text-xs text-gray-500">+ 2 more detailed responses</span>
               </div>
             </div>
           </div>

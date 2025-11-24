@@ -149,7 +149,7 @@ function AccountContent() {
               </div>
               <div>
                 <span className="text-indigo-600 font-semibold">Verdict:</span>{' '}
-                <span className="font-bold text-indigo-700">$4.99 for 10 perspectives</span>
+                <span className="font-bold text-indigo-700">$3.49 for 3 expert perspectives</span>
               </div>
             </div>
           </div>

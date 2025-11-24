@@ -56,14 +56,16 @@ export default function JudgeDashboard() {
     console.log('[Judge Dashboard] ✅ Store updated via SSE');
   }, [setAvailableRequests, transformRequests]);
 
-  // Set up Server-Sent Events connection
+  // Set up Server-Sent Events connection with polling fallback
   useEffect(() => {
     console.log('[Judge Dashboard] 🚀 Setting up SSE connection...');
     setConnectionStatus('connecting');
 
     let reconnectTimeout: NodeJS.Timeout | null = null;
+    let pollingFallback: NodeJS.Timeout | null = null;
     let reconnectAttempts = 0;
-    const maxReconnectAttempts = 5;
+    const maxReconnectAttempts = 3;
+    let sseWorking = false;
 
     const connectSSE = () => {
       // Create EventSource connection
@@ -75,6 +77,13 @@ export default function JudgeDashboard() {
         console.log('[Judge Dashboard] ✅ SSE connection opened');
         setConnectionStatus('connected');
         reconnectAttempts = 0; // Reset on successful connection
+        sseWorking = true;
+        
+        // Clear polling fallback if SSE is working
+        if (pollingFallback) {
+          clearInterval(pollingFallback);
+          pollingFallback = null;
+        }
       };
 
       // Handle incoming messages
@@ -84,13 +93,16 @@ export default function JudgeDashboard() {
           console.log('[Judge Dashboard] 📨 SSE message received:', data.type);
 
           if (data.type === 'requests') {
+            console.log('[Judge Dashboard] 📦 Received requests via SSE:', data.requests?.length || 0);
             handleSSEData(data.requests || []);
+            sseWorking = true; // Confirm SSE is working
           } else if (data.type === 'connected') {
             console.log('[Judge Dashboard] 🔗 SSE:', data.message);
             setConnectionStatus('connected');
           } else if (data.type === 'heartbeat') {
             // Heartbeat to keep connection alive
             console.log('[Judge Dashboard] 💓 Heartbeat received');
+            sseWorking = true;
           }
         } catch (error) {
           console.error('[Judge Dashboard] ❌ Error parsing SSE data:', error);
@@ -102,12 +114,23 @@ export default function JudgeDashboard() {
         console.error('[Judge Dashboard] ❌ SSE error:', error);
         
         if (eventSource.readyState === EventSource.CLOSED) {
+          sseWorking = false;
           setConnectionStatus('disconnected');
+          
+          // If SSE fails, fall back to polling
+          if (!pollingFallback) {
+            console.log('[Judge Dashboard] 🔄 SSE failed, falling back to polling...');
+            setConnectionStatus('connected'); // Show as connected but using polling
+            pollingFallback = setInterval(() => {
+              console.log('[Judge Dashboard] 🔄 Polling fallback tick');
+              fetchRequests();
+            }, 5000);
+          }
           
           // Attempt to reconnect if we haven't exceeded max attempts
           if (reconnectAttempts < maxReconnectAttempts) {
             reconnectAttempts++;
-            const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 10000); // Exponential backoff, max 10s
+            const delay = Math.min(2000 * reconnectAttempts, 10000); // Exponential backoff, max 10s
             
             console.log(`[Judge Dashboard] 🔄 Reconnecting SSE in ${delay}ms (attempt ${reconnectAttempts}/${maxReconnectAttempts})...`);
             
@@ -116,8 +139,7 @@ export default function JudgeDashboard() {
               connectSSE();
             }, delay);
           } else {
-            console.error('[Judge Dashboard] ❌ Max reconnect attempts reached. Please refresh the page.');
-            setConnectionStatus('disconnected');
+            console.log('[Judge Dashboard] ⚠️ SSE reconnection failed, using polling fallback');
           }
         } else if (eventSource.readyState === EventSource.CONNECTING) {
           setConnectionStatus('connecting');
@@ -129,16 +151,22 @@ export default function JudgeDashboard() {
 
     const eventSource = connectSSE();
 
+    // Initial fetch via regular API (fallback if SSE doesn't work immediately)
+    fetchRequests();
+
     // Cleanup on unmount
     return () => {
       console.log('[Judge Dashboard] 🧹 Cleaning up SSE connection');
       if (reconnectTimeout) {
         clearTimeout(reconnectTimeout);
       }
+      if (pollingFallback) {
+        clearInterval(pollingFallback);
+      }
       eventSource.close();
       eventSourceRef.current = null;
     };
-  }, [handleSSEData]);
+  }, [handleSSEData, fetchRequests]);
 
   // Fallback: Manual refresh function
   const fetchRequests = useCallback(async () => {
@@ -302,7 +330,9 @@ export default function JudgeDashboard() {
                 </span>
               </div>
               <span className="text-gray-400">•</span>
-              <span className="text-gray-500">Real-time via SSE</span>
+              <span className="text-gray-500">
+                {connectionStatus === 'connected' ? 'Real-time updates' : 'Polling fallback'}
+              </span>
             </div>
           </div>
           <div className="p-6">

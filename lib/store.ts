@@ -67,7 +67,7 @@ export const useStore = create<StoreState>((set) => ({
             ...state.currentRequest,
             verdicts: [...state.currentRequest.verdicts, verdict],
             status:
-              state.currentRequest.verdicts.length + 1 >= 10
+              state.currentRequest.verdicts.length + 1 >= 3
                 ? 'completed'
                 : 'in_progress',
           }
