@@ -7,7 +7,7 @@ import {
   Star, 
   Eye, 
   MessageSquare, 
-  Fire, 
+  Flame, 
   Clock, 
   Search,
   ChevronRight,
@@ -227,7 +227,7 @@ export default function DiscoverPage() {
         {data.popular_categories && data.popular_categories.length > 0 && (
           <section className="mb-12">
             <div className="flex items-center mb-6">
-              <Fire className="h-6 w-6 text-red-500 mr-3" />
+              <Flame className="h-6 w-6 text-red-500 mr-3" />
               <h2 className="text-2xl font-bold text-gray-900">Popular Categories</h2>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

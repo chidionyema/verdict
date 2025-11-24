@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { createServiceClient } from '@/lib/supabase/server';
@@ -67,17 +66,17 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
     return;
   }
 
-  // Update transaction status
-  const { error: txError } = await (supabase
-    .from('transactions') as ReturnType<typeof supabase.from>)
+  // Update payment status
+  const { error: paymentError } = await supabase
+    .from('payments')
     .update({
-      status: 'completed',
+      status: 'succeeded',
       stripe_payment_intent_id: session.payment_intent as string,
-    } as Record<string, unknown>)
-    .eq('stripe_session_id', session.id);
+    })
+    .eq('stripe_payment_intent_id', session.payment_intent as string);
 
-  if (txError) {
-    console.error('Failed to update transaction:', txError);
+  if (paymentError) {
+    console.error('Failed to update payment:', paymentError);
   }
 
   // Add credits to user
@@ -104,11 +103,11 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
 async function handleCheckoutExpired(session: Stripe.Checkout.Session) {
   const supabase = createServiceClient();
 
-  // Mark transaction as failed
-  await (supabase
-    .from('transactions') as ReturnType<typeof supabase.from>)
-    .update({ status: 'failed' } as Record<string, unknown>)
-    .eq('stripe_session_id', session.id);
+  // Mark payment as failed
+  await supabase
+    .from('payments')
+    .update({ status: 'failed' })
+    .eq('stripe_payment_intent_id', session.payment_intent as string);
 
   console.log(`Checkout expired: ${session.id}`);
 }

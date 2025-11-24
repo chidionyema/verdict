@@ -1,31 +1,64 @@
-# 🚀 Production Deployment Checklist
+# 🚀 Production Launch Checklist
 
-## ⚡ Quick Wins (Deploy Today)
+## **CRITICAL (Must Complete Before Launch)**
 
-### Database Performance
-- [ ] Run `scripts/add-performance-indexes.sql` in production
-- [ ] Enable connection pooling in Supabase settings
-- [ ] Set up read replicas if using Pro plan
+### Database Setup ✅
+- [ ] Run `scripts/complete-database-setup.sql` in Supabase SQL Editor
+- [ ] Verify all tables exist: `profiles`, `verdict_requests`, `verdicts`, `judge_demographics`, `payments`, etc.
+- [ ] Enable RLS policies on all tables
+- [ ] Create storage bucket named `requests` for image uploads
 
-### Security
-- [ ] Update `.env` with production values
-- [ ] Enable RLS on all tables
-- [ ] Set up CORS restrictions
-- [ ] Configure CSP headers
+### Environment Variables ⚠️
+**Required for app to function:**
+```bash
+# Supabase (CRITICAL)
+NEXT_PUBLIC_SUPABASE_URL=your_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key  
+SUPABASE_SERVICE_ROLE_KEY=your_service_key
 
-### Monitoring (15 min setup)
-- [ ] Add Vercel Analytics: `npm i @vercel/analytics`
-- [ ] Enable Vercel Speed Insights
-- [ ] Set up error tracking with Sentry
-- [ ] Configure uptime monitoring
+# Stripe (for payments)
+STRIPE_SECRET_KEY=sk_live_...
+STRIPE_WEBHOOK_SECRET=whsec_...
 
-### Performance
-- [ ] Deploy `next.config.quick-wins.js`
-- [ ] Enable Vercel Edge Functions
-- [ ] Configure CDN for images
-- [ ] Add compression middleware
+# App Config
+NEXT_PUBLIC_APP_URL=https://yourdomain.com
+NODE_ENV=production
+```
 
-## 🔧 Critical Fixes (Next Week)
+### Storage Configuration 📁
+**Create Supabase Storage Bucket:**
+1. Go to Storage in Supabase dashboard
+2. Create bucket named `requests`
+3. Set to Public
+4. Add policy: `Users can upload to their own folder`
+
+### TypeScript Safety 🔧
+- [ ] Remove remaining `@ts-nocheck` from:
+  - `app/judge/page.tsx`
+  - `app/api/requests/[id]/route.ts`
+  - `app/api/billing/create-checkout-session/route.ts`
+  - `app/api/profile/route.ts`
+  - `app/api/judge/*.ts` files
+
+### Payment System 💳
+- [ ] Configure Stripe webhook endpoint: `/api/billing/webhook`
+- [ ] Test payment flow end-to-end
+- [ ] Verify credit deduction/addition works
+
+## **HIGH PRIORITY**
+
+### Security Hardening 🔒
+- [ ] Verify all API routes have authentication
+- [ ] Check RLS policies prevent data leaks
+- [ ] Remove console.log statements from production code
+- [ ] Add rate limiting to API endpoints
+
+### Error Handling 🚨
+- [ ] Add proper error boundaries to React components
+- [ ] Implement graceful failures for external services
+- [ ] Add monitoring/alerting for critical errors
+
+## **MEDIUM PRIORITY**
 
 ### Scalability
 - [ ] Implement queue system for judge assignment
