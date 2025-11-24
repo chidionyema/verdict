@@ -13,7 +13,7 @@ const replySchema = z.object({
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = createClient();
@@ -23,7 +23,7 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const ticketId = params.id;
+    const { id: ticketId } = await params;
 
     // Get ticket details
     const { data: ticket, error: ticketError } = await supabase
@@ -68,7 +68,7 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = createClient();
@@ -78,7 +78,7 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const ticketId = params.id;
+    const { id: ticketId } = await params;
     const body = await request.json();
     const validated = replySchema.parse(body);
 
@@ -147,7 +147,7 @@ export async function POST(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = createClient();
@@ -157,7 +157,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const ticketId = params.id;
+    const { id: ticketId } = await params;
     const body = await request.json();
     const { action } = body;
 

@@ -3,11 +3,11 @@ import { createClient } from '@/lib/supabase/server';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = createClient();
-    const articleId = params.id;
+    const { id: articleId } = await params;
 
     if (!articleId) {
       return NextResponse.json({ error: 'Article ID required' }, { status: 400 });
@@ -59,12 +59,12 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
-    const articleId = params.id;
+    const { id: articleId } = await params;
 
     if (!articleId) {
       return NextResponse.json({ error: 'Article ID required' }, { status: 400 });

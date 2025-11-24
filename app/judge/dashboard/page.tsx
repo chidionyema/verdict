@@ -17,6 +17,7 @@ export default function JudgeDashboard() {
   const [loading, setLoading] = useState(true);
   const [lastFetch, setLastFetch] = useState<Date | null>(null);
   const [secondsAgo, setSecondsAgo] = useState(0);
+  const [newRequestsCount, setNewRequestsCount] = useState(0);
 
   // Fetch available requests
   const fetchRequests = useCallback(async () => {
@@ -38,6 +39,16 @@ export default function JudgeDashboard() {
         createdAt: new Date(req.created_at),
       }));
 
+      // Check if there are new requests
+      const previousCount = availableRequests.length;
+      const newCount = transformedRequests.length;
+      if (newCount > previousCount && previousCount > 0) {
+        const diff = newCount - previousCount;
+        setNewRequestsCount(diff);
+        // Clear notification after 3 seconds
+        setTimeout(() => setNewRequestsCount(0), 3000);
+      }
+
       setAvailableRequests(transformedRequests);
       setLastFetch(new Date());
     } catch (error) {
@@ -45,7 +56,7 @@ export default function JudgeDashboard() {
     } finally {
       setLoading(false);
     }
-  }, [setAvailableRequests]);
+  }, [setAvailableRequests, availableRequests.length]);
 
   // Initial fetch on mount
   useEffect(() => {
@@ -99,8 +110,28 @@ export default function JudgeDashboard() {
     };
   }, [fetchRequests]);
 
+  // Update "seconds ago" counter every second
+  useEffect(() => {
+    if (!lastFetch) return;
+
+    const updateTimer = setInterval(() => {
+      setSecondsAgo(Math.floor((Date.now() - lastFetch.getTime()) / 1000));
+    }, 1000);
+
+    return () => clearInterval(updateTimer);
+  }, [lastFetch]);
+
   return (
     <div className="min-h-screen bg-gray-50 py-12">
+      {/* New Request Notification */}
+      {newRequestsCount > 0 && (
+        <div className="fixed top-4 right-4 z-50 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg animate-bounce">
+          <p className="font-semibold">
+            🎉 {newRequestsCount} new request{newRequestsCount > 1 ? 's' : ''} available!
+          </p>
+        </div>
+      )}
+
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Judge Dashboard</h1>
@@ -177,7 +208,7 @@ export default function JudgeDashboard() {
               <div className="flex items-center gap-3">
                 {lastFetch && (
                   <span className="text-xs text-gray-400">
-                    Updated {Math.floor((Date.now() - lastFetch.getTime()) / 1000)}s ago
+                    Updated {secondsAgo}s ago
                   </span>
                 )}
                 <button
