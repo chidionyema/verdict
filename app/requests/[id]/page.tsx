@@ -88,10 +88,10 @@ export default function RequestDetailPage({
 
       // Check if user is the request owner
       const isSeeker = request.user_id === user.id;
-      const isJudge = profile?.is_judge || false;
+      const isJudge = profile ? (profile as { is_judge?: boolean }).is_judge || false : false;
 
       // If judge, check if they've given a verdict for this request
-      let myVerdictId = null;
+      let myVerdictId: string | null = null;
       if (isJudge) {
         const { data: myVerdict } = await supabase
           .from('verdict_responses')
@@ -99,7 +99,7 @@ export default function RequestDetailPage({
           .eq('request_id', request.id)
           .eq('judge_id', user.id)
           .single();
-        myVerdictId = myVerdict?.id || null;
+        myVerdictId = myVerdict ? (myVerdict as { id?: string }).id || null : null;
       }
 
       setUserContext({

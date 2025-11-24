@@ -24,10 +24,6 @@ export function EmptyState({
   tips,
   className = '',
 }: EmptyStateProps) {
-  const ActionButton = actionHref ? Link : 'button';
-  const actionProps = actionHref
-    ? { href: actionHref, className: 'inline-block' }
-    : { onClick: onAction, type: 'button' as const };
 
   return (
     <div className={`bg-white rounded-lg shadow-lg p-12 text-center ${className}`}>
@@ -38,12 +34,22 @@ export function EmptyState({
       <p className="text-gray-600 mb-6 max-w-md mx-auto">{description}</p>
       
       {(actionLabel && (actionHref || onAction)) && (
-        <ActionButton
-          {...actionProps}
-          className="inline-block bg-indigo-600 text-white px-8 py-4 rounded-xl font-semibold hover:bg-indigo-700 transition shadow-lg min-h-[48px]"
-        >
-          {actionLabel}
-        </ActionButton>
+        actionHref ? (
+          <Link
+            href={actionHref}
+            className="inline-block bg-indigo-600 text-white px-8 py-4 rounded-xl font-semibold hover:bg-indigo-700 transition shadow-lg min-h-[48px]"
+          >
+            {actionLabel}
+          </Link>
+        ) : (
+          <button
+            onClick={onAction}
+            type="button"
+            className="inline-block bg-indigo-600 text-white px-8 py-4 rounded-xl font-semibold hover:bg-indigo-700 transition shadow-lg min-h-[48px]"
+          >
+            {actionLabel}
+          </button>
+        )
       )}
 
       {tips && tips.length > 0 && (

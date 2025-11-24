@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
+import { toast } from '@/components/ui/toast';
 import { 
   Clock, CheckCircle, XCircle, Eye, Calendar, Filter, Search, 
   TrendingUp, Star, Share2, Copy, MoreHorizontal, Image, 
@@ -18,10 +19,77 @@ export default function MyRequestsPage() {
   const [filter, setFilter] = useState<'all' | 'open' | 'closed' | 'cancelled'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const previousCountsRef = useRef<Record<string, number>>({});
 
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Set up real-time subscription for verdict updates
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = supabase
+      .channel('my-requests-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'verdict_requests',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          const updatedRequest = payload.new as any;
+          const oldRequest = payload.old as any;
+          
+          // Check if verdict count increased
+          const oldCount = oldRequest?.received_verdict_count || previousCountsRef.current[updatedRequest.id] || 0;
+          const newCount = updatedRequest?.received_verdict_count || 0;
+          
+          if (newCount > oldCount) {
+            // Update the request in state
+            setRequests((prev) => {
+              const updated = prev.map((req) =>
+                req.id === updatedRequest.id
+                  ? { ...req, ...updatedRequest }
+                  : req
+              );
+              
+              // Update previous counts
+              previousCountsRef.current[updatedRequest.id] = newCount;
+              
+              return updated;
+            });
+
+            // Show notification
+            const verdictsReceived = newCount - oldCount;
+            if (newCount >= updatedRequest.target_verdict_count) {
+              toast.success(
+                `🎉 All verdicts received! Your request is complete.`,
+                5000
+              );
+            } else {
+              toast.success(
+                `✨ You received ${verdictsReceived} new verdict${verdictsReceived > 1 ? 's' : ''}! (${newCount}/${updatedRequest.target_verdict_count})`,
+                5000
+              );
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    // Polling fallback - refresh every 30 seconds to catch any missed updates
+    const pollInterval = setInterval(() => {
+      fetchData();
+    }, 30000);
+
+    return () => {
+      supabase.removeChannel(channel);
+      clearInterval(pollInterval);
+    };
+  }, [user?.id, supabase]);
 
   const fetchData = async () => {
     try {
@@ -44,7 +112,15 @@ export default function MyRequestsPage() {
       if (res.ok) {
         const data = await res.json();
         console.log('API Response data:', data);
-        setRequests(data.requests || []);
+        const fetchedRequests = data.requests || [];
+        setRequests(fetchedRequests);
+        
+        // Store initial counts for comparison
+        const counts: Record<string, number> = {};
+        fetchedRequests.forEach((req: any) => {
+          counts[req.id] = req.received_verdict_count || 0;
+        });
+        previousCountsRef.current = counts;
       } else {
         const errorData = await res.json();
         console.error('API Error:', errorData);

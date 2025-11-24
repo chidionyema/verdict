@@ -56,6 +56,23 @@ export default function JudgeDashboard() {
     console.log('[Judge Dashboard] ✅ Store updated via SSE');
   }, [setAvailableRequests, transformRequests]);
 
+  // Fallback: Manual refresh function
+  const fetchRequests = useCallback(async () => {
+    try {
+      console.log('[Judge Dashboard] 🔄 Manual refresh...');
+      const res = await fetch('/api/judge/queue?limit=20');
+
+      if (!res.ok) {
+        throw new Error(`Failed to fetch requests: ${res.status}`);
+      }
+
+      const data = await res.json();
+      handleSSEData(data.requests || []);
+    } catch (error) {
+      console.error('[Judge Dashboard] ❌ Manual refresh error:', error);
+    }
+  }, [handleSSEData]);
+
   // Set up Server-Sent Events connection with polling fallback
   useEffect(() => {
     console.log('[Judge Dashboard] 🚀 Setting up SSE connection...');
@@ -167,23 +184,6 @@ export default function JudgeDashboard() {
       eventSourceRef.current = null;
     };
   }, [handleSSEData, fetchRequests]);
-
-  // Fallback: Manual refresh function
-  const fetchRequests = useCallback(async () => {
-    try {
-      console.log('[Judge Dashboard] 🔄 Manual refresh...');
-      const res = await fetch('/api/judge/queue?limit=20');
-
-      if (!res.ok) {
-        throw new Error(`Failed to fetch requests: ${res.status}`);
-      }
-
-      const data = await res.json();
-      handleSSEData(data.requests || []);
-    } catch (error) {
-      console.error('[Judge Dashboard] ❌ Manual refresh error:', error);
-    }
-  }, [handleSSEData]);
 
   // Update "seconds ago" counter every second
   useEffect(() => {
