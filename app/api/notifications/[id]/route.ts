@@ -20,7 +20,7 @@ export async function PATCH(
     }
 
     const { data: success, error: markError } = await supabase
-      .rpc('mark_notification_read', { notification_id: id });
+      .rpc('mark_notification_read', { notification_id: id } as any) as any;
 
     if (markError) {
       console.error('Error marking notification as read:', markError);

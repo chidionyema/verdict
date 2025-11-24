@@ -22,10 +22,18 @@ export default function JudgeDashboard() {
   // Fetch available requests
   const fetchRequests = useCallback(async () => {
     try {
+      console.log('[Judge Dashboard] Fetching requests...');
       const res = await fetch('/api/judge/queue?limit=20');
-      if (!res.ok) throw new Error('Failed to fetch requests');
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error('[Judge Dashboard] API error:', res.status, errorText);
+        throw new Error(`Failed to fetch requests: ${res.status}`);
+      }
 
       const data = await res.json();
+      console.log('[Judge Dashboard] Received data:', data);
+      console.log('[Judge Dashboard] Number of requests:', data.requests?.length || 0);
 
       // Transform API response to match store format
       const transformedRequests = (data.requests || []).map((req: any) => ({
@@ -39,11 +47,14 @@ export default function JudgeDashboard() {
         createdAt: new Date(req.created_at),
       }));
 
+      console.log('[Judge Dashboard] Transformed requests:', transformedRequests.length);
+
       // Check if there are new requests
       const previousCount = availableRequests.length;
       const newCount = transformedRequests.length;
       if (newCount > previousCount && previousCount > 0) {
         const diff = newCount - previousCount;
+        console.log(`[Judge Dashboard] 🎉 ${diff} new requests detected!`);
         setNewRequestsCount(diff);
         // Clear notification after 3 seconds
         setTimeout(() => setNewRequestsCount(0), 3000);
@@ -51,8 +62,9 @@ export default function JudgeDashboard() {
 
       setAvailableRequests(transformedRequests);
       setLastFetch(new Date());
+      console.log('[Judge Dashboard] ✅ Store updated');
     } catch (error) {
-      console.error('Failed to fetch requests:', error);
+      console.error('[Judge Dashboard] ❌ Fetch error:', error);
     } finally {
       setLoading(false);
     }
@@ -63,50 +75,17 @@ export default function JudgeDashboard() {
     fetchRequests();
   }, [fetchRequests]);
 
-  // Set up polling for new requests (every 5 seconds)
+  // Set up polling for new requests (every 3 seconds for better UX)
   useEffect(() => {
+    console.log('[Judge Dashboard] Setting up polling...');
     const pollInterval = setInterval(() => {
+      console.log('[Judge Dashboard] 🔄 Polling tick...');
       fetchRequests();
-    }, 5000);
-
-    return () => clearInterval(pollInterval);
-  }, [fetchRequests]);
-
-  // Set up Supabase Realtime subscription for instant updates
-  useEffect(() => {
-    const supabase = createClient();
-
-    const channel = supabase
-      .channel('judge-requests')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'verdict_requests',
-          filter: 'status=in.("in_progress","pending")',
-        },
-        () => {
-          // New request created - fetch immediately
-          fetchRequests();
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'verdict_requests',
-        },
-        () => {
-          // Request updated (might be closed) - refresh list
-          fetchRequests();
-        }
-      )
-      .subscribe();
+    }, 3000); // Poll every 3 seconds
 
     return () => {
-      supabase.removeChannel(channel);
+      console.log('[Judge Dashboard] Cleaning up polling interval');
+      clearInterval(pollInterval);
     };
   }, [fetchRequests]);
 
@@ -224,10 +203,10 @@ export default function JudgeDashboard() {
             <div className="mt-3 flex items-center gap-2 text-xs">
               <div className="flex items-center gap-1">
                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                <span className="text-green-600 font-medium">Live updates enabled</span>
+                <span className="text-green-600 font-medium">Auto-refresh enabled</span>
               </div>
               <span className="text-gray-400">•</span>
-              <span className="text-gray-500">Auto-refreshing every 5s</span>
+              <span className="text-gray-500">Checking every 3 seconds</span>
             </div>
           </div>
           <div className="p-6">

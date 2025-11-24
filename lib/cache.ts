@@ -155,7 +155,7 @@ if (typeof window === 'undefined') {
 
 // Cache middleware for API routes
 export function withCache<T>(
-  key: string,
+  key: string | ((...args: any[]) => string),
   ttlMs?: number
 ) {
   return function (

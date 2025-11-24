@@ -41,7 +41,9 @@ export async function GET(request: NextRequest) {
 
     const excludeIds = respondedRequestIds?.map((r) => r.request_id) || [];
 
-    // Fetch open requests (in_progress means waiting for judges)
+    // Fetch open requests
+    // Status can be: 'pending', 'in_progress', 'open', 'closed', 'cancelled'
+    // We want requests that are actively looking for judges
     let query = supabase
       .from('verdict_requests')
       .select(`
@@ -50,15 +52,20 @@ export async function GET(request: NextRequest) {
         category,
         subcategory,
         media_type,
+        media_url,
+        text_content,
         context,
         target_verdict_count,
-        received_verdict_count
+        received_verdict_count,
+        status
       `)
-      .in('status', ['in_progress', 'pending']) // Accept both 'in_progress' (new) and 'pending' (legacy)
+      .in('status', ['open', 'in_progress', 'pending']) // All active statuses
       .neq('user_id', user.id) // Exclude own requests
       .is('deleted_at', null)
       .order('created_at', { ascending: true }) // Oldest first
       .limit(limit);
+
+    console.log('[Judge Queue API] Querying for requests...');
 
     // Exclude already responded requests
     if (excludeIds.length > 0) {
@@ -68,12 +75,15 @@ export async function GET(request: NextRequest) {
     const { data: requests, error } = await query;
 
     if (error) {
-      console.error('Fetch queue error:', error);
+      console.error('[Judge Queue API] ❌ Fetch queue error:', error);
       return NextResponse.json(
         { error: 'Failed to fetch queue' },
         { status: 500 }
       );
     }
+
+    console.log('[Judge Queue API] ✅ Found', requests?.length || 0, 'requests');
+    console.log('[Judge Queue API] Excluded request IDs:', excludeIds.length);
 
     return NextResponse.json({ requests: requests || [] });
   } catch (error) {

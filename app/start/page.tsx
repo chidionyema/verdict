@@ -14,6 +14,7 @@ import PersonalizationEngine from '@/components/PersonalizationEngine';
 import QualityScoring from '@/components/QualityScoring';
 import ViralGrowthHub from '@/components/ViralGrowthHub';
 import { JudgePreferences } from '@/components/request/judge-preferences';
+import type { JudgePreferences as JudgePreferencesType } from '@/components/request/judge-preferences';
 import { TrustBadge, TrustBadgeGroup } from '@/components/shared/TrustBadge';
 import { EncouragingCounter } from '@/components/shared/EncouragingCounter';
 import { DecisionFramingHelper } from '@/components/request/DecisionFramingHelper';
@@ -86,7 +87,7 @@ export default function StartPage() {
   const [title, setTitle] = useState('');
   const [context, setContext] = useState('');
   const [uploading, setUploading] = useState(false);
-  const [judgePreferences, setJudgePreferences] = useState(null);
+  const [judgePreferences, setJudgePreferences] = useState<JudgePreferencesType | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 

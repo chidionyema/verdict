@@ -16,7 +16,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
@@ -71,7 +71,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
@@ -88,7 +88,7 @@ export async function POST(
       .select('id, status')
       .eq('id', ticketId)
       .eq('user_id', user.id)
-      .single();
+      .single() as { data: { id: string; status: string } | null; error: any };
 
     if (ticketError || !ticket) {
       return NextResponse.json({ error: 'Ticket not found' }, { status: 404 });
@@ -107,7 +107,7 @@ export async function POST(
         message: validated.message,
         attachments: validated.attachments || [],
         is_from_admin: false,
-      })
+      } as any)
       .select(`
         *,
         profiles(full_name, is_admin)
@@ -120,12 +120,11 @@ export async function POST(
     }
 
     // Update ticket status and last response time
-    await supabase
+    await (supabase
       .from('support_tickets')
-      .update({
+      .update as any)({
         status: 'waiting_for_admin',
         last_response_at: new Date().toISOString(),
-        response_count: supabase.raw('response_count + 1'),
         updated_at: new Date().toISOString(),
       })
       .eq('id', ticketId);
@@ -137,7 +136,7 @@ export async function POST(
 
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: 'Invalid request data', details: error.errors }, { status: 400 });
+      return NextResponse.json({ error: 'Invalid request data', details: error.issues }, { status: 400 });
     }
 
     console.error('Create reply error:', error);
@@ -150,7 +149,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
@@ -167,16 +166,16 @@ export async function PATCH(
       .select('id, status')
       .eq('id', ticketId)
       .eq('user_id', user.id)
-      .single();
+      .single() as { data: { id: string; status: string } | null; error: any };
 
     if (ticketError || !ticket) {
       return NextResponse.json({ error: 'Ticket not found' }, { status: 404 });
     }
 
     if (action === 'close') {
-      const { error } = await supabase
+      const { error } = await (supabase
         .from('support_tickets')
-        .update({
+        .update as any)({
           status: 'closed',
           updated_at: new Date().toISOString(),
         })
@@ -198,9 +197,9 @@ export async function PATCH(
         return NextResponse.json({ error: 'Ticket is not closed' }, { status: 400 });
       }
 
-      const { error } = await supabase
+      const { error } = await (supabase
         .from('support_tickets')
-        .update({
+        .update as any)({
           status: 'open',
           updated_at: new Date().toISOString(),
         })

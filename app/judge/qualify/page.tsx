@@ -119,7 +119,7 @@ export default function JudgeQualificationPage() {
       if (profileData) {
         setProfile(profileData);
         // If already a judge, redirect to judge dashboard
-        if (profileData.is_judge) {
+        if ((profileData as any).is_judge) {
           router.push('/judge');
           return;
         }

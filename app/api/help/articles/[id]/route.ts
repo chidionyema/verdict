@@ -6,7 +6,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const { id: articleId } = await params;
 
     if (!articleId) {
@@ -22,23 +22,23 @@ export async function GET(
       `)
       .eq('id', articleId)
       .eq('is_published', true)
-      .single();
+      .single() as { data: { view_count?: number; category?: string; [key: string]: any } | null; error: any };
 
     if (error || !article) {
       return NextResponse.json({ error: 'Article not found' }, { status: 404 });
     }
 
     // Increment view count
-    await supabase
+    await (supabase
       .from('help_articles')
-      .update({ view_count: (article.view_count || 0) + 1 })
+      .update as any)({ view_count: (article.view_count || 0) + 1 })
       .eq('id', articleId);
 
     // Get related articles
     const { data: relatedArticles } = await supabase
       .from('help_articles')
       .select('id, title, category, created_at')
-      .eq('category', article.category)
+      .eq('category', article.category || '')
       .eq('is_published', true)
       .neq('id', articleId)
       .limit(5);
@@ -62,7 +62,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     const { id: articleId } = await params;
 
@@ -93,7 +93,7 @@ export async function POST(
       }
 
       // Increment helpful count
-      const { error: updateError } = await supabase.rpc('increment_article_helpful_count', {
+      const { error: updateError } = await (supabase.rpc as any)('increment_article_helpful_count', {
         article_id: articleId
       });
 
@@ -110,7 +110,7 @@ export async function POST(
             article_id: articleId,
             user_id: userId,
             feedback_type: 'helpful',
-          });
+          } as any);
       }
 
       return NextResponse.json({ success: true });

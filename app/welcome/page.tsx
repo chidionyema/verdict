@@ -53,9 +53,9 @@ export default function WelcomePage() {
         .single();
       
       if (profileData) {
-        setProfile(profileData);
+        setProfile(profileData as Profile);
         // If already completed onboarding, redirect to dashboard
-        if (profileData.onboarding_completed) {
+        if ((profileData as any).onboarding_completed) {
           router.push('/dashboard');
           return;
         }
@@ -70,9 +70,9 @@ export default function WelcomePage() {
   const updateProfile = async (updates: Partial<Profile>) => {
     if (!user) return;
     
-    const { error } = await supabase
+    const { error } = await (supabase
       .from('profiles')
-      .update(updates)
+      .update as any)(updates)
       .eq('id', user.id);
     
     if (!error) {

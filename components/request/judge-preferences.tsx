@@ -19,7 +19,7 @@ import {
   Sparkles
 } from 'lucide-react';
 
-interface JudgePreferences {
+export interface JudgePreferences {
   age_ranges: string[];
   genders: string[];
   ethnicities: string[];

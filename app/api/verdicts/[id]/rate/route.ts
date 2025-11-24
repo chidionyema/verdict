@@ -50,14 +50,14 @@ export async function POST(
         verdict_requests!request_id(user_id)
       `)
       .eq('id', id)
-      .single();
+      .single() as { data: { id: string; judge_id: string; verdict_requests?: { user_id: string } } | null; error: any };
 
     if (verdictError || !verdict) {
       return NextResponse.json({ error: 'Verdict not found' }, { status: 404 });
     }
 
     // Verify user owns the original request
-    if (verdict.verdict_requests.user_id !== user.id) {
+    if (verdict.verdict_requests?.user_id !== user.id) {
       return NextResponse.json({ 
         error: 'You can only rate verdicts on your own requests' 
       }, { status: 403 });
@@ -93,7 +93,7 @@ export async function POST(
 
     const { data: rating, error: ratingError } = await supabase
       .from('verdict_quality_ratings')
-      .insert(ratingData)
+      .insert(ratingData as any)
       .select()
       .single();
 
@@ -105,9 +105,9 @@ export async function POST(
     // Update verdict quality score
     const averageQuality = (helpfulness_rating + accuracy_rating + constructiveness_rating + overall_rating) / 4;
     
-    await supabase
+    await (supabase
       .from('verdict_responses')
-      .update({
+      .update as any)({
         quality_score: averageQuality,
         helpfulness_rating: helpfulness_rating,
         is_featured: is_featured_worthy,
@@ -116,7 +116,7 @@ export async function POST(
       .eq('id', id);
 
     // Notify the judge about the rating
-    await supabase.rpc('create_notification', {
+    await (supabase.rpc as any)('create_notification', {
       target_user_id: verdict.judge_id,
       notification_type: 'verdict_rated',
       notification_title: 'Your verdict was rated!',
@@ -135,11 +135,11 @@ export async function POST(
       const { data: admins } = await supabase
         .from('profiles')
         .select('id')
-        .eq('is_admin', true);
+        .eq('is_admin', true) as { data: Array<{ id: string }> | null };
 
       if (admins && admins.length > 0) {
         for (const admin of admins) {
-          await supabase.rpc('create_notification', {
+          await (supabase.rpc as any)('create_notification', {
             target_user_id: admin.id,
             notification_type: 'featured_content_candidate',
             notification_title: 'Featured content candidate',
@@ -156,7 +156,7 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
-      rating_id: rating.id,
+      rating_id: (rating as any)?.id,
       message: 'Rating submitted successfully'
     });
 

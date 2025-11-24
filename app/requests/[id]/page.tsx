@@ -384,7 +384,7 @@ export default function RequestDetailPage({
                   />
                   <div className="absolute top-3 right-3">
                     <button
-                      onClick={() => window.open(request.media_url, '_blank')}
+                      onClick={() => request.media_url && window.open(request.media_url, '_blank')}
                       className="p-2 bg-white/90 backdrop-blur rounded-lg shadow-sm hover:bg-white transition"
                       title="View full size"
                     >
@@ -629,7 +629,7 @@ export default function RequestDetailPage({
                       </button>
 
                       {/* Rate Button */}
-                      {request?.status === 'completed' && (
+                      {request?.status === 'closed' && (
                         <button
                           onClick={() => handleRateVerdict(verdict.id)}
                           className="px-4 py-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-lg border border-indigo-200 transition-colors text-sm font-medium"

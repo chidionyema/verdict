@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
     }
 
     // If it's a new user (no profile or onboarding not completed), redirect to welcome
-    if (!profile || !profile.onboarding_completed) {
+    if (!profile || !(profile as any).onboarding_completed) {
       return NextResponse.redirect(new URL('/welcome', requestUrl.origin));
     }
 
