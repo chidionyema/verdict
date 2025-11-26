@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
+import { log } from '@/lib/logger';
 
 const deletionSchema = z.object({
   reason: z.enum(['privacy_concerns', 'no_longer_needed', 'switching_services', 'other']),
@@ -101,7 +102,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (deletionError) {
-      console.error('Error creating deletion request:', deletionError);
+      log.error('Error creating deletion request', deletionError, { userId: user.id });
       return NextResponse.json({ error: 'Failed to create deletion request' }, { status: 500 });
     }
 
@@ -143,7 +144,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.error('Data deletion request error:', error);
+    log.error('Data deletion request error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -172,7 +173,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Get deletion status error:', error);
+    log.error('Get deletion status error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -199,7 +200,7 @@ export async function DELETE(request: NextRequest) {
       .single();
 
     if (cancelError) {
-      console.error('Error cancelling deletion request:', cancelError);
+      log.error('Error cancelling deletion request', cancelError, { userId: user.id });
       return NextResponse.json({ error: 'Failed to cancel deletion request' }, { status: 500 });
     }
 
@@ -231,7 +232,7 @@ export async function DELETE(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Cancel deletion error:', error);
+    log.error('Cancel deletion error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

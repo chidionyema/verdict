@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { sseConnectionRateLimiter, checkRateLimit } from '@/lib/rate-limiter';
+import { log } from '@/lib/logger';
 
 // Track active connections per user to prevent multiple connections
 const activeConnections = new Map<string, { timestamp: number; controller: ReadableStreamDefaultController }>();
@@ -36,7 +37,7 @@ export async function GET(request: NextRequest) {
         try {
           controller.enqueue(encoder.encode(`data: ${data}\n\n`));
         } catch (err) {
-          console.error('Error sending SSE data:', err);
+          log.error('Error sending SSE data', err);
         }
       };
 
@@ -44,7 +45,7 @@ export async function GET(request: NextRequest) {
         try {
           controller.enqueue(encoder.encode(`event: error\ndata: ${JSON.stringify({ error })}\n\n`));
         } catch (err) {
-          console.error('Error sending SSE error:', err);
+          log.error('Error sending SSE error', err);
         }
       };
 
@@ -104,7 +105,7 @@ export async function GET(request: NextRequest) {
         // Check if user already has an active connection - close the old one
         const existingConnection = activeConnections.get(userId);
         if (existingConnection) {
-          console.log(`[SSE] Closing existing connection for user ${userId}`);
+          log.info('[SSE] Closing existing connection for user', { userId });
           try {
             existingConnection.controller.close();
           } catch (err) {
@@ -159,7 +160,7 @@ export async function GET(request: NextRequest) {
             const { data: requests, error } = await query;
 
             if (error) {
-              console.error('Error fetching requests:', error);
+              log.error('Error fetching requests', error);
               return;
             }
 
@@ -169,10 +170,10 @@ export async function GET(request: NextRequest) {
               requests: requests || [],
               timestamp: new Date().toISOString(),
             };
-            console.log('[SSE Stream] Sending requests:', requests?.length || 0);
+            log.debug('[SSE Stream] Sending requests', { count: requests?.length || 0 });
             send(JSON.stringify(requestsData));
           } catch (err) {
-            console.error('Error in fetchAndSendRequests:', err);
+            log.error('Error in fetchAndSendRequests', err);
           }
         };
 
@@ -191,7 +192,7 @@ export async function GET(request: NextRequest) {
 
         // Enforce maximum connection duration to prevent memory leaks
         maxDurationTimeout = setTimeout(() => {
-          console.log(`[SSE] Max duration reached for user ${userId}, closing connection`);
+          log.info('[SSE] Max duration reached for user, closing connection', { userId });
           send(JSON.stringify({
             type: 'reconnect',
             message: 'Connection timeout, please reconnect'
@@ -210,7 +211,7 @@ export async function GET(request: NextRequest) {
             const { data: { user: currentUser }, error: authError } = await supabase.auth.getUser();
 
             if (authError || !currentUser || currentUser.id !== userId) {
-              console.log(`[SSE] Auth validation failed for user ${userId}, closing connection`);
+              log.info('[SSE] Auth validation failed for user, closing connection', { userId });
               sendError('Session expired');
               cleanup();
               try {
@@ -229,7 +230,7 @@ export async function GET(request: NextRequest) {
               .single();
 
             if (!currentProfile?.is_judge) {
-              console.log(`[SSE] Judge status revoked for user ${userId}, closing connection`);
+              log.info('[SSE] Judge status revoked for user, closing connection', { userId });
               sendError('Judge access revoked');
               cleanup();
               try {
@@ -239,13 +240,13 @@ export async function GET(request: NextRequest) {
               }
             }
           } catch (err) {
-            console.error('[SSE] Error in auth re-validation:', err);
+            log.error('[SSE] Error in auth re-validation', err);
           }
         }, 30000); // Every 30 seconds
 
         // Cleanup on client disconnect
         request.signal.addEventListener('abort', () => {
-          console.log(`[SSE] Client disconnected: ${userId}`);
+          log.info('[SSE] Client disconnected', { userId });
           cleanup();
           try {
             controller.close();
@@ -255,7 +256,7 @@ export async function GET(request: NextRequest) {
         });
 
       } catch (error) {
-        console.error('SSE stream error:', error);
+        log.error('SSE stream error', error);
         sendError('Internal server error');
         cleanup();
         try {

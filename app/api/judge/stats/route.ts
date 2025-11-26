@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { log } from '@/lib/logger';
 
 // GET /api/judge/stats - Get judge statistics
 export async function GET(request: NextRequest) {
@@ -36,7 +37,7 @@ export async function GET(request: NextRequest) {
       .eq('judge_id', user.id);
 
     if (verdictsError) {
-      console.error('Error counting verdicts:', verdictsError);
+      log.error('Error counting verdicts', verdictsError, { userId: user.id });
     }
 
     // Get total earnings
@@ -46,7 +47,7 @@ export async function GET(request: NextRequest) {
       .eq('judge_id', user.id);
 
     if (earningsError) {
-      console.error('Error fetching earnings:', earningsError);
+      log.error('Error fetching earnings', earningsError, { userId: user.id });
     }
 
     const totalEarnings =
@@ -63,7 +64,7 @@ export async function GET(request: NextRequest) {
       .eq('payout_status', 'pending');
 
     if (pendingError) {
-      console.error('Error fetching pending earnings:', pendingError);
+      log.error('Error fetching pending earnings', pendingError, { userId: user.id });
     }
 
     const availableForPayout =
@@ -80,7 +81,7 @@ export async function GET(request: NextRequest) {
       .not('quality_score', 'is', null);
 
     if (qualityError) {
-      console.error('Error fetching quality scores:', qualityError);
+      log.error('Error fetching quality scores', qualityError, { userId: user.id });
     }
 
     const qualityScores =
@@ -105,7 +106,7 @@ export async function GET(request: NextRequest) {
       .gte('created_at', sevenDaysAgo.toISOString());
 
     if (recentError) {
-      console.error('Error counting recent verdicts:', recentError);
+      log.error('Error counting recent verdicts', recentError, { userId: user.id });
     }
 
     return NextResponse.json({
@@ -116,7 +117,7 @@ export async function GET(request: NextRequest) {
       recent_verdicts: recentVerdicts || 0,
     }, { status: 200 });
   } catch (error) {
-    console.error('GET /api/judge/stats error:', error);
+    log.error('GET /api/judge/stats error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

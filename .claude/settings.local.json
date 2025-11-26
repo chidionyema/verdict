@@ -5,7 +5,8 @@
       "Bash(tree:*)",
       "Bash(npm uninstall:*)",
       "Bash(npx next build --no-lint)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(npm run build:*)"
     ],
     "deny": [],
     "ask": []

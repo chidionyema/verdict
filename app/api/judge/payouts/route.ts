@@ -170,7 +170,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (payoutError) {
-      console.error('Error creating payout:', payoutError);
+      log.error('Error creating payout', payoutError, { userId: user.id, amount: validated.amount_cents });
       return NextResponse.json({ error: 'Failed to create payout request' }, { status: 500 });
     }
 
@@ -218,8 +218,8 @@ export async function POST(request: NextRequest) {
       });
 
     } catch (stripeError: any) {
-      console.error('Stripe transfer error:', stripeError);
-      
+      log.error('Stripe transfer error', stripeError, { userId: user.id, payoutId: payout.id });
+
       // Update payout status to failed
       await (supabase as any)
         .from('payouts')
@@ -244,7 +244,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.error('Payout creation error:', error);
+    log.error('Payout creation error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

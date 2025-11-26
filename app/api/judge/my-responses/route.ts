@@ -1,11 +1,10 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
-// GET /api/judge/my-responses - Get judge's submitted verdicts
+// GET /api/judge/my-responses - Get judge's submitted verdicts (with per-verdict earnings)
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    const supabase: any = await createClient();
 
     const {
       data: { user },
@@ -22,7 +21,8 @@ export async function GET(request: NextRequest) {
 
     const { data: responses, error } = await supabase
       .from('verdict_responses')
-      .select(`
+      .select(
+        `
         id,
         created_at,
         rating,
@@ -32,9 +32,14 @@ export async function GET(request: NextRequest) {
         verdict_requests (
           category,
           subcategory,
-          media_type
+          media_type,
+          context
+        ),
+        judge_earnings!inner (
+          amount
         )
-      `)
+      `
+      )
       .eq('judge_id', user.id)
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
@@ -47,7 +52,17 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({ responses: responses || [] });
+    // Flatten earnings into a judge_earning field (amount per verdict)
+    const mapped =
+      responses?.map((r: any) => ({
+        ...r,
+        judge_earning:
+          Array.isArray(r.judge_earnings) && r.judge_earnings.length > 0
+            ? Number(r.judge_earnings[0].amount ?? 0)
+            : 0,
+      })) || [];
+
+    return NextResponse.json({ responses: mapped });
   } catch (error) {
     console.error('GET /api/judge/my-responses error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

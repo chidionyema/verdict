@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import Stripe from 'stripe';
 import { headers } from 'next/headers';
+import { log } from '@/lib/logger';
 
 const getStripe = () => {
   if (!process.env.STRIPE_SECRET_KEY) {
@@ -24,7 +25,7 @@ export async function POST(request: NextRequest) {
     try {
       event = getStripe().webhooks.constructEvent(body, sig, endpointSecret);
     } catch (err: any) {
-      console.error('Webhook signature verification failed:', err.message);
+      log.error('Webhook signature verification failed', err, { message: err.message });
       return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
     }
 
@@ -76,13 +77,13 @@ export async function POST(request: NextRequest) {
         break;
 
       default:
-        console.log(`Unhandled event type: ${event.type}`);
+        log.info('Unhandled webhook event type', { eventType: event.type });
     }
 
     return NextResponse.json({ received: true });
 
   } catch (error) {
-    console.error('Webhook processing error:', error);
+    log.error('Webhook processing error', error);
     return NextResponse.json({ error: 'Webhook processing failed' }, { status: 500 });
   }
 }
@@ -117,13 +118,13 @@ async function handleCheckoutSessionCompleted(
     });
 
     if (addError) {
-      console.error('Failed to add credits:', addError);
+      log.error('Failed to add credits', addError, { userId, credits });
       return;
     }
 
     const result = addResult?.[0];
     if (!result?.success) {
-      console.error('Credit addition failed:', result?.message);
+      log.error('Credit addition failed', null, { message: result?.message, userId, credits });
       return;
     }
 
@@ -141,7 +142,7 @@ async function handleCheckoutSessionCompleted(
 
   } else if (metadata.type === 'subscription') {
     // Subscription will be handled by subscription.created event
-    console.log('Subscription checkout completed, waiting for subscription.created event');
+    log.info('Subscription checkout completed, waiting for subscription.created event', { sessionId: session.id });
   }
 }
 
@@ -189,7 +190,7 @@ async function handleInvoicePaymentSucceeded(
   );
 
   if (!subscription.metadata?.subscription_db_id) {
-    console.error('Subscription missing database ID in metadata');
+    log.error('Subscription missing database ID in metadata', null, { subscriptionId: subscription.id });
     return;
   }
 
@@ -199,13 +200,13 @@ async function handleInvoicePaymentSucceeded(
   });
 
   if (renewalError) {
-    console.error('Failed to process subscription renewal:', renewalError);
+    log.error('Failed to process subscription renewal', renewalError, { subscriptionDbId: subscription.metadata.subscription_db_id });
     return;
   }
 
   const result = renewalResult?.[0];
   if (!result?.success) {
-    console.error('Subscription renewal failed:', result?.message);
+    log.error('Subscription renewal failed', null, { message: result?.message, subscriptionDbId: subscription.metadata.subscription_db_id });
   }
 }
 
@@ -285,11 +286,11 @@ async function handleSubscriptionCreated(
     );
 
     if (addError) {
-      console.error('Failed to add subscription credits:', addError);
+      log.error('Failed to add subscription credits', addError, { userId, credits: (plan as any).monthly_credits });
     } else {
       const result = (addResult as any)?.[0];
       if (!result?.success) {
-        console.error('Subscription credit addition failed:', result?.message);
+        log.error('Subscription credit addition failed', null, { message: result?.message, userId, credits: (plan as any).monthly_credits });
       }
     }
   }

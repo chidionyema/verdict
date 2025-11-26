@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { sseConnectionRateLimiter, checkRateLimit } from '@/lib/rate-limiter';
+import { log } from '@/lib/logger';
 
 // Maximum connection duration: 5 minutes (forces reconnect to prevent memory buildup)
 const MAX_CONNECTION_DURATION = 5 * 60 * 1000;
@@ -180,7 +181,7 @@ export async function GET(
           }
         });
       } catch (error) {
-        console.error('SSE /api/requests/[id]/stream error:', error);
+        log.error('SSE /api/requests/[id]/stream error', error);
         sendError('Internal server error');
         cleanup();
         try {

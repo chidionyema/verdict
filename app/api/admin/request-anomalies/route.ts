@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { log } from '@/lib/logger';
 
 // GET /api/admin/request-anomalies - list requests that look "stuck" or over-filled
 export async function GET(request: NextRequest) {
@@ -37,7 +38,7 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: true });
 
     if (error) {
-      console.error('[admin] request-anomalies query error', error);
+      log.error('Admin request-anomalies query error', error);
       return NextResponse.json(
         { error: 'Failed to fetch anomalies' },
         { status: 500 }
@@ -52,7 +53,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ requests: anomalies });
   } catch (err) {
-    console.error('GET /api/admin/request-anomalies error:', err);
+    log.error('GET /api/admin/request-anomalies error', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

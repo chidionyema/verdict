@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import Stripe from 'stripe';
+import { log } from '@/lib/logger';
 
 const getStripe = () => {
   if (!process.env.STRIPE_SECRET_KEY) {
@@ -53,7 +54,7 @@ export async function GET(request: NextRequest) {
           },
         });
       } catch (stripeError) {
-        console.warn('Failed to fetch Stripe account:', stripeError);
+        log.warn('Failed to fetch Stripe account', { error: stripeError, accountId: existingAccount.stripe_account_id });
         return NextResponse.json({ account: existingAccount });
       }
     }
@@ -64,7 +65,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Connect account fetch error:', error);
+    log.error('Connect account fetch error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -172,7 +173,7 @@ export async function POST(request: NextRequest) {
         .single();
 
       if (dbError) {
-        console.error('Error saving payout account:', dbError);
+        log.error('Error saving payout account', dbError, { accountId: account.id, judgeId: user.id });
         // Clean up Stripe account if database save fails
         await getStripe().accounts.del(account.id);
         return NextResponse.json({ error: 'Failed to save payout account' }, { status: 500 });
@@ -185,15 +186,15 @@ export async function POST(request: NextRequest) {
       });
 
     } catch (stripeError: any) {
-      console.error('Stripe Connect account creation error:', stripeError);
-      return NextResponse.json({ 
+      log.error('Stripe Connect account creation error', stripeError, { judgeId: user.id, country });
+      return NextResponse.json({
         error: 'Failed to create payout account',
         details: stripeError.message,
       }, { status: 500 });
     }
 
   } catch (error) {
-    console.error('Connect account creation error:', error);
+    log.error('Connect account creation error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -234,7 +235,7 @@ export async function PATCH(request: NextRequest) {
       .eq('id', payoutAccount.id);
 
     if (error) {
-      console.error('Error updating payout account:', error);
+      log.error('Error updating payout account', error, { accountId: payoutAccount.id, stripeAccountId: payoutAccount.stripe_account_id });
       return NextResponse.json({ error: 'Failed to update account' }, { status: 500 });
     }
 
@@ -268,7 +269,7 @@ export async function PATCH(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Connect account refresh error:', error);
+    log.error('Connect account refresh error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

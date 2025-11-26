@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
 import Stripe from 'stripe';
+import { log } from '@/lib/logger';
 
 const getStripe = () => {
   if (!process.env.STRIPE_SECRET_KEY) {
@@ -41,7 +42,7 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('Error fetching subscriptions:', error);
+      log.error('Error fetching subscriptions', error, { userId: user.id });
       return NextResponse.json({ error: 'Failed to fetch subscriptions' }, { status: 500 });
     }
 
@@ -67,7 +68,7 @@ export async function GET(request: NextRequest) {
               },
             };
           } catch (stripeError) {
-            console.warn('Failed to fetch Stripe subscription details:', stripeError);
+            log.warn('Failed to fetch Stripe subscription details', { error: stripeError, subscriptionId: sub.id });
             return sub as any;
           }
         }
@@ -77,7 +78,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ subscriptions: enrichedSubscriptions });
   } catch (error) {
-    console.error('Subscriptions error:', error);
+    log.error('Subscriptions error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -130,7 +131,7 @@ export async function DELETE(request: NextRequest) {
       .eq('id', validated.subscription_id);
 
     if (error) {
-      console.error('Error updating subscription:', error);
+      log.error('Error updating subscription', error, { userId: user.id, subscriptionId: validated.subscription_id });
       return NextResponse.json({ error: 'Failed to cancel subscription' }, { status: 500 });
     }
 
@@ -152,7 +153,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    console.error('Subscription cancellation error:', error);
+    log.error('Subscription cancellation error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -224,7 +225,7 @@ export async function PATCH(request: NextRequest) {
     }
 
   } catch (error) {
-    console.error('Subscription update error:', error);
+    log.error('Subscription update error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

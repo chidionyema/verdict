@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
+import { log } from '@/lib/logger';
 
 const exportSchema = z.object({
   format: z.enum(['json', 'csv', 'xlsx']),
@@ -137,7 +138,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.error('Export error:', error);
+    log.error('Export error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

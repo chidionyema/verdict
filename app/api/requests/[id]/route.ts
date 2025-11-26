@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
+import { log } from '@/lib/logger';
 
 // GET /api/requests/[id] - Get request with verdicts
 export async function GET(
@@ -55,7 +56,7 @@ export async function GET(
       .order('created_at', { ascending: true });
 
     if (verdictsError) {
-      console.error('Fetch verdicts error:', verdictsError);
+      log.error('Fetch verdicts error', verdictsError);
     }
 
     // For seekers, don't expose judge IDs (anonymize)
@@ -70,7 +71,7 @@ export async function GET(
       verdicts: anonymizedVerdicts || [],
     });
   } catch (error) {
-    console.error('GET /api/requests/[id] error:', error);
+    log.error('GET /api/requests/[id] error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -140,7 +141,7 @@ export async function PATCH(
       .single();
 
     if (updateError) {
-      console.error('Update request error:', updateError);
+      log.error('Update request error', updateError);
       return NextResponse.json(
         { error: 'Failed to update request' },
         { status: 500 }
@@ -149,7 +150,7 @@ export async function PATCH(
 
     return NextResponse.json({ request: updatedRequest });
   } catch (error) {
-    console.error('PATCH /api/requests/[id] error:', error);
+    log.error('PATCH /api/requests/[id] error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

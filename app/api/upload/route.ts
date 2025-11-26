@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { uploadRateLimiter, checkRateLimit } from '@/lib/rate-limiter';
 import { v4 as uuidv4 } from 'uuid';
+import { log } from '@/lib/logger';
 
 // POST /api/upload - Upload image to Supabase Storage
 export async function POST(request: NextRequest) {
@@ -71,7 +72,7 @@ export async function POST(request: NextRequest) {
       });
 
     if (uploadError) {
-      console.error('Upload error:', uploadError);
+      log.error('Upload error', uploadError);
 
       // Storage bucket not configured
       if (
@@ -115,7 +116,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ url: publicUrl });
   } catch (error) {
-    console.error('POST /api/upload error:', error);
+    log.error('POST /api/upload error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

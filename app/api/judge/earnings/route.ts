@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { log } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   try {
@@ -66,27 +67,23 @@ export async function GET(request: NextRequest) {
     const { data: earnings, error, count } = await query;
 
     if (error) {
-      console.error('Error fetching earnings:', error);
+      log.error('Error fetching earnings', error);
       return NextResponse.json({ error: 'Failed to fetch earnings' }, { status: 500 });
     }
 
-    // Get total earnings summary
-    const { data: totalEarnings } = await (supabase.rpc as any)('get_available_payout_amount', {
-      target_judge_id: user.id,
-    });
-
-    // Get earnings by status
+    // Get earnings by status and total amounts (in dollars)
     const { data: earningsSummary } = await (supabase as any)
       .from('judge_earnings')
-      .select('payout_status, net_amount_cents')
+      .select('payout_status, amount')
       .eq('judge_id', user.id);
 
     const summary =
       earningsSummary?.reduce((acc: Record<string, number>, earning: any) => {
+        const amt = Number(earning.amount ?? 0);
         if (!acc[earning.payout_status]) {
           acc[earning.payout_status] = 0;
         }
-        acc[earning.payout_status] += earning.net_amount_cents;
+        acc[earning.payout_status] += amt;
         return acc;
       }, {} as Record<string, number>) || {};
 
@@ -99,7 +96,8 @@ export async function GET(request: NextRequest) {
         total_pages: Math.ceil((count || 0) / limit),
       },
       summary: {
-        available_for_payout: totalEarnings || 0,
+        // These amounts are in dollars
+        available_for_payout: summary.pending || 0,
         pending: summary.pending || 0,
         paid: summary.paid || 0,
         total_earned: Object.values(summary).reduce(
@@ -110,7 +108,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Judge earnings error:', error);
+    log.error('Judge earnings error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

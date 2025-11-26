@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
+import { log } from '@/lib/logger';
 
 const analyticsConfigSchema = z.object({
   provider: z.enum(['mixpanel', 'amplitude', 'segment']),
@@ -68,7 +69,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ config });
 
   } catch (error) {
-    console.error('Analytics config GET error:', error);
+    log.error('Analytics config GET error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -124,7 +125,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      console.error('Error saving analytics config:', error);
+      log.error('Error saving analytics config', error);
       return NextResponse.json({ error: 'Failed to save analytics configuration' }, { status: 500 });
     }
 
@@ -138,7 +139,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.error('Analytics config error:', error);
+    log.error('Analytics config error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -174,7 +175,7 @@ export async function PUT(request: NextRequest) {
     const result = await trackEvent(analyticsConfig, validated);
     
     if (!result.success) {
-      console.error('Failed to track event:', result.error);
+      log.error('Failed to track event', new Error(result.error));
       return NextResponse.json({ error: 'Failed to track event' }, { status: 500 });
     }
 
@@ -188,7 +189,7 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    console.error('Analytics tracking error:', error);
+    log.error('Analytics tracking error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

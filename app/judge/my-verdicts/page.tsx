@@ -30,6 +30,7 @@ export default function MyVerdictsPage() {
   const [verdicts, setVerdicts] = useState<VerdictResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [totalEarnings, setTotalEarnings] = useState(0);
   const [filterTone, setFilterTone] = useState<'all' | 'encouraging' | 'honest' | 'constructive'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [timeFilter, setTimeFilter] = useState<'all' | 'today' | 'week' | 'month'>('all');
@@ -46,6 +47,20 @@ export default function MyVerdictsPage() {
       }
       const data = await res.json();
       setVerdicts(data.responses || []);
+
+      // Fetch earnings summary so total earnings matches payouts
+      try {
+        const earningsRes = await fetch('/api/judge/earnings?limit=1');
+        if (earningsRes.ok) {
+          const earningsData = await earningsRes.json();
+          const total = earningsData?.summary?.total_earned ?? 0;
+          if (typeof total === 'number') {
+            setTotalEarnings(total);
+          }
+        }
+      } catch {
+        // ignore earnings summary failure; page still works without it
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load verdicts');
     } finally {
@@ -82,7 +97,6 @@ export default function MyVerdictsPage() {
     return matchesTone && matchesSearch && matchesTime;
   });
 
-  const totalEarnings = verdicts.reduce((sum, v) => sum + parseFloat(v.judge_earning?.toString() || '0'), 0);
   const averageRating = verdicts.length > 0
     ? verdicts.reduce((sum, v) => sum + (v.rating || 0), 0) / verdicts.length
     : 0;

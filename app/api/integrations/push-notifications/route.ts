@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
+import { log } from '@/lib/logger';
 
 const pushConfigSchema = z.object({
   provider: z.enum(['firebase', 'onesignal', 'pusher']),
@@ -76,7 +77,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ config });
 
   } catch (error) {
-    console.error('Push notifications config GET error:', error);
+    log.error('Push notifications config GET error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -127,7 +128,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      console.error('Error saving push notification config:', error);
+      log.error('Error saving push notification config', error);
       return NextResponse.json({ error: 'Failed to save push notification configuration' }, { status: 500 });
     }
 
@@ -141,7 +142,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.error('Push notification config error:', error);
+    log.error('Push notification config error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -194,9 +195,9 @@ export async function PUT(request: NextRequest) {
       ...validated,
       device_tokens: deviceTokens,
     });
-    
+
     if (!result.success) {
-      console.error('Failed to send push notification:', result.error);
+      log.error('Failed to send push notification', result.error);
       return NextResponse.json({ error: 'Failed to send push notification' }, { status: 500 });
     }
 
@@ -227,7 +228,7 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    console.error('Push notification error:', error);
+    log.error('Push notification error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

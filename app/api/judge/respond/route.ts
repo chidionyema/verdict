@@ -4,6 +4,7 @@ import { validateFeedback, validateRating, validateTone, getTierConfigByVerdictC
 import { addJudgeVerdict } from '@/lib/verdicts';
 import { verdictRateLimiter, checkRateLimit } from '@/lib/rate-limiter';
 import { sendRequestLifecycleEmail } from '@/lib/notifications';
+import { log } from '@/lib/logger';
 
 // POST /api/judge/respond - Submit a verdict
 export async function POST(request: NextRequest) {
@@ -113,7 +114,7 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
       }
-      console.error('Create verdict error:', err);
+      log.error('Create verdict error', err);
       return NextResponse.json(
         { error: 'Failed to submit verdict', details: err?.message },
         { status: 500 }
@@ -137,7 +138,7 @@ export async function POST(request: NextRequest) {
       });
 
     if (earningsError) {
-      console.error('Error creating earnings record:', earningsError);
+      log.error('Error creating earnings record', earningsError);
       // Don't fail the request if earnings creation fails, but log it
     }
 
@@ -163,7 +164,7 @@ export async function POST(request: NextRequest) {
         notification_priority: 'normal',
       });
     } catch (notifError) {
-      console.error('Error creating notification:', notifError);
+      log.error('Error creating notification', notifError);
       // Don't fail if notification creation fails
     }
 
@@ -194,12 +195,12 @@ export async function POST(request: NextRequest) {
         } as any);
       }
     } catch (emailErr) {
-      console.error('sendRequestLifecycleEmail error:', emailErr);
+      log.error('sendRequestLifecycleEmail error', emailErr);
     }
 
     return NextResponse.json({ verdict }, { status: 201 });
   } catch (error) {
-    console.error('POST /api/judge/respond error:', error);
+    log.error('POST /api/judge/respond error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

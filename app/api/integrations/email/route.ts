@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
 import { sendEmail } from '@/lib/email';
+import { log } from '@/lib/logger';
 
 const sendEmailSchema = z.object({
   to: z.string().email(),
@@ -39,7 +40,7 @@ export async function GET() {
       from_email: process.env.RESEND_FROM_EMAIL || 'Not configured',
     });
   } catch (error) {
-    console.error('Email config GET error:', error);
+    log.error('Email config GET error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -91,7 +92,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.error('Email send error:', error);
+    log.error('Email send error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -139,7 +140,7 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    console.error('Email PUT error:', error);
+    log.error('Email PUT error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
