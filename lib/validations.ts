@@ -110,6 +110,41 @@ export const VERDICT_TIERS = {
 
 export type VerdictTier = keyof typeof VERDICT_TIERS;
 
+// Tier pricing / payout model (finance-approved)
+export const VERDICT_TIER_PRICING = {
+  basic: {
+    tier: 'basic' as const,
+    credits: 1,
+    verdicts: VERDICT_TIERS.basic.verdicts,
+    judgePayout: 0.5,
+  },
+  standard: {
+    tier: 'standard' as const,
+    credits: 2,
+    verdicts: VERDICT_TIERS.standard.verdicts,
+    judgePayout: 0.55,
+  },
+  premium: {
+    tier: 'premium' as const,
+    credits: 3,
+    verdicts: VERDICT_TIERS.premium.verdicts,
+    judgePayout: 0.6,
+  },
+} as const;
+
+export type VerdictTierPricing = typeof VERDICT_TIER_PRICING;
+
+export function getTierConfig(tier: VerdictTier) {
+  return VERDICT_TIER_PRICING[tier];
+}
+
+export function getTierConfigByVerdictCount(count: number) {
+  const entry = Object.values(VERDICT_TIER_PRICING).find(
+    (cfg) => cfg.verdicts === count
+  );
+  return entry ?? VERDICT_TIER_PRICING.basic;
+}
+
 export type PackageId = keyof typeof CREDIT_PACKAGES;
 
 export function isValidPackageId(id: string): id is PackageId {

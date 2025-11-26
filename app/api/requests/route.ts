@@ -6,6 +6,7 @@ import {
   validateCategory,
   validateMediaType,
   VERDICT_TIERS,
+  VERDICT_TIER_PRICING,
 } from '@/lib/validations';
 import { createVerdictRequest } from '@/lib/verdicts';
 
@@ -85,13 +86,28 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { category, subcategory, media_type, media_url, text_content, context } =
-      body;
+    const {
+      category,
+      subcategory,
+      media_type,
+      media_url,
+      text_content,
+      context,
+      tier,
+    } = body;
 
     // Validate category
     if (!validateCategory(category)) {
       return NextResponse.json({ error: 'Invalid category' }, { status: 400 });
     }
+
+    // Determine tier (defaults to basic)
+    const normalizedTier =
+      tier && VERDICT_TIER_PRICING[tier as keyof typeof VERDICT_TIER_PRICING]
+        ? (tier as keyof typeof VERDICT_TIER_PRICING)
+        : 'basic';
+
+    const tierConfig = VERDICT_TIER_PRICING[normalizedTier];
 
     // Validate media_type
     if (!validateMediaType(media_type)) {
@@ -134,9 +150,9 @@ export async function POST(request: NextRequest) {
           media_url,
           text_content,
           context,
-          // For now we keep the current product: 1 credit → Basic tier verdicts.
-          creditsToCharge: 1,
-          targetVerdictCount: VERDICT_TIERS.basic.verdicts,
+          // Use finance-approved tier config
+          creditsToCharge: tierConfig.credits,
+          targetVerdictCount: tierConfig.verdicts,
         }
       );
 

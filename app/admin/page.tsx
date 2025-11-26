@@ -72,12 +72,19 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [stuckRequests, setStuckRequests] = useState<any[]>([]);
+  const [stuckLoading, setStuckLoading] = useState(false);
+  const [stuckError, setStuckError] = useState('');
 
   useEffect(() => {
     fetchDashboardStats();
+    fetchStuckRequests();
     
     // Refresh stats every 30 seconds
-    const interval = setInterval(fetchDashboardStats, 30000);
+    const interval = setInterval(() => {
+      fetchDashboardStats();
+      fetchStuckRequests();
+    }, 30000);
     return () => clearInterval(interval);
   }, []);
 
@@ -99,6 +106,47 @@ export default function AdminDashboard() {
       setError(err instanceof Error ? err.message : 'Failed to load dashboard');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchStuckRequests = async () => {
+    try {
+      setStuckLoading(true);
+      setStuckError('');
+      const res = await fetch('/api/admin/request-anomalies');
+      if (!res.ok) {
+        if (res.status === 403) {
+          setStuckError('Access denied for anomalies. Admin privileges required.');
+        } else {
+          setStuckError('Failed to load potential stuck requests.');
+        }
+        setStuckRequests([]);
+        return;
+      }
+      const data = await res.json();
+      setStuckRequests(data.requests || []);
+    } catch (err) {
+      setStuckError('Failed to load potential stuck requests.');
+      setStuckRequests([]);
+    } finally {
+      setStuckLoading(false);
+    }
+  };
+
+  const updateRequestStatus = async (id: string, status: 'completed' | 'cancelled') => {
+    const note =
+      status === 'completed'
+        ? 'Marked completed via admin dashboard (stuck request cleanup).'
+        : 'Marked cancelled via admin dashboard.';
+
+    const res = await fetch(`/api/admin/requests/${id}/status`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status, note }),
+    });
+    if (res.ok) {
+      await fetchStuckRequests();
+      await fetchDashboardStats();
     }
   };
 
@@ -242,7 +290,7 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Recent Activity */}
+        {/* Recent Activity & Guardrails */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* System Health */}
           <div className="bg-white rounded-lg shadow-lg p-6">
@@ -282,58 +330,55 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          {/* Recent Alerts */}
+          {/* Stuck Requests (Operational Guardrail) */}
           <div className="bg-white rounded-lg shadow-lg p-6">
-            <h3 className="font-semibold text-gray-900 mb-4">Recent Alerts</h3>
-            <div className="space-y-3">
-              {(stats?.moderation?.pending_reports ?? 0) > 0 && (
-                <div className="flex items-center p-3 bg-red-50 rounded-lg">
-                  <AlertTriangle className="h-5 w-5 text-red-500 mr-3" />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-red-800">
-                      {stats?.moderation?.pending_reports ?? 0} pending content reports
-                    </p>
-                    <p className="text-xs text-red-600">Requires moderation action</p>
-                  </div>
-                  <Link
-                    href="/admin/moderation"
-                    className="text-red-600 hover:text-red-800 text-sm font-medium"
+            <h3 className="font-semibold text-gray-900 mb-4">Potentially Stuck Requests</h3>
+            {stuckLoading ? (
+              <p className="text-sm text-gray-500">Checking for anomalies…</p>
+            ) : stuckError ? (
+              <p className="text-sm text-red-600">{stuckError}</p>
+            ) : stuckRequests.length === 0 ? (
+              <p className="text-sm text-gray-500">No requests appear to be stuck. 🎉</p>
+            ) : (
+              <div className="space-y-3 max-h-80 overflow-y-auto">
+                {stuckRequests.map((req) => (
+                  <div
+                    key={req.id}
+                    className="border border-yellow-200 rounded-lg p-3 flex flex-col gap-2"
                   >
-                    Review →
-                  </Link>
-                </div>
-              )}
-              
-              {(stats?.moderation?.suspended_users ?? 0) > 0 && (
-                <div className="flex items-center p-3 bg-yellow-50 rounded-lg">
-                  <UserCheck className="h-5 w-5 text-yellow-500 mr-3" />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-yellow-800">
-                      {stats?.moderation?.suspended_users ?? 0} suspended users
-                    </p>
-                    <p className="text-xs text-yellow-600">May require review</p>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900">
+                          {req.category} • {req.received_verdict_count}/
+                          {req.target_verdict_count} verdicts
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          ID: {req.id.slice(0, 8)}… • Created{' '}
+                          {new Date(req.created_at).toLocaleString()}
+                        </p>
+                      </div>
+                      <span className="text-xs px-2 py-1 rounded-full bg-yellow-100 text-yellow-800">
+                        {req.status}
+                      </span>
+                    </div>
+                    <div className="flex gap-2 justify-end">
+                      <button
+                        onClick={() => updateRequestStatus(req.id, 'completed')}
+                        className="px-3 py-1.5 text-xs rounded-md bg-green-600 text-white hover:bg-green-700"
+                      >
+                        Mark Completed
+                      </button>
+                      <button
+                        onClick={() => updateRequestStatus(req.id, 'cancelled')}
+                        className="px-3 py-1.5 text-xs rounded-md bg-red-600 text-white hover:bg-red-700"
+                      >
+                        Cancel
+                      </button>
+                    </div>
                   </div>
-                  <Link
-                    href="/admin/users?filter=suspended"
-                    className="text-yellow-600 hover:text-yellow-800 text-sm font-medium"
-                  >
-                    View →
-                  </Link>
-                </div>
-              )}
-
-              {(!stats?.moderation.pending_reports && !stats?.moderation.suspended_users) && (
-                <div className="flex items-center p-3 bg-green-50 rounded-lg">
-                  <CheckCircle className="h-5 w-5 text-green-500 mr-3" />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-green-800">
-                      All systems normal
-                    </p>
-                    <p className="text-xs text-green-600">No urgent actions required</p>
-                  </div>
-                </div>
-              )}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 

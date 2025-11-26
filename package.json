@@ -10,7 +10,8 @@
     "lint": "eslint",
     "seed:demo": "env-cmd -f .env.local tsx scripts/seed-demo.ts",
     "sim:full": "env-cmd -f .env.local tsx scripts/sim/full-verdict-flow.ts",
-    "sim:edges": "env-cmd -f .env.local tsx scripts/sim/verdict-edge-cases.ts"
+    "sim:edges": "env-cmd -f .env.local tsx scripts/sim/verdict-edge-cases.ts",
+    "admin:check-earnings": "env-cmd -f .env.local tsx scripts/admin/check-earnings.ts"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.11",

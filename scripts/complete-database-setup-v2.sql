@@ -670,6 +670,20 @@ CREATE TABLE IF NOT EXISTS help_article_feedback (
 );
 
 -- =====================================================
+-- ADMIN REQUEST ACTIONS (AUDIT LOG)
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS admin_request_actions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  admin_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  request_id UUID NOT NULL REFERENCES verdict_requests(id) ON DELETE CASCADE,
+  old_status TEXT,
+  new_status TEXT NOT NULL,
+  note TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- =====================================================
 -- SEARCH & DISCOVERY
 -- =====================================================
 

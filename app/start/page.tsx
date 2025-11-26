@@ -18,6 +18,7 @@ import type { JudgePreferences as JudgePreferencesType } from '@/components/requ
 import { TrustBadge, TrustBadgeGroup } from '@/components/shared/TrustBadge';
 import { EncouragingCounter } from '@/components/shared/EncouragingCounter';
 import { DecisionFramingHelper } from '@/components/request/DecisionFramingHelper';
+import { VERDICT_TIERS, VERDICT_TIER_PRICING } from '@/lib/validations';
 
 const categories = [
   { id: 'appearance', label: 'Appearance', icon: Heart, description: 'Dating, events, professional looks' },
@@ -91,6 +92,7 @@ export default function StartPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [tier, setTier] = useState<'basic' | 'standard' | 'premium'>('basic');
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -191,6 +193,7 @@ export default function StartPage() {
         subcategory,
         title,
         context,
+        tier,
       }));
       router.push('/auth/signup?redirect=/start/submit');
       return;
@@ -251,6 +254,7 @@ export default function StartPage() {
           text_content: mediaType === 'text' ? textContent : null,
           context: fullContext,
           judge_preferences: judgePreferences,
+          tier,
         }),
       });
 

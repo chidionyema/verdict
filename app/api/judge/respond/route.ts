@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { validateFeedback, validateRating, validateTone } from '@/lib/validations';
+import { validateFeedback, validateRating, validateTone, getTierConfigByVerdictCount } from '@/lib/validations';
 import { addJudgeVerdict } from '@/lib/verdicts';
 
 // POST /api/judge/respond - Submit a verdict
@@ -107,8 +107,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Determine earning based on request's target_verdict_count (tier)
+    const tierConfig = getTierConfigByVerdictCount(
+      updatedRequest.target_verdict_count
+    );
+    const baseEarning = tierConfig.judgePayout;
+
     // Create earnings record for the judge
-    const baseEarning = 0.50; // Base earning per verdict
     const { error: earningsError } = await supabase
       .from('judge_earnings')
       .insert({
