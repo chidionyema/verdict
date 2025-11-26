@@ -89,20 +89,26 @@ export async function GET(request: NextRequest) {
       : 0;
 
     // Get moderation statistics
-    const { count: pendingReports } = await supabase
+    const { count: pendingReports } = await (supabase as any)
       .from('content_reports')
       .select('*', { count: 'exact', head: true })
       .eq('status', 'pending');
 
-    const { count: flaggedContent } = await supabase
-      .from('content_flags')
+    const { count: flaggedContent } = await (supabase as any)
+      .from('verdict_requests')
       .select('*', { count: 'exact', head: true })
-      .eq('reviewed', false);
+      .eq('auto_hidden', true);
 
-    const { count: suspendedUsers } = await supabase
+    const { count: suspendedJudges } = await (supabase as any)
       .from('profiles')
       .select('*', { count: 'exact', head: true })
-      .eq('is_suspended', true);
+      .eq('judge_status', 'suspended');
+    
+    const { count: stuckRequests } = await (supabase as any)
+      .from('verdict_requests')
+      .select('*', { count: 'exact', head: true })
+      .in('status', ['pending', 'in_progress'])
+      .lt('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString());
 
     // Get revenue statistics (sum of completed transactions)
     const { data: revenueData } = await supabase
@@ -150,7 +156,8 @@ export async function GET(request: NextRequest) {
       moderation: {
         pending_reports: pendingReports || 0,
         flagged_content: flaggedContent || 0,
-        suspended_users: suspendedUsers || 0,
+        suspended_judges: suspendedJudges || 0,
+        stuck_requests: stuckRequests || 0,
       },
       revenue: {
         total: totalRevenue,

@@ -25,8 +25,10 @@ import {
 } from 'lucide-react';
 import { getTierConfigByVerdictCount } from '@/lib/validations';
 
+// Force dynamic rendering to avoid Supabase client issues during build
+export const dynamic = 'force-dynamic';
+
 export default function MyRequestsPage() {
-  const supabase = createClient();
   const [user, setUser] = useState<any>(null);
   const [requests, setRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -36,78 +38,16 @@ export default function MyRequestsPage() {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const previousCountsRef = useRef<Record<string, number>>({});
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  // Set up real-time subscription for verdict updates
-  useEffect(() => {
-    if (!user?.id) return;
-
-    const channel = supabase
-      .channel('my-requests-updates')
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'verdict_requests',
-          filter: `user_id=eq.${user.id}`,
-        },
-        (payload) => {
-          const updatedRequest = payload.new as any;
-          const oldRequest = payload.old as any;
-          
-          // Check if verdict count increased
-          const oldCount = oldRequest?.received_verdict_count || previousCountsRef.current[updatedRequest.id] || 0;
-          const newCount = updatedRequest?.received_verdict_count || 0;
-          
-          if (newCount > oldCount) {
-            // Update the request in state
-            setRequests((prev) => {
-              const updated = prev.map((req) =>
-                req.id === updatedRequest.id
-                  ? { ...req, ...updatedRequest }
-                  : req
-              );
-              
-              // Update previous counts
-              previousCountsRef.current[updatedRequest.id] = newCount;
-              
-              return updated;
-            });
-
-            // Show notification
-            const verdictsReceived = newCount - oldCount;
-            if (newCount >= updatedRequest.target_verdict_count) {
-              toast.success(
-                `🎉 All verdicts received! Your request is complete.`,
-                5000
-              );
-            } else {
-              toast.success(
-                `✨ You received ${verdictsReceived} new verdict${verdictsReceived > 1 ? 's' : ''}! (${newCount}/${updatedRequest.target_verdict_count})`,
-                5000
-              );
-            }
-          }
-        }
-      )
-      .subscribe();
-
-    // Polling fallback - refresh every 30 seconds to catch any missed updates
-    const pollInterval = setInterval(() => {
-      fetchData();
-    }, 30000);
-
-    return () => {
-      supabase.removeChannel(channel);
-      clearInterval(pollInterval);
-    };
-  }, [user?.id, supabase]);
-
   const fetchData = async () => {
+    // Only run in browser
+    if (typeof window === 'undefined') {
+      setLoading(false);
+      return;
+    }
+
     try {
+      const supabase = createClient();
+      
       // Get user first
       const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
@@ -159,6 +99,84 @@ export default function MyRequestsPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  // Set up real-time subscription for verdict updates
+  useEffect(() => {
+    // Only run in browser
+    if (typeof window === 'undefined') return;
+    if (!user?.id) return;
+
+    try {
+      const supabase = createClient();
+      
+      const channel = supabase
+        .channel('my-requests-updates')
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'verdict_requests',
+            filter: `user_id=eq.${user.id}`,
+          },
+          (payload) => {
+            const updatedRequest = payload.new as any;
+            const oldRequest = payload.old as any;
+            
+            // Check if verdict count increased
+            const oldCount = oldRequest?.received_verdict_count || previousCountsRef.current[updatedRequest.id] || 0;
+            const newCount = updatedRequest?.received_verdict_count || 0;
+            
+            if (newCount > oldCount) {
+              // Update the request in state
+              setRequests((prev) => {
+                const updated = prev.map((req) =>
+                  req.id === updatedRequest.id
+                    ? { ...req, ...updatedRequest }
+                    : req
+                );
+                
+                // Update previous counts
+                previousCountsRef.current[updatedRequest.id] = newCount;
+                
+                return updated;
+              });
+
+              // Show notification
+              const verdictsReceived = newCount - oldCount;
+              if (newCount >= updatedRequest.target_verdict_count) {
+                toast.success(
+                  `🎉 All verdicts received! Your request is complete.`,
+                  5000
+                );
+              } else {
+                toast.success(
+                  `✨ You received ${verdictsReceived} new verdict${verdictsReceived > 1 ? 's' : ''}! (${newCount}/${updatedRequest.target_verdict_count})`,
+                  5000
+                );
+              }
+            }
+          }
+        )
+        .subscribe();
+
+      // Polling fallback - refresh every 30 seconds to catch any missed updates
+      const pollInterval = setInterval(() => {
+        fetchData();
+      }, 30000);
+
+      return () => {
+        supabase.removeChannel(channel);
+        clearInterval(pollInterval);
+      };
+    } catch (error) {
+      console.error('Error setting up real-time subscription:', error);
+    }
+  }, [user?.id]);
 
   const normalizeStatus = (status: string) => {
     if (status === 'in_progress' || status === 'open') return 'open';
@@ -314,7 +332,7 @@ export default function MyRequestsPage() {
               </p>
             </div>
             <Link
-              href="/start"
+              href="/start-simple"
               className="bg-indigo-600 text-white px-6 py-3 rounded-xl hover:bg-indigo-700 transition font-medium shadow-lg"
             >
               + New Request
@@ -387,7 +405,7 @@ export default function MyRequestsPage() {
                 Join thousands who've improved with professional feedback.
               </p>
               <Link
-                href="/start"
+                href="/start-simple"
                 className="inline-flex items-center gap-2 bg-indigo-600 text-white px-8 py-4 rounded-xl hover:bg-indigo-700 transition font-medium shadow-lg"
               >
                 <Target className="h-5 w-5" />

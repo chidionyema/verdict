@@ -63,7 +63,7 @@ export function ExitIntentModal({ className = '' }: ExitIntentModalProps) {
 
         <button
           onClick={() => {
-            window.location.href = '/start';
+            window.location.href = '/start-simple';
           }}
           className="w-full bg-indigo-600 text-white px-4 py-3 rounded-xl font-semibold hover:bg-indigo-700 transition min-h-[44px]"
         >

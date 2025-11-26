@@ -10,6 +10,7 @@ import {
 import { createVerdictRequest } from '@/lib/verdicts';
 import { requestRateLimiter, generalApiRateLimiter, checkRateLimit } from '@/lib/rate-limiter';
 import { sendRequestLifecycleEmail } from '@/lib/notifications';
+import { moderateRequest } from '@/lib/moderation-free';
 
 // GET /api/requests - List current user's requests
 export async function GET(request: NextRequest) {
@@ -158,6 +159,26 @@ export async function POST(request: NextRequest) {
     if (media_type === 'text' && !text_content) {
       return NextResponse.json(
         { error: 'Text content is required for text requests' },
+        { status: 400 }
+      );
+    }
+
+    // Content moderation check
+    const moderationResult = moderateRequest(
+      context,
+      media_type,
+      media_type === 'photo' ? media_url?.split('/').pop() : undefined,
+      undefined // file size not available here, but checked on upload
+    );
+
+    if (!moderationResult.approved) {
+      console.log('Content moderation failed:', moderationResult.reason);
+      return NextResponse.json(
+        { 
+          error: 'Content does not meet community guidelines',
+          reason: moderationResult.reason,
+          details: 'Please review our community guidelines and modify your request.'
+        },
         { status: 400 }
       );
     }

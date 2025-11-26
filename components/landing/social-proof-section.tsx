@@ -59,23 +59,23 @@ const FEATURED_TESTIMONIALS = [
 const TRUST_METRICS = [
   {
     icon: MessageSquare,
-    label: 'Verdicts delivered',
+    label: 'Opinions delivered',
     value: '500+',
-    trend: 'And growing',
+    trend: 'During beta testing',
     color: 'text-green-600',
   },
   {
     icon: Star,
-    label: 'Category mix',
-    value: '42% • 31% • 27%',
-    trend: 'Career • Appearance • Relationships',
+    label: 'Beta user rating',
+    value: '4.9/5',
+    trend: 'Average satisfaction',
     color: 'text-yellow-600',
   },
   {
     icon: Clock,
-    label: 'Avg response time',
+    label: 'Response time',
     value: '47 min',
-    trend: 'Money‑back guarantee if slower',
+    trend: 'Average delivery',
     color: 'text-purple-600',
   },
   {
@@ -96,10 +96,10 @@ export function SocialProofSection() {
         {/* Header */}
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-            Join the movement for honest feedback
+            Early beta feedback
           </h2>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            See what happens when real people give you unfiltered opinions
+            Here's what our beta users are saying about getting honest opinions
           </p>
         </div>
 

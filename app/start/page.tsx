@@ -77,6 +77,11 @@ const subcategories: Record<string, string[]> = {
 export default function StartPage() {
   const router = useRouter();
   const supabase = createClient();
+  
+  // Redirect to simplified flow for better conversion
+  useEffect(() => {
+    router.replace('/start-simple');
+  }, [router]);
 
   const [user, setUser] = useState<User | null>(null);
   const [step, setStep] = useState(1);

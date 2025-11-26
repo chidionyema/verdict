@@ -19,47 +19,33 @@ interface SuccessStory {
 const successStories: SuccessStory[] = [
   {
     id: '1',
-    beforeImage: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face',
-    afterImage: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face',
     category: 'appearance',
-    improvement: 'Professional Confidence',
+    improvement: 'Style feedback',
     rating: 5,
-    userQuote: 'The styling feedback transformed how I present myself. Got promoted within 2 months!',
-    userName: 'Sarah M.',
-    timeframe: '2 weeks',
-    metric: '+40% confidence'
+    userQuote: 'Finally got honest feedback on my dating photos. Turns out the group shot was killing my profile.',
+    userName: 'Mike, 28',
+    timeframe: '1 week',
+    metric: ''
   },
   {
     id: '2',
-    category: 'profile',
-    improvement: 'LinkedIn Optimization',
+    category: 'business',
+    improvement: 'Presentation prep',
     rating: 5,
-    userQuote: 'My LinkedIn got 5x more views after implementing the feedback. Dream job offer came in!',
-    userName: 'Michael R.',
-    timeframe: '1 week',
-    metric: '+500% profile views'
+    userQuote: 'Used it before a pitch. One reviewer caught a flaw in my pricing slide I\'d missed for weeks.',
+    userName: 'Startup founder',
+    timeframe: '3 days',
+    metric: ''
   },
   {
     id: '3',
-    category: 'writing',
-    improvement: 'Email Communication',
+    category: 'feedback',
+    improvement: 'Early testing',
     rating: 5,
-    userQuote: 'My emails went from confusing to crystal clear. Clients actually respond now!',
-    userName: 'Jennifer K.',
-    timeframe: '3 days',
-    metric: '+80% response rate'
-  },
-  {
-    id: '4',
-    beforeImage: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face',
-    afterImage: 'https://images.unsplash.com/photo-1494790108755-2616b612b192?w=150&h=150&fit=crop&crop=face',
-    category: 'appearance',
-    improvement: 'Dating Success',
-    rating: 5,
-    userQuote: 'The photo feedback was spot-on. Went from 2 matches to 20+ per week!',
-    userName: 'David L.',
-    timeframe: '1 week',
-    metric: '+900% matches'
+    userQuote: 'Super quick, and the responses were way more honest than I expected.',
+    userName: 'Beta user',
+    timeframe: '2 days',
+    metric: ''
   }
 ];
 
@@ -93,10 +79,10 @@ export default function SocialProofCarousel() {
     <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-100">
       <div className="text-center mb-6">
         <h3 className="text-xl font-bold text-gray-900 mb-2">
-          Real People, Real Results
+          Early tester feedback
         </h3>
         <p className="text-gray-600">
-          Real people sharing their experiences
+          Honest feedback from beta users
         </p>
       </div>
 

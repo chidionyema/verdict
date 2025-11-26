@@ -5,36 +5,36 @@ import { TouchButton } from '@/components/ui/touch-button';
 
 const PLANS = [
   {
-    name: 'Starter',
-    badge: 'Free to try',
-    verdicts: '3 verdicts',
-    delivery: '24hr delivery',
-    features: ['Honest feedback from 3 real people', 'Great for testing the experience'],
-    limitations: ['No judge selection', 'Standard queue'],
-    price: '$0',
-    priceDetail: 'First request free',
+    name: 'Free trial',
+    badge: 'Start here',
+    verdicts: '3 opinions',
+    delivery: '47min average',
+    features: ['Test the experience', 'Honest feedback from real people', 'Completely anonymous'],
+    limitations: [],
+    price: 'Free',
+    priceDetail: 'No credit card required',
     highlight: false,
   },
   {
-    name: 'Popular',
-    badge: 'Most chosen',
-    verdicts: '10 verdicts',
-    delivery: '2hr average delivery',
-    features: ['Deeper range of opinions', 'Choose categories you care about', 'Priority in the queue'],
+    name: 'Pay per request',
+    badge: 'Simple & transparent',
+    verdicts: '3 opinions each',
+    delivery: '47min average',
+    features: ['No subscription needed', 'Pay only when you use it', 'Same quality as free trial'],
     limitations: [],
-    price: '$12.99',
-    priceDetail: '≈ $1.30 per verdict',
+    price: '$3.49',
+    priceDetail: 'per request',
     highlight: true,
   },
   {
-    name: 'Pro',
-    badge: 'For power users',
-    verdicts: '25 verdicts',
-    delivery: '30min priority delivery',
-    features: ['Pick specific judges', 'Great for teams & high‑stakes decisions', 'Best price per verdict'],
+    name: 'Monthly plan',
+    badge: 'Coming soon',
+    verdicts: 'Unlimited requests',
+    delivery: 'Priority queue',
+    features: ['Best value for regular users', 'Faster responses', 'Premium reviewers'],
     limitations: [],
-    price: '$24.99',
-    priceDetail: '≈ $1.00 per verdict',
+    price: '$9.99',
+    priceDetail: 'per month',
     highlight: false,
   },
 ];
@@ -48,8 +48,7 @@ export function PricingTableSection() {
             Simple, Transparent Pricing
           </h2>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Start free, then upgrade when you’re ready for deeper feedback. No subscriptions, no
-            hidden fees.
+            Try free, then pay only when you need more opinions. No hidden fees, no complex tiers.
           </p>
         </div>
 

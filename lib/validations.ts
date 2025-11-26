@@ -138,9 +138,9 @@ export const CREDIT_PACKAGES = {
 
 // Verdict tier definitions
 export const VERDICT_TIERS = {
-  basic: { verdicts: 3, name: 'Basic', description: '3 expert verdicts - Fast & affordable' },
-  standard: { verdicts: 5, name: 'Standard', description: '5 expert verdicts - Most popular' },
-  premium: { verdicts: 7, name: 'Premium', description: '7 expert verdicts - Comprehensive' },
+  basic: { verdicts: 3, name: 'Basic', description: '3 honest opinions - Fast & affordable' },
+  standard: { verdicts: 5, name: 'Standard', description: '5 honest opinions - Most popular' },
+  premium: { verdicts: 7, name: 'Premium', description: '7 honest opinions - Comprehensive' },
 } as const;
 
 export type VerdictTier = keyof typeof VERDICT_TIERS;

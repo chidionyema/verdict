@@ -945,7 +945,7 @@ export default function RequestDetailPage({
 
               <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
                 <Link
-                  href="/start"
+                  href="/start-simple"
                   className="flex items-center gap-2 bg-indigo-600 text-white px-6 py-3 rounded-xl font-medium hover:bg-indigo-700 transition shadow-lg"
                 >
                   <Target className="h-5 w-5" />

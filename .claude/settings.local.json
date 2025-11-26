@@ -6,7 +6,11 @@
       "Bash(npm uninstall:*)",
       "Bash(npx next build --no-lint)",
       "Bash(npx tsc:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(rm:*)",
+      "Bash(sed:*)",
+      "Bash(grep:*)",
+      "Bash(python3:*)"
     ],
     "deny": [],
     "ask": []

@@ -205,7 +205,7 @@ export function StreamlinedStart() {
           Get Your Verdict
         </h1>
         <p className="text-gray-600">
-          Submit your content and get honest feedback from 3 expert judges
+          Submit your content and get honest feedback from 3 verified reviewers
         </p>
       </div>
 
@@ -406,7 +406,7 @@ export function StreamlinedStart() {
                 <div className="text-sm text-blue-700 space-y-1">
                   <div className="flex items-center gap-2">
                     <Clock className="w-4 h-4" />
-                    <span>Get 3 expert verdicts in 2-4 hours</span>
+                    <span>Get 3 honest opinions in 47 minutes</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Shield className="w-4 h-4" />

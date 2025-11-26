@@ -68,7 +68,7 @@ export const emailTemplates = {
           <p>Thank you for joining Verdict! We're excited to have you as part of our community.</p>
           <p>Get started by submitting your first request for honest, anonymous feedback from real people.</p>
           <div style="text-align: center; margin: 32px 0;">
-            <a href="${APP_URL}/start" style="display: inline-block; background: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500;">Submit Your First Request</a>
+            <a href="${APP_URL}/start-simple" style="display: inline-block; background: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500;">Submit Your First Request</a>
           </div>
           <p>If you have any questions, our support team is here to help.</p>
           <p style="color: #6B7280; font-size: 14px; margin-top: 32px;">— The Verdict Team</p>
@@ -214,7 +214,7 @@ export const emailTemplates = {
           <p>Thank you for your payment of <strong>${data.amount}</strong>!</p>
           <p><strong>${data.credits} credits</strong> have been added to your account. You can now submit more requests for feedback.</p>
           <div style="text-align: center; margin: 32px 0;">
-            <a href="${APP_URL}/start" style="display: inline-block; background: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500;">Submit a Request</a>
+            <a href="${APP_URL}/start-simple" style="display: inline-block; background: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500;">Submit a Request</a>
           </div>
           <p style="color: #6B7280; font-size: 14px; margin-top: 32px;">— The Verdict Team</p>
         </body>

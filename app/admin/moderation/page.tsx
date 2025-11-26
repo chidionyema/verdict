@@ -1,129 +1,151 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { AlertTriangle, CheckCircle, XCircle, Eye, Clock, User, Flag } from 'lucide-react';
+import Link from 'next/link';
+import { 
+  ArrowLeft, 
+  Flag, 
+  Clock, 
+  EyeOff, 
+  CheckCircle, 
+  XCircle, 
+  AlertTriangle,
+  UserX,
+  RefreshCw,
+  DollarSign
+} from 'lucide-react';
 
 interface ContentReport {
   id: string;
+  content_type: string;
+  content_id: string;
+  reason: string;
+  description: string;
+  reported_by: string;
   created_at: string;
-  reporter_id: string;
-  reported_content_type: 'verdict_request' | 'verdict_response';
-  reported_content_id: string;
-  report_reason: string;
-  report_description?: string;
-  status: 'pending' | 'reviewing' | 'resolved' | 'dismissed';
-  moderator_id?: string;
-  moderator_notes?: string;
-  resolution?: string;
-  resolved_at?: string;
-  reporter_email?: string;
-  content_preview?: string;
+  status: string;
+  reported_by_profile: { email: string };
+  content_details: { context: string };
 }
 
-const REPORT_REASONS = {
-  inappropriate_content: 'Inappropriate Content',
-  harassment: 'Harassment or Bullying',
-  spam: 'Spam',
-  illegal_content: 'Illegal Content',
-  personal_information: 'Personal Information',
-  copyright_violation: 'Copyright Violation',
-  other: 'Other',
-};
+interface StuckRequest {
+  id: string;
+  category: string;
+  context: string;
+  status: string;
+  created_at: string;
+  received_verdict_count: number;
+  target_verdict_count: number;
+  credit_cost: number;
+  user_profile: { email: string };
+}
 
-const RESOLUTIONS = {
-  content_removed: 'Content Removed',
-  user_warned: 'User Warned',
-  user_suspended: 'User Suspended',
-  no_violation: 'No Violation Found',
-  other: 'Other Action',
-};
+interface HiddenContent {
+  id: string;
+  category: string;
+  context: string;
+  auto_hidden: boolean;
+  moderation_reason: string;
+  created_at: string;
+  user_profile: { email: string };
+}
 
-export default function ModerationPage() {
-  const [reports, setReports] = useState<ContentReport[]>([]);
+interface ModerationData {
+  reports?: ContentReport[];
+  stuckRequests?: StuckRequest[];
+  hiddenContent?: HiddenContent[];
+}
+
+
+export default function AdminModerationPage() {
+  const [data, setData] = useState<ModerationData>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [filter, setFilter] = useState<'all' | 'pending' | 'reviewing' | 'resolved'>('pending');
-  const [selectedReport, setSelectedReport] = useState<ContentReport | null>(null);
-  const [moderatorNotes, setModeratorNotes] = useState('');
-  const [resolution, setResolution] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+  const [activeTab, setActiveTab] = useState<'reports' | 'stuck' | 'hidden'>('reports');
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchReports();
-  }, [filter]);
+    fetchModerationData();
+  }, []);
 
-  const fetchReports = async () => {
+  const fetchModerationData = async () => {
     try {
-      const response = await fetch(`/api/admin/reports?status=${filter}`);
+      setLoading(true);
+      const response = await fetch('/api/admin/moderation?type=all');
       if (!response.ok) {
         if (response.status === 403) {
           setError('Access denied. Admin privileges required.');
-        } else {
-          throw new Error('Failed to fetch reports');
+          return;
         }
-        return;
+        throw new Error('Failed to fetch moderation data');
       }
 
-      const data = await response.json();
-      setReports(data.reports || []);
+      const result = await response.json();
+      setData(result);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load reports');
+      setError(err instanceof Error ? err.message : 'Failed to load data');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleReviewReport = async (reportId: string, action: 'start_review' | 'resolve' | 'dismiss') => {
-    if (action === 'resolve' && !resolution) {
-      alert('Please select a resolution');
-      return;
-    }
-
-    setSubmitting(true);
-    
+  const takeAction = async (action: string, type: string, id: string, reason?: string) => {
     try {
-      const response = await fetch(`/api/admin/reports/${reportId}`, {
-        method: 'PATCH',
+      setActionLoading(id);
+      const response = await fetch('/api/admin/moderation', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action,
-          moderator_notes: moderatorNotes.trim() || null,
-          resolution: action === 'resolve' ? resolution : null,
-        }),
+        body: JSON.stringify({ action, type, id, reason })
       });
 
       if (!response.ok) {
-        throw new Error('Failed to update report');
+        throw new Error('Action failed');
       }
 
-      await fetchReports();
-      setSelectedReport(null);
-      setModeratorNotes('');
-      setResolution('');
-
+      const result = await response.json();
+      
+      // Refresh data after action
+      await fetchModerationData();
+      
+      // Show success message (you could add a toast here)
+      console.log('Action successful:', result.message);
+      
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to update report');
+      console.error('Action failed:', err);
+      // Show error message (you could add a toast here)
     } finally {
-      setSubmitting(false);
+      setActionLoading(null);
     }
   };
 
-  const filteredReports = reports.filter(report => {
-    if (filter === 'all') return true;
-    return report.status === filter;
-  });
-
-  const statusCounts = {
-    all: reports.length,
-    pending: reports.filter(r => r.status === 'pending').length,
-    reviewing: reports.filter(r => r.status === 'reviewing').length,
-    resolved: reports.filter(r => r.status === 'resolved' || r.status === 'dismissed').length,
-  };
+  const tabs = [
+    { 
+      id: 'reports' as const, 
+      label: 'Pending Reports', 
+      count: data.reports?.length || 0,
+      icon: Flag 
+    },
+    { 
+      id: 'stuck' as const, 
+      label: 'Stuck Requests', 
+      count: data.stuckRequests?.length || 0,
+      icon: Clock 
+    },
+    { 
+      id: 'hidden' as const, 
+      label: 'Hidden Content', 
+      count: data.hiddenContent?.length || 0,
+      icon: EyeOff 
+    }
+  ];
 
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <p className="text-gray-500">Loading moderation queue...</p>
+        <div className="flex items-center space-x-2">
+          <RefreshCw className="h-5 w-5 animate-spin" />
+          <span>Loading moderation data...</span>
+        </div>
       </div>
     );
   }
@@ -134,6 +156,9 @@ export default function ModerationPage() {
         <div className="text-center">
           <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
           <p className="text-red-600 mb-4">{error}</p>
+          <Link href="/admin" className="text-indigo-600 hover:underline">
+            Back to Dashboard
+          </Link>
         </div>
       </div>
     );
@@ -144,33 +169,48 @@ export default function ModerationPage() {
       <div className="max-w-7xl mx-auto px-4">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Content Moderation</h1>
-          <p className="text-gray-600">Review and manage reported content</p>
+          <Link href="/admin" className="flex items-center text-gray-600 hover:text-gray-900 mb-4">
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Dashboard
+          </Link>
+          
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">Content Moderation</h1>
+              <p className="text-gray-600">Review reported content and manage platform safety</p>
+            </div>
+            
+            <button
+              onClick={fetchModerationData}
+              className="flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
+            </button>
+          </div>
         </div>
 
-        {/* Filter Tabs */}
-        <div className="bg-white rounded-lg shadow mb-6">
+        {/* Tabs */}
+        <div className="mb-6">
           <div className="border-b border-gray-200">
-            <nav className="flex space-x-8 px-6">
-              {[
-                { key: 'all', label: 'All Reports', count: statusCounts.all },
-                { key: 'pending', label: 'Pending', count: statusCounts.pending },
-                { key: 'reviewing', label: 'In Review', count: statusCounts.reviewing },
-                { key: 'resolved', label: 'Resolved', count: statusCounts.resolved },
-              ].map(({ key, label, count }) => (
+            <nav className="-mb-px flex space-x-8">
+              {tabs.map((tab) => (
                 <button
-                  key={key}
-                  onClick={() => setFilter(key as any)}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                    filter === key
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center py-2 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === tab.id
                       ? 'border-indigo-500 text-indigo-600'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }`}
                 >
-                  {label}
-                  {count > 0 && (
-                    <span className="ml-2 bg-gray-100 text-gray-900 py-0.5 px-2.5 rounded-full text-xs">
-                      {count}
+                  <tab.icon className="h-4 w-4 mr-2" />
+                  {tab.label}
+                  {tab.count > 0 && (
+                    <span className={`ml-2 px-2 py-1 text-xs rounded-full ${
+                      activeTab === tab.id ? 'bg-indigo-100 text-indigo-600' : 'bg-gray-100 text-gray-600'
+                    }`}>
+                      {tab.count}
                     </span>
                   )}
                 </button>
@@ -179,237 +219,199 @@ export default function ModerationPage() {
           </div>
         </div>
 
-        {/* Reports List */}
-        <div className="bg-white shadow rounded-lg">
-          {filteredReports.length === 0 ? (
-            <div className="text-center py-12">
-              <Flag className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-500">No reports to review</p>
-            </div>
-          ) : (
-            <div className="divide-y divide-gray-200">
-              {filteredReports.map((report) => (
-                <div key={report.id} className="p-6 hover:bg-gray-50">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3 mb-2">
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs font-medium ${
-                            report.status === 'pending'
-                              ? 'bg-yellow-100 text-yellow-800'
-                              : report.status === 'reviewing'
-                              ? 'bg-blue-100 text-blue-800'
-                              : report.status === 'resolved'
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-gray-100 text-gray-800'
-                          }`}
-                        >
-                          {report.status}
-                        </span>
-                        <span className="text-sm text-gray-500">
-                          {REPORT_REASONS[report.report_reason as keyof typeof REPORT_REASONS] || report.report_reason}
-                        </span>
-                        <span className="text-sm text-gray-500">
-                          {report.reported_content_type === 'verdict_request' ? 'Request' : 'Response'}
-                        </span>
-                      </div>
-                      
-                      <p className="text-gray-900 font-medium mb-1">
-                        Report #{report.id.slice(-8)}
-                      </p>
-                      
-                      {report.report_description && (
-                        <p className="text-gray-600 text-sm mb-2">
-                          "{report.report_description}"
-                        </p>
-                      )}
-                      
-                      <div className="flex items-center space-x-4 text-xs text-gray-500">
-                        <span>Reported {new Date(report.created_at).toLocaleDateString()}</span>
-                        {report.reporter_email && (
-                          <span>by {report.reporter_email}</span>
-                        )}
-                        {report.resolved_at && (
-                          <span>Resolved {new Date(report.resolved_at).toLocaleDateString()}</span>
-                        )}
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center space-x-2">
-                      <button
-                        onClick={() => setSelectedReport(report)}
-                        className="flex items-center px-3 py-1 text-sm text-indigo-600 hover:text-indigo-900"
-                      >
-                        <Eye className="h-4 w-4 mr-1" />
-                        Review
-                      </button>
-                    </div>
-                  </div>
+        {/* Content */}
+        <div className="bg-white rounded-lg shadow-lg">
+          {activeTab === 'reports' && (
+            <div className="p-6">
+              <h2 className="text-lg font-semibold mb-4">Pending Content Reports</h2>
+              
+              {!data.reports || data.reports.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <Flag className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                  <p>No pending reports</p>
                 </div>
-              ))}
+              ) : (
+                <div className="space-y-4">
+                  {data.reports.map((report) => (
+                    <div key={report.id} className="border border-yellow-200 rounded-lg p-4">
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <h3 className="font-medium text-gray-900">
+                            {report.content_type.charAt(0).toUpperCase() + report.content_type.slice(1)} Report
+                          </h3>
+                          <p className="text-sm text-gray-600">
+                            Reported by: {report.reported_by_profile?.email || 'Unknown'}
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            {new Date(report.created_at).toLocaleString()}
+                          </p>
+                        </div>
+                        <span className="px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded">
+                          {report.reason}
+                        </span>
+                      </div>
+                      
+                      <div className="mb-3">
+                        <p className="text-sm font-medium text-gray-700 mb-1">Content:</p>
+                        <p className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
+                          {report.content_details?.context?.slice(0, 200) || 'No context available'}
+                          {(report.content_details?.context?.length || 0) > 200 && '...'}
+                        </p>
+                      </div>
+
+                      {report.description && (
+                        <div className="mb-3">
+                          <p className="text-sm font-medium text-gray-700 mb-1">Reporter's comment:</p>
+                          <p className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
+                            {report.description}
+                          </p>
+                        </div>
+                      )}
+
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => takeAction('approve_report', report.content_type, report.id)}
+                          disabled={actionLoading === report.id}
+                          className="flex items-center px-3 py-1.5 bg-green-600 text-white text-sm rounded hover:bg-green-700 disabled:opacity-50"
+                        >
+                          <CheckCircle className="h-4 w-4 mr-1" />
+                          Dismiss Report
+                        </button>
+                        <button
+                          onClick={() => takeAction('ban_content', report.content_type, report.content_id, 'Policy violation')}
+                          disabled={actionLoading === report.id}
+                          className="flex items-center px-3 py-1.5 bg-red-600 text-white text-sm rounded hover:bg-red-700 disabled:opacity-50"
+                        >
+                          <XCircle className="h-4 w-4 mr-1" />
+                          Ban Content
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'stuck' && (
+            <div className="p-6">
+              <h2 className="text-lg font-semibold mb-4">Stuck Requests</h2>
+              
+              {!data.stuckRequests || data.stuckRequests.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <Clock className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                  <p>No stuck requests found</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {data.stuckRequests.map((request) => (
+                    <div key={request.id} className="border border-orange-200 rounded-lg p-4">
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <h3 className="font-medium text-gray-900">{request.category}</h3>
+                          <p className="text-sm text-gray-600">
+                            User: {request.user_profile?.email || 'Unknown'}
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            Created: {new Date(request.created_at).toLocaleString()}
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            Progress: {request.received_verdict_count}/{request.target_verdict_count} verdicts
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <span className={`px-2 py-1 text-xs rounded ${
+                            request.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-blue-100 text-blue-800'
+                          }`}>
+                            {request.status}
+                          </span>
+                          <p className="text-sm text-gray-500 mt-1">
+                            {request.credit_cost} credits
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="mb-3">
+                        <p className="text-sm font-medium text-gray-700 mb-1">Request:</p>
+                        <p className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
+                          {request.context?.slice(0, 200) || 'No context available'}
+                          {(request.context?.length || 0) > 200 && '...'}
+                        </p>
+                      </div>
+
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => takeAction('refund_stuck', 'request', request.id, 'Insufficient judge availability')}
+                          disabled={actionLoading === request.id}
+                          className="flex items-center px-3 py-1.5 bg-green-600 text-white text-sm rounded hover:bg-green-700 disabled:opacity-50"
+                        >
+                          <DollarSign className="h-4 w-4 mr-1" />
+                          Refund & Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'hidden' && (
+            <div className="p-6">
+              <h2 className="text-lg font-semibold mb-4">Auto-Hidden Content</h2>
+              
+              {!data.hiddenContent || data.hiddenContent.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  <EyeOff className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                  <p>No hidden content</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {data.hiddenContent.map((content) => (
+                    <div key={content.id} className="border border-red-200 rounded-lg p-4 bg-red-50">
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <h3 className="font-medium text-gray-900">{content.category}</h3>
+                          <p className="text-sm text-gray-600">
+                            User: {content.user_profile?.email || 'Unknown'}
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            Hidden: {new Date(content.created_at).toLocaleString()}
+                          </p>
+                        </div>
+                        <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded">
+                          Hidden
+                        </span>
+                      </div>
+
+                      <div className="mb-3">
+                        <p className="text-sm font-medium text-gray-700 mb-1">Content:</p>
+                        <p className="text-sm text-gray-600 bg-white p-2 rounded">
+                          {content.context?.slice(0, 200) || 'No context available'}
+                          {(content.context?.length || 0) > 200 && '...'}
+                        </p>
+                      </div>
+
+                      {content.moderation_reason && (
+                        <div className="mb-3">
+                          <p className="text-sm font-medium text-gray-700 mb-1">Reason:</p>
+                          <p className="text-sm text-red-600 bg-red-100 p-2 rounded">
+                            {content.moderation_reason}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
 
-        {/* Report Detail Modal */}
-        {selectedReport && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="flex items-center justify-between p-6 border-b">
-                <h3 className="text-lg font-semibold">Review Report #{selectedReport.id.slice(-8)}</h3>
-                <button
-                  onClick={() => setSelectedReport(null)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <XCircle className="h-6 w-6" />
-                </button>
-              </div>
-
-              <div className="p-6 space-y-6">
-                {/* Report Details */}
-                <div>
-                  <h4 className="font-medium mb-3">Report Details</h4>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="text-gray-500">Reason:</span>
-                      <p className="font-medium">
-                        {REPORT_REASONS[selectedReport.report_reason as keyof typeof REPORT_REASONS]}
-                      </p>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Content Type:</span>
-                      <p className="font-medium">
-                        {selectedReport.reported_content_type === 'verdict_request' ? 'Request' : 'Response'}
-                      </p>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Reported:</span>
-                      <p className="font-medium">
-                        {new Date(selectedReport.created_at).toLocaleString()}
-                      </p>
-                    </div>
-                    <div>
-                      <span className="text-gray-500">Status:</span>
-                      <p className="font-medium capitalize">{selectedReport.status}</p>
-                    </div>
-                  </div>
-                  {selectedReport.report_description && (
-                    <div className="mt-3">
-                      <span className="text-gray-500">Description:</span>
-                      <p className="mt-1 p-3 bg-gray-50 rounded text-sm">
-                        {selectedReport.report_description}
-                      </p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Content Preview */}
-                {selectedReport.content_preview && (
-                  <div>
-                    <h4 className="font-medium mb-3">Reported Content</h4>
-                    <div className="p-4 bg-gray-50 rounded border">
-                      <p className="text-sm">{selectedReport.content_preview}</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Moderation Actions */}
-                {selectedReport.status === 'pending' && (
-                  <div>
-                    <h4 className="font-medium mb-3">Take Action</h4>
-                    <div className="space-y-4">
-                      <button
-                        onClick={() => handleReviewReport(selectedReport.id, 'start_review')}
-                        disabled={submitting}
-                        className="w-full flex items-center justify-center px-4 py-2 border border-indigo-600 text-indigo-600 rounded-lg hover:bg-indigo-50 disabled:opacity-50"
-                      >
-                        <Clock className="h-4 w-4 mr-2" />
-                        Start Review
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {selectedReport.status === 'reviewing' && (
-                  <div>
-                    <h4 className="font-medium mb-3">Resolve Report</h4>
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Resolution
-                        </label>
-                        <select
-                          value={resolution}
-                          onChange={(e) => setResolution(e.target.value)}
-                          className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                        >
-                          <option value="">Select resolution...</option>
-                          {Object.entries(RESOLUTIONS).map(([key, label]) => (
-                            <option key={key} value={key}>
-                              {label}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Moderator Notes
-                        </label>
-                        <textarea
-                          value={moderatorNotes}
-                          onChange={(e) => setModeratorNotes(e.target.value)}
-                          placeholder="Add notes about your decision..."
-                          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                          rows={3}
-                        />
-                      </div>
-
-                      <div className="flex space-x-3">
-                        <button
-                          onClick={() => handleReviewReport(selectedReport.id, 'resolve')}
-                          disabled={submitting || !resolution}
-                          className="flex-1 flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
-                        >
-                          <CheckCircle className="h-4 w-4 mr-2" />
-                          Resolve
-                        </button>
-                        <button
-                          onClick={() => handleReviewReport(selectedReport.id, 'dismiss')}
-                          disabled={submitting}
-                          className="flex-1 flex items-center justify-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50"
-                        >
-                          <XCircle className="h-4 w-4 mr-2" />
-                          Dismiss
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Previous Resolution */}
-                {selectedReport.status === 'resolved' && selectedReport.resolution && (
-                  <div>
-                    <h4 className="font-medium mb-3">Resolution</h4>
-                    <div className="p-4 bg-green-50 rounded border border-green-200">
-                      <p className="font-medium text-green-800">
-                        {RESOLUTIONS[selectedReport.resolution as keyof typeof RESOLUTIONS]}
-                      </p>
-                      {selectedReport.moderator_notes && (
-                        <p className="text-green-700 text-sm mt-2">
-                          {selectedReport.moderator_notes}
-                        </p>
-                      )}
-                      <p className="text-green-600 text-xs mt-2">
-                        Resolved on {new Date(selectedReport.resolved_at!).toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Footer */}
+        <div className="mt-8 text-center text-gray-500 text-sm">
+          <p>Moderation data last updated: {new Date().toLocaleTimeString()}</p>
+        </div>
       </div>
     </div>
   );

@@ -44,7 +44,7 @@ export default function NotFound() {
         {/* Help text */}
         <p className="mt-8 text-sm text-gray-500">
           Need help?{' '}
-          <Link href="/start" className="text-indigo-600 hover:text-indigo-700 font-medium">
+          <Link href="/start-simple" className="text-indigo-600 hover:text-indigo-700 font-medium">
             Submit a request
           </Link>{' '}
           or check your{' '}

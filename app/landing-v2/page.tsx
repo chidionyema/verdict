@@ -1,10 +1,8 @@
 'use client';
 
 import { HeroSection } from '@/components/landing/hero-section';
-import { InteractiveDemo } from '@/components/landing/interactive-demo';
-import { FeaturesComparison } from '@/components/landing/features-comparison';
+import { HowItWorks } from '@/components/landing/how-it-works';
 import { SocialProofSection } from '@/components/landing/social-proof-section';
-import { JudgeSelectionSection } from '@/components/landing/judge-selection';
 import { PricingTableSection } from '@/components/landing/pricing-table';
 import { TouchButton } from '@/components/ui/touch-button';
 import { 
@@ -24,76 +22,52 @@ export default function WorldClassLandingPage() {
       {/* Hero Section */}
       <HeroSection />
 
-      {/* Features Overview */}
-      <div className="py-16 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* How It Works - Simple 3-step process */}
+      <HowItWorks />
+
+      {/* Social Proof with Beta Positioning */}
+      <SocialProofSection />
+      
+      {/* Transparent Pricing */}
+      <PricingTableSection />
+
+      {/* Why not Reddit section */}
+      <div className="py-16 bg-white border-t border-gray-100">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              The Truth You've Been Looking For
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+              Why not just post on Reddit?
             </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              No more sugar-coated feedback from friends. Get honest opinions that actually help.
+            <p className="text-xl text-gray-600">
+              We get this question a lot. Here's the honest comparison:
             </p>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <div className="text-center p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl">
-              <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <Shield className="h-8 w-8 text-white" />
-              </div>
-              <h3 className="text-xl font-semibold mb-3">100% Anonymous</h3>
-              <p className="text-gray-600">
-                No profiles, names, or personal info. Complete privacy for honest feedback.
-              </p>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="bg-red-50 border border-red-200 rounded-xl p-6">
+              <h3 className="text-lg font-semibold text-red-900 mb-4">Reddit/Forums</h3>
+              <ul className="space-y-2 text-red-700">
+                <li>• Public posts anyone can see</li>
+                <li>• Random strangers, variable quality</li>
+                <li>• Might get 0 responses or trolls</li>
+                <li>• No guarantee of helpful feedback</li>
+                <li>• Your question stays online forever</li>
+              </ul>
             </div>
-
-            <div className="text-center p-6 bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl">
-              <div className="w-16 h-16 bg-green-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <Clock className="h-8 w-8 text-white" />
-              </div>
-              <h3 className="text-xl font-semibold mb-3">Lightning Fast</h3>
-              <p className="text-gray-600">
-                Get 3 honest opinions in under 5 minutes. No waiting around for days.
-              </p>
-            </div>
-
-            <div className="text-center p-6 bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl">
-              <div className="w-16 h-16 bg-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <MessageSquare className="h-8 w-8 text-white" />
-              </div>
-              <h3 className="text-xl font-semibold mb-3">Quality Feedback</h3>
-              <p className="text-gray-600">
-                Detailed, constructive responses from verified humans. No bots or spam.
-              </p>
-            </div>
-
-            <div className="text-center p-6 bg-gradient-to-br from-yellow-50 to-orange-50 rounded-2xl">
-              <div className="w-16 h-16 bg-yellow-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <Star className="h-8 w-8 text-white" />
-              </div>
-              <h3 className="text-xl font-semibold mb-3">Proven Results</h3>
-              <p className="text-gray-600">
-                4.9★ average rating from 47K+ users who got the feedback they needed.
-              </p>
+            
+            <div className="bg-green-50 border border-green-200 rounded-xl p-6">
+              <h3 className="text-lg font-semibold text-green-900 mb-4">Verdict</h3>
+              <ul className="space-y-2 text-green-700">
+                <li>• Completely private submissions</li>
+                <li>• Verified reviewers with quality scores</li>
+                <li>• Guaranteed 3 responses</li>
+                <li>• Constructive, helpful feedback</li>
+                <li>• Auto-deletes after 30 days</li>
+              </ul>
             </div>
           </div>
         </div>
       </div>
-
-      {/* Judge selection / credibility */}
-      <JudgeSelectionSection />
-
-      {/* Pricing table */}
-      <PricingTableSection />
-
-      {/* Interactive Demo */}
-      <InteractiveDemo />
-
-      {/* Features Comparison */}
-      <FeaturesComparison />
-
-      {/* Social Proof */}
-      <SocialProofSection />
 
       {/* FAQ Section */}
       <div className="py-16 bg-gray-50">
@@ -122,81 +96,63 @@ export default function WorldClassLandingPage() {
                 What if I get mean feedback?
               </h3>
               <p className="text-gray-600">
-                All judges are trained to be honest but constructive. Mean or inappropriate feedback is flagged and those judges lose access. We want truth, not cruelty.
+                All reviewers are trained to be honest but constructive. Mean or inappropriate feedback is flagged and those reviewers lose access. We want truth, not cruelty.
               </p>
             </div>
 
             <div className="bg-white rounded-xl p-6 shadow-sm">
               <h3 className="text-lg font-semibold text-gray-900 mb-3">
-                How qualified are the judges?
+                How qualified are the reviewers?
               </h3>
               <p className="text-gray-600">
-                All judges pass a qualification test and maintain quality ratings. Poor performers are removed. You get feedback from people who know how to give it.
+                All reviewers pass a quality check and maintain ratings. Poor performers lose access. You get feedback from people who know how to give it.
               </p>
             </div>
 
             <div className="bg-white rounded-xl p-6 shadow-sm">
               <h3 className="text-lg font-semibold text-gray-900 mb-3">
-                Can I really trust stranger opinions?
+                Can I become a reviewer?
               </h3>
               <p className="text-gray-600">
-                Strangers have no reason to lie to you. Unlike friends who want to protect your feelings, anonymous judges give you the unfiltered truth.
+                Yes! Help others make better decisions and earn money for quality responses. Apply to review in areas you know well. Flexible - review when you have time.
               </p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Final CTA Section */}
-      <div className="py-16 bg-gradient-to-r from-purple-900 to-pink-900">
+      {/* Single Final CTA Section */}
+      <div className="py-20 bg-gradient-to-r from-indigo-600 to-purple-600">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
-            Stop Guessing. Start Knowing.
+            Ready to get honest opinions?
           </h2>
-          <p className="text-xl text-purple-100 mb-8 max-w-2xl mx-auto">
-            Join 47,000+ people who've gotten the honest feedback they needed to make better decisions.
-            Start with 3 free verdicts - no credit card required.
+          <p className="text-xl text-indigo-100 mb-10 max-w-2xl mx-auto">
+            Join our beta and be among the first to get unfiltered feedback.
+            Start with 3 free opinions - no credit card required.
           </p>
 
           <TouchButton
             onClick={() => window.location.href = '/start'}
-            className="bg-white text-purple-900 px-10 py-5 text-xl font-bold rounded-2xl hover:bg-gray-50 transition-colors inline-flex items-center gap-3 shadow-xl hover:shadow-2xl transform hover:-translate-y-1 duration-300"
+            size="lg"
+            className="bg-white text-indigo-600 font-bold shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300"
           >
-            Get My Free Verdicts Now
-            <ArrowRight className="w-6 h-6" />
+            Get 3 free opinions
+            <ArrowRight className="w-5 h-5 ml-2" />
           </TouchButton>
 
-          <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6 text-purple-200 text-sm">
+          <div className="mt-6 flex items-center justify-center gap-6 text-indigo-200 text-sm">
             <div className="flex items-center gap-2">
               <CheckCircle className="w-4 h-4" />
-              <span>3 Free Verdicts</span>
+              <span>Anonymous</span>
             </div>
             <div className="flex items-center gap-2">
-              <CheckCircle className="w-4 h-4" />
-              <span>No Credit Card</span>
+              <Shield className="w-4 h-4" />
+              <span>No account needed</span>
             </div>
             <div className="flex items-center gap-2">
-              <CheckCircle className="w-4 h-4" />
-              <span>Results in 5 Minutes</span>
-            </div>
-          </div>
-
-          {/* Trust indicators */}
-          <div className="mt-8 pt-8 border-t border-purple-800">
-            <p className="text-purple-200 text-sm mb-4">Trusted by leading communities</p>
-            <div className="flex items-center justify-center gap-8 text-purple-300 text-xs">
-              <div className="flex items-center gap-1">
-                <Star className="w-3 h-3 fill-current" />
-                <span>4.9★ Rating</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Zap className="w-3 h-3" />
-                <span>340K+ Verdicts</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Shield className="w-3 h-3" />
-                <span>Privacy First</span>
-              </div>
+              <Clock className="w-4 h-4" />
+              <span>47min average</span>
             </div>
           </div>
         </div>

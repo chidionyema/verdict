@@ -101,7 +101,7 @@ export default function WelcomePage() {
     {
       id: 'credits',
       title: 'You Have 3 Free Credits',
-      description: 'Each credit gets you 3 expert verdicts',
+      description: 'Each credit gets you 3 honest opinions',
       completed: true,
     },
     {
@@ -109,7 +109,7 @@ export default function WelcomePage() {
       title: 'Create Your First Request',
       description: 'Upload a photo or ask for feedback on anything',
       completed: false,
-      action: () => router.push('/start'),
+      action: () => router.push('/start-simple'),
     },
   ];
 

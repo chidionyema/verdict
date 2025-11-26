@@ -13,28 +13,36 @@ interface FloatingActionButtonProps {
 export default function FloatingActionButton({ className = '' }: FloatingActionButtonProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const supabase = createClient();
   
   const [user, setUser] = useState<any>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
 
   useEffect(() => {
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
-    };
+    // Only run in browser
+    if (typeof window === 'undefined') return;
 
-    getUser();
+    try {
+      const supabase = createClient();
+      
+      const getUser = async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        setUser(user);
+      };
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
+      getUser();
 
-    return () => subscription.unsubscribe();
-  }, [supabase]);
+      const {
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange((_event, session) => {
+        setUser(session?.user ?? null);
+      });
+
+      return () => subscription.unsubscribe();
+    } catch (error) {
+      console.error('Error initializing Supabase client:', error);
+    }
+  }, []);
 
   // Hide on certain pages where it's not needed
   useEffect(() => {
@@ -49,7 +57,7 @@ export default function FloatingActionButton({ className = '' }: FloatingActionB
       label: 'Photo Verdict',
       icon: Camera,
       description: 'Get feedback on photos',
-      action: () => router.push('/start?type=photo'),
+      action: () => router.push('/start-simple?type=photo'),
       color: 'bg-blue-500 hover:bg-blue-600'
     },
     {
@@ -57,7 +65,7 @@ export default function FloatingActionButton({ className = '' }: FloatingActionB
       label: 'Text Verdict',
       icon: MessageSquare,
       description: 'Get feedback on text',
-      action: () => router.push('/start?type=text'),
+      action: () => router.push('/start-simple?type=text'),
       color: 'bg-green-500 hover:bg-green-600'
     },
     {
@@ -65,7 +73,7 @@ export default function FloatingActionButton({ className = '' }: FloatingActionB
       label: 'Quick Decision',
       icon: Zap,
       description: 'Help with choices',
-      action: () => router.push('/start?category=decision'),
+      action: () => router.push('/start-simple?category=decision'),
       color: 'bg-purple-500 hover:bg-purple-600'
     }
   ];

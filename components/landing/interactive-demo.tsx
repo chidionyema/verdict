@@ -68,8 +68,8 @@ const DEMO_STEPS: DemoStep[] = [
   },
   {
     id: 2,
-    title: "Qualified Judges Review",
-    description: "3 expert judges anonymously evaluate your submission",
+    title: "Real People Review",
+    description: "3 verified reviewers anonymously evaluate your submission",
     duration: 3000,
     visual: (
       <div className="space-y-3">
@@ -127,7 +127,7 @@ const DEMO_STEPS: DemoStep[] = [
                 <p className="text-gray-700">{verdict.text}</p>
               </div>
             ))}
-            <p className="text-xs text-gray-500 text-center pt-2">All 3 expert responses shown</p>
+            <p className="text-xs text-gray-500 text-center pt-2">All 3 honest responses shown</p>
           </div>
         </div>
       </div>

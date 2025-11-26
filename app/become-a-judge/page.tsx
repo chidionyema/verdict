@@ -3,6 +3,9 @@
 import Link from 'next/link';
 import { CheckCircle, DollarSign, Star, Target, Clock, ShieldCheck } from 'lucide-react';
 
+// Force dynamic rendering to avoid Supabase client issues during build
+export const dynamic = 'force-dynamic';
+
 export default function BecomeJudgePage() {
   return (
     <div className="min-h-screen bg-gray-50 py-12">

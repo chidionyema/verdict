@@ -7,7 +7,10 @@ import {
   MessageSquare, 
   AlertTriangle, 
   DollarSign, 
-  TrendingUp, 
+  TrendingUp,
+  Flag,
+  Clock,
+  EyeOff, 
   CheckCircle,
   Shield,
   BarChart3,
@@ -36,7 +39,8 @@ interface DashboardStats {
   moderation: {
     pending_reports: number;
     flagged_content: number;
-    suspended_users: number;
+    suspended_judges: number;
+    stuck_requests: number;
   };
   revenue: {
     total: number;
@@ -244,7 +248,7 @@ export default function AdminDashboard() {
             <StatCard
               title="Moderation Queue"
               value={stats?.moderation?.pending_reports ?? 0}
-              subtitle={`${stats?.moderation?.flagged_content ?? 0} flagged items`}
+              subtitle={`${stats?.moderation?.stuck_requests ?? 0} stuck • ${stats?.moderation?.suspended_judges ?? 0} suspended`}
               icon={AlertTriangle}
               color={(stats?.moderation?.pending_reports ?? 0) > 0 ? "#ef4444" : "#f59e0b"}
             />

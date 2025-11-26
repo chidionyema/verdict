@@ -102,12 +102,12 @@ export function FeaturesComparison() {
   const [selectedTab, setSelectedTab] = useState<'comparison' | 'problems'>('problems');
 
   return (
-    <div className="py-16 bg-white">
+    <div className="py-16 bg-gradient-to-br from-white via-indigo-50/30 to-purple-50/30">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Header */}
         <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+          <h2 className="text-3xl md:text-4xl font-bold mb-4 bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
             Why Verdict Beats Asking Friends or Posting on Reddit
           </h2>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
@@ -143,7 +143,7 @@ export function FeaturesComparison() {
             {PAIN_POINTS.map((point, index) => {
               const Icon = point.icon;
               return (
-                <Card key={index} className="border-0 shadow-lg hover:shadow-xl transition-all duration-300">
+                <Card key={index} className="border-0 shadow-xl hover:shadow-2xl transition-all duration-500 bg-white/70 backdrop-blur-xl border border-white/20 hover:-translate-y-1">
                   <CardContent className="p-6">
                     <div className="flex items-start gap-4">
                       <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center flex-shrink-0">
@@ -302,8 +302,8 @@ export function FeaturesComparison() {
 
         {/* Bottom CTA */}
         <div className="text-center mt-12">
-          <div className="bg-gradient-to-r from-gray-50 to-purple-50 rounded-2xl p-8 border border-purple-200">
-            <h3 className="text-2xl font-bold text-gray-900 mb-4">
+          <div className="bg-gradient-to-r from-white/80 via-purple-50/80 to-pink-50/80 backdrop-blur-xl rounded-3xl p-8 border border-white/30 shadow-2xl">
+            <h3 className="text-2xl font-bold mb-4 bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
               Experience the Difference Yourself
             </h3>
             <p className="text-gray-600 mb-6 max-w-2xl mx-auto">

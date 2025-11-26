@@ -12,8 +12,10 @@ import { RetentionDiscountBanner } from '@/components/retention/RetentionDiscoun
 type FilterStatus = 'all' | 'open' | 'in_progress' | 'closed' | 'cancelled';
 type SortBy = 'newest' | 'oldest' | 'status' | 'progress';
 
+// Force dynamic rendering to avoid Supabase client issues during build
+export const dynamic = 'force-dynamic';
+
 export default function DashboardPage() {
-  const supabase = createClient();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [requests, setRequests] = useState<VerdictRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -22,21 +24,16 @@ export default function DashboardPage() {
   const [sortBy, setSortBy] = useState<SortBy>('newest');
   const [showFilters, setShowFilters] = useState(false);
 
-  useEffect(() => {
-    fetchData();
-    
-    // Check for stored redirect after OAuth
-    if (typeof window !== 'undefined') {
-      const storedRedirect = sessionStorage.getItem('verdict_redirect_to');
-      if (storedRedirect && storedRedirect !== '/dashboard' && storedRedirect !== window.location.pathname) {
-        sessionStorage.removeItem('verdict_redirect_to');
-        window.location.href = storedRedirect;
-      }
-    }
-  }, []);
-
   const fetchData = async () => {
+    // Only run in browser
+    if (typeof window === 'undefined') {
+      setLoading(false);
+      return;
+    }
+
     try {
+      const supabase = createClient();
+      
       // Fetch profile
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
@@ -64,6 +61,19 @@ export default function DashboardPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchData();
+    
+    // Check for stored redirect after OAuth
+    if (typeof window !== 'undefined') {
+      const storedRedirect = sessionStorage.getItem('verdict_redirect_to');
+      if (storedRedirect && storedRedirect !== '/dashboard' && storedRedirect !== window.location.pathname) {
+        sessionStorage.removeItem('verdict_redirect_to');
+        window.location.href = storedRedirect;
+      }
+    }
+  }, []);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -237,7 +247,7 @@ export default function DashboardPage() {
             </button>
             
             <Link
-              href="/start"
+              href="/start-simple"
               className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-indigo-700 transition flex items-center justify-center min-h-[48px] whitespace-nowrap"
             >
               <Plus className="h-5 w-5 mr-2" />
@@ -349,7 +359,7 @@ export default function DashboardPage() {
               Get honest feedback from 10 real people in minutes.
             </p>
             <Link
-              href="/start"
+              href="/start-simple"
               className="inline-block bg-indigo-600 text-white px-8 py-4 rounded-xl font-semibold hover:bg-indigo-700 transition shadow-lg min-h-[48px]"
             >
               Create Your First Request
@@ -380,7 +390,7 @@ export default function DashboardPage() {
                 Clear Filters
               </button>
               <Link
-                href="/start"
+                href="/start-simple"
                 className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition"
               >
                 New Request

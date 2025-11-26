@@ -15,17 +15,12 @@ import {
   CheckCircle
 } from 'lucide-react';
 
-const ROTATING_HEADLINES = [
-  "Stop Wondering. Start Knowing.",
-  "Get Brutal Honesty in 5 Minutes.",
-  "Finally, Someone Will Tell You The Truth.",
-  "Skip The Guesswork. Get Real Opinions."
-];
+const MAIN_HEADLINE = "Get honest opinions in minutes";
 
 const SOCIAL_PROOF_STATS = [
-  { icon: Users, label: "27,340+ verdicts", color: "text-blue-600" },
+  { icon: Users, label: "500+ opinions delivered", color: "text-blue-600" },
   { icon: Star, label: "4.9★ rating", color: "text-yellow-500" },
-  { icon: Clock, label: "Avg 3 min delivery", color: "text-green-600" },
+  { icon: Sparkles, label: "Currently in beta", color: "text-purple-600" },
 ];
 
 const USE_CASES = [
@@ -36,27 +31,21 @@ const USE_CASES = [
 ];
 
 export function HeroSection() {
-  const [currentHeadline, setCurrentHeadline] = useState(0);
   const [currentUseCase, setCurrentUseCase] = useState(0);
   const router = useRouter();
 
   useEffect(() => {
-    const headlineInterval = setInterval(() => {
-      setCurrentHeadline((prev) => (prev + 1) % ROTATING_HEADLINES.length);
-    }, 3000);
-
     const useCaseInterval = setInterval(() => {
       setCurrentUseCase((prev) => (prev + 1) % USE_CASES.length);
-    }, 2000);
+    }, 3000);
 
     return () => {
-      clearInterval(headlineInterval);
       clearInterval(useCaseInterval);
     };
   }, []);
 
   return (
-    <div className="relative overflow-hidden bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 hero-section min-h-[600px]">
+    <div className="relative overflow-hidden bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 hero-section min-h-[700px]">
       {/* Background Elements */}
       <div className="absolute inset-0">
         <div className="absolute top-0 left-1/4 w-72 h-72 bg-purple-200 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob"></div>
@@ -67,29 +56,26 @@ export function HeroSection() {
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16">
         <div className="text-center">
           {/* Pre-headline Badge */}
-          <Badge className="mb-6 bg-gradient-to-r from-purple-600 to-pink-600 text-white border-0 px-4 py-2">
+          <Badge className="mb-6 bg-gradient-to-r from-indigo-600 to-purple-600 text-white border-0 px-4 py-2">
             <Sparkles className="w-4 h-4 mr-2" />
-            Be among the first to get unfiltered opinions
+            Currently in beta - get early access
           </Badge>
 
-          {/* Rotating Headline */}
+          {/* Clear Main Headline */}
           <div className="mb-6">
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-gray-900 tracking-tight">
-              <span className="block transition-all duration-1000 transform">
-                {ROTATING_HEADLINES[currentHeadline]}
-              </span>
+              {MAIN_HEADLINE}
             </h1>
           </div>
 
-          {/* Sub-headline with rotating use case + pricing */}
+          {/* Sub-headline with rotating use case */}
           <div className="mb-8">
             <p className="text-xl md:text-2xl text-gray-600 max-w-3xl mx-auto">
-              Whether you're asking{' '}
-              <span className="font-semibold text-purple-600 transition-all duration-500">
+              Real people, real feedback, completely anonymous.
+              <br />
+              <span className="font-semibold text-indigo-600 transition-all duration-500">
                 "{USE_CASES[currentUseCase]}"
               </span>
-              <br />
-              Get 3 honest opinions from real people for <span className="font-semibold text-gray-900">$3.49</span>.
             </p>
           </div>
 
@@ -107,50 +93,55 @@ export function HeroSection() {
           </div>
 
           {/* Primary CTA */}
-          <div className="flex flex-col sm:flex-row gap-4 items-center justify-center mb-6">
+          <div className="mb-8">
             <TouchButton
-              onClick={() => router.push('/start')}
-              className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-8 py-4 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 group min-h-[56px]"
+              onClick={() => router.push('/start-simple')}
+              className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-10 py-4 text-xl font-semibold rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 group min-h-[56px]"
             >
-              Get My 3 Free Verdicts
-              <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+              Get 3 free opinions
+              <ArrowRight className="ml-2 h-6 w-6 group-hover:translate-x-1 transition-transform" />
             </TouchButton>
             
-            <TouchButton
-              variant="outline"
-              onClick={() => {
-                const demoSection = document.getElementById('demo');
-                demoSection?.scrollIntoView({ behavior: 'smooth' });
-              }}
-              className="px-6 py-4 text-lg border-2 hover:bg-gray-50"
-            >
-              ▶ Watch 30‑Second Demo
-            </TouchButton>
+            <div className="mt-4">
+              <TouchButton
+                variant="ghost"
+                onClick={() => {
+                  const demoSection = document.getElementById('how-it-works');
+                  demoSection?.scrollIntoView({ behavior: 'smooth' });
+                }}
+                className="text-indigo-600 hover:text-indigo-700"
+              >
+                See how it works
+              </TouchButton>
+            </div>
           </div>
 
           {/* Trust Indicators */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 text-sm text-gray-600">
             <div className="flex items-center gap-2">
               <Shield className="h-4 w-4 text-green-600" />
-              <span>100% Anonymous</span>
+              <span>Anonymous</span>
             </div>
             <div className="flex items-center gap-2">
               <CheckCircle className="h-4 w-4 text-green-600" />
-              <span>No Credit Card</span>
+              <span>No account required</span>
             </div>
             <div className="flex items-center gap-2">
-              <Zap className="h-4 w-4 text-green-600" />
-              <span>Results in 5 minutes</span>
+              <Clock className="h-4 w-4 text-green-600" />
+              <span>47min average</span>
             </div>
           </div>
 
-          {/* Urgency Indicator */}
-          <div className="mt-8 p-4 bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-xl max-w-lg mx-auto">
-            <div className="flex items-center justify-center gap-2 text-orange-800">
-              <Zap className="h-4 w-4" />
-              <span className="font-medium">
-                <span className="animate-pulse">Live now:</span> 147 people getting verdicts
-              </span>
+          {/* Popular Categories */}
+          <div className="mt-8 p-4 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-xl max-w-lg mx-auto">
+            <div className="text-center text-blue-800">
+              <div className="font-medium mb-2">Popular verdict categories:</div>
+              <div className="text-sm flex flex-wrap justify-center gap-2">
+                <span>• Dating profiles</span>
+                <span>• Job interview prep</span>
+                <span>• Business decisions</span>
+                <span>• Style & appearance</span>
+              </div>
             </div>
           </div>
         </div>

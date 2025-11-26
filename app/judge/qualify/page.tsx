@@ -3,6 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+
+// Force dynamic rendering to avoid Supabase client issues during build
+export const dynamic = 'force-dynamic';
 import { 
   CheckCircle, 
   AlertCircle, 
@@ -86,7 +89,6 @@ const QUIZ_QUESTIONS: QuizQuestion[] = [
 
 export default function JudgeQualificationPage() {
   const router = useRouter();
-  const supabase = createClient();
   
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
@@ -100,36 +102,49 @@ export default function JudgeQualificationPage() {
   const [demographicsCompleted, setDemographicsCompleted] = useState(false);
 
   useEffect(() => {
+    // Only run in browser
+    if (typeof window === 'undefined') {
+      setIsLoading(false);
+      return;
+    }
+
     const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        router.push('/auth/login');
-        return;
-      }
-      
-      setUser(user);
-      
-      // Get user profile
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-      
-      if (profileData) {
-        setProfile(profileData);
-        // If already a judge, redirect to judge dashboard
-        if ((profileData as any).is_judge) {
-          router.push('/judge');
+      try {
+        const supabase = createClient();
+        
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          router.push('/auth/login');
           return;
         }
+        
+        setUser(user);
+        
+        // Get user profile
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+        
+        if (profileData) {
+          setProfile(profileData);
+          // If already a judge, redirect to judge dashboard
+          if ((profileData as any).is_judge) {
+            router.push('/judge');
+            return;
+          }
+        }
+        
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error initializing Supabase client:', error);
+        setIsLoading(false);
       }
-      
-      setIsLoading(false);
     };
 
     getUser();
-  }, [router, supabase]);
+  }, [router]);
 
   const handleQuizAnswer = (questionId: string, answerIndex: number) => {
     setQuizAnswers(prev => ({

@@ -6,6 +6,7 @@ import { forwardRef } from 'react';
 
 interface TouchButtonProps extends ButtonProps {
   touchOptimized?: boolean;
+  loading?: boolean;
 }
 
 export const TouchButton = forwardRef<HTMLButtonElement, TouchButtonProps>(
@@ -44,7 +45,7 @@ export const FABButton = forwardRef<HTMLButtonElement, TouchButtonProps>(
           // FAB specific styles
           'fixed bottom-6 right-6 z-50',
           'w-14 h-14 rounded-full shadow-lg',
-          'bg-blue-600 hover:bg-blue-700 text-white',
+          'bg-indigo-600 hover:bg-indigo-700 text-white',
           'active:shadow-xl transition-all duration-200',
           // Mobile positioning
           'md:bottom-8 md:right-8',
@@ -113,10 +114,10 @@ export const TouchFileInput = forwardRef<HTMLInputElement, React.InputHTMLAttrib
         'border-2 border-dashed border-gray-300',
         'rounded-lg bg-gray-50',
         'hover:border-gray-400 hover:bg-gray-100',
-        'active:border-blue-500 active:bg-blue-50',
+        'active:border-indigo-500 active:bg-indigo-50',
         'transition-colors duration-200',
         'cursor-pointer touch-manipulation',
-        'focus-within:border-blue-500 focus-within:bg-blue-50',
+        'focus-within:border-indigo-500 focus-within:bg-indigo-50',
         className
       )}>
         <input
@@ -190,9 +191,9 @@ export function TouchToggle({
         className={cn(
           'relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent',
           'transition-colors duration-200 ease-in-out',
-          'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+          'focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2',
           'touch-manipulation',
-          checked ? 'bg-blue-600' : 'bg-gray-200',
+          checked ? 'bg-indigo-600' : 'bg-gray-200',
           disabled && 'cursor-not-allowed'
         )}
       >

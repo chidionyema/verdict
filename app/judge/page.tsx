@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { DollarSign, Clock, Award, ArrowRight, ToggleLeft, ToggleRight } from 'lucide-react';
+import { DollarSign, Clock, Award, ArrowRight, ToggleLeft, ToggleRight, TrendingUp, Star, Zap, Filter, Search, Eye } from 'lucide-react';
 import type { Profile } from '@/lib/database.types';
 
 interface QueueRequest {
@@ -17,25 +17,63 @@ interface QueueRequest {
   received_verdict_count: number;
 }
 
+// Force dynamic rendering to avoid Supabase client issues during build
+export const dynamic = 'force-dynamic';
+
 export default function JudgeDashboardPage() {
   const router = useRouter();
-  const supabase = createClient();
   const judgeRedirectPath = '/judge/qualify';
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [queue, setQueue] = useState<QueueRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [toggling, setToggling] = useState(false);
+  const [queueFilter, setQueueFilter] = useState<'all' | 'appearance' | 'profile' | 'writing' | 'decision'>('all');
+  const [queueSort, setQueueSort] = useState<'newest' | 'oldest' | 'earnings'>('newest');
+  const [searchQuery, setSearchQuery] = useState('');
   const [stats, setStats] = useState({
     verdicts_given: 0,
     total_earnings: 0,
     available_for_payout: 0,
     average_quality_score: null as number | null,
     recent_verdicts: 0,
+    response_time_avg: 0,
+    weekly_earnings: 0,
+    completion_rate: 0,
   });
 
+  // Filter and sort queue
+  const filteredQueue = queue
+    .filter(request => {
+      // Filter by category
+      if (queueFilter !== 'all' && request.category !== queueFilter) return false;
+      // Filter by search query
+      if (searchQuery && !request.context.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      switch (queueSort) {
+        case 'newest':
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        case 'oldest':
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        case 'earnings':
+          return 0.6 - 0.5; // Placeholder - would use actual earnings data
+        default:
+          return 0;
+      }
+    });
+
   const fetchData = useCallback(async () => {
+    // Only run in browser
+    if (typeof window === 'undefined') {
+      setLoading(false);
+      return;
+    }
+
     try {
+      const supabase = createClient();
+      
       // Get profile
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
@@ -58,7 +96,7 @@ export default function JudgeDashboardPage() {
           const statsRes = await fetch('/api/judge/stats');
           if (statsRes.ok) {
             const statsData = await statsRes.json();
-            setStats(statsData);
+            setStats(prev => ({ ...prev, ...statsData }));
           }
         }
       }
@@ -67,19 +105,58 @@ export default function JudgeDashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [supabase]);
+  }, []);
 
   useEffect(() => {
     fetchData();
+  }, [fetchData]);
 
+  useEffect(() => {
+    // Set up SSE for real-time updates
+    if (typeof window !== 'undefined' && profile?.is_judge) {
+      const eventSource = new EventSource('/api/judge/queue/stream');
+      
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          
+          if (data.type === 'requests') {
+            setQueue(data.requests || []);
+          } else if (data.type === 'connected') {
+            console.log('SSE connected:', data.message);
+          } else if (data.type === 'heartbeat') {
+            // Connection is alive
+          } else if (data.type === 'reconnect') {
+            console.log('SSE reconnect requested:', data.message);
+            eventSource.close();
+            // Trigger a manual refetch
+            fetchData();
+          }
+        } catch (error) {
+          console.error('Error parsing SSE data:', error);
+        }
+      };
+
+      eventSource.onerror = (error) => {
+        console.error('SSE error:', error);
+        eventSource.close();
+      };
+
+      return () => {
+        eventSource.close();
+      };
+    }
+  }, [profile?.is_judge]);
+
+  useEffect(() => {
     // Set up auto-refresh every 5 seconds
-    const interval = setInterval(() => {
-      if (profile?.is_judge) {
+    if (profile?.is_judge) {
+      const interval = setInterval(() => {
         fetchData();
-      }
-    }, 5000);
+      }, 5000);
 
-    return () => clearInterval(interval);
+      return () => clearInterval(interval);
+    }
   }, [fetchData, profile?.is_judge]);
 
   const toggleJudge = async () => {
@@ -261,88 +338,175 @@ export default function JudgeDashboardPage() {
           </button>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Total Earnings</p>
-                <p className="text-2xl font-bold">${stats.total_earnings.toFixed(2)}</p>
-                <p className="text-xs text-gray-500 mt-1">
-                  ${stats.available_for_payout?.toFixed(2) || '0.00'} available
-                </p>
+        {/* Enhanced Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {/* Total Earnings */}
+          <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl shadow-lg p-6 border border-green-100">
+            <div className="flex items-center justify-between mb-4">
+              <div className="bg-green-100 rounded-full p-3">
+                <DollarSign className="h-6 w-6 text-green-600" />
               </div>
-              <DollarSign className="h-8 w-8 text-green-500" />
+              <div className="text-right">
+                <div className="flex items-center text-green-600 text-sm">
+                  <TrendingUp className="h-4 w-4 mr-1" />
+                  <span>+${stats.weekly_earnings.toFixed(2)} this week</span>
+                </div>
+              </div>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-green-700">Total Earnings</p>
+              <p className="text-2xl font-bold text-green-900">${stats.total_earnings.toFixed(2)}</p>
+              <p className="text-xs text-green-600 mt-1">
+                ${stats.available_for_payout?.toFixed(2) || '0.00'} available for payout
+              </p>
             </div>
           </div>
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Quality Score</p>
-                <p className="text-2xl font-bold">
-                  {stats.average_quality_score ? stats.average_quality_score.toFixed(1) : '-'}
-                </p>
-                {stats.average_quality_score && (
-                  <p className="text-xs text-gray-500 mt-1">Average rating</p>
-                )}
+
+          {/* Verdicts Given */}
+          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl shadow-lg p-6 border border-blue-100">
+            <div className="flex items-center justify-between mb-4">
+              <div className="bg-blue-100 rounded-full p-3">
+                <Award className="h-6 w-6 text-blue-600" />
               </div>
-              <Award className="h-8 w-8 text-indigo-500" />
+              <div className="text-right">
+                <div className="flex items-center text-blue-600 text-sm">
+                  <Zap className="h-4 w-4 mr-1" />
+                  <span>{stats.completion_rate.toFixed(0)}% completion</span>
+                </div>
+              </div>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-blue-700">Verdicts Given</p>
+              <p className="text-2xl font-bold text-blue-900">{stats.verdicts_given}</p>
+              <p className="text-xs text-blue-600 mt-1">
+                {stats.recent_verdicts} in the last 7 days
+              </p>
             </div>
           </div>
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Verdicts Given</p>
-                <p className="text-2xl font-bold">{stats.verdicts_given}</p>
-                {stats.recent_verdicts > 0 && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    {stats.recent_verdicts} this week
-                  </p>
-                )}
+
+          {/* Quality Score */}
+          <div className="bg-gradient-to-br from-purple-50 to-violet-50 rounded-xl shadow-lg p-6 border border-purple-100">
+            <div className="flex items-center justify-between mb-4">
+              <div className="bg-purple-100 rounded-full p-3">
+                <Star className="h-6 w-6 text-purple-600" />
               </div>
-              <Clock className="h-8 w-8 text-blue-500" />
+              <div className="text-right">
+                <div className="flex items-center text-purple-600 text-sm">
+                  <TrendingUp className="h-4 w-4 mr-1" />
+                  <span>Excellent</span>
+                </div>
+              </div>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-purple-700">Quality Score</p>
+              <p className="text-2xl font-bold text-purple-900">
+                {stats.average_quality_score ? `${stats.average_quality_score.toFixed(1)}/10` : 'N/A'}
+              </p>
+              <p className="text-xs text-purple-600 mt-1">
+                Based on {stats.verdicts_given} verdicts
+              </p>
+            </div>
+          </div>
+
+          {/* Response Time */}
+          <div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-xl shadow-lg p-6 border border-orange-100">
+            <div className="flex items-center justify-between mb-4">
+              <div className="bg-orange-100 rounded-full p-3">
+                <Clock className="h-6 w-6 text-orange-600" />
+              </div>
+              <div className="text-right">
+                <div className="flex items-center text-orange-600 text-sm">
+                  <Zap className="h-4 w-4 mr-1" />
+                  <span>Fast</span>
+                </div>
+              </div>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-orange-700">Avg Response Time</p>
+              <p className="text-2xl font-bold text-orange-900">
+                {stats.response_time_avg ? `${Math.round(stats.response_time_avg)}m` : 'N/A'}
+              </p>
+              <p className="text-xs text-orange-600 mt-1">
+                Target: Under 30 minutes
+              </p>
             </div>
           </div>
         </div>
 
-        {/* Queue */}
+        {/* Queue Section */}
         {!profile?.is_judge ? (
           <div className="bg-white rounded-lg shadow-lg p-12 text-center">
             <h3 className="text-lg font-semibold text-gray-900 mb-2">
               Become a Judge
             </h3>
             <p className="text-gray-600 mb-6 max-w-md mx-auto">
-              Toggle &quot;Available to Judge&quot; above to start seeing requests and earning money.
+              Toggle "Available to Judge" above to start seeing requests and earning money.
             </p>
           </div>
         ) : (
-          <div className="bg-white rounded-lg shadow">
-            <div className="p-6 border-b">
-              <div className="flex items-center justify-between">
+          <div className="bg-white rounded-xl shadow-lg">
+            <div className="p-6 border-b border-gray-100">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                 <div>
-                  <h2 className="text-xl font-semibold">Available Requests</h2>
+                  <h2 className="text-xl font-semibold text-gray-900">Available Requests</h2>
                   <p className="text-sm text-gray-500 mt-1">
-                    Click on a request to submit your verdict
+                    {filteredQueue.length} of {queue.length} requests • Click to submit verdict
                   </p>
                 </div>
-                <button
-                  onClick={fetchData}
-                  className="flex items-center gap-2 px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition"
-                  title="Refresh now"
-                >
-                  <Clock className="h-4 w-4" />
-                  Refresh
-                </button>
-              </div>
-              <div className="mt-3 flex items-center gap-2 text-xs">
-                <div className="flex items-center gap-1">
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                  <span className="text-green-600 font-medium">Auto-refresh enabled</span>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                    <span>Live updates</span>
+                  </div>
+                  <button
+                    onClick={fetchData}
+                    className="flex items-center gap-2 px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition"
+                  >
+                    <Clock className="h-4 w-4" />
+                    Refresh
+                  </button>
                 </div>
-                <span className="text-gray-400">•</span>
-                <span className="text-gray-500">Updates every 5 seconds</span>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex-1 relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search requests..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div className="relative">
+                  <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <select
+                    value={queueFilter}
+                    onChange={(e) => setQueueFilter(e.target.value as any)}
+                    className="pl-10 pr-8 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent appearance-none bg-white"
+                  >
+                    <option value="all">All Categories</option>
+                    <option value="appearance">Appearance</option>
+                    <option value="profile">Profile</option>
+                    <option value="writing">Writing</option>
+                    <option value="decision">Decision</option>
+                  </select>
+                </div>
+
+                <select
+                  value={queueSort}
+                  onChange={(e) => setQueueSort(e.target.value as any)}
+                  className="px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent appearance-none bg-white"
+                >
+                  <option value="newest">Newest First</option>
+                  <option value="oldest">Oldest First</option>
+                  <option value="earnings">Highest Earnings</option>
+                </select>
               </div>
             </div>
+
             <div className="p-6">
               {queue.length === 0 ? (
                 <div className="text-center py-12">
@@ -360,39 +524,77 @@ export default function JudgeDashboardPage() {
                     <p>⏱️ Requests typically appear within minutes</p>
                   </div>
                 </div>
+              ) : filteredQueue.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Search className="h-8 w-8 text-orange-600" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    No requests match your filters
+                  </h3>
+                  <p className="text-gray-600 mb-4">
+                    Try adjusting your search or filter settings
+                  </p>
+                  <button
+                    onClick={() => {
+                      setQueueFilter('all');
+                      setSearchQuery('');
+                    }}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+                  >
+                    Clear Filters
+                  </button>
+                </div>
               ) : (
-                <div className="space-y-4">
-                  {queue.map((request) => (
+                <div className="space-y-3">
+                  {filteredQueue.map((request) => (
                     <div
                       key={request.id}
                       onClick={() => router.push(`/judge/requests/${request.id}`)}
-                      className="border rounded-lg p-4 hover:border-indigo-500 cursor-pointer transition group"
+                      className="group relative bg-gradient-to-r from-white to-gray-50 border border-gray-200 rounded-xl p-6 hover:border-indigo-300 hover:shadow-lg cursor-pointer transition-all duration-200 hover:-translate-y-1"
                     >
-                      <div className="flex justify-between items-start">
+                      <div className="absolute top-3 right-3">
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                          {
+                            'appearance': 'bg-rose-100 text-rose-700',
+                            'profile': 'bg-blue-100 text-blue-700', 
+                            'writing': 'bg-purple-100 text-purple-700',
+                            'decision': 'bg-green-100 text-green-700'
+                          }[request.category] || 'bg-gray-100 text-gray-700'
+                        }`}>
+                          {request.category}
+                        </span>
+                      </div>
+
+                      <div className="flex justify-between items-start pr-20">
                         <div className="flex-1">
-                          <div className="flex items-center space-x-2">
-                            <p className="font-semibold capitalize">
-                              {request.category}
-                            </p>
-                            <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs">
-                              {request.media_type}
-                            </span>
+                          <div className="flex items-center space-x-3 mb-3">
+                            <div className="flex items-center gap-2">
+                              <Eye className="h-4 w-4 text-indigo-500" />
+                              <span className="font-medium text-gray-900">{request.media_type}</span>
+                            </div>
+                            <div className="flex items-center gap-1 text-xs text-gray-500">
+                              <Clock className="h-3 w-3" />
+                              <span>{Math.floor((Date.now() - new Date(request.created_at).getTime()) / (1000 * 60))}m ago</span>
+                            </div>
                           </div>
-                          <p className="text-sm text-gray-600 mt-1 line-clamp-2">
+                          
+                          <p className="text-gray-600 mb-3 line-clamp-2 leading-relaxed">
                             {request.context}
                           </p>
-                          <p className="text-sm text-gray-400 mt-2">
-                            {request.received_verdict_count}/{request.target_verdict_count} verdicts
-                          </p>
-                        </div>
-                        <div className="flex items-center space-x-4">
-                          <div className="text-right">
-                            <p className="text-lg font-semibold text-green-600">
-                              $0.50
-                            </p>
-                            <p className="text-xs text-gray-500">Earnings</p>
+                          
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4 text-xs">
+                              <span className="flex items-center gap-1 text-gray-500">
+                                <span className="w-2 h-2 bg-orange-400 rounded-full"></span>
+                                {request.received_verdict_count}/{request.target_verdict_count} verdicts
+                              </span>
+                              <span className="text-green-600 font-medium">
+                                $0.55 earnings
+                              </span>
+                            </div>
+                            <ArrowRight className="h-4 w-4 text-gray-400 group-hover:text-indigo-500 transition-colors" />
                           </div>
-                          <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-indigo-500 transition" />
                         </div>
                       </div>
                     </div>
@@ -403,24 +605,27 @@ export default function JudgeDashboardPage() {
           </div>
         )}
 
-        {/* Past Verdicts Link */}
-        {profile?.is_judge && stats.verdicts_given > 0 && (
+        {/* My Verdicts Link */}
+        {profile?.is_judge && (
           <div className="mt-8 bg-white rounded-lg shadow p-6">
             <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-semibold text-gray-900 mb-1">
-                  View Your Past Verdicts
-                </h3>
-                <p className="text-sm text-gray-600">
-                  Review all {stats.verdicts_given} verdict{stats.verdicts_given !== 1 ? 's' : ''} you've submitted
-                </p>
-              </div>
-              <button
-                onClick={() => router.push('/judge/my-verdicts')}
-                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
-              >
-                View All
-              </button>
+            <div>
+              <h3 className="font-semibold text-gray-900 mb-1">
+                {stats.verdicts_given > 0 ? 'View Your Past Verdicts' : 'My Verdicts'}
+              </h3>
+              <p className="text-sm text-gray-600">
+                {stats.verdicts_given > 0 
+                  ? `Review all ${stats.verdicts_given} verdict${stats.verdicts_given !== 1 ? 's' : ''} you've submitted`
+                  : 'Your submitted verdicts will appear here'
+                }
+              </p>
+            </div>
+            <button
+              onClick={() => router.push('/judge/my-verdicts')}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+            >
+              {stats.verdicts_given > 0 ? 'View All' : 'View Verdicts'}
+            </button>
             </div>
           </div>
         )}

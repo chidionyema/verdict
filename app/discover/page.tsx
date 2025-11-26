@@ -358,7 +358,7 @@ export default function DiscoverPage() {
             Start with 3 free credits!
           </p>
           <Link
-            href="/start"
+            href="/start-simple"
             className="inline-block bg-white text-indigo-600 px-8 py-3 rounded-lg font-semibold hover:bg-indigo-50 transition"
           >
             Get Your First Verdict

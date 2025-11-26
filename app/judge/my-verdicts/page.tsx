@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Star, Calendar, DollarSign, Award, Filter, Search } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
 
 interface VerdictResponse {
   id: string;
@@ -23,9 +22,11 @@ interface VerdictResponse {
   };
 }
 
+// Force dynamic rendering to avoid Supabase client issues during build
+export const dynamic = 'force-dynamic';
+
 export default function MyVerdictsPage() {
   const router = useRouter();
-  const supabase = createClient();
 
   const [verdicts, setVerdicts] = useState<VerdictResponse[]>([]);
   const [loading, setLoading] = useState(true);

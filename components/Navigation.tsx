@@ -21,7 +21,6 @@ interface UserStats {
 
 export default function Navigation() {
   const router = useRouter();
-  const supabase = createClient();
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [userStats, setUserStats] = useState<UserStats>({ activeRequests: 0, pendingVerdicts: 0 });
@@ -31,6 +30,11 @@ export default function Navigation() {
   // Fetch user profile and stats
   const fetchUserData = async (userId: string) => {
     try {
+      // Only create client in browser
+      if (typeof window === 'undefined') return;
+      
+      const supabase = createClient();
+      
       // Fetch profile
       const { data: profile } = await supabase
         .from('profiles')
@@ -65,32 +69,45 @@ export default function Navigation() {
   };
 
   useEffect(() => {
-    // Get initial user
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user);
-      if (user) {
-        fetchUserData(user.id);
-      }
+    // Only run in browser
+    if (typeof window === 'undefined') {
       setLoading(false);
-    });
+      return;
+    }
 
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      const currentUser = session?.user ?? null;
-      setUser(currentUser);
+    try {
+      const supabase = createClient();
       
-      if (currentUser) {
-        fetchUserData(currentUser.id);
-      } else {
-        setUserProfile(null);
-        setUserStats({ activeRequests: 0, pendingVerdicts: 0 });
-      }
-    });
+      // Get initial user
+      supabase.auth.getUser().then(({ data: { user } }) => {
+        setUser(user);
+        if (user) {
+          fetchUserData(user.id);
+        }
+        setLoading(false);
+      });
 
-    return () => subscription.unsubscribe();
-  }, [supabase.auth]);
+      // Listen for auth changes
+      const {
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange((_event, session) => {
+        const currentUser = session?.user ?? null;
+        setUser(currentUser);
+        
+        if (currentUser) {
+          fetchUserData(currentUser.id);
+        } else {
+          setUserProfile(null);
+          setUserStats({ activeRequests: 0, pendingVerdicts: 0 });
+        }
+      });
+
+      return () => subscription.unsubscribe();
+    } catch (error) {
+      console.error('Error initializing Supabase client:', error);
+      setLoading(false);
+    }
+  }, []);
 
   return (
     <nav className="bg-white border-b border-gray-200">
@@ -155,7 +172,7 @@ export default function Navigation() {
                   
                   {/* Quick New Request */}
                   <Link
-                    href="/start"
+                    href="/start-simple"
                     className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition flex items-center text-sm min-h-[36px]"
                   >
                     <Plus className="h-4 w-4 mr-2" />
@@ -274,7 +291,7 @@ export default function Navigation() {
                   </div>
                   
                   <Link
-                    href="/start"
+                    href="/start-simple"
                     className="w-full bg-indigo-600 text-white px-6 py-4 rounded-xl hover:bg-indigo-700 transition flex items-center justify-center font-medium min-h-[48px]"
                     onClick={() => setMobileMenuOpen(false)}
                   >
