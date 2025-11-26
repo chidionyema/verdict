@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
@@ -34,7 +33,7 @@ const sendNotificationSchema = z.object({
   ]),
   title: z.string().min(1),
   body: z.string().min(1),
-  data: z.record(z.any()).optional(),
+  data: z.record(z.string(), z.any()).optional(),
   action_url: z.string().optional(),
 });
 
@@ -48,17 +47,17 @@ export async function GET(request: NextRequest) {
     }
 
     // Check if user is admin
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile, error: profileError } = await (supabase as any)
       .from('profiles')
       .select('is_admin')
       .eq('id', user.id)
-      .single() as { data: { is_admin: boolean } | null; error: any };
+      .single();
 
     if (profileError || !profile || !profile.is_admin) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
-    const { data: config } = await supabase
+    const { data: config } = await (supabase as any)
       .from('integration_configs')
       .select('*')
       .eq('integration_type', 'push_notifications')
@@ -92,11 +91,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user is admin
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile, error: profileError } = await (supabase as any)
       .from('profiles')
       .select('is_admin')
       .eq('id', user.id)
-      .single() as { data: { is_admin: boolean } | null; error: any };
+      .single();
 
     if (profileError || !profile || !profile.is_admin) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
@@ -115,7 +114,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Save or update push notification configuration
-    const { data: config, error } = await supabase
+    const { data: config, error } = await (supabase as any)
       .from('integration_configs')
       .upsert({
         integration_type: 'push_notifications',
@@ -136,7 +135,10 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: 'Invalid push notification configuration', details: error.errors }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Invalid push notification configuration', details: (error as any).errors },
+        { status: 400 }
+      );
     }
 
     console.error('Push notification config error:', error);
@@ -153,7 +155,7 @@ export async function PUT(request: NextRequest) {
     const validated = sendNotificationSchema.parse(body);
 
     // Get push notification configuration
-    const { data: config } = await supabase
+    const { data: config } = await (supabase as any)
       .from('integration_configs')
       .select('*')
       .eq('integration_type', 'push_notifications')
@@ -172,15 +174,15 @@ export async function PUT(request: NextRequest) {
     }
 
     // Get user's device tokens if not provided
-    let deviceTokens = validated.device_tokens;
-    if (!deviceTokens || deviceTokens.length === 0) {
-      const { data: tokens } = await supabase
+    let deviceTokens: string[] = validated.device_tokens || [];
+    if (deviceTokens.length === 0) {
+      const { data: tokens } = await (supabase as any)
         .from('user_device_tokens')
         .select('token')
         .eq('user_id', validated.user_id)
         .eq('is_active', true);
       
-      deviceTokens = tokens?.map(t => t.token) || [];
+      deviceTokens = tokens?.map((t: any) => t.token) || [];
     }
 
     if (deviceTokens.length === 0) {
@@ -199,7 +201,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Log notification
-    await supabase
+    await (supabase as any)
       .from('notification_logs')
       .insert({
         user_id: validated.user_id,
@@ -208,7 +210,7 @@ export async function PUT(request: NextRequest) {
         body: validated.body,
         status: 'sent',
         sent_at: new Date().toISOString(),
-        provider: config.provider,
+        provider: (config as any).provider,
       });
 
     return NextResponse.json({ 
@@ -219,7 +221,10 @@ export async function PUT(request: NextRequest) {
 
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: 'Invalid notification data', details: error.errors }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Invalid notification data', details: (error as any).errors },
+        { status: 400 }
+      );
     }
 
     console.error('Push notification error:', error);

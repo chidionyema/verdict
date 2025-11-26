@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
@@ -9,7 +8,7 @@ const getStripe = () => {
     throw new Error('STRIPE_SECRET_KEY is not configured');
   }
   return new Stripe(process.env.STRIPE_SECRET_KEY, {
-    apiVersion: '2024-06-20',
+    apiVersion: '2024-06-20' as any,
   });
 };
 
@@ -28,7 +27,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Verify user is a judge
-    const { data: profile } = await supabase
+    const { data: profile } = await (supabase as any)
       .from('profiles')
       .select('is_judge')
       .eq('id', user.id)
@@ -46,7 +45,7 @@ export async function GET(request: NextRequest) {
     const from = (page - 1) * limit;
     const to = from + limit - 1;
 
-    const { data: payouts, error, count } = await supabase
+    const { data: payouts, error, count } = await (supabase as any)
       .from('payouts')
       .select('*')
       .eq('judge_id', user.id)
@@ -59,12 +58,12 @@ export async function GET(request: NextRequest) {
     }
 
     // Get available amount for new payout
-    const { data: availableAmount } = await supabase.rpc('get_available_payout_amount', {
+    const { data: availableAmount } = await (supabase.rpc as any)('get_available_payout_amount', {
       target_judge_id: user.id,
     });
 
     // Get payout account status
-    const { data: payoutAccount } = await supabase
+    const { data: payoutAccount } = await (supabase as any)
       .from('judge_payout_accounts')
       .select('*')
       .eq('judge_id', user.id)
@@ -99,7 +98,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify user is a judge
-    const { data: profile } = await supabase
+    const { data: profile } = await (supabase as any)
       .from('profiles')
       .select('is_judge')
       .eq('id', user.id)
@@ -113,7 +112,7 @@ export async function POST(request: NextRequest) {
     const validated = createPayoutSchema.parse(body);
 
     // Check available amount
-    const { data: availableAmount } = await supabase.rpc('get_available_payout_amount', {
+    const { data: availableAmount } = await (supabase.rpc as any)('get_available_payout_amount', {
       target_judge_id: user.id,
     });
 
@@ -126,7 +125,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get payout account
-    const { data: payoutAccount, error: accountError } = await supabase
+    const { data: payoutAccount, error: accountError } = await (supabase as any)
       .from('judge_payout_accounts')
       .select('*')
       .eq('judge_id', user.id)
@@ -153,7 +152,7 @@ export async function POST(request: NextRequest) {
     const netAmount = validated.amount_cents - feeAmount;
 
     // Create payout record
-    const { data: payout, error: payoutError } = await supabase
+    const { data: payout, error: payoutError } = await (supabase as any)
       .from('payouts')
       .insert({
         judge_id: user.id,
@@ -187,7 +186,7 @@ export async function POST(request: NextRequest) {
       });
 
       // Update payout with Stripe transfer ID
-      await supabase
+      await (supabase as any)
         .from('payouts')
         .update({
           stripe_transfer_id: transfer.id,
@@ -197,7 +196,7 @@ export async function POST(request: NextRequest) {
         .eq('id', payout.id);
 
       // Update earnings to mark as paid
-      await supabase
+      await (supabase as any)
         .from('judge_earnings')
         .update({
           payout_status: 'paid',
@@ -221,7 +220,7 @@ export async function POST(request: NextRequest) {
       console.error('Stripe transfer error:', stripeError);
       
       // Update payout status to failed
-      await supabase
+      await (supabase as any)
         .from('payouts')
         .update({
           status: 'failed',
@@ -238,7 +237,10 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: 'Invalid request data', details: error.errors }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Invalid request data', details: (error as any).errors },
+        { status: 400 }
+      );
     }
 
     console.error('Payout creation error:', error);

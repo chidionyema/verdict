@@ -20,6 +20,7 @@ export default function JudgeDashboard() {
   const [connectionStatus, setConnectionStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
   const previousCountRef = useRef(0);
   const eventSourceRef = useRef<EventSource | null>(null);
+  const [showWelcome, setShowWelcome] = useState(false);
 
   // Transform API response to match store format
   const transformRequests = useCallback((requests: any[]) => {
@@ -196,6 +197,15 @@ export default function JudgeDashboard() {
     return () => clearInterval(updateTimer);
   }, [lastFetch]);
 
+  // Judge welcome / expectations – show only on first visit per browser
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const dismissed = window.localStorage.getItem('judge_welcome_dismissed');
+    if (!dismissed) {
+      setShowWelcome(true);
+    }
+  }, []);
+
   return (
     <div className="min-h-screen bg-gray-50 py-12">
       {/* New Request Notification */}
@@ -233,6 +243,49 @@ export default function JudgeDashboard() {
             </span>
           </div>
         </div>
+
+        {/* Judge welcome / expectations */}
+        {showWelcome && (
+          <div className="mb-6 bg-white rounded-xl shadow p-5 border border-indigo-100">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 mb-1">Welcome, Judge</h2>
+                <p className="text-sm text-gray-700">
+                  Most verdicts pay <span className="font-semibold">$0.40–$0.60</span> and take about{' '}
+                  <span className="font-semibold">3–5 minutes</span>. Great verdicts are clear, kind, and actionable.
+                </p>
+                <ul className="mt-3 text-xs text-gray-600 list-disc list-inside space-y-1">
+                  <li>Give a clear recommendation or direction (no fence‑sitting).</li>
+                  <li>
+                    Explain <span className="font-semibold">why</span> you think that – share 2–3 specific reasons.
+                  </li>
+                  <li>
+                    Stay respectful and follow our{' '}
+                    <a
+                      href="/legal/community-guidelines"
+                      className="text-indigo-600 hover:text-indigo-800 underline"
+                    >
+                      community guidelines
+                    </a>
+                    .
+                  </li>
+                </ul>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowWelcome(false);
+                  if (typeof window !== 'undefined') {
+                    window.localStorage.setItem('judge_welcome_dismissed', '1');
+                  }
+                }}
+                className="self-start sm:self-auto px-4 py-2 rounded-lg bg-gray-100 text-gray-700 text-sm font-medium hover:bg-gray-200 transition"
+              >
+                Got it
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Earnings strip */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
@@ -283,7 +336,7 @@ export default function JudgeDashboard() {
               <div>
                 <h2 className="text-xl font-semibold">Available Requests</h2>
                 <p className="text-sm text-gray-500 mt-1">
-                  Help people with life decisions and earn $0.40-0.50 each
+                  Help people with life decisions and earn about $0.40–$0.60 per verdict
                 </p>
               </div>
               <div className="flex items-center gap-3">

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
@@ -9,7 +8,7 @@ const getStripe = () => {
     throw new Error('STRIPE_SECRET_KEY is not configured');
   }
   return new Stripe(process.env.STRIPE_SECRET_KEY, {
-    apiVersion: '2024-06-20',
+    apiVersion: '2024-06-20' as any,
   });
 };
 
@@ -27,7 +26,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { data: subscriptions, error } = await supabase
+    const { data: subscriptions, error } = await (supabase as any)
       .from('subscriptions')
       .select(`
         *,
@@ -48,25 +47,31 @@ export async function GET(request: NextRequest) {
 
     // Get Stripe subscription details for active subscriptions
     const enrichedSubscriptions = await Promise.all(
-      subscriptions.map(async (sub) => {
+      subscriptions.map(async (sub: any) => {
         if (sub.status === 'active' || sub.status === 'trialing') {
           try {
-            const stripeSub = await getStripe().subscriptions.retrieve(sub.stripe_subscription_id);
+            const stripeSub = await getStripe().subscriptions.retrieve(
+              sub.stripe_subscription_id as string
+            );
             return {
               ...sub,
               stripe_details: {
-                current_period_start: new Date(stripeSub.current_period_start * 1000),
-                current_period_end: new Date(stripeSub.current_period_end * 1000),
-                status: stripeSub.status,
-                cancel_at_period_end: stripeSub.cancel_at_period_end,
+                current_period_start: new Date(
+                  (stripeSub as any).current_period_start * 1000
+                ),
+                current_period_end: new Date(
+                  (stripeSub as any).current_period_end * 1000
+                ),
+                status: (stripeSub as any).status,
+                cancel_at_period_end: (stripeSub as any).cancel_at_period_end,
               },
             };
           } catch (stripeError) {
             console.warn('Failed to fetch Stripe subscription details:', stripeError);
-            return sub;
+            return sub as any;
           }
         }
-        return sub;
+        return sub as any;
       })
     );
 
@@ -90,7 +95,7 @@ export async function DELETE(request: NextRequest) {
     const validated = cancelSubscriptionSchema.parse(body);
 
     // Get subscription details
-    const { data: subscription, error: subError } = await supabase
+    const { data: subscription, error: subError } = await (supabase as any)
       .from('subscriptions')
       .select('*')
       .eq('id', validated.subscription_id)
@@ -101,21 +106,24 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Subscription not found' }, { status: 404 });
     }
 
-    if (subscription.status !== 'active') {
+    if ((subscription as any).status !== 'active') {
       return NextResponse.json({ error: 'Subscription is not active' }, { status: 400 });
     }
 
     // Cancel subscription in Stripe
-    const canceledSub = await getStripe().subscriptions.update(subscription.stripe_subscription_id, {
-      cancel_at_period_end: !validated.cancel_immediately,
-      ...(validated.cancel_immediately && { cancel_at: 'now' }),
-    });
+    const canceledSub = await getStripe().subscriptions.update(
+      (subscription as any).stripe_subscription_id,
+      {
+        cancel_at_period_end: !validated.cancel_immediately,
+        ...(validated.cancel_immediately && { cancel_at: Math.floor(Date.now() / 1000) }),
+      }
+    );
 
     // Update subscription in database
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from('subscriptions')
       .update({
-        status: validated.cancel_immediately ? 'canceled' : subscription.status,
+        status: validated.cancel_immediately ? 'canceled' : (subscription as any).status,
         canceled_at: new Date().toISOString(),
         ...(validated.cancel_immediately && { ended_at: new Date().toISOString() }),
       })
@@ -131,14 +139,17 @@ export async function DELETE(request: NextRequest) {
       message: validated.cancel_immediately 
         ? 'Subscription canceled immediately'
         : 'Subscription will cancel at the end of the billing period',
-      cancels_at: validated.cancel_immediately 
-        ? new Date() 
-        : new Date(canceledSub.current_period_end * 1000),
+      cancels_at: validated.cancel_immediately
+        ? new Date()
+        : new Date((canceledSub as any).current_period_end * 1000),
     });
 
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: 'Invalid request data', details: error.errors }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Invalid request data', details: (error as any).errors },
+        { status: 400 }
+      );
     }
 
     console.error('Subscription cancellation error:', error);
@@ -163,7 +174,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Get subscription details
-    const { data: subscription, error: subError } = await supabase
+    const { data: subscription, error: subError } = await (supabase as any)
       .from('subscriptions')
       .select('*')
       .eq('id', subscription_id)
@@ -178,17 +189,20 @@ export async function PATCH(request: NextRequest) {
 
     switch (action) {
       case 'reactivate':
-        if (subscription.status !== 'canceled') {
+        if ((subscription as any).status !== 'canceled') {
           return NextResponse.json({ error: 'Subscription is not canceled' }, { status: 400 });
         }
 
         // Reactivate subscription in Stripe
-        result = await getStripe().subscriptions.update(subscription.stripe_subscription_id, {
-          cancel_at_period_end: false,
-        });
+        result = await getStripe().subscriptions.update(
+          (subscription as any).stripe_subscription_id,
+          {
+            cancel_at_period_end: false,
+          }
+        );
 
         // Update in database
-        await supabase
+        await (supabase as any)
           .from('subscriptions')
           .update({
             status: 'active',

@@ -9,7 +9,6 @@
  *  runFullFlow();
  */
 
-// @ts-nocheck
 import { createClient } from '@supabase/supabase-js';
 import type { Database, VerdictRequest, VerdictResponse, Profile } from '@/lib/database.types';
 import { createVerdictRequest, addJudgeVerdict } from '@/lib/verdicts';
@@ -36,7 +35,7 @@ export async function createTestUser(role: 'seeker' | 'judge', index = 1): Promi
   const email = `sim-${role}${index}@demo.verdict.app`;
 
   // 1) Try to find existing profile by email
-  const { data: existingProfile } = await supabase
+  const { data: existingProfile } = await (supabase as any)
     .from('profiles')
     .select('id')
     .eq('email', email)
@@ -45,13 +44,13 @@ export async function createTestUser(role: 'seeker' | 'judge', index = 1): Promi
   if (existingProfile) {
     // Ensure judge flag is set for judge users
     if (role === 'judge') {
-      await supabase
+      await (supabase as any)
         .from('profiles')
         .update({ is_judge: true })
-        .eq('id', existingProfile.id);
+        .eq('id', (existingProfile as any).id);
     }
 
-    return { id: existingProfile.id, email, role };
+    return { id: (existingProfile as any).id, email, role };
   }
 
   // 2) No profile – create or reconcile auth user, then create profile
@@ -99,7 +98,7 @@ export async function createTestUser(role: 'seeker' | 'judge', index = 1): Promi
   }
 
   // Ensure a profile exists for this auth user
-  const { error: insertError } = await supabase.from('profiles').insert({
+  const { error: insertError } = await (supabase as any).from('profiles').insert({
     id: userId,
     email,
     is_admin: false,
@@ -112,7 +111,7 @@ export async function createTestUser(role: 'seeker' | 'judge', index = 1): Promi
   }
 
   if (role === 'judge') {
-    await supabase
+    await (supabase as any)
       .from('profiles')
       .update({ is_judge: true })
       .eq('id', userId);
@@ -140,14 +139,14 @@ export async function createRequest(
   const { category, media_type, context, subcategory, media_url, text_content } = payload;
 
   // Ensure seeker has enough credits for simulation (top-up if needed)
-  const { data: profile } = await supabase
+  const { data: profile } = await (supabase as any)
     .from('profiles')
     .select('credits')
     .eq('id', seeker.id)
     .single();
 
-  if (!profile || (profile.credits ?? 0) < 1) {
-    await supabase
+  if (!profile || ((profile as any).credits ?? 0) < 1) {
+    await (supabase as any)
       .from('profiles')
       .update({ credits: 10 })
       .eq('id', seeker.id);
@@ -203,13 +202,13 @@ export async function getFinal(requestId: string): Promise<{
   request: VerdictRequest | null;
   verdicts: VerdictResponse[];
 }> {
-  const { data: request } = await supabase
+  const { data: request } = await (supabase as any)
     .from('verdict_requests')
     .select('*')
     .eq('id', requestId)
     .single();
 
-  const { data: verdicts = [] } = await supabase
+  const { data: verdicts = [] } = await (supabase as any)
     .from('verdict_responses')
     .select('*')
     .eq('request_id', requestId);

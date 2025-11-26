@@ -7,6 +7,7 @@ import OutcomePrediction from '@/components/OutcomePrediction';
 import ViralGrowthHub from '@/components/ViralGrowthHub';
 import QualityScoring from '@/components/QualityScoring';
 import { RealTimeWaitingStatus } from '@/components/request/RealTimeWaitingStatus';
+import { VERDICT_TIER_PRICING, PRICE_PER_CREDIT_USD } from '@/lib/validations';
 
 function SuccessContent() {
   const searchParams = useSearchParams();
@@ -24,13 +25,18 @@ function SuccessContent() {
     const mediaType = searchParams.get('mediaType') || 'photo';
     const context = searchParams.get('context') || '';
     const requestId = searchParams.get('requestId') || 'req_' + Date.now();
+    const tier = (searchParams.get('tier') as 'basic' | 'standard' | 'premium') || 'basic';
+    const tierConfig = VERDICT_TIER_PRICING[tier];
 
     setRequestData({
       category,
       mediaType,
       context,
       requestId,
-      estimatedRating: 8.5
+      estimatedRating: 8.5,
+      tier,
+      tierConfig,
+      estimatedDollars: tierConfig.credits * PRICE_PER_CREDIT_USD,
     });
 
     // Show analytics after a brief moment
@@ -65,14 +71,52 @@ function SuccessContent() {
         {/* Real-Time Waiting Status */}
         <RealTimeWaitingStatus
           requestId={requestData.requestId}
-          targetCount={3}
+          targetCount={requestData.tierConfig?.verdicts ?? 3}
           initialCount={0}
           onComplete={handleRequestComplete}
           onProgressChange={(count, target) =>
             setVerdictProgress({ count, target })
           }
-          className="mb-8"
+          className="mb-4"
         />
+
+        {/* Tier / pricing summary */}
+        {requestData.tierConfig && (
+          <div className="mb-6 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-800">
+            <p>
+              This is a{' '}
+              <span className="font-semibold capitalize">{requestData.tier} request</span> ·{' '}
+              <span className="font-semibold">
+                {requestData.tierConfig.verdicts} expert verdict
+                {requestData.tierConfig.verdicts !== 1 ? 's' : ''}
+              </span>{' '}
+              ·{' '}
+              <span className="font-semibold">
+                {requestData.tierConfig.credits} credit
+                {requestData.tierConfig.credits !== 1 ? 's' : ''} (~$
+                {requestData.estimatedDollars.toFixed(2)})
+              </span>
+            </p>
+          </div>
+        )}
+
+        {/* Reassurance about notifications */}
+        <div className="mb-8 bg-blue-50 border border-blue-200 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+          <div className="flex-1 text-sm text-blue-900">
+            <p className="font-semibold">You’re safe to close this tab.</p>
+            <p className="text-blue-800 mt-1">
+              We&apos;ll email you as soon as new verdicts arrive and when all verdicts are ready.
+              You can always find this request again under <span className="font-semibold">My Requests</span>.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => router.push('/my-requests')}
+            className="mt-1 sm:mt-0 px-4 py-2 rounded-lg bg-white text-blue-800 text-sm font-medium border border-blue-300 hover:bg-blue-100 transition"
+          >
+            Go to My Requests
+          </button>
+        </div>
 
         {/* Partial results CTA */}
         {verdictProgress.count > 0 && verdictProgress.count < verdictProgress.target && (

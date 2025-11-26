@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
@@ -20,7 +19,7 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { data: profile } = await supabase
+    const { data: profile } = await (supabase as any)
       .from('profiles')
       .select('is_admin')
       .eq('id', user.id)
@@ -44,7 +43,7 @@ export async function POST(
     }
 
     // Load current request
-    const { data: current, error: fetchError } = await supabase
+    const { data: current, error: fetchError } = await (supabase as any)
       .from('verdict_requests')
       .select('*')
       .eq('id', id)
@@ -55,7 +54,7 @@ export async function POST(
     }
 
     // Update status
-    const { data: updated, error: updateError } = await supabase
+    const { data: updated, error: updateError } = await (supabase as any)
       .from('verdict_requests')
       .update({ status, updated_at: new Date().toISOString() })
       .eq('id', id)
@@ -71,7 +70,7 @@ export async function POST(
     }
 
     // Write audit log
-    await supabase.from('admin_request_actions').insert({
+    await (supabase as any).from('admin_request_actions').insert({
       admin_id: user.id,
       request_id: id,
       old_status: current.status,

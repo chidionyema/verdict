@@ -45,10 +45,16 @@ export default function WaitingPage() {
   // Redirect when complete
   useEffect(() => {
     if (currentRequest?.status === 'completed') {
-      const timeout = setTimeout(() => router.push('/results'), 1500);
+      const timeout = setTimeout(() => {
+        if (currentRequest?.id) {
+          router.push(`/requests/${currentRequest.id}`);
+        } else {
+          router.push('/my-requests');
+        }
+      }, 1500);
       return () => clearTimeout(timeout);
     }
-  }, [currentRequest?.status, router]);
+  }, [currentRequest?.status, currentRequest?.id, router]);
 
   if (!currentRequest) return null;
 

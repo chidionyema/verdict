@@ -1,12 +1,32 @@
-// @ts-nocheck
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { sseConnectionRateLimiter, checkRateLimit } from '@/lib/rate-limiter';
+
+// Maximum connection duration: 5 minutes (forces reconnect to prevent memory buildup)
+const MAX_CONNECTION_DURATION = 5 * 60 * 1000;
 
 // GET /api/requests/[id]/stream - SSE stream for a single request's verdict progress
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // Pre-auth rate limiting check
+  const supabasePreCheck = await createClient();
+  const { data: { user: preCheckUser }, error: preAuthError } = await supabasePreCheck.auth.getUser();
+
+  if (!preAuthError && preCheckUser) {
+    const rateLimitCheck = await checkRateLimit(sseConnectionRateLimiter, preCheckUser.id);
+    if (!rateLimitCheck.allowed) {
+      return NextResponse.json(
+        { error: rateLimitCheck.error },
+        {
+          status: 429,
+          headers: { 'Retry-After': rateLimitCheck.retryAfter?.toString() || '60' }
+        }
+      );
+    }
+  }
+
   const encoder = new TextEncoder();
 
   const stream = new ReadableStream({
@@ -14,8 +34,8 @@ export async function GET(
       const send = (data: string) => {
         try {
           controller.enqueue(encoder.encode(`data: ${data}\n\n`));
-        } catch (err) {
-          console.error('Error sending SSE data (request stream):', err);
+        } catch {
+          // Connection closed
         }
       };
 
@@ -26,21 +46,24 @@ export async function GET(
               `event: error\ndata: ${JSON.stringify({ error })}\n\n`
             )
           );
-        } catch (err) {
-          console.error('Error sending SSE error (request stream):', err);
+        } catch {
+          // Connection closed
         }
       };
 
       let interval: NodeJS.Timeout | null = null;
+      let maxDurationTimeout: NodeJS.Timeout | null = null;
 
       const cleanup = () => {
         if (interval) clearInterval(interval);
+        if (maxDurationTimeout) clearTimeout(maxDurationTimeout);
         interval = null;
+        maxDurationTimeout = null;
       };
 
       try {
         const { id } = await params;
-        const supabase = await createClient();
+        const supabase: any = await createClient();
 
         const {
           data: { user },
@@ -54,8 +77,8 @@ export async function GET(
           return;
         }
 
-        // Fetch the request and check access (same rules as /api/requests/[id])
-        const { data: verdictRequest, error: requestError } = await supabase
+        // Fetch the request and check access
+        const { data: verdictRequest, error: requestError } = await (supabase as any)
           .from('verdict_requests')
           .select('*')
           .eq('id', id)
@@ -69,8 +92,8 @@ export async function GET(
         }
 
         if (verdictRequest.user_id !== user.id) {
-          // Not owner – allow judges/admins to watch, mirroring API route
-          const { data: profile } = await supabase
+          // Not owner – allow judges/admins to watch
+          const { data: profile } = await (supabase as any)
             .from('profiles')
             .select('is_judge, is_admin')
             .eq('id', user.id)
@@ -102,10 +125,10 @@ export async function GET(
         // Send initial snapshot
         sendSnapshot(verdictRequest);
 
-        // Poll for updates every 3 seconds (cheap, single-row query)
+        // Poll for updates every 3 seconds
         interval = setInterval(async () => {
           try {
-            const { data: latest, error: latestError } = await supabase
+            const { data: latest, error: latestError } = await (supabase as any)
               .from('verdict_requests')
               .select(
                 'id, status, received_verdict_count, target_verdict_count, updated_at'
@@ -114,20 +137,13 @@ export async function GET(
               .single();
 
             if (latestError || !latest) {
-              console.error(
-                '[SSE Request Stream] Error fetching latest request:',
-                latestError
-              );
               return;
             }
 
             sendSnapshot(latest);
 
-            // Optionally stop streaming once completed / cancelled
-            if (
-              latest.status === 'completed' ||
-              latest.status === 'cancelled'
-            ) {
+            // Stop streaming once completed/cancelled
+            if (latest.status === 'completed' || latest.status === 'cancelled') {
               cleanup();
               try {
                 controller.close();
@@ -135,10 +151,24 @@ export async function GET(
                 // ignore
               }
             }
-          } catch (err) {
-            console.error('[SSE Request Stream] Poll error:', err);
+          } catch {
+            // Poll error - continue trying
           }
         }, 3000);
+
+        // Enforce maximum connection duration
+        maxDurationTimeout = setTimeout(() => {
+          send(JSON.stringify({
+            type: 'reconnect',
+            message: 'Connection timeout, please reconnect'
+          }));
+          cleanup();
+          try {
+            controller.close();
+          } catch {
+            // ignore
+          }
+        }, MAX_CONNECTION_DURATION);
 
         // Cleanup on client disconnect
         request.signal.addEventListener('abort', () => {
@@ -166,10 +196,8 @@ export async function GET(
     headers: {
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache, no-transform',
-      Connection: 'keep-alive',
+      'Connection': 'keep-alive',
       'X-Accel-Buffering': 'no',
     },
   });
 }
-
-

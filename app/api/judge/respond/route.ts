@@ -1,8 +1,9 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { validateFeedback, validateRating, validateTone, getTierConfigByVerdictCount } from '@/lib/validations';
 import { addJudgeVerdict } from '@/lib/verdicts';
+import { verdictRateLimiter, checkRateLimit } from '@/lib/rate-limiter';
+import { sendRequestLifecycleEmail } from '@/lib/notifications';
 
 // POST /api/judge/respond - Submit a verdict
 export async function POST(request: NextRequest) {
@@ -18,8 +19,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Rate limiting for verdict submission
+    const rateLimitCheck = await checkRateLimit(verdictRateLimiter, user.id);
+    if (!rateLimitCheck.allowed) {
+      return NextResponse.json(
+        { error: rateLimitCheck.error },
+        {
+          status: 429,
+          headers: { 'Retry-After': rateLimitCheck.retryAfter?.toString() || '60' }
+        }
+      );
+    }
+
     // Check if user is a judge
-    const { data: profile } = await supabase
+    const { data: profile } = await (supabase as any)
       .from('profiles')
       .select('is_judge')
       .eq('id', user.id)
@@ -109,12 +122,12 @@ export async function POST(request: NextRequest) {
 
     // Determine earning based on request's target_verdict_count (tier)
     const tierConfig = getTierConfigByVerdictCount(
-      updatedRequest.target_verdict_count
+      (updatedRequest as any).target_verdict_count
     );
     const baseEarning = tierConfig.judgePayout;
 
     // Create earnings record for the judge
-    const { error: earningsError } = await supabase
+    const { error: earningsError } = await (supabase as any)
       .from('judge_earnings')
       .insert({
         judge_id: user.id,
@@ -129,7 +142,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Update verdict response with earning amount
-    await supabase
+    await (supabase as any)
       .from('verdict_responses')
       .update({
         judge_earning: baseEarning,
@@ -152,6 +165,36 @@ export async function POST(request: NextRequest) {
     } catch (notifError) {
       console.error('Error creating notification:', notifError);
       // Don't fail if notification creation fails
+    }
+
+    // Best-effort email to seeker about verdict progress / completion
+    try {
+      const { data: seekerProfile } = await (supabase as any)
+        .from('profiles')
+        .select('email')
+        .eq('id', updatedRequest.user_id)
+        .single();
+
+      const seekerEmail = (seekerProfile as any)?.email as string | undefined;
+      if (seekerEmail) {
+        const receivedCount = updatedRequest.received_verdict_count ?? 0;
+        const targetCount = updatedRequest.target_verdict_count ?? 0;
+        const emailType =
+          receivedCount >= targetCount && targetCount > 0
+            ? 'verdict_completed'
+            : 'verdict_progress';
+
+        void sendRequestLifecycleEmail(emailType, {
+          to: seekerEmail,
+          requestId: updatedRequest.id,
+          title: updatedRequest.context?.slice(0, 80),
+          category: updatedRequest.category,
+          receivedCount,
+          targetCount,
+        } as any);
+      }
+    } catch (emailErr) {
+      console.error('sendRequestLifecycleEmail error:', emailErr);
     }
 
     return NextResponse.json({ verdict }, { status: 201 });

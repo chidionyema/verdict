@@ -18,7 +18,7 @@ import type { JudgePreferences as JudgePreferencesType } from '@/components/requ
 import { TrustBadge, TrustBadgeGroup } from '@/components/shared/TrustBadge';
 import { EncouragingCounter } from '@/components/shared/EncouragingCounter';
 import { DecisionFramingHelper } from '@/components/request/DecisionFramingHelper';
-import { VERDICT_TIERS, VERDICT_TIER_PRICING } from '@/lib/validations';
+import { VERDICT_TIERS, VERDICT_TIER_PRICING, PRICE_PER_CREDIT_USD } from '@/lib/validations';
 
 const categories = [
   { id: 'appearance', label: 'Appearance', icon: Heart, description: 'Dating, events, professional looks' },
@@ -271,8 +271,12 @@ export default function StartPage() {
       sessionStorage.removeItem('pendingFile');
       sessionStorage.removeItem('draftRequest');
 
-      // Redirect to success page with context
-      const successUrl = `/success?category=${encodeURIComponent(category)}&mediaType=${encodeURIComponent(mediaType)}&context=${encodeURIComponent(context)}&requestId=${encodeURIComponent(request.id || 'unknown')}`;
+      // Redirect to success page with context and tier
+      const successUrl = `/success?category=${encodeURIComponent(
+        category
+      )}&mediaType=${encodeURIComponent(mediaType)}&context=${encodeURIComponent(
+        context
+      )}&requestId=${encodeURIComponent(request.id || 'unknown')}&tier=${encodeURIComponent(tier)}`;
       router.push(successUrl);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong');
@@ -285,25 +289,36 @@ export default function StartPage() {
       <SmartMessageBanner currentStep={step} category={category} />
       <div className="max-w-3xl mx-auto px-4">
         {/* Progress */}
-        <div className="flex items-center justify-center mb-8">
-          {[1, 2, 3, 4].map((s) => (
-            <div key={s} className="flex items-center">
-              <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold ${
-                  step >= s ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-500'
-                }`}
-              >
-                {s}
-              </div>
-              {s < 4 && (
+        <div className="flex flex-col items-center mb-8">
+          <p className="text-xs uppercase tracking-wide text-gray-500 mb-2">
+            Step {step} of 4
+          </p>
+          <div className="flex items-center justify-center">
+            {[1, 2, 3, 4].map((s) => (
+              <div key={s} className="flex items-center">
                 <div
-                  className={`w-12 h-1 mx-2 ${
-                    step > s ? 'bg-indigo-600' : 'bg-gray-200'
+                  className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold ${
+                    step >= s ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-500'
                   }`}
-                />
-              )}
-            </div>
-          ))}
+                >
+                  {s}
+                </div>
+                {s < 4 && (
+                  <div
+                    className={`w-12 h-1 mx-2 ${
+                      step > s ? 'bg-indigo-600' : 'bg-gray-200'
+                    }`}
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+          <p className="mt-3 text-xs text-gray-500 text-center">
+            {step === 1 && 'Step 1: Add your photo or text'}
+            {step === 2 && 'Step 2: Choose what kind of feedback you want'}
+            {step === 3 && 'Step 3: Tell us who should judge you'}
+            {step === 4 && 'Step 4: Explain your situation for sharper advice'}
+          </p>
         </div>
 
         <div className="bg-white rounded-lg shadow-lg p-8">
@@ -319,10 +334,10 @@ export default function StartPage() {
               {/* Simple, focused start */}
               <div className="text-center mb-8">
                 <h2 className="text-3xl font-bold text-gray-900 mb-3">
-                  Life's tough decisions made clearer in 10 minutes
+                  Get unstuck with honest, expert feedback
                 </h2>
                 <p className="text-gray-600 text-lg">
-                  Get 3 expert perspectives on your photos, text, or decisions
+                  Upload a photo or paste your text—then we&apos;ll send it to 3 hand‑picked judges.
                 </p>
               </div>
 
@@ -333,11 +348,14 @@ export default function StartPage() {
                 </div>
               ) : null}
 
-              <h3 className="text-xl font-semibold text-gray-800 mb-4">
-                What would you like feedback on?
+              <h3 className="text-xl font-semibold text-gray-800 mb-2">
+                Step 1 · What do you want feedback on?
               </h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Pick whether you&apos;re sharing a photo or some text. You can change this later.
+              </p>
 
-              <div className="flex space-x-4 mb-8">
+              <div className="flex flex-col sm:flex-row gap-3 mb-8">
                 <button
                   onClick={() => setMediaType('photo')}
                   className={`flex-1 py-3 px-6 rounded-lg font-medium transition cursor-pointer ${
@@ -453,8 +471,10 @@ export default function StartPage() {
                 <p className="text-sm text-gray-500 mb-2">
                   {mediaType === 'photo' ? 'Photo uploaded' : 'Text ready'} ✓
                 </p>
-                <h2 className="text-2xl font-bold text-gray-900">Choose your feedback type</h2>
-                <p className="text-gray-600 mt-2">Select the area where you'd like expert guidance</p>
+                <h2 className="text-2xl font-bold text-gray-900">Step 2 · What kind of problem is this?</h2>
+                <p className="text-gray-600 mt-2">
+                  Choose the area that best matches what you&apos;re working on. We&apos;ll route it to the right judges.
+                </p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
@@ -505,7 +525,7 @@ export default function StartPage() {
                 </div>
               )}
 
-              <div className="flex justify-between">
+                <div className="flex flex-col sm:flex-row justify-between gap-3">
                 <button
                   onClick={() => setStep(1)}
                   className="flex items-center gap-2 px-4 py-2 text-gray-500 hover:text-gray-700 transition"
@@ -531,8 +551,10 @@ export default function StartPage() {
                 <p className="text-sm text-gray-500 mb-2">
                   {mediaType === 'photo' ? 'Photo' : 'Text'} ready ✓ • {category} feedback selected ✓
                 </p>
-                <h2 className="text-2xl font-bold text-gray-900">Choose Your Judges</h2>
-                <p className="text-gray-600 mt-2">Select the type of people you want feedback from</p>
+                <h2 className="text-2xl font-bold text-gray-900">Step 3 · Who should judge you?</h2>
+                <p className="text-gray-600 mt-2">
+                  Tell us the kind of people you want feedback from so we can match you well.
+                </p>
               </div>
 
               <JudgePreferences 
@@ -563,18 +585,58 @@ export default function StartPage() {
                   {mediaType === 'photo' ? 'Photo' : 'Text'} ready ✓ • {category} feedback selected ✓ • Judges selected ✓
                 </p>
                 <h2 className="text-2xl font-bold text-gray-900">
-                  {category === 'decision' ? 'Explain your situation' : 'Add context for better feedback'}
+                  Step 4 · {category === 'decision' ? 'Explain your situation' : 'Add context for better feedback'}
                 </h2>
                 <p className="text-gray-600 mt-2">
-                  {category === 'decision'
-                    ? 'The more detail you provide, the better advice you\'ll receive'
-                    : 'Help experts understand your specific situation'}
+                  In 2–5 sentences, tell judges what&apos;s at stake, what you&apos;re unsure about, and what outcome you want.
                 </p>
               </div>
 
               {/* Trust Badges */}
               <div className="mb-6">
                 <TrustBadgeGroup className="justify-center" />
+              </div>
+
+              {/* Tier selection – light, mobile-friendly */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  How many perspectives do you want?
+                </label>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  {(['basic', 'standard', 'premium'] as const).map((t) => {
+                    const config = VERDICT_TIER_PRICING[t];
+                    const totalDollars = config.credits * PRICE_PER_CREDIT_USD;
+                    const isSelected = tier === t;
+                    return (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => setTier(t)}
+                        className={`w-full sm:w-auto px-4 py-3 rounded-lg border text-left text-sm cursor-pointer transition ${
+                          isSelected
+                            ? 'border-indigo-600 bg-indigo-50 text-indigo-900'
+                            : 'border-gray-200 bg-white text-gray-800 hover:bg-gray-50'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-semibold capitalize">{t}</span>
+                          <span className="text-xs text-gray-500">
+                            {config.verdicts} verdicts
+                          </span>
+                        </div>
+                        <div className="mt-1 text-xs text-gray-600">
+                          {config.credits} credit{config.credits !== 1 ? 's' : ''} · ~$
+                          {totalDollars.toFixed(2)}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="mt-2 text-xs text-gray-500">
+                  {tier === 'standard'
+                    ? 'Most people choose Standard for big career or relationship decisions.'
+                    : 'You can always start with Basic and upgrade on your next request.'}
+                </p>
               </div>
 
               {/* Subcategory */}
@@ -694,7 +756,32 @@ export default function StartPage() {
                   ← Back to judges
                 </button>
                 
-                <div className="flex items-center gap-4">
+                <div className="flex flex-col items-end gap-2">
+                  {/* Tier / pricing summary so seekers never do math */}
+                  {tier && (
+                    <div className="text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 max-w-xs text-right">
+                      {(() => {
+                        const config = VERDICT_TIER_PRICING[tier];
+                        const totalDollars = config.credits * PRICE_PER_CREDIT_USD;
+                        return (
+                          <>
+                            <span className="font-semibold">
+                              {config.verdicts} expert verdicts
+                            </span>
+                            <span>{' · '}</span>
+                            <span className="font-semibold">
+                              {config.credits} credit{config.credits !== 1 ? 's' : ''}
+                            </span>
+                            <span>{' · ~'}</span>
+                            <span className="font-semibold">
+                              ${totalDollars.toFixed(2)}
+                            </span>
+                          </>
+                        );
+                      })()}
+                    </div>
+                  )}
+
                   {context.length >= 20 && !submitting && (
                     <div className="text-right">
                       <p className="text-sm text-gray-600">Ready to submit</p>

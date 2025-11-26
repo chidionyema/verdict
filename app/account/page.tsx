@@ -131,7 +131,11 @@ function AccountContent() {
             </div>
           </div>
 
-          <h3 className="font-medium text-gray-900 mb-4">Buy More Credits</h3>
+          <h3 className="font-medium text-gray-900 mb-2">Buy More Credits</h3>
+          <p className="text-sm text-gray-600 mb-4">
+            <span className="font-semibold">1 credit = 1 Basic request</span> (3 expert verdicts).
+            Higher tiers use more credits per request but always show you the total before you pay.
+          </p>
 
           {/* Value Comparison */}
           <div className="mb-6 p-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg border border-indigo-200">
@@ -149,7 +153,9 @@ function AccountContent() {
               </div>
               <div>
                 <span className="text-indigo-600 font-semibold">Verdict:</span>{' '}
-                <span className="font-bold text-indigo-700">$3.49 for 3 expert perspectives</span>
+                <span className="font-bold text-indigo-700">
+                  ~$3.49 for 3 expert verdicts (Basic request)
+                </span>
               </div>
             </div>
           </div>
@@ -189,6 +195,45 @@ function AccountContent() {
               </div>
             ))}
           </div>
+        </div>
+
+        {/* How credits, tiers and verdicts work */}
+        <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
+          <h2 className="text-xl font-semibold mb-3">How credits and tiers work</h2>
+          <p className="text-sm text-gray-600 mb-4">
+            Each request uses credits based on the tier you choose. You always see the total before you pay.
+          </p>
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm text-left border border-gray-200 rounded-lg overflow-hidden">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-2 font-medium text-gray-700">Tier</th>
+                  <th className="px-4 py-2 font-medium text-gray-700">Verdicts per request</th>
+                  <th className="px-4 py-2 font-medium text-gray-700">Credits per request</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-t border-gray-200">
+                  <td className="px-4 py-2">Basic</td>
+                  <td className="px-4 py-2">3 expert verdicts</td>
+                  <td className="px-4 py-2">1 credit</td>
+                </tr>
+                <tr className="border-t border-gray-200">
+                  <td className="px-4 py-2">Standard</td>
+                  <td className="px-4 py-2">5 expert verdicts</td>
+                  <td className="px-4 py-2">2 credits</td>
+                </tr>
+                <tr className="border-t border-gray-200">
+                  <td className="px-4 py-2">Premium</td>
+                  <td className="px-4 py-2">7 expert verdicts</td>
+                  <td className="px-4 py-2">3 credits</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p className="mt-3 text-xs text-gray-500">
+            You can change tiers for each request on the final step before you submit.
+          </p>
         </div>
 
         {/* Logout */}

@@ -1,6 +1,6 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { uploadRateLimiter, checkRateLimit } from '@/lib/rate-limiter';
 import { v4 as uuidv4 } from 'uuid';
 
 // POST /api/upload - Upload image to Supabase Storage
@@ -17,8 +17,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Rate limiting for uploads
+    const rateLimitCheck = await checkRateLimit(uploadRateLimiter, user.id);
+    if (!rateLimitCheck.allowed) {
+      return NextResponse.json(
+        { error: rateLimitCheck.error },
+        {
+          status: 429,
+          headers: { 'Retry-After': rateLimitCheck.retryAfter?.toString() || '60' }
+        }
+      );
+    }
+
     const formData = await request.formData();
-    const file = formData.get('file') as File;
+    const file = formData.get('file') as File | null;
 
     if (!file) {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
@@ -60,32 +72,36 @@ export async function POST(request: NextRequest) {
 
     if (uploadError) {
       console.error('Upload error:', uploadError);
-      
-      // More specific error handling
-      if (uploadError.message?.includes('The resource was not found') || 
-          uploadError.message?.includes('Bucket not found')) {
-        
-        // Fallback: Return a placeholder URL for demo/development
-        console.log('Storage bucket not found, returning placeholder for development');
-        return NextResponse.json({ 
-          url: `https://via.placeholder.com/400x300.png?text=Image+Upload+%28Storage+Not+Configured%29`,
-          warning: 'Storage bucket not configured. Image upload simulated for demo purposes.'
-        });
-      }
-      
-      // RLS policy violation - storage bucket exists but policies aren't set up
-      if (uploadError.message?.includes('row-level security policy') || 
-          uploadError.message?.includes('violates') ||
-          uploadError.message?.includes('permission denied')) {
+
+      // Storage bucket not configured
+      if (
+        uploadError.message?.includes('The resource was not found') ||
+        uploadError.message?.includes('Bucket not found')
+      ) {
         return NextResponse.json(
-          { 
-            error: 'Storage permissions not configured. Please set up storage bucket policies in Supabase Dashboard.',
-            details: 'See SUPABASE_STORAGE_SETUP.md for instructions, or run migration 018_storage_policies.sql'
+          {
+            error: 'Storage not configured',
+            details: 'The storage bucket "requests" does not exist. Please create it in Supabase Dashboard.',
+          },
+          { status: 503 }
+        );
+      }
+
+      // RLS policy violation
+      if (
+        uploadError.message?.includes('row-level security policy') ||
+        uploadError.message?.includes('violates') ||
+        uploadError.message?.includes('permission denied')
+      ) {
+        return NextResponse.json(
+          {
+            error: 'Storage permissions not configured',
+            details: 'Please set up storage bucket policies in Supabase Dashboard.',
           },
           { status: 403 }
         );
       }
-      
+
       return NextResponse.json(
         { error: `Upload failed: ${uploadError.message}` },
         { status: 500 }

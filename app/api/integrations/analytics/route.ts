@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
@@ -26,7 +25,7 @@ const analyticsConfigSchema = z.object({
 const trackEventSchema = z.object({
   event_name: z.string().min(1),
   user_id: z.string().optional(),
-  properties: z.record(z.any()).optional(),
+  properties: z.record(z.string(), z.any()).optional(),
   timestamp: z.string().optional(),
 });
 
@@ -40,17 +39,17 @@ export async function GET(request: NextRequest) {
     }
 
     // Check if user is admin
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile, error: profileError } = await (supabase as any)
       .from('profiles')
       .select('is_admin')
       .eq('id', user.id)
-      .single() as { data: { is_admin: boolean } | null; error: any };
+      .single();
 
     if (profileError || !profile || !profile.is_admin) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
-    const { data: config } = await supabase
+    const { data: config } = await (supabase as any)
       .from('integration_configs')
       .select('*')
       .eq('integration_type', 'analytics')
@@ -84,11 +83,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user is admin
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile, error: profileError } = await (supabase as any)
       .from('profiles')
       .select('is_admin')
       .eq('id', user.id)
-      .single() as { data: { is_admin: boolean } | null; error: any };
+      .single();
 
     if (profileError || !profile || !profile.is_admin) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
@@ -107,7 +106,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Save or update analytics configuration
-    const { data: config, error } = await supabase
+    const { data: config, error } = await (supabase as any)
       .from('integration_configs')
       .upsert({
         integration_type: 'analytics',
@@ -133,7 +132,10 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: 'Invalid analytics configuration', details: error.errors }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Invalid analytics configuration', details: (error as any).errors },
+        { status: 400 }
+      );
     }
 
     console.error('Analytics config error:', error);
@@ -150,7 +152,7 @@ export async function PUT(request: NextRequest) {
     const validated = trackEventSchema.parse(body);
 
     // Get analytics configuration
-    const { data: config } = await supabase
+    const { data: config } = await (supabase as any)
       .from('integration_configs')
       .select('*')
       .eq('integration_type', 'analytics')
@@ -180,7 +182,10 @@ export async function PUT(request: NextRequest) {
 
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: 'Invalid event data', details: error.errors }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Invalid event data', details: (error as any).errors },
+        { status: 400 }
+      );
     }
 
     console.error('Analytics tracking error:', error);

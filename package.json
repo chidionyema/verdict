@@ -11,21 +11,33 @@
     "seed:demo": "env-cmd -f .env.local tsx scripts/seed-demo.ts",
     "sim:full": "env-cmd -f .env.local tsx scripts/sim/full-verdict-flow.ts",
     "sim:edges": "env-cmd -f .env.local tsx scripts/sim/verdict-edge-cases.ts",
-    "admin:check-earnings": "env-cmd -f .env.local tsx scripts/admin/check-earnings.ts"
+    "admin:check-earnings": "env-cmd -f .env.local tsx scripts/admin/check-earnings.ts",
+    "test:sim:full": "env-cmd -f .env.local tsx scripts/sim/full-verdict-flow.ts",
+    "test:sim:edges": "env-cmd -f .env.local tsx scripts/sim/verdict-edge-cases.ts",
+    "test:sim": "npm run test:sim:full && npm run test:sim:edges",
+    "test:unit": "vitest run",
+    "test:unit:watch": "vitest",
+    "test:e2e": "playwright test",
+    "test": "npm run test:unit && npm run test:sim"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.11",
     "@radix-ui/react-slot": "^1.2.4",
+    "@sentry/nextjs": "^10.27.0",
     "@supabase/ssr": "^0.7.0",
     "@supabase/supabase-js": "^2.84.0",
+    "@upstash/ratelimit": "^2.0.7",
+    "@upstash/redis": "^1.35.6",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "env-cmd": "^11.0.0",
     "lucide-react": "^0.554.0",
     "next": "16.0.3",
+    "rate-limiter-flexible": "^8.3.0",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "recharts": "^3.5.0",
+    "resend": "^6.5.2",
     "stripe": "^20.0.0",
     "tailwind-merge": "^3.4.0",
     "uuid": "^13.0.0",
@@ -33,6 +45,7 @@
     "zustand": "^5.0.8"
   },
   "devDependencies": {
+    "@playwright/test": "^1.49.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
@@ -42,6 +55,7 @@
     "eslint-config-next": "16.0.3",
     "tailwindcss": "^4",
     "tsx": "^4.20.6",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^2.1.0"
   }
 }

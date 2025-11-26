@@ -3,10 +3,28 @@
 import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { 
-  Star, User, MapPin, Flag, ArrowLeft, RefreshCw, ThumbsUp, Share2, 
-  Download, Filter, SortAsc, TrendingUp, BarChart3, Heart, 
-  MessageSquare, Copy, ChevronDown, Award, Target, Clock, CheckCircle
+import {
+  Star,
+  User,
+  MapPin,
+  Flag,
+  ArrowLeft,
+  RefreshCw,
+  ThumbsUp,
+  Share2,
+  Download,
+  Filter,
+  SortAsc,
+  TrendingUp,
+  BarChart3,
+  Heart,
+  MessageSquare,
+  Copy,
+  ChevronDown,
+  Award,
+  Target,
+  Clock,
+  CheckCircle,
 } from 'lucide-react';
 import type { VerdictRequest, VerdictResponse } from '@/lib/database.types';
 import ReportContentButton from '@/components/ReportContentButton';
@@ -15,6 +33,7 @@ import { VerdictSummary } from '@/components/request/VerdictSummary';
 import { ThankJudgesButton } from '@/components/request/ThankJudgesButton';
 import { toast } from '@/components/ui/toast';
 import { createClient } from '@/lib/supabase/client';
+import { getTierConfigByVerdictCount, PRICE_PER_CREDIT_USD } from '@/lib/validations';
 
 interface VerdictWithNumber extends VerdictResponse {
   judge_number: number;
@@ -249,6 +268,10 @@ export default function RequestDetailPage({
 
   const progress = (request.received_verdict_count / request.target_verdict_count) * 100;
 
+  const tierConfig = request.target_verdict_count
+    ? getTierConfigByVerdictCount(request.target_verdict_count)
+    : null;
+
   return (
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="max-w-6xl mx-auto px-4">
@@ -297,7 +320,7 @@ export default function RequestDetailPage({
               <h1 className="text-2xl font-bold text-gray-900 mb-2">
                 {request.category.charAt(0).toUpperCase() + request.category.slice(1)} Feedback Request
               </h1>
-              <div className="flex items-center gap-4 text-sm text-gray-600">
+            <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600">
                 <span className="flex items-center gap-1">
                   <Clock className="h-4 w-4" />
                   {new Date(request.created_at).toLocaleDateString()}
@@ -306,6 +329,35 @@ export default function RequestDetailPage({
                   <Target className="h-4 w-4" />
                   {request.received_verdict_count}/{request.target_verdict_count} verdicts
                 </span>
+              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+                <CheckCircle className="h-4 w-4" />
+                <span className="text-xs">
+                  {(() => {
+                    const target = request.target_verdict_count || 0;
+                    const received = request.received_verdict_count || 0;
+                    if (received === 0) return 'Waiting for first verdict';
+                    if (received < target) return 'Partial results available';
+                    return 'All verdicts received';
+                  })()}
+                </span>
+              </span>
+              {tierConfig && (
+                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-gray-50 text-gray-700 border border-gray-200">
+                  {(() => {
+                    const dollars = tierConfig.credits * PRICE_PER_CREDIT_USD;
+                    return (
+                      <>
+                        <span className="text-xs capitalize">{tierConfig.tier} tier</span>
+                        <span className="text-xs">· {tierConfig.verdicts} verdicts</span>
+                        <span className="text-xs">
+                          · {tierConfig.credits} credit{tierConfig.credits !== 1 ? 's' : ''} (~$
+                          {dollars.toFixed(2)})
+                        </span>
+                      </>
+                    );
+                  })()}
+                </span>
+              )}
                 {verdicts.length > 0 && (
                   <span className="flex items-center gap-1 text-green-600">
                     <Star className="h-4 w-4 fill-current" />
@@ -399,92 +451,116 @@ export default function RequestDetailPage({
           </div>
         )}
 
-        {/* Analytics Dashboard */}
-        {showAnalytics && verdicts.length > 0 && (
+        {/* Summary insight + optional analytics */}
+        {verdicts.length > 0 && (
           <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-gray-900">Analytics Dashboard</h3>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-gray-500 mb-1">
+                  Summary insight
+                </p>
+                <p className="text-base text-gray-900">
+                  {averageRating >= 8
+                    ? 'Judges are strongly in favor of what you shared.'
+                    : averageRating >= 6
+                    ? 'Judges see both strengths and areas to improve.'
+                    : 'Judges are cautious and recommend meaningful changes.'}{' '}
+                  <span className="font-semibold">
+                    (Average rating {averageRating.toFixed(1)}/10 from {verdicts.length} verdict
+                    {verdicts.length !== 1 ? 's' : ''})
+                  </span>
+                </p>
+              </div>
               <button
-                onClick={() => setShowAnalytics(false)}
-                className="text-gray-400 hover:text-gray-600"
+                onClick={() => setShowAnalytics(!showAnalytics)}
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition ${
+                  showAnalytics
+                    ? 'bg-purple-100 text-purple-700'
+                    : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+                }`}
               >
-                <ChevronDown className="h-5 w-5" />
+                <BarChart3 className="h-4 w-4" />
+                {showAnalytics ? 'Hide detail' : 'Show detail'}
               </button>
             </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-              <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl">
-                <div className="flex items-center justify-center w-12 h-12 bg-blue-600 text-white rounded-full mx-auto mb-2">
-                  <Award className="h-6 w-6" />
-                </div>
-                <p className="text-2xl font-bold text-blue-900">{averageRating.toFixed(1)}</p>
-                <p className="text-blue-700 text-sm">Average Rating</p>
-                <p className="text-xs text-blue-600 mt-1">
-                  {averageRating >= 8 ? 'Excellent!' : averageRating >= 6 ? 'Good' : 'Needs improvement'}
-                </p>
-              </div>
-              
-              <div className="text-center p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-xl">
-                <div className="flex items-center justify-center w-12 h-12 bg-green-600 text-white rounded-full mx-auto mb-2">
-                  <MessageSquare className="h-6 w-6" />
-                </div>
-                <p className="text-2xl font-bold text-green-900">{verdicts.length}</p>
-                <p className="text-green-700 text-sm">Total Verdicts</p>
-                <p className="text-xs text-green-600 mt-1">
-                  {verdicts.length >= 3 ? 'Complete' : 'Growing'}
-                </p>
-              </div>
-              
-              <div className="text-center p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl">
-                <div className="flex items-center justify-center w-12 h-12 bg-purple-600 text-white rounded-full mx-auto mb-2">
-                  <TrendingUp className="h-6 w-6" />
-                </div>
-                <p className="text-2xl font-bold text-purple-900">
-                  {Math.max(...verdicts.map(v => v.rating || 0)).toFixed(1)}
-                </p>
-                <p className="text-purple-700 text-sm">Highest Rating</p>
-                <p className="text-xs text-purple-600 mt-1">Peak performance</p>
-              </div>
-              
-              <div className="text-center p-4 bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-xl">
-                <div className="flex items-center justify-center w-12 h-12 bg-yellow-600 text-white rounded-full mx-auto mb-2">
-                  <Heart className="h-6 w-6" />
-                </div>
-                <p className="text-2xl font-bold text-yellow-900">
-                  {verdicts.filter(v => v.tone === 'encouraging').length}
-                </p>
-                <p className="text-yellow-700 text-sm">Encouraging</p>
-                <p className="text-xs text-yellow-600 mt-1">Positive feedback</p>
-              </div>
-            </div>
 
-            {/* Tone Distribution */}
-            <div className="bg-gray-50 rounded-xl p-4">
-              <h4 className="font-medium text-gray-900 mb-3">Feedback Tone Distribution</h4>
-              <div className="space-y-2">
-                {['encouraging', 'honest', 'constructive'].map(tone => {
-                  const count = verdicts.filter(v => v.tone === tone).length;
-                  const percentage = (count / verdicts.length) * 100;
-                  return (
-                    <div key={tone} className="flex items-center justify-between">
-                      <span className="text-sm capitalize font-medium text-gray-700">{tone}</span>
-                      <div className="flex items-center gap-2">
-                        <div className="w-24 bg-gray-200 rounded-full h-2">
-                          <div
-                            className={`h-2 rounded-full ${
-                              tone === 'encouraging' ? 'bg-green-500' :
-                              tone === 'honest' ? 'bg-blue-500' : 'bg-yellow-500'
-                            }`}
-                            style={{ width: `${percentage}%` }}
-                          />
-                        </div>
-                        <span className="text-sm text-gray-600 w-8">{count}</span>
-                      </div>
+            {showAnalytics && (
+              <div className="mt-4 pt-4 border-t border-gray-100">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+                  <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl">
+                    <div className="flex items-center justify-center w-12 h-12 bg-blue-600 text-white rounded-full mx-auto mb-2">
+                      <Award className="h-6 w-6" />
                     </div>
-                  );
-                })}
+                    <p className="text-2xl font-bold text-blue-900">{averageRating.toFixed(1)}</p>
+                    <p className="text-blue-700 text-sm">Average Rating</p>
+                    <p className="text-xs text-blue-600 mt-1">
+                      {averageRating >= 8 ? 'Excellent!' : averageRating >= 6 ? 'Good' : 'Needs improvement'}
+                    </p>
+                  </div>
+                  
+                  <div className="text-center p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-xl">
+                    <div className="flex items-center justify-center w-12 h-12 bg-green-600 text-white rounded-full mx-auto mb-2">
+                      <MessageSquare className="h-6 w-6" />
+                    </div>
+                    <p className="text-2xl font-bold text-green-900">{verdicts.length}</p>
+                    <p className="text-green-700 text-sm">Total Verdicts</p>
+                    <p className="text-xs text-green-600 mt-1">
+                      {verdicts.length >= (tierConfig?.verdicts ?? 3) ? 'Complete' : 'Growing'}
+                    </p>
+                  </div>
+                  
+                  <div className="text-center p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl">
+                    <div className="flex items-center justify-center w-12 h-12 bg-purple-600 text-white rounded-full mx-auto mb-2">
+                      <TrendingUp className="h-6 w-6" />
+                    </div>
+                    <p className="text-2xl font-bold text-purple-900">
+                      {Math.max(...verdicts.map(v => v.rating || 0)).toFixed(1)}
+                    </p>
+                    <p className="text-purple-700 text-sm">Highest Rating</p>
+                    <p className="text-xs text-purple-600 mt-1">Peak performance</p>
+                  </div>
+                  
+                  <div className="text-center p-4 bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-xl">
+                    <div className="flex items-center justify-center w-12 h-12 bg-yellow-600 text-white rounded-full mx-auto mb-2">
+                      <Heart className="h-6 w-6" />
+                    </div>
+                    <p className="text-2xl font-bold text-yellow-900">
+                      {verdicts.filter(v => v.tone === 'encouraging').length}
+                    </p>
+                    <p className="text-yellow-700 text-sm">Encouraging</p>
+                    <p className="text-xs text-yellow-600 mt-1">Positive feedback</p>
+                  </div>
+                </div>
+
+                {/* Tone Distribution */}
+                <div className="bg-gray-50 rounded-xl p-4">
+                  <h4 className="font-medium text-gray-900 mb-3">Feedback Tone Distribution</h4>
+                  <div className="space-y-2">
+                    {['encouraging', 'honest', 'constructive'].map(tone => {
+                      const count = verdicts.filter(v => v.tone === tone).length;
+                      const percentage = (count / verdicts.length) * 100;
+                      return (
+                        <div key={tone} className="flex items-center justify-between">
+                          <span className="text-sm capitalize font-medium text-gray-700">{tone}</span>
+                          <div className="flex items-center gap-2">
+                            <div className="w-24 bg-gray-200 rounded-full h-2">
+                              <div
+                                className={`h-2 rounded-full ${
+                                  tone === 'encouraging' ? 'bg-green-500' :
+                                  tone === 'honest' ? 'bg-blue-500' : 'bg-yellow-500'
+                                }`}
+                                style={{ width: `${percentage}%` }}
+                              />
+                            </div>
+                            <span className="text-sm text-gray-600 w-8">{count}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         )}
 

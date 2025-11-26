@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
@@ -26,7 +25,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user has any pending obligations (active subscriptions, pending payouts, etc.)
-    const { data: profile } = await supabase
+    const { data: profile } = await (supabase as any)
       .from('profiles')
       .select('is_judge')
       .eq('id', user.id)
@@ -35,31 +34,40 @@ export async function POST(request: NextRequest) {
     const obligations = [];
 
     // Check for active subscriptions
-    const { data: activeSubscriptions } = await supabase
+    const { data: activeSubscriptions } = await (supabase as any)
       .from('subscriptions')
       .select('id, plan_name, status')
       .eq('user_id', user.id)
       .in('status', ['active', 'trialing']);
 
     if (activeSubscriptions && activeSubscriptions.length > 0) {
-      obligations.push(`Active subscriptions: ${activeSubscriptions.map(s => s.plan_name).join(', ')}`);
+      obligations.push(
+        `Active subscriptions: ${activeSubscriptions
+          .map((s: any) => s.plan_name)
+          .join(', ')}`
+      );
     }
 
     // Check for pending judge payouts
     if (profile?.is_judge) {
-      const { data: pendingPayouts } = await supabase
+      const { data: pendingPayouts } = await (supabase as any)
         .from('payouts')
         .select('id, gross_amount_cents')
         .eq('judge_id', user.id)
         .in('status', ['pending', 'processing']);
 
       if (pendingPayouts && pendingPayouts.length > 0) {
-        const totalPending = pendingPayouts.reduce((sum, p) => sum + p.gross_amount_cents, 0);
-        obligations.push(`Pending payouts: $${(totalPending / 100).toFixed(2)}`);
+        const totalPending = pendingPayouts.reduce(
+          (sum: number, p: any) => sum + p.gross_amount_cents,
+          0
+        );
+        obligations.push(
+          `Pending payouts: $${(totalPending / 100).toFixed(2)}`
+        );
       }
 
       // Check for available earnings
-      const { data: availableEarnings } = await supabase.rpc('get_available_payout_amount', {
+      const { data: availableEarnings } = await (supabase.rpc as any)('get_available_payout_amount', {
         target_judge_id: user.id,
       });
 
@@ -78,7 +86,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create deletion request
-    const { data: deletionRequest, error: deletionError } = await supabase
+    const { data: deletionRequest, error: deletionError } = await (supabase as any)
       .from('data_deletion_requests')
       .insert({
         user_id: user.id,
@@ -98,7 +106,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Immediately disable the account
-    await supabase
+    await (supabase as any)
       .from('profiles')
       .update({ 
         is_active: false,
@@ -107,7 +115,7 @@ export async function POST(request: NextRequest) {
       .eq('id', user.id);
 
     // Send notification to user (in real app, this would be an email)
-    await supabase
+    await (supabase as any)
       .from('notifications')
       .insert({
         user_id: user.id,
@@ -115,8 +123,8 @@ export async function POST(request: NextRequest) {
         title: 'Account Deletion Requested',
         message: 'Your account deletion has been requested and will be processed in 30 days. You can cancel this request by logging in before then.',
         metadata: {
-          deletion_request_id: deletionRequest.id,
-          scheduled_date: deletionRequest.scheduled_deletion_date,
+          deletion_request_id: (deletionRequest as any).id,
+          scheduled_date: (deletionRequest as any).scheduled_deletion_date,
         },
       });
 
@@ -129,7 +137,10 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: 'Invalid deletion request data', details: error.errors }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Invalid deletion request data', details: (error as any).errors },
+        { status: 400 }
+      );
     }
 
     console.error('Data deletion request error:', error);
@@ -147,7 +158,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get user's deletion request status
-    const { data: deletionRequest } = await supabase
+    const { data: deletionRequest } = await (supabase as any)
       .from('data_deletion_requests')
       .select('*')
       .eq('user_id', user.id)
@@ -155,9 +166,9 @@ export async function GET(request: NextRequest) {
       .limit(1)
       .single();
 
-    return NextResponse.json({ 
-      has_pending_deletion: !!deletionRequest && deletionRequest.status === 'pending',
-      deletion_request: deletionRequest 
+    return NextResponse.json({
+      has_pending_deletion: !!deletionRequest && (deletionRequest as any).status === 'pending',
+      deletion_request: deletionRequest,
     });
 
   } catch (error) {
@@ -176,7 +187,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Cancel pending deletion request
-    const { data: deletionRequest, error: cancelError } = await supabase
+    const { data: deletionRequest, error: cancelError } = await (supabase as any)
       .from('data_deletion_requests')
       .update({
         status: 'cancelled',
@@ -193,7 +204,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Reactivate the account
-    await supabase
+    await (supabase as any)
       .from('profiles')
       .update({ 
         is_active: true,
@@ -202,7 +213,7 @@ export async function DELETE(request: NextRequest) {
       .eq('id', user.id);
 
     // Send notification
-    await supabase
+    await (supabase as any)
       .from('notifications')
       .insert({
         user_id: user.id,
@@ -210,7 +221,7 @@ export async function DELETE(request: NextRequest) {
         title: 'Account Deletion Cancelled',
         message: 'Your account deletion request has been cancelled. Your account is now active again.',
         metadata: {
-          deletion_request_id: deletionRequest?.id,
+          deletion_request_id: (deletionRequest as any)?.id,
         },
       });
 

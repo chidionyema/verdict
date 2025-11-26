@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
@@ -9,7 +8,7 @@ const getStripe = () => {
     throw new Error('STRIPE_SECRET_KEY is not configured');
   }
   return new Stripe(process.env.STRIPE_SECRET_KEY, {
-    apiVersion: '2024-06-20',
+    apiVersion: '2024-06-20' as any,
   });
 };
 
@@ -98,14 +97,14 @@ export async function POST(request: NextRequest) {
 
     // If setting as default, unset other defaults first
     if (validated.is_default) {
-      await supabase
+      await (supabase as any)
         .from('payment_methods')
         .update({ is_default: false })
         .eq('user_id', user.id);
     }
 
     // Insert new payment method
-    const { data: paymentMethod, error } = await supabase
+    const { data: paymentMethod, error } = await (supabase as any)
       .from('payment_methods')
       .insert(paymentMethodData)
       .select()
@@ -119,7 +118,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ payment_method: paymentMethod });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: 'Invalid request data', details: error.errors }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Invalid request data', details: (error as any).errors },
+        { status: 400 }
+      );
     }
     
     console.error('Payment method creation error:', error);
@@ -144,7 +146,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Verify ownership and get payment method
-    const { data: paymentMethod, error: fetchError } = await supabase
+    const { data: paymentMethod, error: fetchError } = await (supabase as any)
       .from('payment_methods')
       .select('*')
       .eq('id', paymentMethodId)
@@ -157,14 +159,14 @@ export async function DELETE(request: NextRequest) {
 
     // Detach from Stripe
     try {
-      await getStripe().paymentMethods.detach(paymentMethod.stripe_payment_method_id);
+      await getStripe().paymentMethods.detach((paymentMethod as any).stripe_payment_method_id);
     } catch (stripeError) {
       console.warn('Failed to detach from Stripe:', stripeError);
       // Continue with deletion even if Stripe fails
     }
 
     // Soft delete (mark as inactive)
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from('payment_methods')
       .update({ is_active: false })
       .eq('id', paymentMethodId);

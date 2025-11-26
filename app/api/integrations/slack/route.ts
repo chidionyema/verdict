@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
@@ -31,17 +30,17 @@ export async function GET(request: NextRequest) {
     }
 
     // Check if user is admin
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile, error: profileError } = await (supabase as any)
       .from('profiles')
       .select('is_admin')
       .eq('id', user.id)
-      .single() as { data: { is_admin: boolean } | null; error: any };
+      .single();
 
     if (profileError || !profile || !profile.is_admin) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
-    const { data: config } = await supabase
+    const { data: config } = await (supabase as any)
       .from('integration_configs')
       .select('*')
       .eq('integration_type', 'slack')
@@ -65,11 +64,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user is admin
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile, error: profileError } = await (supabase as any)
       .from('profiles')
       .select('is_admin')
       .eq('id', user.id)
-      .single() as { data: { is_admin: boolean } | null; error: any };
+      .single();
 
     if (profileError || !profile || !profile.is_admin) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
@@ -88,7 +87,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Save or update Slack configuration
-    const { data: config, error } = await supabase
+    const { data: config, error } = await (supabase as any)
       .from('integration_configs')
       .upsert({
         integration_type: 'slack',
@@ -112,7 +111,10 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: 'Invalid Slack configuration', details: error.errors }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Invalid Slack configuration', details: (error as any).errors },
+        { status: 400 }
+      );
     }
 
     console.error('Slack config error:', error);
@@ -129,7 +131,7 @@ export async function PUT(request: NextRequest) {
     const validated = slackNotificationSchema.parse(body);
 
     // Get Slack configuration
-    const { data: config } = await supabase
+    const { data: config } = await (supabase as any)
       .from('integration_configs')
       .select('*')
       .eq('integration_type', 'slack')
@@ -161,7 +163,10 @@ export async function PUT(request: NextRequest) {
 
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: 'Invalid notification data', details: error.errors }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Invalid notification data', details: (error as any).errors },
+        { status: 400 }
+      );
     }
 
     console.error('Slack notification error:', error);

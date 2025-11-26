@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
@@ -22,17 +21,17 @@ export async function GET(request: NextRequest) {
     }
 
     // Check if user is admin
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile, error: profileError } = await (supabase as any)
       .from('profiles')
       .select('is_admin')
       .eq('id', user.id)
-      .single() as { data: { is_admin: boolean } | null; error: any };
+      .single();
 
     if (profileError || !profile || !profile.is_admin) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
-    const { data: webhooks, error } = await supabase
+    const { data: webhooks, error } = await (supabase as any)
       .from('webhook_endpoints')
       .select('*')
       .order('created_at', { ascending: false });
@@ -60,11 +59,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user is admin
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile, error: profileError } = await (supabase as any)
       .from('profiles')
       .select('is_admin')
       .eq('id', user.id)
-      .single() as { data: { is_admin: boolean } | null; error: any };
+      .single();
 
     if (profileError || !profile || !profile.is_admin) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
@@ -74,7 +73,7 @@ export async function POST(request: NextRequest) {
     const validated = webhookSchema.parse(body);
 
     // Create webhook endpoint
-    const { data: webhook, error } = await supabase
+    const { data: webhook, error } = await (supabase as any)
       .from('webhook_endpoints')
       .insert({
         url: validated.url,
@@ -97,7 +96,10 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: 'Invalid webhook data', details: error.errors }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Invalid webhook data', details: (error as any).errors },
+        { status: 400 }
+      );
     }
 
     console.error('Webhook creation error:', error);

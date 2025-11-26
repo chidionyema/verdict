@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
@@ -79,7 +78,7 @@ export async function POST(request: NextRequest) {
     const { credits = 3, action = 'add' } = body; // action can be 'add' or 'set'
 
     // Get current credits
-    const { data: currentProfile, error: fetchError } = await supabase
+    const { data: currentProfile, error: fetchError } = await (supabase as any)
       .from('profiles')
       .select('credits')
       .eq('id', user.id)

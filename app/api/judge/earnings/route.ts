@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
@@ -12,7 +11,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Verify user is a judge
-    const { data: profile } = await supabase
+    const { data: profile } = await (supabase as any)
       .from('profiles')
       .select('is_judge')
       .eq('id', user.id)
@@ -29,7 +28,7 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get('start_date');
     const endDate = searchParams.get('end_date');
 
-    let query = supabase
+    let query = (supabase as any)
       .from('judge_earnings')
       .select(`
         *,
@@ -72,23 +71,24 @@ export async function GET(request: NextRequest) {
     }
 
     // Get total earnings summary
-    const { data: totalEarnings } = await supabase.rpc('get_available_payout_amount', {
+    const { data: totalEarnings } = await (supabase.rpc as any)('get_available_payout_amount', {
       target_judge_id: user.id,
     });
 
     // Get earnings by status
-    const { data: earningsSummary } = await supabase
+    const { data: earningsSummary } = await (supabase as any)
       .from('judge_earnings')
       .select('payout_status, net_amount_cents')
       .eq('judge_id', user.id);
 
-    const summary = earningsSummary?.reduce((acc, earning) => {
-      if (!acc[earning.payout_status]) {
-        acc[earning.payout_status] = 0;
-      }
-      acc[earning.payout_status] += earning.net_amount_cents;
-      return acc;
-    }, {} as Record<string, number>) || {};
+    const summary =
+      earningsSummary?.reduce((acc: Record<string, number>, earning: any) => {
+        if (!acc[earning.payout_status]) {
+          acc[earning.payout_status] = 0;
+        }
+        acc[earning.payout_status] += earning.net_amount_cents;
+        return acc;
+      }, {} as Record<string, number>) || {};
 
     return NextResponse.json({
       earnings,
@@ -102,7 +102,10 @@ export async function GET(request: NextRequest) {
         available_for_payout: totalEarnings || 0,
         pending: summary.pending || 0,
         paid: summary.paid || 0,
-        total_earned: Object.values(summary).reduce((sum, amount) => sum + amount, 0),
+        total_earned: Object.values(summary).reduce(
+          (sum: number, amount: unknown) => sum + (amount as number),
+          0
+        ),
       },
     });
 

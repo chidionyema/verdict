@@ -4,11 +4,26 @@ import { useState, useEffect, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 import { toast } from '@/components/ui/toast';
-import { 
-  Clock, CheckCircle, XCircle, Eye, Calendar, Filter, Search, 
-  TrendingUp, Star, Share2, Copy, MoreHorizontal, Image, 
-  FileText, Award, Target, Zap
+import {
+  Clock,
+  CheckCircle,
+  XCircle,
+  Eye,
+  Calendar,
+  Filter,
+  Search,
+  TrendingUp,
+  Star,
+  Share2,
+  Copy,
+  MoreHorizontal,
+  Image,
+  FileText,
+  Award,
+  Target,
+  Zap,
 } from 'lucide-react';
+import { getTierConfigByVerdictCount } from '@/lib/validations';
 
 export default function MyRequestsPage() {
   const supabase = createClient();
@@ -145,9 +160,34 @@ export default function MyRequestsPage() {
     }
   };
 
+  const normalizeStatus = (status: string) => {
+    if (status === 'in_progress' || status === 'open') return 'open';
+    if (status === 'completed' || status === 'closed') return 'closed';
+    return status;
+  };
+
+  const getHumanStatus = (request: any) => {
+    const normalized = normalizeStatus(request.status);
+    const received = request.received_verdict_count || 0;
+    const target = request.target_verdict_count || 0;
+
+    if (normalized === 'cancelled') return 'Cancelled';
+
+    if (normalized === 'closed') return 'Completed';
+
+    if (normalized === 'open') {
+      if (received === 0) return 'Waiting for verdicts';
+      if (received < target) return 'Partially answered';
+      return 'Awaiting finalisation';
+    }
+
+    return request.status;
+  };
+
   // Filter and search logic
   const filteredRequests = requests.filter(request => {
-    const matchesFilter = filter === 'all' || request.status === filter;
+    const normalized = normalizeStatus(request.status);
+    const matchesFilter = filter === 'all' || normalized === filter;
     const matchesSearch = searchTerm === '' || 
       request.context.toLowerCase().includes(searchTerm.toLowerCase()) ||
       request.category.toLowerCase().includes(searchTerm.toLowerCase());
@@ -157,17 +197,26 @@ export default function MyRequestsPage() {
   // Calculate stats
   const stats = {
     total: requests.length,
-    open: requests.filter(r => r.status === 'open').length,
-    closed: requests.filter(r => r.status === 'closed').length,
+    open: requests.filter((r) => {
+      const s = normalizeStatus(r.status);
+      return s === 'open';
+    }).length,
+    closed: requests.filter((r) => {
+      const s = normalizeStatus(r.status);
+      return s === 'closed';
+    }).length,
     avgRating: requests.length > 0 ? (requests.reduce((acc, r) => acc + (r.avg_rating || 8.2), 0) / requests.length).toFixed(1) : '8.2',
     totalVerdicts: requests.reduce((acc, r) => acc + (r.received_verdict_count || 0), 0)
   };
 
   const getStatusIcon = (status: string) => {
+    const normalized = normalizeStatus(status);
     switch (status) {
       case 'open':
+      case 'in_progress':
         return <Clock className="h-4 w-4 text-yellow-500" />;
       case 'closed':
+      case 'completed':
         return <CheckCircle className="h-4 w-4 text-green-500" />;
       case 'cancelled':
         return <XCircle className="h-4 w-4 text-red-500" />;
@@ -177,21 +226,54 @@ export default function MyRequestsPage() {
   };
 
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'open': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'closed': return 'bg-green-100 text-green-800 border-green-200';
-      case 'cancelled': return 'bg-red-100 text-red-800 border-red-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+    const normalized = normalizeStatus(status);
+    switch (normalized) {
+      case 'open':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'closed':
+        return 'bg-green-100 text-green-800 border-green-200';
+      case 'cancelled':
+        return 'bg-red-100 text-red-800 border-red-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
     }
+  };
+
+  const getPrimaryCtaLabel = (request: any) => {
+    const normalized = normalizeStatus(request.status);
+    const received = request.received_verdict_count || 0;
+    const target = request.target_verdict_count || 0;
+
+    if (normalized === 'closed' || normalized === 'completed') {
+      return 'View results';
+    }
+    if (received > 0 && received < target) {
+      return 'View verdicts so far';
+    }
+    return 'View request';
+  };
+
+  const getTierLabel = (request: any) => {
+    const target = request.target_verdict_count || 0;
+    if (!target) return '';
+    const tierConfig = getTierConfigByVerdictCount(target);
+    return `${tierConfig.tier.charAt(0).toUpperCase() + tierConfig.tier.slice(1)} · ${
+      tierConfig.verdicts
+    } verdicts · ${tierConfig.credits} credit${tierConfig.credits > 1 ? 's' : ''}`;
   };
 
   const getCategoryIcon = (category: string) => {
     switch (category) {
-      case 'appearance': return '👔';
-      case 'profile': return '💼'; 
-      case 'writing': return '✍️';
-      case 'decision': return '🤔';
-      default: return '📝';
+      case 'appearance':
+        return '👔';
+      case 'profile':
+        return '💼';
+      case 'writing':
+        return '✍️';
+      case 'decision':
+        return '🤔';
+      default:
+        return '📝';
     }
   };
 
@@ -227,7 +309,9 @@ export default function MyRequestsPage() {
           <div className="flex items-center justify-between mb-6">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">My Requests</h1>
-              <p className="text-gray-600 mt-1">Track your feedback journey and improvements</p>
+              <p className="text-gray-600 mt-1">
+                This is your home base – track every request and its verdicts in one place.
+              </p>
             </div>
             <Link
               href="/start"
@@ -236,7 +320,6 @@ export default function MyRequestsPage() {
               + New Request
             </Link>
           </div>
-          
           {/* Stats Row */}
           {requests.length > 0 && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -366,15 +449,24 @@ export default function MyRequestsPage() {
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex items-center gap-3">
                         <span className="text-2xl">{getCategoryIcon(request.category)}</span>
-                        <div>
-                          <h3 className="font-semibold text-gray-900 capitalize">{request.category}</h3>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(request.status)}`}>
-                              {request.status}
+                        <div className="min-w-0">
+                          <h3 className="font-semibold text-gray-900 capitalize truncate">
+                            {request.category}
+                          </h3>
+                          <div className="flex flex-wrap items-center gap-2 mt-1 text-xs">
+                            <span
+                              className={`px-2 py-1 rounded-full font-medium border ${getStatusColor(
+                                request.status
+                              )}`}
+                            >
+                              {getHumanStatus(request)}
                             </span>
-                            <span className="text-xs text-gray-500 flex items-center gap-1">
+                            <span className="text-gray-500 flex items-center gap-1">
                               {request.media_type === 'photo' ? <Image className="h-3 w-3" /> : <FileText className="h-3 w-3" />}
                               {request.media_type}
+                            </span>
+                            <span className="text-gray-500 truncate max-w-[150px]">
+                              {getTierLabel(request)}
                             </span>
                           </div>
                         </div>
@@ -429,7 +521,7 @@ export default function MyRequestsPage() {
                         href={`/requests/${request.id}`}
                         className="flex-1 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition font-medium text-center text-sm"
                       >
-                        View Details
+                        {getPrimaryCtaLabel(request)}
                       </Link>
                       {request.status === 'closed' && (
                         <button className="px-3 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">

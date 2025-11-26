@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import Stripe from 'stripe';
@@ -9,7 +8,7 @@ const getStripe = () => {
     throw new Error('STRIPE_SECRET_KEY is not configured');
   }
   return new Stripe(process.env.STRIPE_SECRET_KEY, {
-    apiVersion: '2024-06-20',
+    apiVersion: '2024-06-20' as any,
   });
 };
 
@@ -18,8 +17,7 @@ const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 export async function POST(request: NextRequest) {
   try {
     const body = await request.text();
-    const headersList = headers();
-    const sig = headersList.get('stripe-signature')!;
+    const sig = (await headers()).get('stripe-signature')!;
 
     let event: Stripe.Event;
 
@@ -89,7 +87,10 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session, supabase: any) {
+async function handleCheckoutSessionCompleted(
+  session: Stripe.Checkout.Session,
+  supabase: any
+) {
   const metadata = session.metadata;
   if (!metadata?.type || !metadata?.user_id) return;
 
@@ -97,25 +98,36 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session, 
     const credits = parseInt(metadata.credits || '0');
     const userId = metadata.user_id;
 
-    // Add credits to user profile
-    await supabase
-      .from('profiles')
-      .update({ credits: supabase.raw(`credits + ${credits}`) })
-      .eq('id', userId);
+    // Add credits atomically to prevent race conditions
+    const { data: addResult, error: addError } = await supabase.rpc('add_credits', {
+      p_user_id: userId,
+      p_credits: credits
+    });
 
-    // Update transaction
+    if (addError) {
+      console.error('Failed to add credits:', addError);
+      return;
+    }
+
+    const result = addResult?.[0];
+    if (!result?.success) {
+      console.error('Credit addition failed:', result?.message);
+      return;
+    }
+
+    // Log transaction
     await supabase
       .from('transactions')
-      .update({
-        status: 'completed',
-        stripe_payment_intent_id: session.payment_intent,
+      .insert({
+        user_id: userId,
+        type: 'purchase',
         credits_delta: credits,
+        amount_cents: session.amount_total,
+        stripe_session_id: session.id,
+        stripe_payment_intent_id: session.payment_intent,
+        status: 'completed',
         completed_at: new Date().toISOString(),
-      })
-      .eq('user_id', userId)
-      .eq('status', 'pending')
-      .order('created_at', { ascending: false })
-      .limit(1);
+      });
 
   } else if (metadata.type === 'subscription') {
     // Subscription will be handled by subscription.created event
@@ -123,7 +135,10 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session, 
   }
 }
 
-async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent, supabase: any) {
+async function handlePaymentIntentSucceeded(
+  paymentIntent: Stripe.PaymentIntent,
+  supabase: any
+) {
   // Update transaction with successful payment
   await supabase
     .from('transactions')
@@ -131,13 +146,16 @@ async function handlePaymentIntentSucceeded(paymentIntent: Stripe.PaymentIntent,
       status: 'completed',
       net_amount_cents: paymentIntent.amount_received,
       processing_fee_cents: paymentIntent.application_fee_amount || 0,
-      receipt_url: paymentIntent.charges.data[0]?.receipt_url,
+      receipt_url: (paymentIntent as any).charges.data[0]?.receipt_url,
       completed_at: new Date().toISOString(),
     })
     .eq('stripe_payment_intent_id', paymentIntent.id);
 }
 
-async function handlePaymentIntentFailed(paymentIntent: Stripe.PaymentIntent, supabase: any) {
+async function handlePaymentIntentFailed(
+  paymentIntent: Stripe.PaymentIntent,
+  supabase: any
+) {
   // Update transaction with failure
   await supabase
     .from('transactions')
@@ -149,23 +167,48 @@ async function handlePaymentIntentFailed(paymentIntent: Stripe.PaymentIntent, su
     .eq('stripe_payment_intent_id', paymentIntent.id);
 }
 
-async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice, supabase: any) {
-  if (!invoice.subscription) return;
+async function handleInvoicePaymentSucceeded(
+  invoice: Stripe.Invoice,
+  supabase: any
+) {
+  if (!(invoice as any).subscription) return;
 
   // Handle subscription renewal
-  const subscription = await getStripe().subscriptions.retrieve(invoice.subscription as string);
-  
-  // Process subscription renewal
-  await supabase.rpc('process_subscription_renewal', {
-    subscription_id: subscription.metadata?.subscription_db_id,
+  const subscription = await getStripe().subscriptions.retrieve(
+    (invoice as any).subscription as string
+  );
+
+  if (!subscription.metadata?.subscription_db_id) {
+    console.error('Subscription missing database ID in metadata');
+    return;
+  }
+
+  // Process subscription renewal atomically
+  const { data: renewalResult, error: renewalError } = await supabase.rpc('process_subscription_renewal', {
+    p_subscription_id: subscription.metadata.subscription_db_id,
   });
+
+  if (renewalError) {
+    console.error('Failed to process subscription renewal:', renewalError);
+    return;
+  }
+
+  const result = renewalResult?.[0];
+  if (!result?.success) {
+    console.error('Subscription renewal failed:', result?.message);
+  }
 }
 
-async function handleInvoicePaymentFailed(invoice: Stripe.Invoice, supabase: any) {
-  if (!invoice.subscription) return;
+async function handleInvoicePaymentFailed(
+  invoice: Stripe.Invoice,
+  supabase: any
+) {
+  if (!(invoice as any).subscription) return;
 
   // Update subscription status
-  const subscription = await getStripe().subscriptions.retrieve(invoice.subscription as string);
+  const subscription = await getStripe().subscriptions.retrieve(
+    (invoice as any).subscription as string
+  );
   
   await supabase
     .from('subscriptions')
@@ -177,14 +220,17 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice, supabase: any
     .eq('stripe_subscription_id', subscription.id);
 }
 
-async function handleSubscriptionCreated(subscription: Stripe.Subscription, supabase: any) {
+async function handleSubscriptionCreated(
+  subscription: Stripe.Subscription,
+  supabase: any
+) {
   const userId = subscription.metadata?.user_id;
   if (!userId) return;
 
   const planId = subscription.items.data[0]?.price.id;
   
   // Get plan details
-  const { data: plan } = await supabase
+  const { data: plan } = await (supabase as any)
     .from('subscription_plans')
     .select('*')
     .eq('stripe_price_id', planId)
@@ -193,53 +239,81 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription, supa
   if (!plan) return;
 
   // Create subscription record
-  await supabase
+  await (supabase as any)
     .from('subscriptions')
     .insert({
       user_id: userId,
       stripe_subscription_id: subscription.id,
       stripe_customer_id: subscription.customer,
       plan_id: planId,
-      plan_name: plan.name,
-      plan_price_cents: plan.price_cents,
-      billing_interval: plan.billing_interval,
-      monthly_credits: plan.monthly_credits,
-      bonus_features: plan.bonus_features,
+      plan_name: (plan as any).name,
+      plan_price_cents: (plan as any).price_cents,
+      billing_interval: (plan as any).billing_interval,
+      monthly_credits: (plan as any).monthly_credits,
+      bonus_features: (plan as any).bonus_features,
       status: subscription.status,
-      current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
-      current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+      current_period_start: new Date(
+        (subscription as any).current_period_start * 1000
+      ).toISOString(),
+      current_period_end: new Date(
+        (subscription as any).current_period_end * 1000
+      ).toISOString(),
       trial_start: subscription.trial_start ? 
         new Date(subscription.trial_start * 1000).toISOString() : null,
       trial_end: subscription.trial_end ? 
         new Date(subscription.trial_end * 1000).toISOString() : null,
     });
 
-  // Add initial credits if not in trial
-  if (!subscription.trial_start) {
-    await supabase
-      .from('profiles')
-      .update({ credits: supabase.raw(`credits + ${plan.monthly_credits}`) })
-      .eq('id', userId);
+  // Add initial credits atomically if not in trial
+  if (!subscription.trial_start && (plan as any).monthly_credits > 0) {
+    const { data: addResult, error: addError } = await (supabase as any).rpc(
+      'add_credits',
+      {
+        p_user_id: userId,
+        p_credits: (plan as any).monthly_credits,
+      }
+    );
+
+    if (addError) {
+      console.error('Failed to add subscription credits:', addError);
+    } else {
+      const result = (addResult as any)?.[0];
+      if (!result?.success) {
+        console.error('Subscription credit addition failed:', result?.message);
+      }
+    }
   }
 }
 
-async function handleSubscriptionUpdated(subscription: Stripe.Subscription, supabase: any) {
-  await supabase
+async function handleSubscriptionUpdated(
+  subscription: Stripe.Subscription,
+  supabase: any
+) {
+  await (supabase as any)
     .from('subscriptions')
     .update({
       status: subscription.status,
-      current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
-      current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
-      canceled_at: subscription.canceled_at ? 
-        new Date(subscription.canceled_at * 1000).toISOString() : null,
-      ended_at: subscription.ended_at ? 
-        new Date(subscription.ended_at * 1000).toISOString() : null,
+      current_period_start: new Date(
+        (subscription as any).current_period_start * 1000
+      ).toISOString(),
+      current_period_end: new Date(
+        (subscription as any).current_period_end * 1000
+      ).toISOString(),
+      canceled_at: subscription.canceled_at
+        ? new Date(subscription.canceled_at * 1000).toISOString()
+        : null,
+      ended_at: subscription.ended_at
+        ? new Date(subscription.ended_at * 1000).toISOString()
+        : null,
     })
     .eq('stripe_subscription_id', subscription.id);
 }
 
-async function handleSubscriptionDeleted(subscription: Stripe.Subscription, supabase: any) {
-  await supabase
+async function handleSubscriptionDeleted(
+  subscription: Stripe.Subscription,
+  supabase: any
+) {
+  await (supabase as any)
     .from('subscriptions')
     .update({
       status: 'canceled',
@@ -248,8 +322,11 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription, supa
     .eq('stripe_subscription_id', subscription.id);
 }
 
-async function handleConnectAccountUpdated(account: Stripe.Account, supabase: any) {
-  await supabase
+async function handleConnectAccountUpdated(
+  account: Stripe.Account,
+  supabase: any
+) {
+  await (supabase as any)
     .from('judge_payout_accounts')
     .update({
       charges_enabled: account.charges_enabled,
@@ -261,7 +338,10 @@ async function handleConnectAccountUpdated(account: Stripe.Account, supabase: an
     .eq('stripe_account_id', account.id);
 }
 
-async function handleTransferCreated(transfer: Stripe.Transfer, supabase: any) {
+async function handleTransferCreated(
+  transfer: Stripe.Transfer,
+  supabase: any
+) {
   const payoutId = transfer.metadata?.payout_id;
   if (!payoutId) return;
 

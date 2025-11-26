@@ -8,10 +8,30 @@ export const GENDERS = ['male', 'female', 'nonbinary', 'prefer_not_say'] as cons
 export type Category = (typeof CATEGORIES)[number];
 export type Tone = (typeof TONES)[number];
 
-// Simple banned words list (expand as needed)
+// Banned words list for content moderation
+// This list catches obvious inappropriate content; consider AI moderation for production
 const BANNED_WORDS: string[] = [
-  // Add slurs and obviously inappropriate terms
-  // Keeping minimal for MVP
+  // Slurs and hate speech (abbreviated/obfuscated forms also caught by pattern matching)
+  'nigger', 'nigga', 'faggot', 'fag', 'retard', 'retarded',
+  'chink', 'gook', 'spic', 'wetback', 'kike', 'dyke',
+  'tranny', 'shemale',
+  // Extreme violence
+  'kill yourself', 'kys', 'go die', 'hope you die',
+  // Harassment patterns
+  'i will find you', 'i know where you live',
+  // Spam/scam indicators
+  'send me money', 'wire transfer', 'bitcoin wallet',
+  'click this link', 'free gift card',
+];
+
+// Additional patterns to check (regex-based)
+const BANNED_PATTERNS: RegExp[] = [
+  /n[i1!]+[g9]+[e3]*r/i,           // Obfuscated slur variations
+  /f[a@4]+[g9]+[o0]*t/i,           // Obfuscated slur variations
+  /k+y+s+/i,                        // "kys" variations
+  /\b(https?:\/\/[^\s]+){3,}/i,    // Multiple URLs (spam indicator)
+  /(.)\1{10,}/,                     // Repeated characters (spam)
+  /[A-Z]{20,}/,                     // Excessive caps (spam/shouting)
 ];
 
 export function validateContext(context: string): { valid: boolean; error?: string } {
@@ -73,7 +93,18 @@ export function validateMediaType(mediaType: string): mediaType is 'photo' | 'te
 
 function containsBannedWords(text: string): boolean {
   const lowerText = text.toLowerCase();
-  return BANNED_WORDS.some((word) => lowerText.includes(word.toLowerCase()));
+
+  // Check exact word matches
+  if (BANNED_WORDS.some((word) => lowerText.includes(word.toLowerCase()))) {
+    return true;
+  }
+
+  // Check regex patterns for obfuscation attempts
+  if (BANNED_PATTERNS.some((pattern) => pattern.test(text))) {
+    return true;
+  }
+
+  return false;
 }
 
 // Validate image file
@@ -89,6 +120,10 @@ export function validateImageFile(file: File): { valid: boolean; error?: string 
   }
   return { valid: true };
 }
+
+// Pricing model
+// Single credit base price used throughout the app for seeker-facing messaging.
+export const PRICE_PER_CREDIT_USD = 3.49;
 
 // Credit packages
 // Updated pricing: $3.49/credit minimum for 40-45% profit margin

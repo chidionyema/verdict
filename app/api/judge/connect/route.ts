@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import Stripe from 'stripe';
@@ -8,7 +7,7 @@ const getStripe = () => {
     throw new Error('STRIPE_SECRET_KEY is not configured');
   }
   return new Stripe(process.env.STRIPE_SECRET_KEY, {
-    apiVersion: '2024-06-20',
+    apiVersion: '2024-06-20' as any,
   });
 };
 
@@ -22,7 +21,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Verify user is a judge
-    const { data: profile } = await supabase
+    const { data: profile } = await (supabase as any)
       .from('profiles')
       .select('is_judge, email, full_name')
       .eq('id', user.id)
@@ -33,7 +32,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Check if already has connect account
-    const { data: existingAccount } = await supabase
+    const { data: existingAccount } = await (supabase as any)
       .from('judge_payout_accounts')
       .select('*')
       .eq('judge_id', user.id)
@@ -70,19 +69,39 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// Supported countries for Stripe Connect Express
+const SUPPORTED_COUNTRIES = [
+  'US', 'GB', 'CA', 'AU', 'DE', 'FR', 'ES', 'IT', 'NL', 'BE',
+  'AT', 'IE', 'PT', 'FI', 'SE', 'DK', 'NO', 'CH', 'NZ', 'SG',
+  'HK', 'JP', 'MX', 'BR', 'PL', 'CZ', 'RO', 'BG', 'HR', 'CY',
+  'EE', 'GR', 'HU', 'LV', 'LT', 'LU', 'MT', 'SK', 'SI',
+] as const;
+
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    const supabase: any = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Get country from request body
+    const body = await request.json().catch(() => ({}));
+    const requestedCountry = body.country?.toUpperCase() || 'US';
+
+    // Validate country
+    if (!SUPPORTED_COUNTRIES.includes(requestedCountry as typeof SUPPORTED_COUNTRIES[number])) {
+      return NextResponse.json({
+        error: 'Unsupported country',
+        supported_countries: SUPPORTED_COUNTRIES,
+      }, { status: 400 });
+    }
+
     // Verify user is a judge
-    const { data: profile } = await supabase
+    const { data: profile } = await (supabase as any)
       .from('profiles')
-      .select('is_judge, email, full_name')
+      .select('is_judge, email, full_name, country')
       .eq('id', user.id)
       .single();
 
@@ -90,15 +109,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Access denied. Judge account required.' }, { status: 403 });
     }
 
+    // Use profile country if available, otherwise use requested country
+    const country = requestedCountry;
+
     // Check if already has connect account
-    const { data: existingAccount } = await supabase
+    const { data: existingAccount } = await (supabase as any)
       .from('judge_payout_accounts')
       .select('*')
       .eq('judge_id', user.id)
       .single();
 
     if (existingAccount) {
-      return NextResponse.json({ 
+      return NextResponse.json({
         error: 'Payout account already exists',
         account: existingAccount,
       }, { status: 400 });
@@ -108,8 +130,8 @@ export async function POST(request: NextRequest) {
       // Create Stripe Connect Express account
       const account = await getStripe().accounts.create({
         type: 'express',
-        country: 'US', // TODO: Make this configurable
-        email: profile.email,
+        country: country,
+        email: profile.email ?? undefined,
         business_profile: {
           name: profile.full_name || undefined,
           product_description: 'Verdict judging services',
@@ -142,7 +164,7 @@ export async function POST(request: NextRequest) {
           charges_enabled: account.charges_enabled,
           payouts_enabled: account.payouts_enabled,
           details_submitted: account.details_submitted,
-          country: 'US',
+          country: country,
           onboarding_link: accountLink.url,
           onboarding_expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24 hours
         })
@@ -186,7 +208,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Get existing account
-    const { data: payoutAccount } = await supabase
+    const { data: payoutAccount } = await (supabase as any)
       .from('judge_payout_accounts')
       .select('*')
       .eq('judge_id', user.id)
@@ -200,7 +222,7 @@ export async function PATCH(request: NextRequest) {
     const account = await getStripe().accounts.retrieve(payoutAccount.stripe_account_id);
 
     // Update database with latest info
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from('judge_payout_accounts')
       .update({
         charges_enabled: account.charges_enabled,

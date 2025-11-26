@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Judge earnings reconciliation script.
  *
@@ -31,7 +30,7 @@ async function run() {
   since.setDate(since.getDate() - 30);
 
   // Fetch verdicts with their request's target_verdict_count
-  const { data: verdicts, error } = await supabase
+  const { data: verdicts, error } = await (supabase as any)
     .from('verdict_responses')
     .select(
       `
@@ -56,18 +55,18 @@ async function run() {
   let issues = 0;
 
   for (const v of verdicts || []) {
-    const targetCount = v.verdict_requests?.target_verdict_count ?? 3;
+    const targetCount = (v as any).verdict_requests?.target_verdict_count ?? 3;
     const tierCfg = getTierConfigByVerdictCount(targetCount);
     const expectedAmount = tierCfg.judgePayout;
 
-    const { data: earnings, error: earnError } = await supabase
+    const { data: earnings, error: earnError } = await (supabase as any)
       .from('judge_earnings')
       .select('id, amount, payout_status, created_at')
       .eq('verdict_response_id', v.id);
 
     if (earnError) {
       // eslint-disable-next-line no-console
-      console.error('Error loading earnings for verdict', v.id, earnError);
+      console.error('Error loading earnings for verdict', (v as any).id, earnError);
       issues++;
       continue;
     }
@@ -76,7 +75,7 @@ async function run() {
       // eslint-disable-next-line no-console
       console.warn(
         '[EARNINGS] Missing earnings row for verdict',
-        v.id,
+        (v as any).id,
         'expected',
         expectedAmount
       );
@@ -88,19 +87,19 @@ async function run() {
       // eslint-disable-next-line no-console
       console.warn(
         '[EARNINGS] Multiple earnings rows for verdict',
-        v.id,
+        (v as any).id,
         'rows:',
-        earnings.map((e) => e.id)
+        earnings.map((e: any) => e.id)
       );
       issues++;
     }
 
-    const amount = Number(earnings[0].amount ?? 0);
+    const amount = Number((earnings[0] as any).amount ?? 0);
     if (Math.abs(amount - expectedAmount) > 0.001) {
       // eslint-disable-next-line no-console
       console.warn(
         '[EARNINGS] Amount mismatch for verdict',
-        v.id,
+        (v as any).id,
         'expected',
         expectedAmount,
         'got',

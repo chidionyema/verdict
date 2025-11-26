@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
@@ -29,7 +28,7 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '20');
     const status = searchParams.get('status');
 
-    let query = supabase
+    let query = (supabase as any)
       .from('support_tickets')
       .select(`
         id,
@@ -90,7 +89,7 @@ export async function POST(request: NextRequest) {
     const validated = createTicketSchema.parse(body);
 
     // Create support ticket
-    const { data: ticket, error } = await supabase
+    const { data: ticket, error } = await (supabase as any)
       .from('support_tickets')
       .insert({
         user_id: user.id,
@@ -112,15 +111,15 @@ export async function POST(request: NextRequest) {
     // Send notification to admin (in real app, you'd use email service)
     // For now, we'll create a notification record
     try {
-      await supabase
+      await (supabase as any)
         .from('notifications')
         .insert({
           user_id: user.id, // This would be admin user ID in real implementation
           type: 'support_ticket_created',
           title: 'New Support Ticket',
-          message: `Ticket #${ticket.id}: ${validated.subject}`,
+          message: `Ticket #${(ticket as any).id}: ${validated.subject}`,
           metadata: {
-            ticket_id: ticket.id,
+            ticket_id: (ticket as any).id,
             category: validated.category,
             priority: validated.priority,
           },
@@ -137,7 +136,10 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: 'Invalid request data', details: error.errors }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Invalid request data', details: (error as any).errors },
+        { status: 400 }
+      );
     }
 
     console.error('Create ticket error:', error);

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
@@ -35,7 +34,7 @@ export async function GET(request: NextRequest) {
 
     if (userType === 'judge') {
       // Verify user is a judge
-      const { data: profile } = await supabase
+      const { data: profile } = await (supabase as any)
         .from('profiles')
         .select('is_judge')
         .eq('id', user.id)
@@ -84,23 +83,36 @@ async function getRequesterAnalytics(userId: string, startDate: Date, supabase: 
       .gte('created_at', startDate.toISOString());
 
     // Calculate metrics
-    const totalSpent = transactions
-      ?.filter(t => ['credit_purchase', 'subscription'].includes(t.type))
-      .reduce((sum, t) => sum + (t.amount_cents || 0), 0) || 0;
+    const totalSpent =
+      transactions
+        ?.filter((t: any) =>
+          ['credit_purchase', 'subscription'].includes(t.type)
+        )
+        .reduce((sum: number, t: any) => sum + (t.amount_cents || 0), 0) || 0;
 
-    const creditsSpent = transactions
-      ?.filter(t => t.type === 'verdict_request')
-      .reduce((sum, t) => sum + Math.abs(t.credits_delta || 0), 0) || 0;
+    const creditsSpent =
+      transactions
+        ?.filter((t: any) => t.type === 'verdict_request')
+        .reduce(
+          (sum: number, t: any) =>
+            sum + Math.abs(t.credits_delta || 0),
+          0
+        ) || 0;
 
-    const averageRating = responses && responses.length > 0
-      ? responses.reduce((sum, r) => sum + (r.rating || 0), 0) / responses.length
-      : 0;
+    const averageRating =
+      responses && responses.length > 0
+        ? responses.reduce(
+            (sum: number, r: any) => sum + (r.rating || 0),
+            0
+          ) / responses.length
+        : 0;
 
     // Category breakdown
-    const categoryBreakdown = requests?.reduce((acc, req) => {
-      acc[req.category] = (acc[req.category] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>) || {};
+    const categoryBreakdown =
+      requests?.reduce((acc: Record<string, number>, req: any) => {
+        acc[req.category] = (acc[req.category] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>) || {};
 
     // Daily activity for chart
     const dailyActivity = await getDailyActivity(userId, startDate, supabase, 'requester');
@@ -113,17 +125,23 @@ async function getRequesterAnalytics(userId: string, startDate: Date, supabase: 
         total_spent_cents: totalSpent,
         credits_spent: creditsSpent,
         completion_rate: requests && requests.length > 0 
-          ? Math.round((requests.filter(r => r.status === 'completed').length / requests.length) * 100)
+          ? Math.round(
+              (requests.filter((r: any) => r.status === 'completed').length /
+                requests.length) *
+                100
+            )
           : 0,
       },
       category_breakdown: categoryBreakdown,
       daily_activity: dailyActivity,
-      recent_requests: requests?.slice(0, 5).map(r => ({
+      recent_requests: requests?.slice(0, 5).map((r: any) => ({
         id: r.id,
         category: r.category,
         status: r.status,
         created_at: r.created_at,
-        response_count: responses?.filter(res => res.request_id === r.id).length || 0,
+        response_count:
+          responses?.filter((res: any) => res.request_id === r.id).length ||
+          0,
       })) || [],
     });
 
@@ -150,17 +168,27 @@ async function getJudgeAnalytics(judgeId: string, startDate: Date, supabase: any
       .gte('created_at', startDate.toISOString());
 
     // Get rating data
-    const averageRating = responses && responses.length > 0
-      ? responses.reduce((sum, r) => sum + (r.rating || 0), 0) / responses.length
-      : 0;
+    const averageRating =
+      responses && responses.length > 0
+        ? responses.reduce(
+            (sum: number, r: any) => sum + (r.rating || 0),
+            0
+          ) / responses.length
+        : 0;
 
-    const totalEarnings = earnings?.reduce((sum, e) => sum + e.net_amount_cents, 0) || 0;
-    const availableEarnings = earnings
-      ?.filter(e => e.payout_status === 'available')
-      .reduce((sum, e) => sum + e.net_amount_cents, 0) || 0;
+    const totalEarnings =
+      earnings?.reduce(
+        (sum: number, e: any) => sum + e.net_amount_cents,
+        0
+      ) || 0;
+    const availableEarnings =
+      earnings
+        ?.filter((e: any) => e.payout_status === 'available')
+        .reduce((sum: number, e: any) => sum + e.net_amount_cents, 0) ||
+      0;
 
     // Category breakdown
-    const { data: categoryData } = await supabase
+    const { data: categoryData } = await (supabase as any)
       .from('verdict_responses')
       .select(`
         verdict_requests!inner(category)
@@ -168,11 +196,12 @@ async function getJudgeAnalytics(judgeId: string, startDate: Date, supabase: any
       .eq('judge_id', judgeId)
       .gte('created_at', startDate.toISOString());
 
-    const categoryBreakdown = categoryData?.reduce((acc, item) => {
-      const category = item.verdict_requests.category;
-      acc[category] = (acc[category] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>) || {};
+    const categoryBreakdown =
+      categoryData?.reduce((acc: Record<string, number>, item: any) => {
+        const category = item.verdict_requests.category;
+        acc[category] = (acc[category] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>) || {};
 
     // Daily activity
     const dailyActivity = await getDailyActivity(judgeId, startDate, supabase, 'judge');
@@ -191,7 +220,7 @@ async function getJudgeAnalytics(judgeId: string, startDate: Date, supabase: any
       },
       category_breakdown: categoryBreakdown,
       daily_activity: dailyActivity,
-      recent_responses: responses?.slice(0, 5).map(r => ({
+      recent_responses: responses?.slice(0, 5).map((r: any) => ({
         id: r.id,
         request_id: r.request_id,
         rating: r.rating,
@@ -201,10 +230,20 @@ async function getJudgeAnalytics(judgeId: string, startDate: Date, supabase: any
       earnings_breakdown: {
         total: totalEarnings,
         available: availableEarnings,
-        pending: earnings?.filter(e => e.payout_status === 'pending')
-          .reduce((sum, e) => sum + e.net_amount_cents, 0) || 0,
-        paid: earnings?.filter(e => e.payout_status === 'paid')
-          .reduce((sum, e) => sum + e.net_amount_cents, 0) || 0,
+        pending:
+          earnings
+            ?.filter((e: any) => e.payout_status === 'pending')
+            .reduce(
+              (sum: number, e: any) => sum + e.net_amount_cents,
+              0
+            ) || 0,
+        paid:
+          earnings
+            ?.filter((e: any) => e.payout_status === 'paid')
+            .reduce(
+              (sum: number, e: any) => sum + e.net_amount_cents,
+              0
+            ) || 0,
       },
     });
 
@@ -269,7 +308,7 @@ async function getAverageResponseTime(judgeId: string, startDate: Date, supabase
 
   if (!responses || responses.length === 0) return 0;
 
-  const totalTime = responses.reduce((sum, response) => {
+  const totalTime = responses.reduce((sum: number, response: any) => {
     const requestTime = new Date(response.verdict_requests.created_at);
     const responseTime = new Date(response.created_at);
     const diffHours = (responseTime.getTime() - requestTime.getTime()) / (1000 * 60 * 60);

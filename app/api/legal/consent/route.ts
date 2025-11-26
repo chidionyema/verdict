@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
@@ -30,7 +29,7 @@ export async function POST(request: NextRequest) {
     const userAgent = request.headers.get('user-agent') || 'unknown';
 
     // Record consent
-    const { data: consent, error } = await supabase
+    const { data: consent, error } = await (supabase as any)
       .from('user_consents')
       .insert({
         user_id: user.id,
@@ -56,7 +55,10 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: 'Invalid consent data', details: error.errors }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Invalid consent data', details: (error as any).errors },
+        { status: 400 }
+      );
     }
 
     console.error('Consent recording error:', error);
@@ -76,7 +78,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const consentType = searchParams.get('type');
 
-    let query = supabase
+    let query = (supabase as any)
       .from('user_consents')
       .select('*')
       .eq('user_id', user.id)

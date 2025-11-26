@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
@@ -26,11 +25,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user is admin
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile, error: profileError } = await (supabase as any)
       .from('profiles')
       .select('is_admin')
       .eq('id', user.id)
-      .single() as { data: { is_admin: boolean } | null; error: any };
+      .single();
 
     if (profileError || !profile || !profile.is_admin) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
@@ -44,25 +43,25 @@ export async function POST(request: NextRequest) {
 
     switch (validated.data_type) {
       case 'requests':
-        const { data: requests } = await exportRequests(supabase, validated.filters);
+    const { data: requests } = await exportRequests(supabase as any, validated.filters);
         data = requests || [];
         filename = `verdict_requests_${new Date().toISOString().split('T')[0]}`;
         break;
 
       case 'responses':
-        const { data: responses } = await exportResponses(supabase, validated.filters);
+        const { data: responses } = await exportResponses(supabase as any, validated.filters);
         data = responses || [];
         filename = `verdict_responses_${new Date().toISOString().split('T')[0]}`;
         break;
 
       case 'users':
-        const { data: users } = await exportUsers(supabase, validated.filters);
+        const { data: users } = await exportUsers(supabase as any, validated.filters);
         data = users || [];
         filename = `users_${new Date().toISOString().split('T')[0]}`;
         break;
 
       case 'analytics':
-        const { data: analytics } = await exportAnalytics(supabase, validated.filters);
+        const { data: analytics } = await exportAnalytics(supabase as any, validated.filters);
         data = analytics || [];
         filename = `analytics_${new Date().toISOString().split('T')[0]}`;
         break;
@@ -132,7 +131,10 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: 'Invalid export parameters', details: error.errors }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Invalid export parameters', details: (error as any).errors },
+        { status: 400 }
+      );
     }
 
     console.error('Export error:', error);
@@ -245,7 +247,11 @@ async function exportAnalytics(supabase: any, filters: any = {}) {
     summary: {
       total_requests: requestStats?.length || 0,
       total_responses: responseStats?.length || 0,
-      average_rating: responseStats?.reduce((sum, r) => sum + (r.rating || 0), 0) / (responseStats?.length || 1),
+      average_rating:
+        (responseStats?.reduce(
+          (sum: number, r: any) => sum + (r.rating || 0),
+          0
+        ) || 0) / (responseStats?.length || 1),
     },
   };
 

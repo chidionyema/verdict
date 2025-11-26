@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import {
@@ -9,13 +8,15 @@ import {
   VERDICT_TIER_PRICING,
 } from '@/lib/validations';
 import { createVerdictRequest } from '@/lib/verdicts';
+import { requestRateLimiter, generalApiRateLimiter, checkRateLimit } from '@/lib/rate-limiter';
+import { sendRequestLifecycleEmail } from '@/lib/notifications';
 
 // GET /api/requests - List current user's requests
 export async function GET(request: NextRequest) {
   const startTime = performance.now();
   try {
     console.log('GET /api/requests: Starting...');
-    
+
     const supabase = await createClient();
 
     const {
@@ -26,6 +27,18 @@ export async function GET(request: NextRequest) {
     if (authError || !user) {
       console.log('GET /api/requests: Auth failed', authError?.message);
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Rate limiting
+    const rateLimitCheck = await checkRateLimit(generalApiRateLimiter, user.id);
+    if (!rateLimitCheck.allowed) {
+      return NextResponse.json(
+        { error: rateLimitCheck.error },
+        {
+          status: 429,
+          headers: { 'Retry-After': rateLimitCheck.retryAfter?.toString() || '60' }
+        }
+      );
     }
 
     console.log('GET /api/requests: User authenticated:', user.id);
@@ -85,6 +98,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Rate limiting - strict for request creation
+    const rateLimitCheck = await checkRateLimit(requestRateLimiter, user.id);
+    if (!rateLimitCheck.allowed) {
+      return NextResponse.json(
+        { error: rateLimitCheck.error },
+        {
+          status: 429,
+          headers: { 'Retry-After': rateLimitCheck.retryAfter?.toString() || '60' }
+        }
+      );
+    }
+
     const body = await request.json();
     const {
       category,
@@ -140,10 +165,10 @@ export async function POST(request: NextRequest) {
     // Delegate to domain logic for credits + request creation
     try {
       const { request: createdRequest } = await createVerdictRequest(
-        supabase,
+        supabase as any,
         {
           userId: user.id,
-          email: user.email,
+          email: (user.email ?? null) as string | null,
           category,
           subcategory,
           media_type,
@@ -155,6 +180,16 @@ export async function POST(request: NextRequest) {
           targetVerdictCount: tierConfig.verdicts,
         }
       );
+
+      // Best-effort email notification
+      if (user.email) {
+        void sendRequestLifecycleEmail('request_created', {
+          to: user.email,
+          requestId: createdRequest.id,
+          title: context?.slice(0, 80),
+          category,
+        });
+      }
 
       return NextResponse.json({ request: createdRequest }, { status: 201 });
     } catch (err: any) {

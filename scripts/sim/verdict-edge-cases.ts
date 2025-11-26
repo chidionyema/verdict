@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Verdict edge-case simulations:
  *
@@ -119,7 +118,7 @@ async function testClosedRequestRejection() {
   if (!final.request) throw new Error('Request not found after completion');
 
   const { request: finalRequest } = final;
-  const isCompleted = finalRequest.status === 'completed';
+  const isCompleted = finalRequest.status === 'closed';
 
   if (!isCompleted) {
     throw new Error(

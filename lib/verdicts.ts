@@ -1,4 +1,3 @@
-// @ts-nocheck
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database, VerdictRequest, VerdictResponse } from './database.types';
 
@@ -57,10 +56,10 @@ export async function createVerdictRequest(
   const targetCount = targetVerdictCount ?? 3;
   const creditsToUse = creditsToCharge ?? 1;
 
-  // Ensure profile exists and fetch credits
+  // Ensure profile exists first
   let { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('credits')
+    .select('id, credits')
     .eq('id', userId)
     .single();
 
@@ -71,7 +70,7 @@ export async function createVerdictRequest(
 
   // Create profile with starter credits if it doesn't exist
   if (!profile) {
-    const { data: newProfile, error: createError } = await supabase
+    const { data: newProfile, error: createError } = await (supabase as any)
       .from('profiles')
       .insert({
         id: userId,
@@ -81,7 +80,7 @@ export async function createVerdictRequest(
         is_judge: false,
         is_admin: false,
       })
-      .select('credits')
+      .select('id, credits')
       .single();
 
     if (createError || !newProfile) {
@@ -91,25 +90,27 @@ export async function createVerdictRequest(
     profile = newProfile;
   }
 
-  if (profile.credits < creditsToUse) {
-    const err = new Error('Insufficient credits');
+  // Use atomic deduct_credits function to prevent race conditions
+  const { data: deductResult, error: deductError } = await (supabase.rpc as any)('deduct_credits', {
+    p_user_id: userId,
+    p_credits: creditsToUse
+  });
+
+  if (deductError) {
+    throw new Error(`Failed to deduct credits: ${deductError.message}`);
+  }
+
+  // Check if deduction was successful
+  const result = (deductResult as any)?.[0];
+  if (!result || !result.success) {
+    const err = new Error(result?.message || 'Insufficient credits');
     // @ts-expect-error augment error
     err.code = 'INSUFFICIENT_CREDITS';
     throw err;
   }
 
-  // Deduct credits
-  const { error: creditError } = await supabase
-    .from('profiles')
-    .update({ credits: profile.credits - creditsToUse })
-    .eq('id', userId);
-
-  if (creditError) {
-    throw new Error(`Failed to deduct credits: ${creditError.message}`);
-  }
-
   // Create the request
-  const { data: newRequest, error: createRequestError } = await supabase
+  const { data: newRequest, error: createRequestError } = await (supabase as any)
     .from('verdict_requests')
     .insert({
       user_id: userId,
@@ -127,11 +128,12 @@ export async function createVerdictRequest(
     .single();
 
   if (createRequestError || !newRequest) {
-    // Attempt best-effort credit refund
-    await supabase
-      .from('profiles')
-      .update({ credits: profile.credits })
-      .eq('id', userId);
+    // Atomic credit refund on failure
+    await (supabase.rpc as any)('refund_credits', {
+      p_user_id: userId,
+      p_credits: creditsToUse,
+      p_reason: 'Request creation failed'
+    });
 
     throw new Error(`Failed to create request: ${createRequestError?.message}`);
   }
@@ -166,7 +168,7 @@ export async function addJudgeVerdict(
   const { requestId, judgeId, rating, feedback, tone } = input;
 
   // Fetch the request
-  const { data: verdictRequest, error: requestError } = await supabase
+  const { data: verdictRequest, error: requestError } = await (supabase as any)
     .from('verdict_requests')
     .select('*')
     .eq('id', requestId)
@@ -195,7 +197,7 @@ export async function addJudgeVerdict(
   }
 
   // Prevent double response by same judge
-  const { data: existingResponse } = await supabase
+  const { data: existingResponse } = await (supabase as any)
     .from('verdict_responses')
     .select('id')
     .eq('request_id', requestId)
@@ -210,7 +212,7 @@ export async function addJudgeVerdict(
   }
 
   // Insert verdict
-  const { data: verdict, error: createError } = await supabase
+  const { data: verdict, error: createError } = await (supabase as any)
     .from('verdict_responses')
     .insert({
       request_id: requestId,

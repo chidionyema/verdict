@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 
@@ -21,7 +20,7 @@ export async function GET(
     }
 
     // Fetch the request
-    const { data: verdictRequest, error: requestError } = await supabase
+    const { data: verdictRequest, error: requestError } = await (supabase as any)
       .from('verdict_requests')
       .select('*')
       .eq('id', id)
@@ -32,24 +31,24 @@ export async function GET(
     }
 
     // Check if user owns this request
-    if (verdictRequest.user_id !== user.id) {
+    if ((verdictRequest as any).user_id !== user.id) {
       // Check if user is a judge (can view for judging)
-      const { data: profile } = await supabase
+      const { data: profile } = await (supabase as any)
         .from('profiles')
         .select('is_judge, is_admin')
         .eq('id', user.id)
         .single();
 
-      if (!profile?.is_judge && !profile?.is_admin) {
+      if (!(profile as any)?.is_judge && !(profile as any)?.is_admin) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }
     }
 
     // Fetch verdicts for this request using service client to avoid RLS edge-cases,
     // after we've already verified that the caller is allowed to view this request.
-    const serviceClient = createServiceClient();
+    const serviceClient = createServiceClient() as any;
 
-    const { data: verdicts, error: verdictsError } = await serviceClient
+    const { data: verdicts, error: verdictsError } = await (serviceClient as any)
       .from('verdict_responses')
       .select('*')
       .eq('request_id', id)
@@ -59,17 +58,9 @@ export async function GET(
       console.error('Fetch verdicts error:', verdictsError);
     }
 
-    // Temporary deep debug for partial-results bug
-    console.log('DEBUG verdict_responses', {
-      requestId: id,
-      verdictsError,
-      verdictsLength: verdicts?.length ?? 0,
-      sample: verdicts?.[0],
-    });
-
     // For seekers, don't expose judge IDs (anonymize)
-    const anonymizedVerdicts = verdicts?.map((v, index) => ({
-      ...v,
+    const anonymizedVerdicts = verdicts?.map((v: any, index: number) => ({
+      ...(v as any),
       judge_id: undefined,
       judge_number: index + 1,
     }));
@@ -106,7 +97,7 @@ export async function PATCH(
     const { action, reason } = body;
 
     // Fetch the request
-    const { data: verdictRequest, error: requestError } = await supabase
+    const { data: verdictRequest, error: requestError } = await (supabase as any)
       .from('verdict_requests')
       .select('*')
       .eq('id', id)
@@ -117,7 +108,7 @@ export async function PATCH(
     }
 
     // Check ownership
-    if (verdictRequest.user_id !== user.id) {
+    if ((verdictRequest as any).user_id !== user.id) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -127,7 +118,10 @@ export async function PATCH(
       updateData.is_flagged = true;
       updateData.flagged_reason = reason || 'Flagged by user';
     } else if (action === 'cancel') {
-      if (verdictRequest.status !== 'in_progress' && verdictRequest.status !== 'pending') {
+      if (
+        (verdictRequest as any).status !== 'in_progress' &&
+        (verdictRequest as any).status !== 'pending'
+      ) {
         return NextResponse.json(
           { error: 'Can only cancel requests that are in progress' },
           { status: 400 }
@@ -138,7 +132,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
     }
 
-    const { data: updatedRequest, error: updateError } = await supabase
+    const { data: updatedRequest, error: updateError } = await (supabase as any)
       .from('verdict_requests')
       .update(updateData)
       .eq('id', id)

@@ -166,7 +166,7 @@ export default function WorldClassLandingPage() {
             <ArrowRight className="w-6 h-6" />
           </TouchButton>
 
-          <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-6 text-purple-200 text-sm">
+          <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6 text-purple-200 text-sm">
             <div className="flex items-center gap-2">
               <CheckCircle className="w-4 h-4" />
               <span>3 Free Verdicts</span>

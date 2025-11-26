@@ -98,7 +98,10 @@ export default function Navigation() {
         <div className="flex justify-between h-16 items-center">
           {/* Logo */}
           <div className="flex items-center">
-            <Link href="/" className="text-2xl font-bold text-indigo-600">
+            <Link
+              href={user ? '/my-requests' : '/'}
+              className="text-2xl font-bold text-indigo-600"
+            >
               Verdict
             </Link>
           </div>

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
@@ -31,7 +30,7 @@ export async function GET(request: NextRequest) {
 
     const supabase = await createClient();
 
-    let query = supabase
+    let query = (supabase as any)
       .from('help_articles')
       .select(`
         id,
@@ -72,13 +71,15 @@ export async function GET(request: NextRequest) {
     }
 
     // Get categories for filtering
-    const { data: categories } = await supabase
+    const { data: categories } = await (supabase as any)
       .from('help_articles')
       .select('category')
       .eq('is_published', true)
       .order('category');
 
-    const uniqueCategories = [...new Set(categories?.map(c => c.category) || [])];
+    const uniqueCategories = [
+      ...new Set((categories?.map((c: any) => c.category) || [])),
+    ];
 
     return NextResponse.json({
       articles,
@@ -93,7 +94,10 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: 'Invalid request parameters', details: error.errors }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Invalid request parameters', details: (error as any).errors },
+        { status: 400 }
+      );
     }
 
     console.error('Help articles error:', error);
@@ -111,11 +115,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user is admin
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile, error: profileError } = await (supabase as any)
       .from('profiles')
       .select('is_admin')
       .eq('id', user.id)
-      .single() as { data: { is_admin: boolean } | null; error: any };
+      .single();
 
     if (profileError || !profile || !profile.is_admin) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
@@ -125,7 +129,7 @@ export async function POST(request: NextRequest) {
     const validated = createArticleSchema.parse(body);
 
     // Create article
-    const { data: article, error } = await supabase
+    const { data: article, error } = await (supabase as any)
       .from('help_articles')
       .insert({
         title: validated.title,
@@ -148,7 +152,10 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: 'Invalid request data', details: error.errors }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Invalid request data', details: (error as any).errors },
+        { status: 400 }
+      );
     }
 
     console.error('Create article error:', error);

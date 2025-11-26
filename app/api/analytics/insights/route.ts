@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
@@ -15,7 +14,7 @@ export async function GET(request: NextRequest) {
     const userType = searchParams.get('user_type') || 'requester';
 
     if (userType === 'judge') {
-      const { data: profile } = await supabase
+      const { data: profile } = await (supabase as any)
         .from('profiles')
         .select('is_judge')
         .eq('id', user.id)
@@ -71,7 +70,9 @@ async function getRequesterInsights(userId: string, supabase: any) {
 
     // Response rate insight
     const totalRequests = requests.length;
-    const requestsWithResponses = requests.filter(r => r.verdict_responses.length > 0).length;
+    const requestsWithResponses = requests.filter(
+      (r: any) => r.verdict_responses.length > 0
+    ).length;
     const responseRate = requestsWithResponses / totalRequests;
 
     if (responseRate < 0.3) {
@@ -86,30 +87,38 @@ async function getRequesterInsights(userId: string, supabase: any) {
     }
 
     // Category performance insight
-    const categoryStats = requests.reduce((acc, req) => {
-      if (!acc[req.category]) {
-        acc[req.category] = { count: 0, totalRating: 0, responses: 0 };
-      }
-      acc[req.category].count++;
-      
-      const avgRating = req.verdict_responses.length > 0 
-        ? req.verdict_responses.reduce((sum: number, r: any) => sum + (r.rating || 0), 0) / req.verdict_responses.length
-        : 0;
-      
-      if (avgRating > 0) {
-        acc[req.category].totalRating += avgRating;
-        acc[req.category].responses++;
-      }
-      
-      return acc;
-    }, {} as Record<string, any>);
+    const categoryStats = requests.reduce(
+      (acc: Record<string, any>, req: any) => {
+        if (!acc[req.category]) {
+          acc[req.category] = { count: 0, totalRating: 0, responses: 0 };
+        }
+        acc[req.category].count++;
+        
+        const avgRating =
+          req.verdict_responses.length > 0
+            ? req.verdict_responses.reduce(
+                (sum: number, r: any) => sum + (r.rating || 0),
+                0
+              ) / req.verdict_responses.length
+            : 0;
+        
+        if (avgRating > 0) {
+          acc[req.category].totalRating += avgRating;
+          acc[req.category].responses++;
+        }
+        
+        return acc;
+      },
+      {} as Record<string, any>
+    );
 
     let bestCategory = '';
     let bestRating = 0;
     
     Object.entries(categoryStats).forEach(([category, stats]) => {
-      if (stats.responses > 0) {
-        const avgRating = stats.totalRating / stats.responses;
+      const s = stats as any;
+      if (s.responses > 0) {
+        const avgRating = s.totalRating / s.responses;
         if (avgRating > bestRating) {
           bestRating = avgRating;
           bestCategory = category;
@@ -128,15 +137,25 @@ async function getRequesterInsights(userId: string, supabase: any) {
 
     // Credit usage insight
     const creditSpending = transactions
-      .filter(t => t.type === 'verdict_request')
+      .filter((t: any) => t.type === 'verdict_request')
       .slice(0, 10);
     
     if (creditSpending.length >= 5) {
       const recentSpending = creditSpending.slice(0, 5);
       const olderSpending = creditSpending.slice(5);
       
-      const recentAvg = recentSpending.reduce((sum, t) => sum + Math.abs(t.credits_delta || 0), 0) / recentSpending.length;
-      const olderAvg = olderSpending.reduce((sum, t) => sum + Math.abs(t.credits_delta || 0), 0) / olderSpending.length;
+      const recentAvg =
+        recentSpending.reduce(
+          (sum: number, t: any) =>
+            sum + Math.abs(t.credits_delta || 0),
+          0
+        ) / recentSpending.length;
+      const olderAvg =
+        olderSpending.reduce(
+          (sum: number, t: any) =>
+            sum + Math.abs(t.credits_delta || 0),
+          0
+        ) / olderSpending.length;
       
       if (recentAvg > olderAvg * 1.5) {
         insights.push({
@@ -153,7 +172,9 @@ async function getRequesterInsights(userId: string, supabase: any) {
     // Time-based insights
     const now = new Date();
     const last30Days = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-    const recentRequests = requests.filter(r => new Date(r.created_at) > last30Days);
+    const recentRequests = requests.filter(
+      (r: any) => new Date(r.created_at) > last30Days
+    );
 
     if (recentRequests.length === 0 && requests.length > 0) {
       const lastRequest = new Date(requests[0].created_at);
@@ -171,16 +192,28 @@ async function getRequesterInsights(userId: string, supabase: any) {
 
     // Response time insight
     const responseTimes = requests
-      .filter(r => r.verdict_responses.length > 0)
-      .map(r => {
+      .filter((r: any) => r.verdict_responses.length > 0)
+      .map((r: any) => {
         const requestTime = new Date(r.created_at);
         const firstResponse = r.verdict_responses
-          .sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())[0];
-        return (new Date(firstResponse.created_at).getTime() - requestTime.getTime()) / (1000 * 60 * 60);
+          .sort(
+            (a: any, b: any) =>
+              new Date(a.created_at).getTime() -
+              new Date(b.created_at).getTime()
+          )[0];
+        return (
+          (new Date(firstResponse.created_at).getTime() -
+            requestTime.getTime()) /
+          (1000 * 60 * 60)
+        );
       });
 
     if (responseTimes.length > 0) {
-      const avgResponseTime = responseTimes.reduce((sum, time) => sum + time, 0) / responseTimes.length;
+      const avgResponseTime =
+        responseTimes.reduce(
+          (sum: number, time: number) => sum + time,
+          0
+        ) / responseTimes.length;
       
       if (avgResponseTime < 2) {
         insights.push({
@@ -239,7 +272,11 @@ async function getJudgeInsights(judgeId: string, supabase: any) {
     }
 
     // Rating performance insight
-    const avgRating = responses.reduce((sum, r) => sum + (r.rating || 0), 0) / responses.length;
+    const avgRating =
+      responses.reduce(
+        (sum: number, r: any) => sum + (r.rating || 0),
+        0
+      ) / responses.length;
     
     if (avgRating >= 8) {
       insights.push({
@@ -260,23 +297,32 @@ async function getJudgeInsights(judgeId: string, supabase: any) {
     }
 
     // Specialty category insight
-    const categoryStats = responses.reduce((acc, resp) => {
-      const category = resp.verdict_requests.category;
-      if (!acc[category]) {
-        acc[category] = { count: 0, totalRating: 0, totalHelpfulness: 0 };
-      }
-      acc[category].count++;
-      acc[category].totalRating += resp.rating || 0;
-      acc[category].totalHelpfulness += resp.helpfulness || 0;
-      return acc;
-    }, {} as Record<string, any>);
+    const categoryStats = responses.reduce(
+      (acc: Record<string, any>, resp: any) => {
+        const category = resp.verdict_requests.category;
+        if (!acc[category]) {
+          acc[category] = {
+            count: 0,
+            totalRating: 0,
+            totalHelpfulness: 0,
+          };
+        }
+        acc[category].count++;
+        acc[category].totalRating += resp.rating || 0;
+        acc[category].totalHelpfulness += resp.helpfulness || 0;
+        return acc;
+      },
+      {} as Record<string, any>
+    );
 
     let bestCategory = '';
     let bestScore = 0;
     
     Object.entries(categoryStats).forEach(([category, stats]) => {
-      if (stats.count >= 3) {
-        const avgScore = (stats.totalRating + stats.totalHelpfulness) / (stats.count * 2);
+      const s = stats as any;
+      if (s.count >= 3) {
+        const avgScore =
+          (s.totalRating + s.totalHelpfulness) / (s.count * 2);
         if (avgScore > bestScore) {
           bestScore = avgScore;
           bestCategory = category;
@@ -295,10 +341,13 @@ async function getJudgeInsights(judgeId: string, supabase: any) {
 
     // Earnings insights
     if (earnings && earnings.length > 0) {
-      const totalEarnings = earnings.reduce((sum, e) => sum + e.net_amount_cents, 0);
+      const totalEarnings = earnings.reduce(
+        (sum: number, e: any) => sum + e.net_amount_cents,
+        0
+      );
       const availableEarnings = earnings
-        .filter(e => e.payout_status === 'available')
-        .reduce((sum, e) => sum + e.net_amount_cents, 0);
+        .filter((e: any) => e.payout_status === 'available')
+        .reduce((sum: number, e: any) => sum + e.net_amount_cents, 0);
 
       if (availableEarnings >= 1000) { // $10+
         insights.push({
@@ -313,10 +362,15 @@ async function getJudgeInsights(judgeId: string, supabase: any) {
 
       // Earnings trend
       const last30Days = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-      const recentEarnings = earnings.filter(e => new Date(e.created_at) > last30Days);
+      const recentEarnings = earnings.filter(
+        (e: any) => new Date(e.created_at) > last30Days
+      );
       
       if (recentEarnings.length > 0) {
-        const monthlyEarnings = recentEarnings.reduce((sum, e) => sum + e.net_amount_cents, 0);
+        const monthlyEarnings = recentEarnings.reduce(
+          (sum: number, e: any) => sum + e.net_amount_cents,
+          0
+        );
         const projectedMonthly = (monthlyEarnings / recentEarnings.length) * 30;
         
         if (projectedMonthly > 5000) { // $50+/month projected
@@ -331,14 +385,16 @@ async function getJudgeInsights(judgeId: string, supabase: any) {
     }
 
     // Response time insight
-    const responseTimes = responses.map(resp => {
+    const responseTimes = responses.map((resp: any) => {
       const requestTime = new Date(resp.verdict_requests.created_at);
       const responseTime = new Date(resp.created_at);
       return (responseTime.getTime() - requestTime.getTime()) / (1000 * 60 * 60);
     });
 
     if (responseTimes.length > 0) {
-      const avgResponseTime = responseTimes.reduce((sum, time) => sum + time, 0) / responseTimes.length;
+      const avgResponseTime =
+        responseTimes.reduce((sum: number, time: number) => sum + time, 0) /
+        responseTimes.length;
       
       if (avgResponseTime < 2) {
         insights.push({
@@ -359,7 +415,9 @@ async function getJudgeInsights(judgeId: string, supabase: any) {
 
     // Activity consistency
     const last7Days = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    const recentResponses = responses.filter(r => new Date(r.created_at) > last7Days);
+    const recentResponses = responses.filter(
+      (r: any) => new Date(r.created_at) > last7Days
+    );
     
     if (recentResponses.length === 0 && responses.length > 0) {
       insights.push({

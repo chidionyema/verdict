@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
@@ -16,7 +15,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { data: profile } = await supabase
+    const { data: profile } = await (supabase as any)
       .from('profiles')
       .select('is_admin')
       .eq('id', user.id)
@@ -29,7 +28,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const { data: candidates, error } = await supabase
+    const { data: candidates, error } = await (supabase as any)
       .from('verdict_requests')
       .select(
         'id, user_id, status, category, target_verdict_count, received_verdict_count, created_at, updated_at'
@@ -47,7 +46,8 @@ export async function GET(request: NextRequest) {
 
     const anomalies =
       candidates?.filter(
-        (r) => (r.received_verdict_count || 0) >= (r.target_verdict_count || 0)
+        (r: any) =>
+          (r.received_verdict_count || 0) >= (r.target_verdict_count || 0)
       ) ?? [];
 
     return NextResponse.json({ requests: anomalies });
