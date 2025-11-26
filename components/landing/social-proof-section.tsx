@@ -1,9 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { 
   Star, 
   Verified, 
@@ -14,69 +12,56 @@ import {
   Quote,
   CheckCircle,
   Users,
-  Award
+  Award,
+  Shield
 } from 'lucide-react';
 
-const REAL_TIME_ACTIVITY = [
-  { name: 'Sarah', action: 'got verdict on dating profile photos', time: '2 min ago', rating: 8.5 },
-  { name: 'Mike', action: 'received feedback on a salary negotiation email', time: '4 min ago', rating: 9.2 },
-  { name: 'Jessica', action: 'outfit check before a big interview', time: '6 min ago', rating: 7.8 },
-  { name: 'David', action: 'career decision feedback about moving cities', time: '8 min ago', rating: 8.9 },
-  { name: 'Emma', action: 'tone check on an email to her manager', time: '11 min ago', rating: 9.1 },
-];
 
 const FEATURED_TESTIMONIALS = [
   {
     id: 1,
-    name: "Sarah Chen",
-    role: "Marketing Manager",
-    company: "Tech Startup",
-    image: "SC",
+    name: "Mike",
+    role: "28",
+    company: "",
+    image: "M",
     rating: 5,
-    text: "I was nervous about my presentation style and got incredibly detailed feedback. The anonymity meant people were brutally honest, which is exactly what I needed. Changed my entire approach!",
-    category: "Professional",
-    verified: true,
-    result: "30% better presentation scores"
+    text: "Finally got honest feedback on my dating photos. Turns out the group shot was killing my profile.",
+    category: "Dating",
+    verified: false,
+    result: ""
   },
   {
     id: 2,
-    name: "Mike Rodriguez",
-    role: "Entrepreneur", 
-    company: "Founder",
-    image: "MR",
+    name: "Startup founder",
+    role: "",
+    company: "",
+    image: "S",
     rating: 5,
-    text: "Used this before launching my product packaging. The feedback caught design flaws I never noticed. Saved me thousands in redesign costs after launch.",
+    text: "Used it before a pitch. One reviewer caught a flaw in my pricing slide I'd missed for weeks.",
     category: "Business",
-    verified: true,
-    result: "Prevented costly redesign"
+    verified: false,
+    result: ""
   },
   {
     id: 3,
-    name: "Jessica Kim",
-    role: "College Student",
-    company: "NYU",
-    image: "JK", 
+    name: "Beta user",
+    role: "",
+    company: "",
+    image: "B", 
     rating: 5,
-    text: "Way better than asking friends who just tell you what you want to hear. Got honest feedback on my dating profile and actually started getting matches!",
-    category: "Personal",
-    verified: true,
-    result: "3x more dating matches"
+    text: "Super quick, and the responses were way more honest than I expected.",
+    category: "Early tester",
+    verified: false,
+    result: ""
   }
 ];
 
 const TRUST_METRICS = [
   {
-    icon: Users,
-    label: 'Active users',
-    value: '47,000+',
-    trend: '+23% this month',
-    color: 'text-blue-600',
-  },
-  {
     icon: MessageSquare,
-    label: 'Verdicts this week',
-    value: '3,847',
-    trend: 'Across all categories',
+    label: 'Verdicts delivered',
+    value: '500+',
+    trend: 'And growing',
     color: 'text-green-600',
   },
   {
@@ -93,45 +78,25 @@ const TRUST_METRICS = [
     trend: 'Money‑back guarantee if slower',
     color: 'text-purple-600',
   },
+  {
+    icon: Shield,
+    label: 'Privacy first',
+    value: '100%',
+    trend: 'Anonymous & secure',
+    color: 'text-blue-600',
+  },
 ];
 
 export function SocialProofSection() {
-  const [activeActivity, setActiveActivity] = useState(0);
-  const [liveCount, setLiveCount] = useState(283);
-
-  useEffect(() => {
-    // Rotate through real-time activity
-    const activityInterval = setInterval(() => {
-      setActiveActivity((prev) => (prev + 1) % REAL_TIME_ACTIVITY.length);
-    }, 3000);
-
-    // Simulate live judge count changes (small variance, fixed container)
-    const countInterval = setInterval(() => {
-      setLiveCount((prev) => {
-        const delta = Math.floor(Math.random() * 3) - 1;
-        const next = prev + delta;
-        return Math.min(Math.max(next, 260), 320);
-      });
-    }, 5000);
-
-    return () => {
-      clearInterval(activityInterval);
-      clearInterval(countInterval);
-    };
-  }, []);
 
   return (
     <div className="py-16 bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
-        {/* Live Activity Header */}
+        {/* Header */}
         <div className="text-center mb-12">
-          <Badge className="bg-green-100 text-green-800 border-green-300 mb-4">
-            <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
-            {liveCount} people getting verdicts right now
-          </Badge>
           <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-            Join 47,000+ People Getting Honest Feedback
+            Join the movement for honest feedback
           </h2>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
             See what happens when real people give you unfiltered opinions
@@ -181,126 +146,86 @@ export function SocialProofSection() {
                   "{testimonial.text}"
                 </p>
 
-                {/* Result Badge */}
-                <div className="mb-4">
-                  <Badge className="bg-green-100 text-green-800 border-green-300">
-                    <TrendingUp className="w-3 h-3 mr-1" />
-                    {testimonial.result}
-                  </Badge>
-                </div>
-
                 {/* Author Info */}
                 <div className="flex items-center gap-3">
-                  <Avatar className="w-10 h-10">
-                    <AvatarFallback className="bg-purple-100 text-purple-700">
-                      {testimonial.image}
-                    </AvatarFallback>
-                  </Avatar>
+                  <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
+                    <span className="text-purple-700 font-semibold">{testimonial.image}</span>
+                  </div>
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
                       <span className="font-semibold text-gray-900">{testimonial.name}</span>
-                      {testimonial.verified && (
-                        <Verified className="w-4 h-4 text-blue-500" />
+                      {testimonial.role && (
+                        <span className="text-sm text-gray-500">, {testimonial.role}</span>
                       )}
                     </div>
-                    <div className="text-sm text-gray-600">
-                      {testimonial.role} • {testimonial.company}
-                    </div>
+                    {testimonial.category && (
+                      <div className="text-xs text-gray-500">
+                        {testimonial.category}
+                      </div>
+                    )}
                   </div>
-                  <Badge variant="outline" className="text-xs">
-                    {testimonial.category}
-                  </Badge>
                 </div>
               </CardContent>
             </Card>
           ))}
         </div>
 
-        {/* Real-time Activity Feed */}
+        {/* Popular Categories */}
         <Card className="mb-16 border-0 shadow-lg">
           <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-semibold text-gray-900">Live Activity</h3>
-              <Badge className="bg-green-100 text-green-800">
-                <div className="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></div>
-                Real-time
-              </Badge>
+            <div className="mb-6">
+              <h3 className="text-xl font-semibold text-gray-900">Popular verdict categories</h3>
             </div>
 
-            <div className="activity-feed space-y-3">
-              {REAL_TIME_ACTIVITY.map((activity, index) => (
-                <div
-                  key={index}
-                  className={`
-                    flex items-center gap-4 p-3 rounded-lg transition-all duration-500
-                    ${index === activeActivity 
-                      ? 'bg-purple-50 border border-purple-200 shadow-sm' 
-                      : 'bg-gray-50'
-                    }
-                  `}
-                >
-                  <Avatar className="w-8 h-8">
-                    <AvatarFallback className="bg-blue-100 text-blue-700 text-sm">
-                      {activity.name[0]}
-                    </AvatarFallback>
-                  </Avatar>
-                  
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900">
-                      <span className="font-semibold">{activity.name}</span> {activity.action}
-                    </p>
-                    <p className="text-xs text-gray-500">{activity.time}</p>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <div className="text-right">
-                      <div className="text-sm font-semibold text-gray-900">
-                        {activity.rating}/10
-                      </div>
-                      <div className="flex text-yellow-400">
-                        {[...Array(Math.floor(activity.rating / 2))].map((_, i) => (
-                          <Star key={i} className="w-3 h-3 fill-current" />
-                        ))}
-                      </div>
-                    </div>
-                    {index === activeActivity && (
-                      <CheckCircle className="w-5 h-5 text-green-500" />
-                    )}
-                  </div>
-                </div>
-              ))}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50">
+                <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                <span className="text-gray-700">Dating profiles</span>
+              </div>
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50">
+                <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                <span className="text-gray-700">Job interview prep</span>
+              </div>
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50">
+                <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                <span className="text-gray-700">Business decisions</span>
+              </div>
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50">
+                <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                <span className="text-gray-700">Style & appearance</span>
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Recognition Section */}
+        {/* Privacy First Section */}
         <div className="text-center">
           <h3 className="text-2xl font-bold text-gray-900 mb-8">
-            Trusted by Leading Communities
+            Built with privacy first
           </h3>
           
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-8 text-gray-600">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-6 text-gray-700">
             <div className="flex items-center gap-2">
-              <Award className="w-5 h-5 text-purple-600" />
-              <span>Featured on Product Hunt</span>
+              <CheckCircle className="w-5 h-5 text-green-600" />
+              <span>No accounts required</span>
             </div>
             <div className="flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-green-600" />
-              <span>Top 1% User Satisfaction</span>
+              <Shield className="w-5 h-5 text-green-600" />
+              <span>No data sold</span>
             </div>
             <div className="flex items-center gap-2">
-              <Users className="w-5 h-5 text-blue-600" />
-              <span>47K+ Active Community</span>
+              <Clock className="w-5 h-5 text-green-600" />
+              <span>Submissions auto-delete after 30 days</span>
             </div>
           </div>
 
           {/* Final CTA */}
           <div className="mt-12 p-8 bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl text-white">
             <h3 className="text-2xl font-bold mb-2">
-              Ready to Get Brutally Honest Feedback?
+              Ready to Get Unfiltered Feedback?
             </h3>
             <p className="text-purple-100 mb-6 max-w-2xl mx-auto">
-              Join thousands who've discovered what people really think. 
+              Be among the first to get honest opinions. 
               Start with 3 free verdicts - no credit card required.
             </p>
             

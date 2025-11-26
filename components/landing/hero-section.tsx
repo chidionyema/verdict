@@ -69,7 +69,7 @@ export function HeroSection() {
           {/* Pre-headline Badge */}
           <Badge className="mb-6 bg-gradient-to-r from-purple-600 to-pink-600 text-white border-0 px-4 py-2">
             <Sparkles className="w-4 h-4 mr-2" />
-            Over 1M+ honest opinions delivered
+            Be among the first to get unfiltered opinions
           </Badge>
 
           {/* Rotating Headline */}
@@ -89,7 +89,7 @@ export function HeroSection() {
                 "{USE_CASES[currentUseCase]}"
               </span>
               <br />
-              Get 3 expert opinions from qualified judges for <span className="font-semibold text-gray-900">$3.49</span>.
+              Get 3 honest opinions from real people for <span className="font-semibold text-gray-900">$3.49</span>.
             </p>
           </div>
 

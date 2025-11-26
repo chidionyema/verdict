@@ -22,39 +22,52 @@ import {
 const COMPARISON_DATA = [
   {
     feature: "Get honest opinions",
-    verdict: { available: true, description: "3 expert verdicts from qualified judges" },
+    verdict: { available: true, description: "3 honest opinions from real people" },
     friends: { available: false, description: "Biased opinions to protect your feelings" },
-    social: { available: false, description: "Filtered responses for social image" }
+    social: { available: false, description: "Filtered responses for social image" },
+    reddit: { available: false, description: "Random strangers, variable quality" }
   },
   {
     feature: "Complete anonymity",
     verdict: { available: true, description: "No profiles, names, or personal info shared" },
     friends: { available: false, description: "Everyone knows it's you asking" },
-    social: { available: false, description: "Public posts tied to your identity" }
+    social: { available: false, description: "Public posts tied to your identity" },
+    reddit: { available: false, description: "Public posts anyone can see" }
   },
   {
     feature: "Fast responses",
     verdict: { available: true, description: "Average 4.2 minutes for all verdicts" },
     friends: { available: false, description: "May take days or never respond" },
-    social: { available: true, description: "Quick but often superficial" }
+    social: { available: true, description: "Quick but often superficial" },
+    reddit: { available: false, description: "Might get 0 responses or trolls" }
   },
   {
     feature: "Quality feedback",
     verdict: { available: true, description: "Detailed, constructive responses required" },
     friends: { available: false, description: "Often vague or overly positive" },
-    social: { available: false, description: "Mostly emoji reactions and brief comments" }
+    social: { available: false, description: "Mostly emoji reactions and brief comments" },
+    reddit: { available: false, description: "Variable quality, may include trolls" }
   },
   {
     feature: "Diverse perspectives",
-    verdict: { available: true, description: "Judges from different backgrounds" },
+    verdict: { available: true, description: "Verified reviewers from different backgrounds" },
     friends: { available: false, description: "Similar social circle viewpoints" },
-    social: { available: true, description: "Varied but potentially toxic" }
+    social: { available: true, description: "Varied but potentially toxic" },
+    reddit: { available: true, description: "Diverse but unverified" }
   },
   {
     feature: "No social pressure",
     verdict: { available: true, description: "No awkwardness or relationship impact" },
     friends: { available: false, description: "May affect friendships" },
-    social: { available: false, description: "Public scrutiny and judgment" }
+    social: { available: false, description: "Public scrutiny and judgment" },
+    reddit: { available: false, description: "Public scrutiny and judgment" }
+  },
+  {
+    feature: "Guaranteed responses",
+    verdict: { available: true, description: "Guaranteed 3 responses" },
+    friends: { available: false, description: "No guarantee" },
+    social: { available: false, description: "No guarantee" },
+    reddit: { available: false, description: "Might get 0 responses" }
   }
 ];
 
@@ -81,7 +94,7 @@ const PAIN_POINTS = [
     icon: Clock,
     title: "Slow or no responses",
     problem: "Friends might ignore your request or take forever to respond",
-    solution: "Guaranteed 3 expert responses within hours, not days"
+    solution: "Guaranteed 3 thoughtful responses within hours, not days"
   }
 ];
 
@@ -95,10 +108,10 @@ export function FeaturesComparison() {
         {/* Header */}
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-            Why Verdict Beats Asking Friends
+            Why Verdict Beats Asking Friends or Posting on Reddit
           </h2>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Finally get the honest feedback you've been looking for - without the social drama
+            Unlike posting on Reddit, your question stays private and you're guaranteed real responses — not trolls or silence.
           </p>
         </div>
 
@@ -166,7 +179,7 @@ export function FeaturesComparison() {
           <div className="overflow-x-auto">
             <div className="min-w-[800px]">
               {/* Header Row */}
-              <div className="grid grid-cols-4 gap-4 mb-6">
+              <div className="grid grid-cols-5 gap-4 mb-6">
                 <div className="p-4">
                   <h3 className="font-semibold text-gray-900">What you need</h3>
                 </div>
@@ -183,12 +196,16 @@ export function FeaturesComparison() {
                   <MessageSquare className="w-6 h-6 mx-auto mb-2 text-gray-600" />
                   <h3 className="font-semibold text-gray-700">Social Media</h3>
                 </div>
+                <div className="bg-gray-100 p-4 rounded-xl text-center">
+                  <MessageSquare className="w-6 h-6 mx-auto mb-2 text-gray-600" />
+                  <h3 className="font-semibold text-gray-700">Reddit/Forums</h3>
+                </div>
               </div>
 
               {/* Feature Rows */}
               <div className="space-y-2">
                 {COMPARISON_DATA.map((item, index) => (
-                  <div key={index} className="grid grid-cols-4 gap-4 items-center py-3 border-b border-gray-100 last:border-b-0">
+                  <div key={index} className="grid grid-cols-5 gap-4 items-center py-3 border-b border-gray-100 last:border-b-0">
                     <div className="p-2">
                       <h4 className="font-medium text-gray-900">{item.feature}</h4>
                     </div>
@@ -251,6 +268,31 @@ export function FeaturesComparison() {
                         {item.social.description}
                       </p>
                     </div>
+
+                    {/* Reddit/Forums Column */}
+                    <div className={`p-3 rounded-lg border ${
+                      item.reddit?.available 
+                        ? 'bg-yellow-50 border-yellow-200' 
+                        : 'bg-red-50 border-red-200'
+                    }`}>
+                      <div className="flex items-center gap-2 mb-1">
+                        {item.reddit?.available ? (
+                          <Check className="w-4 h-4 text-yellow-600" />
+                        ) : (
+                          <X className="w-4 h-4 text-red-600" />
+                        )}
+                        <span className={`font-medium ${
+                          item.reddit?.available ? 'text-yellow-900' : 'text-red-900'
+                        }`}>
+                          {item.reddit?.available ? 'Limited' : 'No'}
+                        </span>
+                      </div>
+                      <p className={`text-xs ${
+                        item.reddit?.available ? 'text-yellow-700' : 'text-red-700'
+                      }`}>
+                        {item.reddit?.description}
+                      </p>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -265,7 +307,7 @@ export function FeaturesComparison() {
               Experience the Difference Yourself
             </h3>
             <p className="text-gray-600 mb-6 max-w-2xl mx-auto">
-              Stop getting sugar-coated opinions. Start getting the truth that helps you improve.
+              Stop getting sugar-coated opinions. Start getting straight answers that help you improve.
               Try 3 verdicts completely free - no strings attached.
             </p>
             

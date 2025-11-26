@@ -96,7 +96,7 @@ export default function SocialProofCarousel() {
           Real People, Real Results
         </h3>
         <p className="text-gray-600">
-          Join thousands who've transformed their lives with expert feedback
+          Real people sharing their experiences
         </p>
       </div>
 
@@ -198,7 +198,7 @@ export default function SocialProofCarousel() {
       <div className="mt-4 text-center">
         <div className="flex items-center justify-center gap-2 text-sm text-gray-600">
           <Heart className="h-4 w-4 text-red-500" />
-          <span>Loved by <strong>50,000+</strong> people worldwide</span>
+          <span>Early tester feedback</span>
         </div>
       </div>
     </div>

@@ -9,7 +9,7 @@ const PLANS = [
     badge: 'Free to try',
     verdicts: '3 verdicts',
     delivery: '24hr delivery',
-    features: ['Honest feedback from 3 expert judges', 'Great for testing the experience'],
+    features: ['Honest feedback from 3 real people', 'Great for testing the experience'],
     limitations: ['No judge selection', 'Standard queue'],
     price: '$0',
     priceDetail: 'First request free',

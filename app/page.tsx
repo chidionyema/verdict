@@ -10,7 +10,7 @@ import { FeatureDiscoveryBanner } from "@/components/discovery/FeatureDiscoveryB
 import { JudgeSelectionSection } from "@/components/landing/judge-selection";
 import { PricingTableSection } from "@/components/landing/pricing-table";
 import { ExitIntentModal } from "@/components/ExitIntentModal";
-import { Clock, Shield, CheckCircle, Eye, Star } from "lucide-react";
+import { Clock, Shield, CheckCircle, Eye, Star, Users } from "lucide-react";
 
 export default function HomePage() {
   const router = useRouter();
@@ -26,9 +26,9 @@ export default function HomePage() {
           __html: JSON.stringify({
             "@context": "https://schema.org",
             "@type": "Product",
-            name: "Verdict – Anonymous Feedback from Expert Judges",
+            name: "Verdict – Anonymous Feedback from Real People",
             description:
-              "Get 3 expert opinions on your photo, text, or decision in under an hour. Anonymous, fast, and brutally honest feedback.",
+              "Get 3 honest opinions on your photo, text, or decision in under an hour. Anonymous, fast, and unfiltered feedback.",
             aggregateRating: {
               "@type": "AggregateRating",
               ratingValue: "4.9",
@@ -70,6 +70,47 @@ export default function HomePage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 pb-32">
         <div className="text-center">
 
+          {/* How Judging Works Section */}
+          <div className="mt-20 max-w-4xl mx-auto">
+            <h2 className="text-3xl font-bold text-center mb-6">Want to be a judge?</h2>
+            <p className="text-lg text-gray-600 text-center mb-8 max-w-2xl mx-auto">
+              Help others make better decisions and earn rewards.
+            </p>
+            <div className="bg-white rounded-xl p-8 shadow-sm mb-12">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div className="text-center">
+                  <div className="bg-indigo-100 rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-4">
+                    <Users className="h-6 w-6 text-indigo-600" />
+                  </div>
+                  <h4 className="font-semibold mb-2">Review submissions</h4>
+                  <p className="text-gray-600 text-sm">In your areas of interest</p>
+                </div>
+                <div className="text-center">
+                  <div className="bg-indigo-100 rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-4">
+                    <Star className="h-6 w-6 text-indigo-600" />
+                  </div>
+                  <h4 className="font-semibold mb-2">Get paid</h4>
+                  <p className="text-gray-600 text-sm">Per quality response</p>
+                </div>
+                <div className="text-center">
+                  <div className="bg-indigo-100 rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-4">
+                    <Clock className="h-6 w-6 text-indigo-600" />
+                  </div>
+                  <h4 className="font-semibold mb-2">Flexible</h4>
+                  <p className="text-gray-600 text-sm">Judge when you have time</p>
+                </div>
+              </div>
+              <div className="text-center">
+                <a
+                  href="/become-a-judge"
+                  className="inline-flex items-center px-6 py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition"
+                >
+                  Join as a Judge →
+                </a>
+              </div>
+            </div>
+          </div>
+
           {/* FAQ Section */}
           <div className="mt-20 max-w-4xl mx-auto">
             <h2 className="text-3xl font-bold text-center mb-12">Common Questions</h2>
@@ -81,7 +122,7 @@ export default function HomePage() {
               
               <div className="bg-white rounded-xl p-6 shadow-sm">
                 <h3 className="font-semibold text-lg mb-3 text-gray-900">What if I don't get 3 responses?</h3>
-                <p className="text-gray-600">We guarantee all 3 expert responses within 24 hours, or you get a full refund. Most requests get all 3 responses within hours.</p>
+                <p className="text-gray-600">We guarantee all 3 thoughtful responses within 24 hours, or you get a full refund. Most requests get all 3 responses within hours.</p>
               </div>
               
               <div className="bg-white rounded-xl p-6 shadow-sm">
@@ -111,7 +152,7 @@ export default function HomePage() {
                   <span className="text-indigo-600 font-bold">2</span>
                 </div>
                 <h4 className="font-semibold mb-2">Wait</h4>
-                <p className="text-gray-600 text-sm">3 expert judges review your submission</p>
+                <p className="text-gray-600 text-sm">3 real people review your submission</p>
               </div>
               <div className="text-center">
                 <div className="bg-indigo-100 rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-4">
@@ -173,8 +214,8 @@ export default function HomePage() {
                     ))}
                   </div>
                 </div>
-                <p className="text-gray-700 mb-4">"Got incredibly honest feedback about my dating profile. The responses were thoughtful and helped me see blind spots I never noticed."</p>
-                <div className="text-sm text-gray-500">— Sarah, Marketing Manager</div>
+                <p className="text-gray-700 mb-4">"Finally got honest feedback on my dating photos. Turns out the group shot was killing my profile."</p>
+                <div className="text-sm text-gray-500">— Mike, 28</div>
               </div>
               
               <div className="bg-white rounded-xl p-6 shadow-sm">
@@ -185,8 +226,8 @@ export default function HomePage() {
                     ))}
                   </div>
                 </div>
-                <p className="text-gray-700 mb-4">"Perfect for getting unbiased opinions on business decisions. The anonymity makes people brutally honest in the best way."</p>
-                <div className="text-sm text-gray-500">— Mike, Entrepreneur</div>
+                <p className="text-gray-700 mb-4">"Used it before a pitch. One reviewer caught a flaw in my pricing slide I'd missed for weeks."</p>
+                <div className="text-sm text-gray-500">— Startup founder</div>
               </div>
               
               <div className="bg-white rounded-xl p-6 shadow-sm">
@@ -197,8 +238,8 @@ export default function HomePage() {
                     ))}
                   </div>
                 </div>
-                <p className="text-gray-700 mb-4">"Super fast responses and surprisingly detailed feedback. Way better than asking friends who might just tell you what you want to hear."</p>
-                <div className="text-sm text-gray-500">— Jessica, College Student</div>
+                <p className="text-gray-700 mb-4">"Super quick, and the responses were way more honest than I expected."</p>
+                <div className="text-sm text-gray-500">— Beta user</div>
               </div>
             </div>
           </div>
@@ -228,7 +269,7 @@ export default function HomePage() {
                 Stop Wondering. Start Knowing.
               </h2>
               <p className="text-xl mb-8 text-indigo-100 max-w-2xl mx-auto">
-                Join 47,000+ people who chose truth over uncertainty. Get brutally honest feedback in minutes, not days.
+                Join the movement for honest feedback. Get straight answers in minutes, not days.
               </p>
               
               <div className="space-y-6">
@@ -255,7 +296,7 @@ export default function HomePage() {
                 </div>
                 
                 <p className="text-sm text-indigo-200 mt-4">
-                  No credit card required • Cancel anytime • 4.9/5 rating from 47,000+ users
+                  No credit card required • Cancel anytime • Currently free during beta
                 </p>
               </div>
             </div>
