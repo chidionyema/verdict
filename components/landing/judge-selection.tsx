@@ -38,10 +38,10 @@ export function JudgeSelectionSection() {
 
             <div className="mt-8 flex flex-col sm:flex-row gap-4 sm:items-center">
               <Link
-                href="/judge"
+                href="/become-a-judge"
                 className="inline-flex items-center justify-center px-6 py-3 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 transition min-h-[48px]"
               >
-                Become a Judge – Earn $20–50/hour
+                Become a Judge – Learn how it works
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Link>
               <p className="text-sm text-gray-500 max-w-sm">

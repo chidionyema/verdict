@@ -51,21 +51,21 @@ export async function GET(
 
     const { data: verdicts, error: verdictsError } = await serviceClient
       .from('verdict_responses')
-      .select(`
-        id,
-        created_at,
-        rating,
-        feedback,
-        tone,
-        is_flagged,
-        judge_id
-      `)
+      .select('*')
       .eq('request_id', id)
       .order('created_at', { ascending: true });
 
     if (verdictsError) {
       console.error('Fetch verdicts error:', verdictsError);
     }
+
+    // Temporary deep debug for partial-results bug
+    console.log('DEBUG verdict_responses', {
+      requestId: id,
+      verdictsError,
+      verdictsLength: verdicts?.length ?? 0,
+      sample: verdicts?.[0],
+    });
 
     // For seekers, don't expose judge IDs (anonymize)
     const anonymizedVerdicts = verdicts?.map((v, index) => ({

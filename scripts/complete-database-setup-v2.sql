@@ -944,18 +944,18 @@ CREATE INDEX IF NOT EXISTS idx_content_tags_name ON content_tags(name);
 
 -- =====================================================
 -- ROLE GRANTS FOR PUBLIC SCHEMA
--- Ensure anon/authenticated roles can access tables before RLS policies apply
+-- Ensure anon/authenticated/service_role can access tables before RLS policies apply
 -- =====================================================
 
-GRANT USAGE ON SCHEMA public TO anon, authenticated;
+GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
 
 GRANT SELECT, INSERT, UPDATE, DELETE
 ON ALL TABLES IN SCHEMA public
-TO anon, authenticated;
+TO anon, authenticated, service_role;
 
 ALTER DEFAULT PRIVILEGES IN SCHEMA public
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES
-TO anon, authenticated;
+TO anon, authenticated, service_role;
 
 -- =====================================================
 -- ROW LEVEL SECURITY

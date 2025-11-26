@@ -316,6 +316,20 @@ export default function RequestDetailPage({
             </div>
 
             <div className="flex items-center gap-3">
+              {verdicts.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const el = document.getElementById('verdicts-section');
+                    if (el) {
+                      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                  }}
+                  className="hidden sm:inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition"
+                >
+                  See your feedback
+                </button>
+              )}
               {(request.status === 'in_progress' || request.status === 'open') && (
                 <button
                   onClick={fetchRequest}
@@ -357,14 +371,19 @@ export default function RequestDetailPage({
           </div>
         </div>
 
-        {/* Progress */}
+        {/* Progress / State */}
         {(request.status === 'in_progress' || request.status === 'open') && (
           <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
-            <div className="flex justify-between text-sm text-gray-600 mb-2">
-              <span>
-                {request.received_verdict_count} of {request.target_verdict_count} verdicts received
-              </span>
-              <span>{Math.round(progress)}%</span>
+            <div className="flex justify-between items-center mb-2">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-gray-500 mb-1">
+                  Verdict progress
+                </p>
+                <p className="text-lg font-semibold text-gray-900">
+                  {request.received_verdict_count}/{request.target_verdict_count} verdicts
+                </p>
+              </div>
+              <span className="text-sm text-gray-600">{Math.round(progress)}%</span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-3">
               <div
@@ -373,7 +392,9 @@ export default function RequestDetailPage({
               />
             </div>
             <p className="text-sm text-gray-500 mt-2">
-              New verdicts will appear automatically
+              {request.received_verdict_count === 0
+                ? 'Judges are reviewing your submission. New verdicts will appear here automatically.'
+                : "You're now seeing real feedback from our judges. We'll add more verdicts here as they come in."}
             </p>
           </div>
         )}
@@ -589,7 +610,7 @@ export default function RequestDetailPage({
           </div>
 
           {/* Verdicts List */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2" id="verdicts-section">
             {/* Enhanced Verdict Summary */}
             {verdicts.length > 0 && (
               <VerdictSummary
@@ -602,12 +623,19 @@ export default function RequestDetailPage({
             {verdicts.length > 0 && (
               <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
                 <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-                  <h3 className="font-semibold text-gray-900">
-                    {filteredAndSortedVerdicts.length} Verdicts
-                    {filteredAndSortedVerdicts.length !== verdicts.length && 
-                      <span className="text-gray-500"> (filtered from {verdicts.length})</span>
-                    }
-                  </h3>
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-gray-500">
+                      Verdicts
+                    </p>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      {request.received_verdict_count}/{request.target_verdict_count} received
+                    </h3>
+                    {filteredAndSortedVerdicts.length !== verdicts.length && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Showing {filteredAndSortedVerdicts.length} of {verdicts.length} verdicts
+                      </p>
+                    )}
+                  </div>
                   
                   <div className="flex gap-3">
                     {/* Filter Dropdown */}
