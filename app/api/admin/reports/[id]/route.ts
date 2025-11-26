@@ -1,6 +1,6 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { log } from '@/lib/logger';
 
 // PATCH /api/admin/reports/[id] - Update report status and resolution
 export async function PATCH(
@@ -9,7 +9,7 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params;
-    const supabase = await createClient();
+    const supabase: any = await createClient();
 
     const {
       data: { user },
@@ -25,7 +25,7 @@ export async function PATCH(
       .from('profiles')
       .select('is_admin')
       .eq('id', user.id)
-      .single() as { data: { is_admin: boolean } | null; error: any };
+      .single() as { data: { is_admin: boolean } | null; error: unknown };
 
     if (profileError || !profile || !profile.is_admin) {
       return NextResponse.json({ error: 'Access denied. Admin privileges required.' }, { status: 403 });
@@ -53,7 +53,7 @@ export async function PATCH(
       .from('content_reports')
       .select('*')
       .eq('id', id)
-      .single() as { data: { status: string; [key: string]: any } | null; error: any };
+      .single() as { data: { status: string; reported_content_type: string; reported_content_id: string; report_reason?: string; [key: string]: unknown } | null; error: unknown };
 
     if (fetchError || !currentReport) {
       return NextResponse.json({ error: 'Report not found' }, { status: 404 });
@@ -109,11 +109,11 @@ export async function PATCH(
 
     const { error: updateError } = await supabase
       .from('content_reports')
-      .update(updateData as any)
+      .update(updateData)
       .eq('id', id);
 
     if (updateError) {
-      console.error('Error updating report:', updateError);
+      log.error('Error updating report', updateError);
       return NextResponse.json({ error: 'Failed to update report' }, { status: 500 });
     }
 
@@ -122,7 +122,7 @@ export async function PATCH(
       try {
         await handleModerationAction(supabase, currentReport, resolution, user.id, moderator_notes);
       } catch (actionError) {
-        console.error('Error executing moderation action:', actionError);
+        log.error('Error executing moderation action', actionError);
         // Don't fail the report update, but log the error
       }
     }
@@ -134,14 +134,14 @@ export async function PATCH(
     });
 
   } catch (error) {
-    console.error('PATCH /api/admin/reports/[id] error:', error);
+    log.error('PATCH /api/admin/reports/[id] error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
 async function handleModerationAction(
   supabase: any,
-  report: any,
+  report: { reported_content_type: string; reported_content_id: string; report_reason?: string },
   resolution: string,
   moderatorId: string,
   moderatorNotes?: string

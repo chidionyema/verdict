@@ -1,15 +1,15 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { log } from '@/lib/logger';
 
 // GET /api/discover - Get discovery content (trending, featured, popular)
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    const supabase: any = await createClient();
     const url = new URL(request.url);
     const section = url.searchParams.get('section') || 'all'; // 'featured', 'trending', 'popular', 'all'
 
-    const results: any = {};
+    const results: Record<string, unknown> = {};
 
     // Get featured content
     if (section === 'featured' || section === 'all') {
@@ -38,23 +38,27 @@ export async function GET(request: NextRequest) {
 
       // Get average ratings for featured content
       if (featured && featured.length > 0) {
-        const featuredIds = featured.map(r => r.id);
+        const featuredIds = featured.map((r: any) => r.id);
         const { data: ratings } = await supabase
           .from('verdict_responses')
           .select('request_id, rating')
           .in('request_id', featuredIds)
           .not('rating', 'is', null);
 
-        const ratingsByRequest = ratings?.reduce((acc, rating) => {
-          if (!acc[rating.request_id]) acc[rating.request_id] = [];
-          acc[rating.request_id].push(rating.rating);
-          return acc;
-        }, {} as Record<string, number[]>) || {};
+        const ratingsByRequest =
+          ratings?.reduce((acc: Record<string, number[]>, rating: any) => {
+            if (!acc[rating.request_id]) acc[rating.request_id] = [];
+            acc[rating.request_id].push(rating.rating);
+            return acc;
+          }, {} as Record<string, number[]>) || {};
 
-        results.featured = featured.map(request => ({
+        results.featured = featured.map((request: any) => ({
           ...request,
-          average_rating: ratingsByRequest[request.id] 
-            ? ratingsByRequest[request.id].reduce((sum, r) => sum + r, 0) / ratingsByRequest[request.id].length
+          average_rating: ratingsByRequest[request.id]
+            ? ratingsByRequest[request.id].reduce(
+                (sum: number, r: number) => sum + r,
+                0
+              ) / ratingsByRequest[request.id].length
             : null,
           response_count: ratingsByRequest[request.id]?.length || 0,
           preview_text: request.text_content 
@@ -93,7 +97,8 @@ export async function GET(request: NextRequest) {
         .order('view_count', { ascending: false })
         .limit(10);
 
-      results.trending = trending?.map(request => ({
+      results.trending =
+        trending?.map((request: any) => ({
         ...request,
         preview_text: request.text_content 
           ? request.text_content.substring(0, 150) + (request.text_content.length > 150 ? '...' : '')
@@ -109,13 +114,14 @@ export async function GET(request: NextRequest) {
         .eq('is_public', true)
         .eq('moderation_status', 'approved');
 
-      const categoryCounts = categoryStats?.reduce((acc, request) => {
-        acc[request.category] = (acc[request.category] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>) || {};
+      const categoryCounts =
+        categoryStats?.reduce((acc: Record<string, number>, request: any) => {
+          acc[request.category] = (acc[request.category] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>) || {};
 
       const popularCategories = Object.entries(categoryCounts)
-        .map(([category, count]) => ({ category, count }))
+        .map(([category, count]) => ({ category, count: count as number }))
         .sort((a, b) => b.count - a.count)
         .slice(0, 8);
 
@@ -151,7 +157,7 @@ export async function GET(request: NextRequest) {
         .order('created_at', { ascending: false })
         .limit(8);
 
-      results.recent_activity = recent?.map(request => ({
+      results.recent_activity = recent?.map((request: any) => ({
         ...request,
         preview_text: request.context.substring(0, 100) + (request.context.length > 100 ? '...' : ''),
       })) || [];
@@ -176,7 +182,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(results);
 
   } catch (error) {
-    console.error('GET /api/discover error:', error);
+    log.error('GET /api/discover error:', { error });
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

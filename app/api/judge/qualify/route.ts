@@ -1,11 +1,11 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { log } from '@/lib/logger';
 
 // POST /api/judge/qualify - Submit judge qualification application
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    const supabase: any = await createClient();
 
     const {
       data: { user },
@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (result.error) {
-      console.error('Error creating/updating qualification:', result.error);
+      log.error('Error creating/updating qualification', result.error);
       return NextResponse.json({ error: 'Failed to submit application' }, { status: 500 });
     }
 
@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('POST /api/judge/qualify error:', error);
+    log.error('POST /api/judge/qualify error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -136,7 +136,7 @@ export async function POST(request: NextRequest) {
 // GET /api/judge/qualify - Get qualification status
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    const supabase: any = await createClient();
 
     const {
       data: { user },
@@ -158,7 +158,7 @@ export async function GET(request: NextRequest) {
       .single();
 
     if (fetchError && fetchError.code !== 'PGRST116') { // Not found is OK
-      console.error('Error fetching qualification:', fetchError);
+      log.error('Error fetching qualification', fetchError);
       return NextResponse.json({ error: 'Failed to fetch qualification status' }, { status: 500 });
     }
 
@@ -168,7 +168,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('GET /api/judge/qualify error:', error);
+    log.error('GET /api/judge/qualify error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

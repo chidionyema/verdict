@@ -1,25 +1,26 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { sendPasswordResetEmail } from '@/lib/email';
+import { log } from '@/lib/logger';
 
 // POST /api/auth/reset-password - Send password reset email
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    const supabase: any = await createClient();
     const body = await request.json();
     const { email } = body;
 
     if (!email) {
-      return NextResponse.json({ 
-        error: 'Email is required' 
+      return NextResponse.json({
+        error: 'Email is required'
       }, { status: 400 });
     }
 
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      return NextResponse.json({ 
-        error: 'Invalid email format' 
+      return NextResponse.json({
+        error: 'Invalid email format'
       }, { status: 400 });
     }
 
@@ -30,30 +31,26 @@ export async function POST(request: NextRequest) {
     const clientIp = forwarded?.split(',')[0] || realIp || 'unknown';
 
     // Create password reset (always returns success for security)
-    const { data: token } = await supabase
+    const { data: token, error: rpcError } = await supabase
       .rpc('create_password_reset', {
         target_email: email,
         user_ip: clientIp,
         user_user_agent: userAgent
       });
 
-    // In demo mode, return the token for testing
-    const isDemoMode = process.env.NODE_ENV !== 'production';
-    
-    if (isDemoMode && token && token !== 'token_sent') {
-      return NextResponse.json({
-        success: true,
-        message: 'Password reset email sent. Please check your inbox.',
-        demo_token: token, // Only for demo - remove in production
-        reset_url: `${request.headers.get('origin')}/auth/reset-password?token=${token}`
-      });
-    }
+    // Send password reset email if token was created
+    if (token && token !== 'token_sent' && !rpcError) {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+      const resetLink = `${appUrl}/auth/reset-password?token=${token}`;
 
-    // TODO: In production, send actual password reset email
-    // Example:
-    // if (token && token !== 'token_sent') {
-    //   await sendPasswordResetEmail(email, token);
-    // }
+      const emailResult = await sendPasswordResetEmail(email, resetLink);
+
+      if (!emailResult.success) {
+        log.error('Failed to send password reset email', new Error(emailResult.error), { email });
+      } else {
+        log.info('Password reset email sent', { email, emailId: emailResult.id });
+      }
+    }
 
     // Always return success message for security (don't reveal if email exists)
     return NextResponse.json({
@@ -62,7 +59,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('POST /api/auth/reset-password error:', error);
+    log.error('POST /api/auth/reset-password error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -70,7 +67,7 @@ export async function POST(request: NextRequest) {
 // PATCH /api/auth/reset-password - Reset password with token
 export async function PATCH(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    const supabase: any = await createClient();
     const body = await request.json();
     const { token, password } = body;
 
@@ -115,9 +112,9 @@ export async function PATCH(request: NextRequest) {
     );
 
     if (updateError) {
-      console.error('Error updating password:', updateError);
-      return NextResponse.json({ 
-        error: 'Failed to update password' 
+      log.error('Error updating password', updateError, { userId: resetRecord.user_id });
+      return NextResponse.json({
+        error: 'Failed to update password'
       }, { status: 500 });
     }
 
@@ -155,7 +152,7 @@ export async function PATCH(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('PATCH /api/auth/reset-password error:', error);
+    log.error('PATCH /api/auth/reset-password error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

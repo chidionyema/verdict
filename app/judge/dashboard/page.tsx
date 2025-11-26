@@ -10,9 +10,9 @@ export default function JudgeDashboard() {
   const router = useRouter();
   const availableRequests = useStore((state) => state.availableRequests);
   const setAvailableRequests = useStore((state) => state.setAvailableRequests);
-  const [earnings] = useState(47.5);
-  const [qualityScore] = useState(4.6);
-  const [totalVerdicts] = useState(95);
+  const [earnings, setEarnings] = useState(0); // all-time earnings in dollars
+  const [qualityScore, setQualityScore] = useState<number | null>(null);
+  const [totalVerdicts, setTotalVerdicts] = useState(0);
   const [loading, setLoading] = useState(true);
   const [lastFetch, setLastFetch] = useState<Date | null>(null);
   const [secondsAgo, setSecondsAgo] = useState(0);
@@ -34,6 +34,30 @@ export default function JudgeDashboard() {
       verdicts: [],
       createdAt: new Date(req.created_at),
     }));
+  }, []);
+
+  // Fetch judge stats (earnings, quality, totals)
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const res = await fetch('/api/judge/stats');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (typeof data.total_earnings === 'number') {
+          setEarnings(data.total_earnings);
+        }
+        if (typeof data.average_quality_score === 'number') {
+          setQualityScore(data.average_quality_score);
+        }
+        if (typeof data.verdicts_given === 'number') {
+          setTotalVerdicts(data.verdicts_given);
+        }
+      } catch (err) {
+        console.error('[Judge Dashboard] Failed to fetch judge stats', err);
+      }
+    };
+
+    fetchStats();
   }, []);
 
   // Handle incoming SSE data

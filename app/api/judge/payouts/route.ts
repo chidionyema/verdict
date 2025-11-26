@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
 import Stripe from 'stripe';
+import { log } from '@/lib/logger';
 
 const getStripe = () => {
   if (!process.env.STRIPE_SECRET_KEY) {
@@ -53,7 +54,7 @@ export async function GET(request: NextRequest) {
       .range(from, to);
 
     if (error) {
-      console.error('Error fetching payouts:', error);
+      log.error('Error fetching payouts', error, { userId: user.id });
       return NextResponse.json({ error: 'Failed to fetch payouts' }, { status: 500 });
     }
 
@@ -83,7 +84,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Payouts error:', error);
+    log.error('Payouts error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

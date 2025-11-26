@@ -1,7 +1,7 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
+import { log } from '@/lib/logger';
 
 const moderationConfigSchema = z.object({
   provider: z.enum(['openai', 'perspective', 'aws-comprehend']),
@@ -27,7 +27,7 @@ const moderateContentSchema = z.object({
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    const supabase: any = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
@@ -35,11 +35,11 @@ export async function GET(request: NextRequest) {
     }
 
     // Check if user is admin
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile, error: profileError } = await (supabase as any)
       .from('profiles')
       .select('is_admin')
       .eq('id', user.id)
-      .single() as { data: { is_admin: boolean } | null; error: any };
+      .single() as { data: { is_admin: boolean } | null; error: unknown };
 
     if (profileError || !profile || !profile.is_admin) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
@@ -52,8 +52,9 @@ export async function GET(request: NextRequest) {
       .single();
 
     // Don't expose API keys in response
-    if (config?.config) {
-      const sanitizedConfig = { ...config };
+    const cfg: any = config;
+    if (cfg?.config) {
+      const sanitizedConfig = { ...cfg };
       sanitizedConfig.config = {
         ...sanitizedConfig.config,
         api_key: sanitizedConfig.config.api_key ? '***hidden***' : null,
@@ -64,14 +65,14 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ config });
 
   } catch (error) {
-    console.error('AI moderation config GET error:', error);
+    log.error('AI moderation config GET error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    const supabase: any = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
@@ -79,11 +80,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user is admin
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile, error: profileError } = await (supabase as any)
       .from('profiles')
       .select('is_admin')
       .eq('id', user.id)
-      .single() as { data: { is_admin: boolean } | null; error: any };
+      .single() as { data: { is_admin: boolean } | null; error: unknown };
 
     if (profileError || !profile || !profile.is_admin) {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
@@ -95,9 +96,9 @@ export async function POST(request: NextRequest) {
     // Test the AI moderation configuration
     const testResult = await testModerationConfig(validated);
     if (!testResult.success) {
-      return NextResponse.json({ 
-        error: 'AI moderation configuration test failed', 
-        details: testResult.error 
+      return NextResponse.json({
+        error: 'AI moderation configuration test failed',
+        details: testResult.error
       }, { status: 400 });
     }
 
@@ -119,7 +120,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      console.error('Error saving AI moderation config:', error);
+      log.error('Error saving AI moderation config', error);
       return NextResponse.json({ error: 'Failed to save AI moderation configuration' }, { status: 500 });
     }
 
@@ -127,10 +128,13 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: 'Invalid AI moderation configuration', details: error.errors }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Invalid AI moderation configuration', details: (error as any).errors },
+        { status: 400 }
+      );
     }
 
-    console.error('AI moderation config error:', error);
+    log.error('AI moderation config error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -138,13 +142,13 @@ export async function POST(request: NextRequest) {
 // Moderate content endpoint
 export async function PUT(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    const supabase: any = await createClient();
     
     const body = await request.json();
     const validated = moderateContentSchema.parse(body);
 
     // Get AI moderation configuration
-    const { data: config } = await supabase
+    const { data: config } = await (supabase as any)
       .from('integration_configs')
       .select('*')
       .eq('integration_type', 'ai_moderation')
@@ -155,18 +159,18 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'AI moderation not configured' }, { status: 404 });
     }
 
-    const moderationConfig = config.config as any;
-    
+    const moderationConfig = config.config as Record<string, unknown>;
+
     // Perform moderation
     const result = await moderateContent(moderationConfig, validated.content);
-    
+
     if (!result.success) {
-      console.error('Failed to moderate content:', result.error);
+      log.error('Failed to moderate content', result.error ? new Error(result.error) : undefined);
       return NextResponse.json({ error: 'Failed to moderate content' }, { status: 500 });
     }
 
     // Store moderation result
-    const { error: insertError } = await supabase
+    const { error: insertError } = await (supabase as any)
       .from('content_moderation_logs')
       .insert({
         content_type: validated.content_type,
@@ -179,7 +183,7 @@ export async function PUT(request: NextRequest) {
       });
 
     if (insertError) {
-      console.error('Error storing moderation result:', insertError);
+      log.error('Error storing moderation result', insertError);
     }
 
     return NextResponse.json({
@@ -191,15 +195,25 @@ export async function PUT(request: NextRequest) {
 
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: 'Invalid moderation data', details: error.errors }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Invalid moderation data', details: (error as any).errors },
+        { status: 400 }
+      );
     }
 
-    console.error('Content moderation error:', error);
+    log.error('Content moderation error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
-async function testModerationConfig(config: any): Promise<{ success: boolean; error?: string }> {
+interface ModerationConfig {
+  provider: string;
+  api_key: string;
+  thresholds?: Record<string, number>;
+  auto_action?: string;
+}
+
+async function testModerationConfig(config: ModerationConfig): Promise<{ success: boolean; error?: string }> {
   try {
     // Test with a sample text
     const testText = "This is a test message for moderation.";
@@ -280,11 +294,11 @@ async function testAWSComprehend(apiKey: string, text: string): Promise<{ succes
   }
 }
 
-async function moderateContent(config: any, content: string): Promise<{ 
-  success: boolean; 
-  error?: string; 
-  result?: any; 
-  actionTaken?: string; 
+async function moderateContent(config: Record<string, unknown>, content: string): Promise<{
+  success: boolean;
+  error?: string;
+  result?: unknown;
+  actionTaken?: string;
   requiresReview?: boolean;
 }> {
   try {
@@ -303,11 +317,11 @@ async function moderateContent(config: any, content: string): Promise<{
   }
 }
 
-async function moderateWithOpenAI(config: any, content: string): Promise<{ 
-  success: boolean; 
-  error?: string; 
-  result?: any; 
-  actionTaken?: string; 
+async function moderateWithOpenAI(config: Record<string, unknown>, content: string): Promise<{
+  success: boolean;
+  error?: string;
+  result?: unknown;
+  actionTaken?: string;
   requiresReview?: boolean;
 }> {
   try {
@@ -328,12 +342,12 @@ async function moderateWithOpenAI(config: any, content: string): Promise<{
     }
 
     const data = await response.json();
-    const result = data.results[0];
-    
+    const result = data.results[0] as { flagged?: boolean; [key: string]: unknown };
+
     // Determine action based on configuration
     let actionTaken = 'none';
     let requiresReview = false;
-    
+
     if (result.flagged) {
       switch (config.auto_action) {
         case 'block':
@@ -360,11 +374,11 @@ async function moderateWithOpenAI(config: any, content: string): Promise<{
   }
 }
 
-async function moderateWithPerspective(config: any, content: string): Promise<{ 
-  success: boolean; 
-  error?: string; 
-  result?: any; 
-  actionTaken?: string; 
+async function moderateWithPerspective(config: Record<string, unknown>, content: string): Promise<{
+  success: boolean;
+  error?: string;
+  result?: unknown;
+  actionTaken?: string;
   requiresReview?: boolean;
 }> {
   try {
@@ -392,18 +406,18 @@ async function moderateWithPerspective(config: any, content: string): Promise<{
     }
 
     const data = await response.json();
-    const scores = data.attributeScores;
-    
+    const scores = data.attributeScores as Record<string, { scores?: { PROBABILITY?: number } }>;
+
     // Check against thresholds
     let flagged = false;
-    const thresholds = config.thresholds;
-    
-    if (scores.TOXICITY?.scores?.PROBABILITY >= thresholds.toxicity) flagged = true;
-    if (scores.SEVERE_TOXICITY?.scores?.PROBABILITY >= thresholds.severe_toxicity) flagged = true;
-    if (scores.IDENTITY_ATTACK?.scores?.PROBABILITY >= thresholds.identity_attack) flagged = true;
-    if (scores.INSULT?.scores?.PROBABILITY >= thresholds.insult) flagged = true;
-    if (scores.PROFANITY?.scores?.PROBABILITY >= thresholds.profanity) flagged = true;
-    if (scores.THREAT?.scores?.PROBABILITY >= thresholds.threat) flagged = true;
+    const thresholds = config.thresholds as Record<string, number>;
+
+    if ((scores.TOXICITY?.scores?.PROBABILITY ?? 0) >= (thresholds.toxicity ?? 0.7)) flagged = true;
+    if ((scores.SEVERE_TOXICITY?.scores?.PROBABILITY ?? 0) >= (thresholds.severe_toxicity ?? 0.5)) flagged = true;
+    if ((scores.IDENTITY_ATTACK?.scores?.PROBABILITY ?? 0) >= (thresholds.identity_attack ?? 0.7)) flagged = true;
+    if ((scores.INSULT?.scores?.PROBABILITY ?? 0) >= (thresholds.insult ?? 0.7)) flagged = true;
+    if ((scores.PROFANITY?.scores?.PROBABILITY ?? 0) >= (thresholds.profanity ?? 0.8)) flagged = true;
+    if ((scores.THREAT?.scores?.PROBABILITY ?? 0) >= (thresholds.threat ?? 0.5)) flagged = true;
     
     // Determine action based on configuration
     let actionTaken = 'none';
@@ -435,11 +449,11 @@ async function moderateWithPerspective(config: any, content: string): Promise<{
   }
 }
 
-async function moderateWithAWSComprehend(config: any, content: string): Promise<{ 
-  success: boolean; 
-  error?: string; 
-  result?: any; 
-  actionTaken?: string; 
+async function moderateWithAWSComprehend(config: Record<string, unknown>, content: string): Promise<{
+  success: boolean;
+  error?: string;
+  result?: unknown;
+  actionTaken?: string;
   requiresReview?: boolean;
 }> {
   // AWS Comprehend implementation would require AWS SDK

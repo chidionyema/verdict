@@ -1,6 +1,6 @@
-// @ts-nocheck
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { log } from '@/lib/logger';
 
 export async function GET() {
   try {
@@ -33,7 +33,7 @@ export async function GET() {
       profile,
     });
   } catch (error) {
-    console.error('GET /api/me error:', error);
+    log.error('GET /api/me error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

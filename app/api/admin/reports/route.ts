@@ -1,6 +1,6 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { log } from '@/lib/logger';
 
 // GET /api/admin/reports - Get all reports for moderation
 export async function GET(request: NextRequest) {
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
       .from('profiles')
       .select('is_admin')
       .eq('id', user.id)
-      .single() as { data: { is_admin: boolean } | null; error: any };
+      .single() as { data: { is_admin: boolean } | null; error: unknown };
 
     if (profileError || !profile || !profile.is_admin) {
       return NextResponse.json({ error: 'Access denied. Admin privileges required.' }, { status: 403 });
@@ -48,10 +48,10 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const { data: reports, error: fetchError } = await query as { data: Array<{ reported_content_type: string; reported_content_id: string; reporter?: { email?: string }; [key: string]: any }> | null; error: any };
+    const { data: reports, error: fetchError } = await query as { data: Array<{ reported_content_type: string; reported_content_id: string; reporter?: { email?: string }; [key: string]: unknown }> | null; error: unknown };
 
     if (fetchError) {
-      console.error('Error fetching reports:', fetchError);
+      log.error('Error fetching reports', fetchError);
       return NextResponse.json({ error: 'Failed to fetch reports' }, { status: 500 });
     }
 
@@ -99,7 +99,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ reports: enhancedReports });
 
   } catch (error) {
-    console.error('GET /api/admin/reports error:', error);
+    log.error('GET /api/admin/reports error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { log } from '@/lib/logger';
 
 export async function GET(request: NextRequest) {
   try {
@@ -50,7 +51,7 @@ export async function GET(request: NextRequest) {
     }
 
   } catch (error) {
-    console.error('Analytics overview error:', error);
+    log.error('Analytics overview error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -146,7 +147,7 @@ async function getRequesterAnalytics(userId: string, startDate: Date, supabase: 
     });
 
   } catch (error) {
-    console.error('Requester analytics error:', error);
+    log.error('Requester analytics error', error);
     throw error;
   }
 }
@@ -248,7 +249,7 @@ async function getJudgeAnalytics(judgeId: string, startDate: Date, supabase: any
     });
 
   } catch (error) {
-    console.error('Judge analytics error:', error);
+    log.error('Judge analytics error', error);
     throw error;
   }
 }

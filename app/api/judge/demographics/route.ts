@@ -1,11 +1,11 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { log } from '@/lib/logger';
 
 // GET /api/judge/demographics - Get judge demographics
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    const supabase: any = await createClient();
     
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     
@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ demographics });
   } catch (error) {
-    console.error('GET /api/judge/demographics error:', error);
+    log.error('GET /api/judge/demographics error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
 // POST /api/judge/demographics - Create/update judge demographics
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    const supabase: any = await createClient();
     
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     
@@ -58,14 +58,14 @@ export async function POST(request: NextRequest) {
         });
 
         if (insertError) {
-          console.error('Failed to auto-create profile before demographics:', insertError);
+          log.error('Failed to auto-create profile before demographics', insertError);
           return NextResponse.json(
             { error: 'Unable to prepare profile for demographics' },
             { status: 500 }
           );
         }
       } else {
-        console.error('Profile lookup error:', profileError);
+        log.error('Profile lookup error', profileError);
         return NextResponse.json({ error: 'Failed to load profile' }, { status: 500 });
       }
     } else if (!existingProfile) {
@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
       });
 
       if (insertError) {
-        console.error('Failed to auto-create profile before demographics:', insertError);
+        log.error('Failed to auto-create profile before demographics', insertError);
         return NextResponse.json(
           { error: 'Unable to prepare profile for demographics' },
           { status: 500 }
@@ -141,7 +141,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      console.error('Demographics upsert error:', error);
+      log.error('Demographics upsert error', error);
 
       // Check if table doesn't exist
       if (error.code === '42P01' || error.message?.includes('relation') || error.message?.includes('does not exist')) {
@@ -180,7 +180,7 @@ export async function POST(request: NextRequest) {
       message: 'Demographics saved successfully' 
     });
   } catch (error) {
-    console.error('POST /api/judge/demographics error:', error);
+    log.error('POST /api/judge/demographics error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

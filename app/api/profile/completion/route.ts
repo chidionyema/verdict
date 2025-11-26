@@ -1,11 +1,11 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { log } from '@/lib/logger';
 
 // GET /api/profile/completion - Get profile completion status
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    const supabase: any = await createClient();
 
     const {
       data: { user },
@@ -17,13 +17,14 @@ export async function GET(request: NextRequest) {
     }
 
     // Get completion status
+    // @ts-ignore - RPC function types not generated
     const { data: completionStatus, error: statusError } = await supabase
-      .rpc('get_profile_completion_status', { target_user_id: user.id });
+      .rpc('get_profile_completion_status', { target_user_id: user.id }) as { data: any; error: any };
 
     if (statusError) {
-      console.error('Error getting completion status:', statusError);
-      return NextResponse.json({ 
-        error: 'Failed to get profile completion status' 
+      log.error('Error getting completion status', statusError);
+      return NextResponse.json({
+        error: 'Failed to get profile completion status'
       }, { status: 500 });
     }
 
@@ -38,7 +39,13 @@ export async function GET(request: NextRequest) {
       .from('profiles')
       .select('email_verified, full_name, avatar_url, bio, is_judge')
       .eq('id', user.id)
-      .single();
+      .single() as { data: {
+        email_verified: boolean;
+        full_name: string | null;
+        avatar_url: string | null;
+        bio: string | null;
+        is_judge: boolean;
+      } | null };
 
     const stepDetails = {
       email_verification: {
@@ -54,19 +61,19 @@ export async function GET(request: NextRequest) {
         required: true,
       },
       preferences: {
-        completed: steps?.some(s => s.step_name === 'preferences' && s.completed) || false,
+        completed: steps?.some((s: any) => s.step_name === 'preferences' && s.completed) || false,
         title: 'Set Preferences',
         description: 'Choose notification and privacy settings',
         required: false,
       },
       first_request: {
-        completed: steps?.some(s => s.step_name === 'first_request' && s.completed) || false,
+        completed: steps?.some((s: any) => s.step_name === 'first_request' && s.completed) || false,
         title: 'First Request',
         description: 'Submit your first verdict request',
         required: false,
       },
       judge_qualification: {
-        completed: steps?.some(s => s.step_name === 'judge_qualification' && s.completed) || false,
+        completed: steps?.some((s: any) => s.step_name === 'judge_qualification' && s.completed) || false,
         title: 'Become a Judge',
         description: 'Apply to become a judge and help others',
         required: false,
@@ -86,7 +93,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('GET /api/profile/completion error:', error);
+    log.error('GET /api/profile/completion error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -94,7 +101,7 @@ export async function GET(request: NextRequest) {
 // POST /api/profile/completion - Mark completion step
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    const supabase: any = await createClient();
 
     const {
       data: { user },
@@ -122,33 +129,34 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Mark step as completed
+    // Mark step as completed using upsert
+    // @ts-ignore - Supabase upsert types
     const { error: insertError } = await supabase
       .from('profile_completion_steps')
-      .insert({
+      .upsert({
         user_id: user.id,
         step_name,
         completed: true,
         completed_at: new Date().toISOString(),
-      })
-      .on('conflict', '(user_id, step_name)', {
-        completed: true,
-        completed_at: new Date().toISOString(),
+      }, {
+        onConflict: 'user_id,step_name'
       });
 
     if (insertError) {
-      console.error('Error marking step completion:', insertError);
-      return NextResponse.json({ 
-        error: 'Failed to mark step as completed' 
+      log.error('Error marking step completion', insertError);
+      return NextResponse.json({
+        error: 'Failed to mark step as completed'
       }, { status: 500 });
     }
 
     // Get updated completion status
+    // @ts-ignore - RPC function types not generated
     const { data: updatedStatus } = await supabase
-      .rpc('get_profile_completion_status', { target_user_id: user.id });
+      .rpc('get_profile_completion_status', { target_user_id: user.id }) as { data: any };
 
     // If profile is now complete, create celebration notification
     if (updatedStatus?.is_completed) {
+      // @ts-ignore - RPC function types not generated
       await supabase.rpc('create_notification', {
         target_user_id: user.id,
         notification_type: 'profile_completed',
@@ -167,7 +175,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('POST /api/profile/completion error:', error);
+    log.error('POST /api/profile/completion error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

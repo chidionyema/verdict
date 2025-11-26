@@ -1,11 +1,11 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { log } from '@/lib/logger';
 
 // POST /api/judge/available-pool - Get available judge pool for preferences
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    const supabase: any = await createClient();
     
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     
@@ -79,10 +79,10 @@ export async function POST(request: NextRequest) {
     const { data: availableJudges, error } = await query;
 
     if (error) {
-      console.error('Available judges query error:', error);
-      return NextResponse.json({ 
+      log.error('Available judges query error', error);
+      return NextResponse.json({
         error: 'Database error',
-        details: error.message 
+        details: error.message
       }, { status: 500 });
     }
 
@@ -91,18 +91,20 @@ export async function POST(request: NextRequest) {
     
     const avgResponseTime = poolSize > 0 
       ? Math.round(
-          availableJudges.reduce((sum, judge) => 
-            sum + (judge.judge_availability?.avg_response_time_minutes || 30), 0
+          availableJudges.reduce(
+            (sum: number, judge: any) =>
+              sum + (judge.judge_availability?.avg_response_time_minutes || 30),
+            0
           ) / poolSize
         )
       : 30;
 
     // Calculate diversity score
     const demographics = {
-      age_groups: new Set(availableJudges?.map(j => j.age_range).filter(Boolean)).size,
-      genders: new Set(availableJudges?.map(j => j.gender).filter(Boolean)).size,
-      professions: new Set(availableJudges?.map(j => j.profession).filter(Boolean)).size,
-      locations: new Set(availableJudges?.map(j => j.location).filter(Boolean)).size,
+      age_groups: new Set(availableJudges?.map((j: any) => j.age_range).filter(Boolean)).size,
+      genders: new Set(availableJudges?.map((j: any) => j.gender).filter(Boolean)).size,
+      professions: new Set(availableJudges?.map((j: any) => j.profession).filter(Boolean)).size,
+      locations: new Set(availableJudges?.map((j: any) => j.location).filter(Boolean)).size,
     };
 
     const diversityScore = Math.min(10, 
@@ -114,9 +116,11 @@ export async function POST(request: NextRequest) {
 
     // Calculate expertise match
     const expertiseScore = poolSize > 0
-      ? Math.min(10, 
-          availableJudges.reduce((sum, judge) => 
-            sum + (judge.quality_score || 5), 0
+      ? Math.min(
+          10,
+          availableJudges.reduce(
+            (sum: number, judge: any) => sum + (judge.quality_score || 5),
+            0
           ) / poolSize
         )
       : 5;
@@ -138,14 +142,19 @@ export async function POST(request: NextRequest) {
     }
 
     // Demographics breakdown for display
-    const breakdown = {
+    const breakdown: {
+      age: Record<string, number>;
+      gender: Record<string, number>;
+      profession: Record<string, number>;
+      location: Record<string, number>;
+    } = {
       age: {},
       gender: {},
       profession: {},
-      location: {}
+      location: {},
     };
 
-    availableJudges?.forEach(judge => {
+    availableJudges?.forEach((judge: any) => {
       if (judge.age_range) {
         breakdown.age[judge.age_range] = (breakdown.age[judge.age_range] || 0) + 1;
       }
@@ -156,9 +165,12 @@ export async function POST(request: NextRequest) {
         breakdown.profession[judge.profession] = (breakdown.profession[judge.profession] || 0) + 1;
       }
       if (judge.location) {
-        const locationType = judge.location.toLowerCase().includes('new york') || 
-                           judge.location.toLowerCase().includes('los angeles') ||
-                           judge.location.toLowerCase().includes('chicago') ? 'Urban' : 'Other';
+        const locationType =
+          judge.location.toLowerCase().includes('new york') ||
+          judge.location.toLowerCase().includes('los angeles') ||
+          judge.location.toLowerCase().includes('chicago')
+            ? 'Urban'
+            : 'Other';
         breakdown.location[locationType] = (breakdown.location[locationType] || 0) + 1;
       }
     });
@@ -174,7 +186,7 @@ export async function POST(request: NextRequest) {
       judges: availableJudges?.slice(0, 20) // Return top 20 for preview
     });
   } catch (error) {
-    console.error('POST /api/judge/available-pool error:', error);
+    log.error('POST /api/judge/available-pool error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

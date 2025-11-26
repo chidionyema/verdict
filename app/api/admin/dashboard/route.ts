@@ -1,6 +1,6 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { log } from '@/lib/logger';
 
 // GET /api/admin/dashboard - Get admin dashboard statistics
 export async function GET(request: NextRequest) {
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
       .from('profiles')
       .select('is_admin')
       .eq('id', user.id)
-      .single() as { data: { is_admin: boolean } | null; error: any };
+      .single() as { data: { is_admin: boolean } | null; error: unknown };
 
     if (profileError || !profile || !profile.is_admin) {
       return NextResponse.json({ error: 'Access denied. Admin privileges required.' }, { status: 403 });
@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
     const { data: ratingData } = await supabase
       .from('verdict_responses')
       .select('rating')
-      .not('rating', 'is', null) as { data: Array<{ rating: number }> | null };
+      .not('rating', 'is', null) as { data: Array<{ rating: number | null }> | null };
 
     const averageRating = ratingData && ratingData.length > 0
       ? ratingData.reduce((sum, r) => sum + (r.rating || 0), 0) / ratingData.length
@@ -162,7 +162,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ stats });
 
   } catch (error) {
-    console.error('GET /api/admin/dashboard error:', error);
+    log.error('GET /api/admin/dashboard error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

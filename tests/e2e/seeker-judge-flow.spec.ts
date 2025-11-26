@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { runPartialVerdictFlow, runCompleteVerdictFlow } from '../sim/helpers';
 
 /**
  * High-level happy path:
@@ -54,6 +55,42 @@ test('seeker can submit a request and see verdict progress', async ({ page }: { 
   // We don’t force verdict completion here (that’s handled by simulators / backend),
   // but we assert that the CTA to view results appears once at least one verdict exists.
   // In CI you can coordinate by running the simulator in parallel.
+});
+
+test.skip('seeker sees partial then complete results for a single request', async ({ page }: { page: any }) => {
+  const { requestId } = await runPartialVerdictFlow();
+
+  // Go straight to the request detail page
+  await page.goto(`/requests/${requestId}`);
+
+  // Assert partial state is visible
+  await expect(page.getByText(/partial results|1 of 3 verdicts/i)).toBeVisible();
+  await expect(page.getByRole('button', { name: /view results/i })).toBeVisible();
+
+  // Complete the remaining verdicts out of band
+  await runCompleteVerdictFlow(requestId);
+
+  // Refresh and assert completed state
+  await page.reload();
+  await expect(page.getByText(/all results ready|3 of 3 verdicts/i)).toBeVisible();
+});
+
+test.skip('judge earnings update after submitting a verdict', async ({ page }: { page: any }) => {
+  // This helper should ensure there is a judge, a request, and a submitted verdict,
+  // and that earnings are attributed to the judge.
+  const { judgeEmail, judgePassword } = await runCompleteVerdictFlow();
+
+  // Log in as the judge (assumes existing auth UI)
+  await page.goto('/login');
+  await page.getByLabel(/email/i).fill(judgeEmail);
+  await page.getByLabel(/password/i).fill(judgePassword);
+  await page.getByRole('button', { name: /log in|sign in/i }).click();
+
+  // Navigate to earnings page
+  await page.goto('/judge/earnings');
+
+  // Assert that some earnings and available-for-payout numbers show up
+  await expect(page.getByText(/available for payout|total earned/i)).toBeVisible();
 });
 
 

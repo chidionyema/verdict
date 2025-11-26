@@ -1,11 +1,11 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { log } from '@/lib/logger';
 
 // POST /api/reports - Create a content report
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    const supabase: any = await createClient();
 
     const {
       data: { user },
@@ -98,6 +98,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create the report
+    // @ts-ignore - Supabase generated types issue
     const { data: report, error: insertError } = await supabase
       .from('content_reports')
       .insert({
@@ -109,14 +110,15 @@ export async function POST(request: NextRequest) {
         status: 'pending'
       })
       .select()
-      .single();
+      .single() as { data: any; error: any };
 
     if (insertError) {
-      console.error('Error creating report:', insertError);
+      log.error('Error creating report', insertError);
       return NextResponse.json({ error: 'Failed to create report' }, { status: 500 });
     }
 
     // Auto-flag content for review
+    // @ts-ignore - Supabase generated types issue
     await supabase
       .from('content_flags')
       .insert({
@@ -134,7 +136,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('POST /api/reports error:', error);
+    log.error('POST /api/reports error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -142,7 +144,7 @@ export async function POST(request: NextRequest) {
 // GET /api/reports - Get user's reports
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    const supabase: any = await createClient();
 
     const {
       data: { user },
@@ -171,14 +173,14 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false });
 
     if (fetchError) {
-      console.error('Error fetching reports:', fetchError);
+      log.error('Error fetching reports', fetchError);
       return NextResponse.json({ error: 'Failed to fetch reports' }, { status: 500 });
     }
 
     return NextResponse.json({ reports });
 
   } catch (error) {
-    console.error('GET /api/reports error:', error);
+    log.error('GET /api/reports error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

@@ -1,11 +1,11 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { log } from '@/lib/logger';
 
 // GET /api/notifications - Get user's notifications
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    const supabase: any = await createClient();
 
     const {
       data: { user },
@@ -36,13 +36,14 @@ export async function GET(request: NextRequest) {
     const { data: notifications, error: fetchError } = await query;
 
     if (fetchError) {
-      console.error('Error fetching notifications:', fetchError);
+      log.error('Error fetching notifications', fetchError);
       return NextResponse.json({ error: 'Failed to fetch notifications' }, { status: 500 });
     }
 
     // Get unread count
+    // @ts-ignore - RPC function types not generated
     const { data: unreadCountData } = await supabase
-      .rpc('get_unread_notification_count', { target_user_id: user.id });
+      .rpc('get_unread_notification_count', { target_user_id: user.id }) as { data: number | null };
 
     return NextResponse.json({ 
       notifications: notifications || [],
@@ -51,7 +52,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('GET /api/notifications error:', error);
+    log.error('GET /api/notifications error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -59,7 +60,7 @@ export async function GET(request: NextRequest) {
 // PATCH /api/notifications - Mark all notifications as read
 export async function PATCH(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    const supabase: any = await createClient();
 
     const {
       data: { user },
@@ -70,11 +71,12 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // @ts-ignore - RPC function types not generated
     const { data: updatedCount, error: markError } = await supabase
-      .rpc('mark_all_notifications_read', { target_user_id: user.id });
+      .rpc('mark_all_notifications_read', { target_user_id: user.id }) as { data: number | null; error: any };
 
     if (markError) {
-      console.error('Error marking notifications as read:', markError);
+      log.error('Error marking notifications as read', markError);
       return NextResponse.json({ error: 'Failed to mark notifications as read' }, { status: 500 });
     }
 
@@ -84,7 +86,7 @@ export async function PATCH(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('PATCH /api/notifications error:', error);
+    log.error('PATCH /api/notifications error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

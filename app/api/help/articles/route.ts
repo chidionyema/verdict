@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
+import { log } from '@/lib/logger';
 
 const createArticleSchema = z.object({
   title: z.string().min(1).max(200),
@@ -66,7 +67,7 @@ export async function GET(request: NextRequest) {
     const { data: articles, error, count } = await query;
 
     if (error) {
-      console.error('Error fetching help articles:', error);
+      log.error('Error fetching help articles', error);
       return NextResponse.json({ error: 'Failed to fetch articles' }, { status: 500 });
     }
 
@@ -100,7 +101,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    console.error('Help articles error:', error);
+    log.error('Help articles error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -144,7 +145,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      console.error('Error creating help article:', error);
+      log.error('Error creating help article', error);
       return NextResponse.json({ error: 'Failed to create article' }, { status: 500 });
     }
 
@@ -158,7 +159,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.error('Create article error:', error);
+    log.error('Create article error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

@@ -1,11 +1,11 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { log } from '@/lib/logger';
 
 // GET /api/judge/performance - Get judge performance metrics
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    const supabase: any = await createClient();
 
     const {
       data: { user },
@@ -76,10 +76,16 @@ export async function GET(request: NextRequest) {
     const currentWeekStats = {
       verdicts_submitted: currentWeekVerdicts?.length || 0,
       average_user_rating: currentWeekRatings?.length 
-        ? currentWeekRatings.reduce((sum, r) => sum + r.overall_rating, 0) / currentWeekRatings.length
+        ? currentWeekRatings.reduce(
+            (sum: number, r: any) => sum + r.overall_rating,
+            0
+          ) / currentWeekRatings.length
         : 0,
       helpfulness_score: currentWeekRatings?.length
-        ? currentWeekRatings.reduce((sum, r) => sum + r.helpfulness_rating, 0) / currentWeekRatings.length
+        ? currentWeekRatings.reduce(
+            (sum: number, r: any) => sum + r.helpfulness_rating,
+            0
+          ) / currentWeekRatings.length
         : 0,
     };
 
@@ -87,7 +93,8 @@ export async function GET(request: NextRequest) {
     const { data: rankingData } = await supabase
       .rpc('get_judge_leaderboard', { limit_count: 100 });
 
-    const currentJudgeRank = rankingData?.findIndex(j => j.judge_id === user.id) + 1 || null;
+    const currentJudgeRank =
+      (rankingData?.findIndex((j: any) => j.judge_id === user.id) ?? -1) + 1 || null;
 
     return NextResponse.json({
       profile: {
@@ -104,7 +111,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('GET /api/judge/performance error:', error);
+    log.error('GET /api/judge/performance error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

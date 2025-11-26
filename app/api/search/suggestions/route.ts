@@ -1,11 +1,11 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { log } from '@/lib/logger';
 
 // GET /api/search/suggestions - Get search suggestions and popular searches
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    const supabase: any = await createClient();
     const url = new URL(request.url);
     const query = url.searchParams.get('q') || '';
     const limit = Math.min(parseInt(url.searchParams.get('limit') || '10'), 20);
@@ -16,10 +16,10 @@ export async function GET(request: NextRequest) {
       .select('search_query, search_count')
       .ilike('search_query', `%${query}%`)
       .order('search_count', { ascending: false })
-      .limit(limit);
+      .limit(limit) as { data: any[] | null; error: any };
 
     if (popularError) {
-      console.error('Error fetching popular searches:', popularError);
+      log.error('Error fetching popular searches', popularError);
     }
 
     // Get trending tags that match the query
@@ -28,10 +28,10 @@ export async function GET(request: NextRequest) {
       .select('name, usage_count, category')
       .ilike('name', `%${query}%`)
       .order('usage_count', { ascending: false })
-      .limit(limit);
+      .limit(limit) as { data: any[] | null; error: any };
 
     if (tagsError) {
-      console.error('Error fetching trending tags:', tagsError);
+      log.error('Error fetching trending tags', tagsError);
     }
 
     // Get category suggestions
@@ -50,14 +50,14 @@ export async function GET(request: NextRequest) {
     // Combine and format suggestions
     const suggestions = [
       // Popular searches
-      ...(popularSearches || []).map(search => ({
+      ...(popularSearches || []).map((search: any) => ({
         type: 'search',
         text: search.search_query,
         popularity: search.search_count,
         category: null
       })),
       // Trending tags
-      ...(trendingTags || []).map(tag => ({
+      ...(trendingTags || []).map((tag: any) => ({
         type: 'tag',
         text: tag.name,
         popularity: tag.usage_count,
@@ -90,7 +90,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('GET /api/search/suggestions error:', error);
+    log.error('GET /api/search/suggestions error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

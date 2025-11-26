@@ -1,11 +1,11 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { log } from '@/lib/logger';
 
 // GET /api/search - Search verdict requests with filters
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    const supabase: any = await createClient();
     const url = new URL(request.url);
     
     // Extract search parameters
@@ -21,6 +21,7 @@ export async function GET(request: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser();
 
     // Perform search using the database function
+    // @ts-ignore - RPC function types not generated
     const { data: results, error: searchError } = await supabase
       .rpc('search_requests', {
         search_query: query,
@@ -29,10 +30,10 @@ export async function GET(request: NextRequest) {
         sort_by: sortBy,
         limit_count: limit,
         offset_count: offset
-      });
+      }) as { data: any[] | null; error: any };
 
     if (searchError) {
-      console.error('Search error:', searchError);
+      log.error('Search error', searchError);
       return NextResponse.json({ error: 'Search failed' }, { status: 500 });
     }
 
@@ -50,6 +51,7 @@ export async function GET(request: NextRequest) {
     const forwarded = request.headers.get('x-forwarded-for');
     const clientIp = forwarded?.split(',')[0] || 'unknown';
 
+    // @ts-ignore - RPC function types not generated
     await supabase.rpc('track_search', {
       user_id: user?.id || null,
       search_query: query,
@@ -61,7 +63,7 @@ export async function GET(request: NextRequest) {
     });
 
     // Format results
-    const formattedResults = results?.map(result => ({
+    const formattedResults = results?.map((result: any) => ({
       ...result,
       preview_text: result.text_content 
         ? result.text_content.substring(0, 200) + (result.text_content.length > 200 ? '...' : '')
@@ -87,7 +89,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('GET /api/search error:', error);
+    log.error('GET /api/search error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

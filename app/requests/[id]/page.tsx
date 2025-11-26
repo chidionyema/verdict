@@ -6,8 +6,6 @@ import Link from 'next/link';
 import {
   Star,
   User,
-  MapPin,
-  Flag,
   ArrowLeft,
   RefreshCw,
   ThumbsUp,
@@ -20,7 +18,6 @@ import {
   Heart,
   MessageSquare,
   Copy,
-  ChevronDown,
   Award,
   Target,
   Clock,
@@ -29,7 +26,6 @@ import {
 import type { VerdictRequest, VerdictResponse } from '@/lib/database.types';
 import ReportContentButton from '@/components/ReportContentButton';
 import VerdictRatingModal from '@/components/VerdictRatingModal';
-import { VerdictSummary } from '@/components/request/VerdictSummary';
 import { ThankJudgesButton } from '@/components/request/ThankJudgesButton';
 import { toast } from '@/components/ui/toast';
 import { createClient } from '@/lib/supabase/client';
@@ -687,15 +683,6 @@ export default function RequestDetailPage({
 
           {/* Verdicts List */}
           <div className="lg:col-span-2" id="verdicts-section">
-            {/* Enhanced Verdict Summary */}
-            {verdicts.length > 0 && (
-              <VerdictSummary
-                verdicts={verdicts}
-                category={request.category}
-                className="mb-6"
-              />
-            )}
-
             {verdicts.length > 0 && (
               <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
                 <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">

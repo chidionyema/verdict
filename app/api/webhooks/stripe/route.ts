@@ -98,6 +98,18 @@ async function handleCheckoutSessionCompleted(
     const credits = parseInt(metadata.credits || '0');
     const userId = metadata.user_id;
 
+    // Idempotency: if we've already processed this session, exit early
+    const { data: existingTx } = await supabase
+      .from('transactions')
+      .select('id')
+      .eq('stripe_session_id', session.id)
+      .maybeSingle?.() ?? { data: null };
+
+    if (existingTx) {
+      // Already processed this checkout session
+      return;
+    }
+
     // Add credits atomically to prevent race conditions
     const { data: addResult, error: addError } = await supabase.rpc('add_credits', {
       p_user_id: userId,
@@ -116,18 +128,16 @@ async function handleCheckoutSessionCompleted(
     }
 
     // Log transaction
-    await supabase
-      .from('transactions')
-      .insert({
-        user_id: userId,
-        type: 'purchase',
-        credits_delta: credits,
-        amount_cents: session.amount_total,
-        stripe_session_id: session.id,
-        stripe_payment_intent_id: session.payment_intent,
-        status: 'completed',
-        completed_at: new Date().toISOString(),
-      });
+    await supabase.from('transactions').insert({
+      user_id: userId,
+      type: 'credit_purchase',
+      credits_delta: credits,
+      amount_cents: session.amount_total,
+      stripe_session_id: session.id,
+      stripe_payment_intent_id: session.payment_intent,
+      status: 'completed',
+      completed_at: new Date().toISOString(),
+    });
 
   } else if (metadata.type === 'subscription') {
     // Subscription will be handled by subscription.created event
