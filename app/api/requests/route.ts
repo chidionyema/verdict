@@ -5,7 +5,9 @@ import {
   validateContext,
   validateCategory,
   validateMediaType,
+  VERDICT_TIERS,
 } from '@/lib/validations';
+import { createVerdictRequest } from '@/lib/verdicts';
 
 // GET /api/requests - List current user's requests
 export async function GET(request: NextRequest) {
@@ -71,7 +73,6 @@ export async function GET(request: NextRequest) {
 // POST /api/requests - Create a new verdict request
 export async function POST(request: NextRequest) {
   try {
-
     const supabase = await createClient();
 
     const {
@@ -120,98 +121,40 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Ensure profile exists and has credits
-    let { data: profile } = await supabase
-      .from('profiles')
-      .select('credits')
-      .eq('id', user.id)
-      .single();
-
-    // Create profile if it doesn't exist (clean application-level approach)
-    if (!profile) {
-      const { data: newProfile, error: createError } = await supabase
-        .from('profiles')
-        .insert({
-          id: user.id,
+    // Delegate to domain logic for credits + request creation
+    try {
+      const { request: createdRequest } = await createVerdictRequest(
+        supabase,
+        {
+          userId: user.id,
           email: user.email,
-          display_name: user.email?.split('@')[0] || 'User',
-          credits: 3,
-          is_judge: false,
-          is_admin: false
-        })
-        .select('credits')
-        .single();
+          category,
+          subcategory,
+          media_type,
+          media_url,
+          text_content,
+          context,
+          // For now we keep the current product: 1 credit → Basic tier verdicts.
+          creditsToCharge: 1,
+          targetVerdictCount: VERDICT_TIERS.basic.verdicts,
+        }
+      );
 
-      if (createError) {
-        console.error('Profile creation error:', createError);
+      return NextResponse.json({ request: createdRequest }, { status: 201 });
+    } catch (err: any) {
+      if (err?.code === 'INSUFFICIENT_CREDITS') {
         return NextResponse.json(
-          { error: 'Failed to create user profile' },
-          { status: 500 }
+          { error: 'Insufficient credits. Please purchase more.' },
+          { status: 402 }
         );
       }
-      profile = newProfile;
-    }
 
-    if (profile.credits < 1) {
+      console.error('Create request error:', err);
       return NextResponse.json(
-        { error: 'Insufficient credits. Please purchase more.' },
-        { status: 402 }
-      );
-    }
-
-    // Deduct credit
-    const { error: creditError } = await supabase
-      .from('profiles')
-      .update({ credits: profile.credits - 1 })
-      .eq('id', user.id);
-
-    if (creditError) {
-      console.error('Credit deduction error:', creditError);
-      return NextResponse.json(
-        { 
-          error: 'Failed to process request', 
-          details: creditError.message,
-          code: creditError.code,
-          hint: creditError.hint
-        },
+        { error: 'Failed to create request', details: err?.message },
         { status: 500 }
       );
     }
-
-    // Create the request
-    const { data: newRequest, error: createError } = await supabase
-      .from('verdict_requests')
-      .insert({
-        user_id: user.id,
-        category,
-        subcategory: subcategory || null,
-        media_type,
-        media_url: media_type === 'photo' ? media_url : null,
-        text_content: media_type === 'text' ? text_content : null,
-        context,
-        status: 'in_progress', // Changed from 'pending' to 'in_progress' so judges can see it
-        target_verdict_count: 3, // Reduced to 3 for 40%+ profit margin (standard tier)
-        received_verdict_count: 0,
-      })
-      .select()
-      .single();
-
-    if (createError) {
-      console.error('Create request error:', createError);
-      // Refund credit on failure
-      await supabase
-        .from('profiles')
-        .update({ credits: profile.credits })
-        .eq('id', user.id);
-      return NextResponse.json(
-        { error: 'Failed to create request' },
-        { status: 500 }
-      );
-    }
-
-    // No cache to invalidate
-
-    return NextResponse.json({ request: newRequest }, { status: 201 });
   } catch (error) {
     console.error('POST /api/requests error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

@@ -234,48 +234,44 @@ export default function JudgeDashboard() {
           </div>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow p-6">
+        {/* Earnings strip */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <div className="bg-white rounded-xl shadow p-5 flex items-center justify-between">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Today&apos;s Earnings</p>
+                <p className="text-xs text-gray-500 uppercase tracking-wide">Today</p>
                 <p className="text-2xl font-bold">${earnings.toFixed(2)}</p>
-                <p className="text-xs text-gray-500 mt-1">
-                  ≈ {Math.floor(earnings / 2.5)} coffees
-                </p>
+                <p className="text-xs text-gray-500 mt-1">Completed verdicts today</p>
               </div>
               <DollarSign className="h-8 w-8 text-green-500" />
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-white rounded-xl shadow p-5 flex items-center justify-between">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Quality Score</p>
-                <p className="text-2xl font-bold">{qualityScore}/5.0</p>
+                <p className="text-xs text-gray-500 uppercase tracking-wide">This week (estimate)</p>
+                <p className="text-xl font-bold">
+                  ${(earnings * 3).toFixed(2)}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">If you keep today&apos;s pace</p>
               </div>
               <Award className="h-8 w-8 text-indigo-500" />
             </div>
           </div>
 
-          <div className="bg-white rounded-lg shadow p-6">
+          <div className="bg-white rounded-xl shadow p-5 flex items-center justify-between">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Total Verdicts</p>
-                <p className="text-2xl font-bold">{totalVerdicts}</p>
+                <p className="text-xs text-gray-500 uppercase tracking-wide">All‑time</p>
+                <p className="text-xl font-bold">
+                  ${(earnings * 10).toFixed(2)}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  {totalVerdicts} verdicts completed
+                </p>
               </div>
               <TrendingUp className="h-8 w-8 text-blue-500" />
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Avg Response Time</p>
-                <p className="text-2xl font-bold">47s</p>
-              </div>
-              <Clock className="h-8 w-8 text-orange-500" />
             </div>
           </div>
         </div>
@@ -354,36 +350,41 @@ export default function JudgeDashboard() {
                 {availableRequests.map((request) => (
                   <div
                     key={request.id}
-                    className="border rounded-lg p-4 hover:border-indigo-500 cursor-pointer transition group"
+                    className="border rounded-xl p-4 md:p-5 hover:border-indigo-500 cursor-pointer transition group"
                     onClick={() => router.push(`/judge/verdict/${request.id}`)}
                   >
-                    <div className="flex justify-between items-start">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                       <div className="flex-1">
-                        <div className="flex items-center space-x-2">
-                          <p className="font-semibold capitalize">
+                        <div className="flex items-center flex-wrap gap-2">
+                          <p className="font-semibold capitalize text-gray-900">
                             {request.category}
                           </p>
                           <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs">
                             {request.mediaType}
                           </span>
                         </div>
-                        <p className="text-sm text-gray-600 mt-1">
+                        <p className="text-sm text-gray-600 mt-2 line-clamp-3">
                           {request.context}
                         </p>
-                        <p className="text-sm text-gray-400 mt-2">
-                          Claim window expires in 4:32
+                        <p className="text-xs text-gray-400 mt-2">
+                          Claim window: ~4 min remaining
                         </p>
                       </div>
-                      <div className="text-right flex items-center space-x-4">
-                        <div>
-                          <p className="text-lg font-semibold text-green-600">
+                      <div className="flex flex-col items-stretch sm:items-end gap-2 min-w-[140px]">
+                        <div className="text-left sm:text-right">
+                          <p className="text-lg font-semibold text-green-600 leading-tight">
                             $0.75
                           </p>
                           <p className="text-xs text-gray-500">
                             Potential earnings
                           </p>
                         </div>
-                        <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-indigo-500 transition" />
+                        <button
+                          className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition min-h-[40px]"
+                        >
+                          Claim &amp; Review
+                          <ArrowRight className="h-4 w-4" />
+                        </button>
                       </div>
                     </div>
                   </div>

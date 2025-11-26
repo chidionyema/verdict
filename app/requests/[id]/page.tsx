@@ -88,7 +88,8 @@ export default function RequestDetailPage({
 
       // Check if user is the request owner
       const isSeeker = request.user_id === user.id;
-      const isJudge = profile ? (profile as { is_judge?: boolean }).is_judge || false : false;
+      const isJudge =
+        !!(profile && (profile as { is_judge?: boolean }).is_judge);
 
       // If judge, check if they've given a verdict for this request
       let myVerdictId: string | null = null;
@@ -99,7 +100,9 @@ export default function RequestDetailPage({
           .eq('request_id', request.id)
           .eq('judge_id', user.id)
           .single();
-        myVerdictId = myVerdict ? (myVerdict as { id?: string }).id || null : null;
+        if (myVerdict) {
+          myVerdictId = (myVerdict as { id?: string }).id || null;
+        }
       }
 
       setUserContext({

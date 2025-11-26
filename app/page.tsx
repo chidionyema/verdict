@@ -1,18 +1,49 @@
-'use client';
+"use client";
 
-import { useRouter } from 'next/navigation';
-import { HeroSection } from '@/components/landing/hero-section';
-import { FeaturesComparison } from '@/components/landing/features-comparison';
-import { SocialProofSection } from '@/components/landing/social-proof-section';
-import { InteractiveDemo } from '@/components/landing/interactive-demo';
-import { FeatureDiscoveryBanner } from '@/components/discovery/FeatureDiscoveryBanner';
-import { Clock, Shield, CheckCircle, Eye, Star } from 'lucide-react';
+import { useRouter } from "next/navigation";
+import Script from "next/script";
+import { HeroSection } from "@/components/landing/hero-section";
+import { FeaturesComparison } from "@/components/landing/features-comparison";
+import { SocialProofSection } from "@/components/landing/social-proof-section";
+import { InteractiveDemo } from "@/components/landing/interactive-demo";
+import { FeatureDiscoveryBanner } from "@/components/discovery/FeatureDiscoveryBanner";
+import { JudgeSelectionSection } from "@/components/landing/judge-selection";
+import { PricingTableSection } from "@/components/landing/pricing-table";
+import { ExitIntentModal } from "@/components/ExitIntentModal";
+import { Clock, Shield, CheckCircle, Eye, Star } from "lucide-react";
 
 export default function HomePage() {
   const router = useRouter();
 
   return (
     <div className="min-h-screen">
+      {/* Review / Product schema for SEO */}
+      <Script
+        id="verdict-review-schema"
+        type="application/ld+json"
+        strategy="afterInteractive"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Product",
+            name: "Verdict – Anonymous Feedback from Expert Judges",
+            description:
+              "Get 3 expert opinions on your photo, text, or decision in under an hour. Anonymous, fast, and brutally honest feedback.",
+            aggregateRating: {
+              "@type": "AggregateRating",
+              ratingValue: "4.9",
+              reviewCount: "12000",
+            },
+            offers: {
+              "@type": "Offer",
+              price: "3.49",
+              priceCurrency: "USD",
+              availability: "https://schema.org/InStock",
+            },
+          }),
+        }}
+      />
+
       {/* Feature Discovery Banner */}
       <FeatureDiscoveryBanner />
 
@@ -30,7 +61,13 @@ export default function HomePage() {
       {/* Social Proof */}
       <SocialProofSection />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+      {/* Judge selection / credibility */}
+      <JudgeSelectionSection />
+
+      {/* Pricing table */}
+      <PricingTableSection />
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 pb-32">
         <div className="text-center">
 
           {/* FAQ Section */}
@@ -224,6 +261,19 @@ export default function HomePage() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Exit-intent modal for conversion capture */}
+      <ExitIntentModal />
+
+      {/* Mobile sticky CTA */}
+      <div className="fixed bottom-4 left-0 right-0 px-4 sm:hidden z-40">
+        <button
+          onClick={() => router.push('/start')}
+          className="w-full bg-indigo-600 text-white px-6 py-4 rounded-xl shadow-lg font-semibold text-base flex items-center justify-center gap-2 min-h-[48px]"
+        >
+          Get Started – Free
+        </button>
       </div>
 
       {/* CSS Animations */}

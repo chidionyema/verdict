@@ -61,6 +61,11 @@ CREATE TABLE IF NOT EXISTS verdict_requests (
   deleted_at TIMESTAMPTZ
 );
 
+-- Ensure we never record more received verdicts than the target
+ALTER TABLE verdict_requests
+  ADD CONSTRAINT verdict_requests_counts_check
+  CHECK (received_verdict_count <= target_verdict_count);
+
 -- Verdicts (Legacy - keeping for compatibility)
 CREATE TABLE IF NOT EXISTS verdicts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -296,6 +301,13 @@ CREATE TABLE IF NOT EXISTS judge_earnings (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- One earnings row per verdict, non-negative amounts
+ALTER TABLE judge_earnings
+  ADD CONSTRAINT judge_earnings_unique_verdict UNIQUE (verdict_response_id);
+
+ALTER TABLE judge_earnings
+  ADD CONSTRAINT judge_earnings_positive_amount CHECK (amount >= 0);
+
 -- Payouts
 CREATE TABLE IF NOT EXISTS payouts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -383,6 +395,31 @@ CREATE TABLE IF NOT EXISTS content_reports (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   resolved_at TIMESTAMPTZ
 );
+
+-- Helper function: atomically increment received_verdict_count and close when full
+CREATE OR REPLACE FUNCTION increment_verdict_count_and_close(p_request_id UUID)
+RETURNS verdict_requests AS $$
+DECLARE
+  updated_row verdict_requests;
+BEGIN
+  UPDATE verdict_requests
+  SET
+    received_verdict_count = received_verdict_count + 1,
+    status = CASE
+      WHEN received_verdict_count + 1 >= target_verdict_count THEN 'completed'
+      ELSE 'in_progress'
+    END,
+    updated_at = NOW()
+  WHERE id = p_request_id
+  RETURNING * INTO updated_row;
+
+  IF updated_row.id IS NULL THEN
+    RAISE EXCEPTION 'Request % not found', p_request_id;
+  END IF;
+
+  RETURN updated_row;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Content Flags (Auto-moderation)
 CREATE TABLE IF NOT EXISTS content_flags (
@@ -890,6 +927,21 @@ CREATE INDEX IF NOT EXISTS idx_help_articles_category ON help_articles(category,
 CREATE INDEX IF NOT EXISTS idx_popular_searches_term ON popular_searches(search_term);
 CREATE INDEX IF NOT EXISTS idx_search_analytics_query ON search_analytics(search_query, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_content_tags_name ON content_tags(name);
+
+-- =====================================================
+-- ROLE GRANTS FOR PUBLIC SCHEMA
+-- Ensure anon/authenticated roles can access tables before RLS policies apply
+-- =====================================================
+
+GRANT USAGE ON SCHEMA public TO anon, authenticated;
+
+GRANT SELECT, INSERT, UPDATE, DELETE
+ON ALL TABLES IN SCHEMA public
+TO anon, authenticated;
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES
+TO anon, authenticated;
 
 -- =====================================================
 -- ROW LEVEL SECURITY

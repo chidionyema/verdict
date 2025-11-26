@@ -3,13 +3,14 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store';
-import { Star, User, MapPin } from 'lucide-react';
+import { Star, User, MapPin, ArrowLeft, Share2, CheckCircle } from 'lucide-react';
 
 export default function ResultsPage() {
   const router = useRouter();
   const currentRequest = useStore((state) => state.currentRequest);
   const user = useStore((state) => state.user);
   const [selectedVerdict, setSelectedVerdict] = useState(0);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (!currentRequest || !user) {
@@ -30,16 +31,44 @@ export default function ResultsPage() {
   return (
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="max-w-6xl mx-auto px-4">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">
-            Your Verdict Results
-          </h1>
-          <div className="flex items-center justify-center space-x-6 text-gray-600">
-            <span>Average Rating: {averageRating.toFixed(1)}/10</span>
-            <span>-</span>
-            <span>{currentRequest.verdicts.length} Judges</span>
-            <span>-</span>
-            <span>Credits remaining: {user.credits - 1}</span>
+        {/* Header / summary strip */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
+          <div>
+            <button
+              onClick={() => router.push('/my-requests')}
+              className="inline-flex items-center text-sm text-gray-500 hover:text-indigo-600 mb-2"
+            >
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              Back to My Requests
+            </button>
+            <h1 className="text-3xl font-bold text-gray-900">
+              Your Verdict Results
+            </h1>
+            <p className="text-sm text-gray-600 mt-1">
+              3 expert judges reviewed your submission. Here&apos;s what they said.
+            </p>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-sm px-5 py-3 flex items-center gap-6 text-sm">
+            <div>
+              <p className="text-xs text-gray-500 uppercase tracking-wide">
+                Average rating
+              </p>
+              <p className="text-xl font-semibold text-indigo-600 flex items-center gap-1">
+                {averageRating.toFixed(1)}
+                <span className="text-xs text-gray-500">/10</span>
+              </p>
+            </div>
+            <div className="h-8 w-px bg-gray-200" />
+            <div>
+              <p className="text-xs text-gray-500 uppercase tracking-wide">
+                Verdicts received
+              </p>
+              <p className="text-sm font-semibold text-gray-900">
+                {currentRequest.verdicts.length} judge
+                {currentRequest.verdicts.length !== 1 ? 's' : ''}
+              </p>
+            </div>
           </div>
         </div>
 
@@ -76,7 +105,7 @@ export default function ResultsPage() {
               <div
                 key={verdict.id}
                 className={`bg-white rounded-lg shadow-lg p-6 cursor-pointer transition ${
-                  selectedVerdict === index ? 'ring-2 ring-indigo-500' : ''
+                  selectedVerdict === index ? 'ring-2 ring-indigo-500' : 'hover:shadow-md'
                 }`}
                 onClick={() => setSelectedVerdict(index)}
               >
@@ -120,7 +149,9 @@ export default function ResultsPage() {
                   )}
                 </div>
 
-                <p className="text-gray-700 mb-4">{verdict.feedback}</p>
+                <p className="text-gray-700 mb-4 whitespace-pre-line leading-relaxed">
+                  {verdict.feedback}
+                </p>
 
                 <div className="flex items-center justify-between text-sm">
                   <span
@@ -144,20 +175,46 @@ export default function ResultsPage() {
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="mt-12 text-center">
-          <button
-            onClick={() => router.push('/upload')}
-            className="bg-indigo-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-indigo-700 transition mr-4 cursor-pointer"
-          >
-            Get Another Verdict
-          </button>
-          <button
-            onClick={() => window.print()}
-            className="bg-gray-200 text-gray-700 px-8 py-3 rounded-lg font-semibold hover:bg-gray-300 transition cursor-pointer"
-          >
-            Download Results
-          </button>
+        {/* Next actions / share */}
+        <div className="mt-12 flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex flex-wrap gap-3">
+            <button
+              onClick={() => router.push('/start')}
+              className="bg-indigo-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-indigo-700 transition cursor-pointer flex items-center gap-2"
+            >
+              Get Another Verdict
+            </button>
+            <button
+              onClick={() => window.print()}
+              className="bg-gray-200 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:bg-gray-300 transition cursor-pointer flex items-center gap-2"
+            >
+              Download as PDF
+            </button>
+          </div>
+
+          <div className="flex items-center gap-3 text-sm">
+            <button
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(window.location.href);
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 2500);
+                } catch {
+                  // ignore
+                }
+              }}
+              className="inline-flex items-center gap-2 text-gray-600 hover:text-indigo-600 cursor-pointer"
+            >
+              <Share2 className="h-4 w-4" />
+              <span>Copy share link</span>
+            </button>
+            {copied && (
+              <span className="inline-flex items-center text-xs text-green-600">
+                <CheckCircle className="h-3 w-3 mr-1" />
+                Link copied
+              </span>
+            )}
+          </div>
         </div>
       </div>
     </div>

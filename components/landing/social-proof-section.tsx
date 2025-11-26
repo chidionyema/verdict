@@ -18,11 +18,11 @@ import {
 } from 'lucide-react';
 
 const REAL_TIME_ACTIVITY = [
-  { name: "Sarah", action: "got verdict on dating profile", time: "2 min ago", rating: 8.5 },
-  { name: "Mike", action: "received business feedback", time: "4 min ago", rating: 9.2 },
-  { name: "Jessica", action: "outfit rating completed", time: "6 min ago", rating: 7.8 },
-  { name: "David", action: "career decision feedback", time: "8 min ago", rating: 8.9 },
-  { name: "Emma", action: "writing review finished", time: "11 min ago", rating: 9.1 },
+  { name: 'Sarah', action: 'got verdict on dating profile photos', time: '2 min ago', rating: 8.5 },
+  { name: 'Mike', action: 'received feedback on a salary negotiation email', time: '4 min ago', rating: 9.2 },
+  { name: 'Jessica', action: 'outfit check before a big interview', time: '6 min ago', rating: 7.8 },
+  { name: 'David', action: 'career decision feedback about moving cities', time: '8 min ago', rating: 8.9 },
+  { name: 'Emma', action: 'tone check on an email to her manager', time: '11 min ago', rating: 9.1 },
 ];
 
 const FEATURED_TESTIMONIALS = [
@@ -67,37 +67,37 @@ const FEATURED_TESTIMONIALS = [
 const TRUST_METRICS = [
   {
     icon: Users,
-    label: "Active Users",
-    value: "47,000+",
-    trend: "+23% this month",
-    color: "text-blue-600"
+    label: 'Active users',
+    value: '47,000+',
+    trend: '+23% this month',
+    color: 'text-blue-600',
   },
   {
     icon: MessageSquare,
-    label: "Verdicts Delivered", 
-    value: "340K+",
-    trend: "99.2% satisfaction",
-    color: "text-green-600"
+    label: 'Verdicts this week',
+    value: '3,847',
+    trend: 'Across all categories',
+    color: 'text-green-600',
   },
   {
     icon: Star,
-    label: "Average Rating",
-    value: "4.94/5",
-    trend: "Based on 12K+ reviews",
-    color: "text-yellow-600"
+    label: 'Category mix',
+    value: '42% • 31% • 27%',
+    trend: 'Career • Appearance • Relationships',
+    color: 'text-yellow-600',
   },
   {
     icon: Clock,
-    label: "Avg Response Time",
-    value: "4.2 min",
-    trend: "Industry leading",
-    color: "text-purple-600"
-  }
+    label: 'Avg response time',
+    value: '47 min',
+    trend: 'Money‑back guarantee if slower',
+    color: 'text-purple-600',
+  },
 ];
 
 export function SocialProofSection() {
   const [activeActivity, setActiveActivity] = useState(0);
-  const [liveCount, setLiveCount] = useState(147);
+  const [liveCount, setLiveCount] = useState(283);
 
   useEffect(() => {
     // Rotate through real-time activity
@@ -105,9 +105,13 @@ export function SocialProofSection() {
       setActiveActivity((prev) => (prev + 1) % REAL_TIME_ACTIVITY.length);
     }, 3000);
 
-    // Simulate live user count changes
+    // Simulate live judge count changes (small variance, fixed container)
     const countInterval = setInterval(() => {
-      setLiveCount(prev => prev + Math.floor(Math.random() * 3) - 1);
+      setLiveCount((prev) => {
+        const delta = Math.floor(Math.random() * 3) - 1;
+        const next = prev + delta;
+        return Math.min(Math.max(next, 260), 320);
+      });
     }, 5000);
 
     return () => {
@@ -223,7 +227,7 @@ export function SocialProofSection() {
               </Badge>
             </div>
 
-            <div className="space-y-3">
+            <div className="activity-feed space-y-3">
               {REAL_TIME_ACTIVITY.map((activity, index) => (
                 <div
                   key={index}

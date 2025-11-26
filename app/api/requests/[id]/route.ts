@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createServiceClient } from '@/lib/supabase/server';
 
 // GET /api/requests/[id] - Get request with verdicts
 export async function GET(
@@ -45,8 +45,11 @@ export async function GET(
       }
     }
 
-    // Fetch verdicts for this request
-    const { data: verdicts, error: verdictsError } = await supabase
+    // Fetch verdicts for this request using service client to avoid RLS edge-cases,
+    // after we've already verified that the caller is allowed to view this request.
+    const serviceClient = createServiceClient();
+
+    const { data: verdicts, error: verdictsError } = await serviceClient
       .from('verdict_responses')
       .select(`
         id,

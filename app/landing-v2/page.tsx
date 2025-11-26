@@ -4,6 +4,8 @@ import { HeroSection } from '@/components/landing/hero-section';
 import { InteractiveDemo } from '@/components/landing/interactive-demo';
 import { FeaturesComparison } from '@/components/landing/features-comparison';
 import { SocialProofSection } from '@/components/landing/social-proof-section';
+import { JudgeSelectionSection } from '@/components/landing/judge-selection';
+import { PricingTableSection } from '@/components/landing/pricing-table';
 import { TouchButton } from '@/components/ui/touch-button';
 import { 
   ArrowRight,
@@ -77,6 +79,12 @@ export default function WorldClassLandingPage() {
           </div>
         </div>
       </div>
+
+      {/* Judge selection / credibility */}
+      <JudgeSelectionSection />
+
+      {/* Pricing table */}
+      <PricingTableSection />
 
       {/* Interactive Demo */}
       <InteractiveDemo />

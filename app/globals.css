@@ -134,3 +134,18 @@ button, a {
   word-break: break-word;
   hyphens: auto;
 }
+
+/* Landing page stability helpers */
+.hero-section {
+  min-height: 600px;
+}
+
+.testimonial-card {
+  min-height: 200px;
+}
+
+.activity-feed {
+  height: 300px;
+  overflow: hidden;
+  contain: layout;
+}

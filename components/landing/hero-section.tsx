@@ -29,12 +29,10 @@ const SOCIAL_PROOF_STATS = [
 ];
 
 const USE_CASES = [
-  "Should I take the startup job offer?",
-  "Is my dating profile attractive?",
-  "Should I move to a new city?",
-  "Does this outfit work for the interview?",
-  "Should I confront my roommate?",
-  "Is this business idea worth pursuing?",
+  'Should I take this job offer?',
+  'Is this outfit professional enough?',
+  'Will this email sound too aggressive to my boss?',
+  'Which photo will get more matches on my dating profile?',
 ];
 
 export function HeroSection() {
@@ -58,7 +56,7 @@ export function HeroSection() {
   }, []);
 
   return (
-    <div className="relative overflow-hidden bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
+    <div className="relative overflow-hidden bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 hero-section min-h-[600px]">
       {/* Background Elements */}
       <div className="absolute inset-0">
         <div className="absolute top-0 left-1/4 w-72 h-72 bg-purple-200 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-blob"></div>
@@ -83,7 +81,7 @@ export function HeroSection() {
             </h1>
           </div>
 
-          {/* Sub-headline with rotating use case */}
+          {/* Sub-headline with rotating use case + pricing */}
           <div className="mb-8">
             <p className="text-xl md:text-2xl text-gray-600 max-w-3xl mx-auto">
               Whether you're asking{' '}
@@ -91,7 +89,7 @@ export function HeroSection() {
                 "{USE_CASES[currentUseCase]}"
               </span>
               <br />
-              Get 3 expert verdicts from qualified judges in minutes.
+              Get 3 expert opinions from qualified judges for <span className="font-semibold text-gray-900">$3.49</span>.
             </p>
           </div>
 
@@ -126,7 +124,7 @@ export function HeroSection() {
               }}
               className="px-6 py-4 text-lg border-2 hover:bg-gray-50"
             >
-              Watch Demo (30s)
+              ▶ Watch 30‑Second Demo
             </TouchButton>
           </div>
 

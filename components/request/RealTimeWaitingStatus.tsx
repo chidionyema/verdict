@@ -2,13 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { Users, CheckCircle, Clock, Sparkles } from 'lucide-react';
-import { createClient } from '@/lib/supabase/client';
 
 interface RealTimeWaitingStatusProps {
   requestId: string;
   targetCount: number;
   initialCount?: number;
   onComplete?: () => void;
+  onProgressChange?: (count: number, target: number) => void;
   className?: string;
 }
 
@@ -17,44 +17,116 @@ export function RealTimeWaitingStatus({
   targetCount,
   initialCount = 0,
   onComplete,
+  onProgressChange,
   className = '',
 }: RealTimeWaitingStatusProps) {
   const [verdictCount, setVerdictCount] = useState(initialCount);
   const [activeJudges, setActiveJudges] = useState<number>(0);
   const [recentVerdict, setRecentVerdict] = useState<boolean>(false);
-  const supabase = createClient();
+  const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    // Subscribe to real-time verdict updates
-    const channel = supabase
-      .channel(`request-${requestId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'verdict_responses',
-          filter: `request_id=eq.${requestId}`,
-        },
-        (payload) => {
+    let isMounted = true;
+    let pollFallback: NodeJS.Timeout | null = null;
+
+    const connectSSE = () => {
+      const es = new EventSource(`/api/requests/${requestId}/stream`);
+
+      es.onopen = () => {
+        if (!isMounted) return;
+        setIsLoaded(true);
+      };
+
+      es.onmessage = (event) => {
+        if (!isMounted) return;
+
+        try {
+          const data = JSON.parse(event.data);
+          const request = data.request || data;
+          if (!request) return;
+
           setVerdictCount((prev) => {
-            const newCount = prev + 1;
+            const current = typeof prev === 'number' ? prev : 0;
+            const next = Math.max(
+              current,
+              request.received_verdict_count ?? current
+            );
 
-            // Show animation
-            setRecentVerdict(true);
-            setTimeout(() => setRecentVerdict(false), 3000);
+            if (next > current) {
+              setRecentVerdict(true);
+              setTimeout(() => setRecentVerdict(false), 3000);
+            }
 
-            // Check if complete
-            if (newCount >= targetCount && onComplete) {
+            if (next >= targetCount && onComplete) {
               onComplete();
             }
 
-            return newCount;
-          });
-        }
-      )
-      .subscribe();
+            if (onProgressChange) {
+              onProgressChange(next, targetCount);
+            }
 
+            return next;
+          });
+        } catch (err) {
+          console.error(
+            '[RealTimeWaitingStatus] Error parsing SSE data:',
+            err
+          );
+        }
+      };
+
+      es.onerror = (err) => {
+        console.error('[RealTimeWaitingStatus] SSE error:', err);
+        es.close();
+
+        // Very light HTTP fallback if SSE dies
+        if (!pollFallback) {
+          pollFallback = setInterval(async () => {
+            try {
+              const res = await fetch(`/api/requests/${requestId}`);
+              if (!res.ok) return;
+              const data = await res.json();
+              const request = data.request;
+              if (!request) return;
+
+              setVerdictCount((prev) => {
+                const current = typeof prev === 'number' ? prev : 0;
+                const next = Math.max(
+                  current,
+                  request.received_verdict_count ?? current
+                );
+                if (next >= targetCount && onComplete) {
+                  onComplete();
+                }
+                if (onProgressChange) {
+                  onProgressChange(next, targetCount);
+                }
+                return next;
+              });
+            } catch {
+              // ignore – best-effort fallback
+            }
+          }, 15000);
+        }
+      };
+
+      return es;
+    };
+
+    const eventSource = connectSSE();
+
+    return () => {
+      isMounted = false;
+      if (eventSource) {
+        eventSource.close();
+      }
+      if (pollFallback) {
+        clearInterval(pollFallback);
+      }
+    };
+  }, [requestId, targetCount, onComplete, onProgressChange]);
+
+  useEffect(() => {
     // Simulate active judges (in production, track actual claiming)
     const judgeInterval = setInterval(() => {
       const remaining = targetCount - verdictCount;
@@ -68,10 +140,9 @@ export function RealTimeWaitingStatus({
     }, 5000);
 
     return () => {
-      supabase.removeChannel(channel);
       clearInterval(judgeInterval);
     };
-  }, [requestId, targetCount, verdictCount, onComplete, supabase]);
+  }, [targetCount, verdictCount]);
 
   const progress = (verdictCount / targetCount) * 100;
   const isComplete = verdictCount >= targetCount;
@@ -132,7 +203,7 @@ export function RealTimeWaitingStatus({
 
       {/* Live status */}
       {!isComplete && (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {/* Active judges indicator */}
           {activeJudges > 0 && (
             <div className="flex items-center gap-2 p-3 bg-purple-50 rounded-lg border border-purple-200 animate-fade-in">
@@ -159,6 +230,18 @@ export function RealTimeWaitingStatus({
               {Math.max(1, Math.ceil(((targetCount - verdictCount) * 2) / 60))} min
             </span>
           </div>
+
+          {/* Quick link to current verdicts once at least one has arrived */}
+          {verdictCount > 0 && (
+            <div className="flex justify-end">
+              <a
+                href={`/requests/${requestId}`}
+                className="text-sm text-indigo-600 hover:text-indigo-800 font-medium"
+              >
+                View {verdictCount === 1 ? 'your first verdict' : 'verdicts so far'}
+              </a>
+            </div>
+          )}
         </div>
       )}
 

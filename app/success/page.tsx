@@ -13,6 +13,10 @@ function SuccessContent() {
   const router = useRouter();
   const [requestData, setRequestData] = useState<any>(null);
   const [showAnalytics, setShowAnalytics] = useState(false);
+  const [verdictProgress, setVerdictProgress] = useState<{ count: number; target: number }>({
+    count: 0,
+    target: 3,
+  });
 
   useEffect(() => {
     // Get request data from URL params or localStorage
@@ -64,8 +68,32 @@ function SuccessContent() {
           targetCount={3}
           initialCount={0}
           onComplete={handleRequestComplete}
+          onProgressChange={(count, target) =>
+            setVerdictProgress({ count, target })
+          }
           className="mb-8"
         />
+
+        {/* Partial results CTA */}
+        {verdictProgress.count > 0 && verdictProgress.count < verdictProgress.target && (
+          <div className="mb-8 bg-indigo-50 border border-indigo-200 rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-indigo-900">
+                You already have {verdictProgress.count} of {verdictProgress.target} verdicts.
+              </p>
+              <p className="text-xs text-indigo-700">
+                You can start reading feedback now while the remaining verdicts arrive.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleRequestComplete}
+              className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition min-h-[40px]"
+            >
+              View {verdictProgress.count === 1 ? 'your first verdict' : 'verdicts so far'}
+            </button>
+          </div>
+        )}
 
         {/* Analytics Section - Shows after delay */}
         {showAnalytics && (

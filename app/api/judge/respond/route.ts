@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { validateFeedback, validateRating, validateTone } from '@/lib/validations';
+import { addJudgeVerdict } from '@/lib/verdicts';
 
 // POST /api/judge/respond - Submit a verdict
 export async function POST(request: NextRequest) {
@@ -65,80 +66,46 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid tone' }, { status: 400 });
     }
 
-    // Fetch the request
-    const { data: verdictRequest, error: requestError } = await supabase
-      .from('verdict_requests')
-      .select('*')
-      .eq('id', request_id)
-      .single();
-
-    if (requestError || !verdictRequest) {
-      return NextResponse.json({ error: 'Request not found' }, { status: 404 });
-    }
-
-    // Validate request state
-    if (verdictRequest.status !== 'in_progress' && verdictRequest.status !== 'pending') {
-      return NextResponse.json(
-        { error: 'Request is no longer accepting verdicts' },
-        { status: 400 }
-      );
-    }
-
-    if (verdictRequest.user_id === user.id) {
-      return NextResponse.json(
-        { error: 'Cannot judge your own request' },
-        { status: 400 }
-      );
-    }
-
-    // Check if judge already responded
-    const { data: existingResponse } = await supabase
-      .from('verdict_responses')
-      .select('id')
-      .eq('request_id', request_id)
-      .eq('judge_id', user.id)
-      .single();
-
-    if (existingResponse) {
-      return NextResponse.json(
-        { error: 'You have already submitted a verdict for this request' },
-        { status: 400 }
-      );
-    }
-
-    // Create the verdict response
-    const { data: verdict, error: createError } = await supabase
-      .from('verdict_responses')
-      .insert({
-        request_id,
-        judge_id: user.id,
-        rating: rating || null,
+    // Domain logic: add verdict and update request atomically at the app layer
+    let verdict, updatedRequest;
+    try {
+      const result = await addJudgeVerdict(supabase, {
+        requestId: request_id,
+        judgeId: user.id,
+        rating,
         feedback,
         tone,
-      })
-      .select()
-      .single();
-
-    if (createError) {
-      console.error('Create verdict error:', createError);
+      });
+      verdict = result.verdict;
+      updatedRequest = result.updatedRequest;
+    } catch (err: any) {
+      if (err?.code === 'REQUEST_NOT_FOUND') {
+        return NextResponse.json({ error: 'Request not found' }, { status: 404 });
+      }
+      if (err?.code === 'REQUEST_CLOSED') {
+        return NextResponse.json(
+          { error: 'Request is no longer accepting verdicts' },
+          { status: 400 }
+        );
+      }
+      if (err?.code === 'ALREADY_RESPONDED') {
+        return NextResponse.json(
+          { error: 'You have already submitted a verdict for this request' },
+          { status: 400 }
+        );
+      }
+      if (err?.code === 'CANNOT_JUDGE_OWN_REQUEST') {
+        return NextResponse.json(
+          { error: 'You cannot judge your own request' },
+          { status: 400 }
+        );
+      }
+      console.error('Create verdict error:', err);
       return NextResponse.json(
-        { error: 'Failed to submit verdict' },
+        { error: 'Failed to submit verdict', details: err?.message },
         { status: 500 }
       );
     }
-
-    // Increment received_verdict_count
-    const newCount = verdictRequest.received_verdict_count + 1;
-    const newStatus =
-      newCount >= verdictRequest.target_verdict_count ? 'closed' : 'in_progress';
-
-    await supabase
-      .from('verdict_requests')
-      .update({
-        received_verdict_count: newCount,
-        status: newStatus,
-      })
-      .eq('id', request_id);
 
     // Create earnings record for the judge
     const baseEarning = 0.50; // Base earning per verdict
@@ -167,10 +134,10 @@ export async function POST(request: NextRequest) {
     // Create notification for the seeker
     try {
       await (supabase.rpc as any)('create_notification', {
-        target_user_id: verdictRequest.user_id,
+        target_user_id: updatedRequest.user_id,
         notification_type: 'new_verdict',
         notification_title: 'New verdict received!',
-        notification_message: `You've received a new verdict for your ${verdictRequest.category} request.`,
+        notification_message: `You've received a new verdict for your ${updatedRequest.category} request.`,
         related_type: 'verdict_request',
         related_id: request_id,
         action_label: 'View Verdict',

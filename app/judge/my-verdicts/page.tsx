@@ -32,6 +32,7 @@ export default function MyVerdictsPage() {
   const [error, setError] = useState('');
   const [filterTone, setFilterTone] = useState<'all' | 'encouraging' | 'honest' | 'constructive'>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [timeFilter, setTimeFilter] = useState<'all' | 'today' | 'week' | 'month'>('all');
 
   useEffect(() => {
     fetchVerdicts();
@@ -52,13 +53,33 @@ export default function MyVerdictsPage() {
     }
   };
 
-  const filteredVerdicts = verdicts.filter(verdict => {
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfWeek = new Date(startOfToday);
+  startOfWeek.setDate(startOfToday.getDate() - 7);
+  const startOfMonth = new Date(startOfToday);
+  startOfMonth.setDate(startOfToday.getDate() - 30);
+
+  const filteredVerdicts = verdicts.filter((verdict) => {
+    const createdAt = new Date(verdict.created_at);
+
     const matchesTone = filterTone === 'all' || verdict.tone === filterTone;
-    const matchesSearch = searchTerm === '' || 
+    const matchesSearch =
+      searchTerm === '' ||
       verdict.feedback.toLowerCase().includes(searchTerm.toLowerCase()) ||
       verdict.verdict_requests?.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
       verdict.verdict_requests?.context.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesTone && matchesSearch;
+
+    let matchesTime = true;
+    if (timeFilter === 'today') {
+      matchesTime = createdAt >= startOfToday;
+    } else if (timeFilter === 'week') {
+      matchesTime = createdAt >= startOfWeek;
+    } else if (timeFilter === 'month') {
+      matchesTime = createdAt >= startOfMonth;
+    }
+
+    return matchesTone && matchesSearch && matchesTime;
   });
 
   const totalEarnings = verdicts.reduce((sum, v) => sum + parseFloat(v.judge_earning?.toString() || '0'), 0);
@@ -111,7 +132,7 @@ export default function MyVerdictsPage() {
             <div>
               <h1 className="text-3xl font-bold text-gray-900">My Verdicts</h1>
               <p className="text-gray-600 mt-1">
-                Review all your submitted verdicts, earnings, and impact
+                Your judging history, earnings, and impact in one place
               </p>
             </div>
             <Link
@@ -172,29 +193,54 @@ export default function MyVerdictsPage() {
 
         {/* Filters */}
         <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search verdicts..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search by context or feedback..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+              <div className="relative">
+                <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <select
+                  value={filterTone}
+                  onChange={(e) => setFilterTone(e.target.value as any)}
+                  className="pl-10 pr-8 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 appearance-none bg-white"
+                >
+                  <option value="all">All Tones</option>
+                  <option value="encouraging">Encouraging</option>
+                  <option value="honest">Honest</option>
+                  <option value="constructive">Constructive</option>
+                </select>
+              </div>
             </div>
-            <div className="relative">
-              <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-              <select
-                value={filterTone}
-                onChange={(e) => setFilterTone(e.target.value as any)}
-                className="pl-10 pr-8 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 appearance-none bg-white"
-              >
-                <option value="all">All Tones</option>
-                <option value="encouraging">Encouraging</option>
-                <option value="honest">Honest</option>
-                <option value="constructive">Constructive</option>
-              </select>
+
+            {/* Time range pills */}
+            <div className="flex flex-wrap gap-2">
+              {[
+                { key: 'all', label: 'All time' },
+                { key: 'today', label: 'Today' },
+                { key: 'week', label: 'Last 7 days' },
+                { key: 'month', label: 'Last 30 days' },
+              ].map((option) => (
+                <button
+                  key={option.key}
+                  type="button"
+                  onClick={() => setTimeFilter(option.key as any)}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium border min-h-[32px] ${
+                    timeFilter === option.key
+                      ? 'bg-indigo-600 text-white border-indigo-600'
+                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
             </div>
           </div>
         </div>
@@ -254,10 +300,24 @@ export default function MyVerdictsPage() {
                         </span>
                       )}
                     </div>
-                    <p className="text-sm text-gray-500 mb-2">
-                      {verdict.verdict_requests?.context?.substring(0, 150)}
-                      {verdict.verdict_requests?.context && verdict.verdict_requests.context.length > 150 ? '...' : ''}
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                      Request you judged
                     </p>
+                    <p className="text-sm text-gray-600 mb-1">
+                      {verdict.verdict_requests?.context?.substring(0, 160)}
+                      {verdict.verdict_requests?.context &&
+                      verdict.verdict_requests.context.length > 160
+                        ? '…'
+                        : ''}
+                    </p>
+                    <div className="mb-2">
+                      <Link
+                        href={`/requests/${verdict.request_id}`}
+                        className="text-xs text-indigo-600 hover:text-indigo-800 font-medium inline-flex items-center gap-1"
+                      >
+                        Open full request →
+                      </Link>
+                    </div>
                     <div className="flex items-center gap-4 text-sm text-gray-500">
                       <span className="flex items-center gap-1">
                         <Calendar className="h-4 w-4" />
@@ -265,7 +325,7 @@ export default function MyVerdictsPage() {
                       </span>
                       <span className="flex items-center gap-1">
                         <Star className="h-4 w-4 text-yellow-500" />
-                        {verdict.rating}/10
+                        You gave <span className="font-semibold">{verdict.rating}/10</span>
                       </span>
                       <span className="flex items-center gap-1">
                         <DollarSign className="h-4 w-4 text-green-500" />
@@ -276,16 +336,12 @@ export default function MyVerdictsPage() {
                 </div>
 
                 <div className="border-t border-gray-100 pt-4 mt-4">
-                  <p className="text-gray-700 leading-relaxed">{verdict.feedback}</p>
-                </div>
-
-                <div className="mt-4 pt-4 border-t border-gray-100">
-                  <Link
-                    href={`/requests/${verdict.request_id}`}
-                    className="text-sm text-indigo-600 hover:text-indigo-800 font-medium inline-flex items-center gap-1 min-h-[44px]"
-                  >
-                    View Request You Judged →
-                  </Link>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                    Your verdict
+                  </p>
+                  <p className="text-gray-800 leading-relaxed bg-gray-50 rounded-lg p-4 border border-gray-100">
+                    {verdict.feedback}
+                  </p>
                 </div>
               </div>
             ))}
