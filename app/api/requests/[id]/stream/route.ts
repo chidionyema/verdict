@@ -126,7 +126,7 @@ export async function GET(
         // Send initial snapshot
         sendSnapshot(verdictRequest);
 
-        // Poll for updates every 3 seconds
+        // Poll for updates every 30 seconds (reduced from 3s to minimize DB load at scale)
         interval = setInterval(async () => {
           try {
             const { data: latest, error: latestError } = await (supabase as any)
@@ -155,7 +155,7 @@ export async function GET(
           } catch {
             // Poll error - continue trying
           }
-        }, 3000);
+        }, 30000);
 
         // Enforce maximum connection duration
         maxDurationTimeout = setTimeout(() => {
