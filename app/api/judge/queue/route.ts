@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { log } from '@/lib/logger';
 
 // GET /api/judge/queue - Get open requests for judges
 export async function GET(request: NextRequest) {
@@ -65,7 +66,7 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: true }) // Oldest first
       .limit(limit);
 
-    console.log('[Judge Queue API] Querying for requests...');
+    log.debug('Judge queue query starting', { excludeCount: excludeIds.length });
 
     // Exclude already responded requests
     if (excludeIds.length > 0) {
@@ -75,19 +76,18 @@ export async function GET(request: NextRequest) {
     const { data: requests, error } = await query;
 
     if (error) {
-      console.error('[Judge Queue API] ❌ Fetch queue error:', error);
+      log.error('Failed to fetch judge queue', error);
       return NextResponse.json(
         { error: 'Failed to fetch queue' },
         { status: 500 }
       );
     }
 
-    console.log('[Judge Queue API] ✅ Found', requests?.length || 0, 'requests');
-    console.log('[Judge Queue API] Excluded request IDs:', excludeIds.length);
+    log.debug('Judge queue fetched', { count: requests?.length || 0, excludedCount: excludeIds.length });
 
     return NextResponse.json({ requests: requests || [] });
   } catch (error) {
-    console.error('GET /api/judge/queue error:', error);
+    log.error('Judge queue endpoint error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

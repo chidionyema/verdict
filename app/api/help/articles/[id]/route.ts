@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { log } from '@/lib/logger';
 
 export async function GET(
   request: NextRequest,
@@ -52,7 +53,7 @@ export async function GET(
     });
 
   } catch (error) {
-    console.error('Get article error:', error);
+    log.error('Get article failed', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -98,7 +99,7 @@ export async function POST(
       });
 
       if (updateError) {
-        console.error('Error updating helpful count:', updateError);
+        log.error('Failed to update helpful count', updateError, { articleId });
         return NextResponse.json({ error: 'Failed to update helpful count' }, { status: 500 });
       }
 
@@ -119,7 +120,7 @@ export async function POST(
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
 
   } catch (error) {
-    console.error('Article action error:', error);
+    log.error('Article action failed', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

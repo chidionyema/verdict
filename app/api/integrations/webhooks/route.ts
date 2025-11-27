@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { log } from '@/lib/logger';
 import { z } from 'zod';
 
 const webhookSchema = z.object({
@@ -37,14 +38,14 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('Error fetching webhooks:', error);
+      log.error('Failed to fetch webhooks', error);
       return NextResponse.json({ error: 'Failed to fetch webhooks' }, { status: 500 });
     }
 
     return NextResponse.json({ webhooks });
 
   } catch (error) {
-    console.error('Webhooks GET error:', error);
+    log.error('Webhooks GET endpoint error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -88,7 +89,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      console.error('Error creating webhook:', error);
+      log.error('Failed to create webhook', error);
       return NextResponse.json({ error: 'Failed to create webhook' }, { status: 500 });
     }
 
@@ -102,7 +103,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.error('Webhook creation error:', error);
+    log.error('Webhook creation endpoint error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

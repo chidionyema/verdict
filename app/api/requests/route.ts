@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { log } from '@/lib/logger';
 import {
   validateContext,
   validateCategory,
@@ -16,8 +17,6 @@ import { moderateRequest } from '@/lib/moderation-free';
 export async function GET(request: NextRequest) {
   const startTime = performance.now();
   try {
-    console.log('GET /api/requests: Starting...');
-
     const supabase = await createClient();
 
     const {
@@ -26,7 +25,6 @@ export async function GET(request: NextRequest) {
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      console.log('GET /api/requests: Auth failed', authError?.message);
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -42,13 +40,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    console.log('GET /api/requests: User authenticated:', user.id);
-
     const searchParams = request.nextUrl.searchParams;
     const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 50);
     const offset = parseInt(searchParams.get('offset') || '0');
-
-    console.log('GET /api/requests: Query params', { limit, offset });
 
     const { data: requests, error } = await supabase
       .from('verdict_requests')
@@ -58,30 +52,24 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
 
-    console.log('GET /api/requests: Query result', { 
-      requestCount: requests?.length, 
-      error: error?.message 
-    });
-
     if (error) {
-      console.error('GET /api/requests: Database error:', error);
-      return NextResponse.json({ 
-        error: 'Database error', 
-        details: error.message 
+      log.error('Failed to fetch requests', error);
+      return NextResponse.json({
+        error: 'Database error',
+        details: error.message
       }, { status: 500 });
     }
 
-    console.log('GET /api/requests: Returning success with', requests?.length, 'requests');
     const response = NextResponse.json({ requests: requests || [] });
     response.headers.set('X-Response-Time', `${Math.round(performance.now() - startTime)}ms`);
     return response;
 
   } catch (error) {
-    console.error('GET /api/requests: Catch error:', error);
-    return NextResponse.json({ 
-      error: 'Internal server error',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+    log.error('Requests GET endpoint error', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
 }
 
@@ -172,9 +160,9 @@ export async function POST(request: NextRequest) {
     );
 
     if (!moderationResult.approved) {
-      console.log('Content moderation failed:', moderationResult.reason);
+      log.info('Content moderation rejected request', { reason: moderationResult.reason });
       return NextResponse.json(
-        { 
+        {
           error: 'Content does not meet community guidelines',
           reason: moderationResult.reason,
           details: 'Please review our community guidelines and modify your request.'
@@ -221,14 +209,19 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      console.error('Create request error:', err);
+      log.error('Failed to create verdict request', err);
       return NextResponse.json(
         { error: 'Failed to create request', details: err?.message },
         { status: 500 }
       );
     }
   } catch (error) {
-    console.error('POST /api/requests error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    log.error('Requests POST endpoint error', error);
+    return NextResponse.json(
+      {
+        error: 'Internal server error',
+      },
+      { status: 500 }
+    );
   }
 }

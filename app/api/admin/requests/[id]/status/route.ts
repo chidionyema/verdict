@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { log } from '@/lib/logger';
 
 // POST /api/admin/requests/[id]/status - update a request status with audit
 export async function POST(
@@ -62,7 +63,7 @@ export async function POST(
       .single();
 
     if (updateError) {
-      console.error('[admin] update request status error', updateError);
+      log.error('Admin update request status failed', updateError, { requestId: id });
       return NextResponse.json(
         { error: 'Failed to update request status' },
         { status: 500 }
@@ -80,7 +81,7 @@ export async function POST(
 
     return NextResponse.json({ request: updated });
   } catch (err) {
-    console.error('POST /api/admin/requests/[id]/status error:', err);
+    log.error('Admin request status endpoint error', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

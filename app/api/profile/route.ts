@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { log } from '@/lib/logger';
 import { AGE_RANGES, GENDERS } from '@/lib/validations';
 
 export async function PATCH(request: NextRequest) {
@@ -78,7 +79,7 @@ export async function PATCH(request: NextRequest) {
       .single();
 
     if (updateError) {
-      console.error('Profile update error:', updateError);
+      log.error('Profile update failed', updateError);
       return NextResponse.json(
         { error: 'Failed to update profile' },
         { status: 500 }
@@ -87,7 +88,7 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json({ profile });
   } catch (error) {
-    console.error('PATCH /api/profile error:', error);
+    log.error('Profile PATCH endpoint error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

@@ -66,6 +66,52 @@ npm run test:sim
 npm run test:e2e
 ```
 
+### Local Stripe webhook testing (credits & payments)
+
+To test credit purchases and Stripe webhooks **locally**, you need to forward Stripe events to your local app.
+
+1. **Set required env vars**
+
+   In `.env.local`:
+
+   - `STRIPE_SECRET_KEY` – your Stripe **secret** key (e.g. `sk_test_...`)
+   - `STRIPE_WEBHOOK_SECRET` – the webhook signing secret from Stripe/Stripe CLI
+
+2. **Run the dev server**
+
+   ```bash
+   npm run dev
+   # app should be available at http://localhost:3000
+   ```
+
+3. **Use Stripe CLI to forward webhooks (recommended)**
+
+   - Install and log in to the Stripe CLI, then run:
+
+     ```bash
+     stripe listen --forward-to localhost:3000/api/billing/webhook
+     ```
+
+   - The CLI will print a line like:
+
+     ```text
+     Ready! Your webhook signing secret is whsec_XXXX...
+     ```
+
+   - Copy that `whsec_...` value into `STRIPE_WEBHOOK_SECRET` in `.env.local` and **restart** the dev server.
+
+4. **Trigger a test purchase**
+
+   - In the app, go to the account/credits page and start a test purchase using a Stripe test card (e.g. `4242 4242 4242 4242`).
+   - After completing checkout, Stripe will send a `checkout.session.completed` event to the CLI, which forwards it to `http://localhost:3000/api/billing/webhook`.
+
+5. **Verify credits updated**
+
+   - In your Supabase dashboard, check the `profiles` table for your user row and confirm `credits` increased.
+   - Refresh the `/account` page in the app; the displayed credits should match the updated value from Supabase.
+
+For deployed environments (e.g. Vercel), configure a webhook endpoint in the Stripe Dashboard pointing to `https://your-domain.com/api/billing/webhook` and use the dashboard-provided `whsec_...` as `STRIPE_WEBHOOK_SECRET`.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

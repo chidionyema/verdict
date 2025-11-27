@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { log } from '@/lib/logger';
 
 // POST /api/auth/verify-email - Verify email with token
 export async function POST(request: NextRequest) {
@@ -20,9 +21,9 @@ export async function POST(request: NextRequest) {
       .rpc('verify_email', { token });
 
     if (verifyError) {
-      console.error('Error verifying email:', verifyError);
-      return NextResponse.json({ 
-        error: 'Failed to verify email' 
+      log.error('Email verification failed', verifyError);
+      return NextResponse.json({
+        error: 'Failed to verify email'
       }, { status: 500 });
     }
 
@@ -56,7 +57,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('POST /api/auth/verify-email error:', error);
+    log.error('Email verification endpoint error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

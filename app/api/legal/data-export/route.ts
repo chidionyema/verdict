@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { log } from '@/lib/logger';
 
 export async function POST(request: NextRequest) {
   try {
@@ -145,7 +146,7 @@ export async function POST(request: NextRequest) {
       });
 
     if (exportError) {
-      console.warn('Failed to record export:', exportError);
+      log.warn('Failed to record data export', { error: exportError });
       // Don't fail the request if we can't record the export
     }
 
@@ -166,15 +167,15 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Data export error:', error);
-    
+    log.error('Data export failed', error);
+
     // Record failed export attempt
     try {
       const supa = await createClient();
       const {
         data: { user },
       } = await supa.auth.getUser();
-      
+
       if (user) {
         await (supa as any)
           .from('data_exports')
@@ -186,7 +187,7 @@ export async function POST(request: NextRequest) {
           });
       }
     } catch (recordError) {
-      console.warn('Failed to record export failure:', recordError);
+      log.warn('Failed to record export failure', { error: recordError });
     }
 
     return NextResponse.json({ error: 'Failed to export data' }, { status: 500 });
@@ -211,14 +212,14 @@ export async function GET(request: NextRequest) {
       .limit(10);
 
     if (error) {
-      console.error('Error fetching export history:', error);
+      log.error('Failed to fetch export history', error);
       return NextResponse.json({ error: 'Failed to fetch export history' }, { status: 500 });
     }
 
     return NextResponse.json({ exports });
 
   } catch (error) {
-    console.error('Get exports error:', error);
+    log.error('Get exports endpoint error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

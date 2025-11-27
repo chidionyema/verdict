@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { stripe, isDemoMode } from '@/lib/stripe';
 import { CREDIT_PACKAGES, isValidPackageId } from '@/lib/validations';
+import { log } from '@/lib/logger';
 
 // POST /api/billing/create-checkout-session
 export async function POST(request: NextRequest) {
@@ -108,7 +109,19 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ checkout_url: session.url });
   } catch (error) {
-    console.error('POST /api/billing/create-checkout-session error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    // Log full error details server-side for debugging
+    log.error('Checkout session creation failed', error);
+
+    // In non-production, expose a concise error message to help diagnose issues.
+    const isError = error instanceof Error;
+    const message = isError ? error.message : 'Unknown error';
+
+    return NextResponse.json(
+      {
+        error: 'Internal server error',
+        details: process.env.NODE_ENV === 'production' ? undefined : message,
+      },
+      { status: 500 }
+    );
   }
 }

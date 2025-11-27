@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { log } from '@/lib/logger';
 import { z } from 'zod';
 
 const replySchema = z.object({
@@ -51,7 +52,7 @@ export async function GET(
       .order('created_at', { ascending: true });
 
     if (repliesError) {
-      console.error('Error fetching replies:', repliesError);
+      log.error('Failed to fetch ticket replies', repliesError);
       return NextResponse.json({ error: 'Failed to fetch replies' }, { status: 500 });
     }
 
@@ -61,7 +62,7 @@ export async function GET(
     });
 
   } catch (error) {
-    console.error('Get ticket error:', error);
+    log.error('Get ticket endpoint error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -115,7 +116,7 @@ export async function POST(
       .single();
 
     if (replyError) {
-      console.error('Error creating reply:', replyError);
+      log.error('Failed to create ticket reply', replyError);
       return NextResponse.json({ error: 'Failed to create reply' }, { status: 500 });
     }
 
@@ -139,7 +140,7 @@ export async function POST(
       return NextResponse.json({ error: 'Invalid request data', details: error.issues }, { status: 400 });
     }
 
-    console.error('Create reply error:', error);
+    log.error('Create reply endpoint error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -182,7 +183,7 @@ export async function PATCH(
         .eq('id', ticketId);
 
       if (error) {
-        console.error('Error closing ticket:', error);
+        log.error('Failed to close ticket', error);
         return NextResponse.json({ error: 'Failed to close ticket' }, { status: 500 });
       }
 
@@ -206,7 +207,7 @@ export async function PATCH(
         .eq('id', ticketId);
 
       if (error) {
-        console.error('Error reopening ticket:', error);
+        log.error('Failed to reopen ticket', error);
         return NextResponse.json({ error: 'Failed to reopen ticket' }, { status: 500 });
       }
 
@@ -219,7 +220,7 @@ export async function PATCH(
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
 
   } catch (error) {
-    console.error('Update ticket error:', error);
+    log.error('Update ticket endpoint error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

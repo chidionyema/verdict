@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { log } from '@/lib/logger';
 import { z } from 'zod';
 
 const slackConfigSchema = z.object({
@@ -49,7 +50,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ config });
 
   } catch (error) {
-    console.error('Slack config GET error:', error);
+    log.error('Slack config GET failed', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -103,7 +104,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      console.error('Error saving Slack config:', error);
+      log.error('Failed to save Slack config', error);
       return NextResponse.json({ error: 'Failed to save Slack configuration' }, { status: 500 });
     }
 
@@ -117,7 +118,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.error('Slack config error:', error);
+    log.error('Slack config POST failed', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -153,9 +154,9 @@ export async function PUT(request: NextRequest) {
     
     // Send to Slack
     const result = await sendSlackMessage(slackConfig.webhook_url, message, slackConfig.channel);
-    
+
     if (!result.success) {
-      console.error('Failed to send Slack message:', result.error);
+      log.error('Failed to send Slack message', null, { error: result.error });
       return NextResponse.json({ error: 'Failed to send Slack notification' }, { status: 500 });
     }
 
@@ -169,7 +170,7 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    console.error('Slack notification error:', error);
+    log.error('Slack notification failed', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

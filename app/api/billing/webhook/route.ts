@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { createServiceClient } from '@/lib/supabase/server';
+import { log } from '@/lib/logger';
 import Stripe from 'stripe';
 
 // POST /api/billing/webhook - Stripe webhook handler
@@ -26,7 +27,7 @@ export async function POST(request: NextRequest) {
         process.env.STRIPE_WEBHOOK_SECRET!
       );
     } catch (err) {
-      console.error('Webhook signature verification failed:', err);
+      log.error('Stripe webhook signature verification failed', err);
       return NextResponse.json(
         { error: 'Invalid signature' },
         { status: 400 }
@@ -46,12 +47,12 @@ export async function POST(request: NextRequest) {
         break;
       }
       default:
-        console.log(`Unhandled event type: ${event.type}`);
+        log.debug('Unhandled Stripe event type', { eventType: event.type });
     }
 
     return NextResponse.json({ received: true });
   } catch (error) {
-    console.error('POST /api/billing/webhook error:', error);
+    log.error('Stripe webhook handler failed', error);
     return NextResponse.json({ error: 'Webhook handler failed' }, { status: 500 });
   }
 }
@@ -63,7 +64,7 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
   const credits = parseInt(session.metadata?.credits || '0');
 
   if (!userId || !credits) {
-    console.error('Missing metadata in checkout session:', session.id);
+    log.error('Missing metadata in checkout session', null, { sessionId: session.id });
     return;
   }
 
@@ -77,7 +78,7 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
     .eq('stripe_payment_intent_id', session.payment_intent as string);
 
   if (paymentError) {
-    console.error('Failed to update payment:', paymentError);
+    log.error('Failed to update payment status', paymentError, { sessionId: session.id });
   }
 
   // Add credits to user
@@ -94,11 +95,11 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
       .eq('id', userId);
 
     if (creditError) {
-      console.error('Failed to add credits:', creditError);
+      log.error('Failed to add credits', creditError, { userId, credits });
     }
   }
 
-  console.log(`Added ${credits} credits to user ${userId}`);
+  log.info('Credits added successfully', { userId, credits, sessionId: session.id });
 }
 
 async function handleCheckoutExpired(session: Stripe.Checkout.Session) {
@@ -110,5 +111,5 @@ async function handleCheckoutExpired(session: Stripe.Checkout.Session) {
     .update({ status: 'failed' })
     .eq('stripe_payment_intent_id', session.payment_intent as string);
 
-  console.log(`Checkout expired: ${session.id}`);
+  log.info('Checkout session expired', { sessionId: session.id });
 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { log } from '@/lib/logger';
 import { z } from 'zod';
 
 const createTicketSchema = z.object({
@@ -56,7 +57,7 @@ export async function GET(request: NextRequest) {
     const { data: tickets, error, count } = await query;
 
     if (error) {
-      console.error('Error fetching support tickets:', error);
+      log.error('Failed to fetch support tickets', error);
       return NextResponse.json({ error: 'Failed to fetch tickets' }, { status: 500 });
     }
 
@@ -71,7 +72,7 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Support tickets error:', error);
+    log.error('Support tickets GET endpoint error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -104,7 +105,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      console.error('Error creating support ticket:', error);
+      log.error('Failed to create support ticket', error);
       return NextResponse.json({ error: 'Failed to create ticket' }, { status: 500 });
     }
 
@@ -126,7 +127,7 @@ export async function POST(request: NextRequest) {
         });
     } catch (notifError) {
       // Non-critical error, log but don't fail the request
-      console.warn('Failed to create notification:', notifError);
+      log.warn('Failed to create support ticket notification', { error: notifError });
     }
 
     return NextResponse.json({ 
@@ -142,7 +143,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.error('Create ticket error:', error);
+    log.error('Create ticket endpoint error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

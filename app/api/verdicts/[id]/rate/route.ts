@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { log } from '@/lib/logger';
 
 // POST /api/verdicts/[id]/rate - Rate a verdict's quality
 export async function POST(
@@ -98,7 +99,7 @@ export async function POST(
       .single();
 
     if (ratingError) {
-      console.error('Error creating rating:', ratingError);
+      log.error('Failed to create verdict rating', ratingError);
       return NextResponse.json({ error: 'Failed to submit rating' }, { status: 500 });
     }
 
@@ -161,7 +162,7 @@ export async function POST(
     });
 
   } catch (error) {
-    console.error('POST /api/verdicts/[id]/rate error:', error);
+    log.error('Verdict rate endpoint error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

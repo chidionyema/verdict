@@ -10,3 +10,4 @@ const nextIntlConfig = {
 export default nextIntlConfig;
 
 
+

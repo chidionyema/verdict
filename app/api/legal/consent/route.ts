@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { log } from '@/lib/logger';
 import { z } from 'zod';
 
 const consentSchema = z.object({
@@ -43,14 +44,14 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      console.error('Error recording consent:', error);
+      log.error('Failed to record consent', error);
       return NextResponse.json({ error: 'Failed to record consent' }, { status: 500 });
     }
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       consent,
-      message: 'Consent recorded successfully' 
+      message: 'Consent recorded successfully'
     });
 
   } catch (error) {
@@ -61,7 +62,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.error('Consent recording error:', error);
+    log.error('Consent recording endpoint error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -91,14 +92,14 @@ export async function GET(request: NextRequest) {
     const { data: consents, error } = await query;
 
     if (error) {
-      console.error('Error fetching consents:', error);
+      log.error('Failed to fetch consents', error);
       return NextResponse.json({ error: 'Failed to fetch consents' }, { status: 500 });
     }
 
     return NextResponse.json({ consents });
 
   } catch (error) {
-    console.error('Get consents error:', error);
+    log.error('Get consents endpoint error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

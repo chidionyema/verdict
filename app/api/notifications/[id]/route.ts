@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { log } from '@/lib/logger';
 
 // PATCH /api/notifications/[id] - Mark specific notification as read
 export async function PATCH(
@@ -23,7 +24,7 @@ export async function PATCH(
       .rpc('mark_notification_read', { notification_id: id } as any) as any;
 
     if (markError) {
-      console.error('Error marking notification as read:', markError);
+      log.error('Failed to mark notification as read', markError, { notificationId: id });
       return NextResponse.json({ error: 'Failed to mark notification as read' }, { status: 500 });
     }
 
@@ -34,7 +35,7 @@ export async function PATCH(
     return NextResponse.json({ success: true });
 
   } catch (error) {
-    console.error('PATCH /api/notifications/[id] error:', error);
+    log.error('Notification PATCH endpoint error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -64,14 +65,14 @@ export async function DELETE(
       .eq('user_id', user.id); // Security check
 
     if (deleteError) {
-      console.error('Error deleting notification:', deleteError);
+      log.error('Failed to delete notification', deleteError, { notificationId: id });
       return NextResponse.json({ error: 'Failed to delete notification' }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });
 
   } catch (error) {
-    console.error('DELETE /api/notifications/[id] error:', error);
+    log.error('Notification DELETE endpoint error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

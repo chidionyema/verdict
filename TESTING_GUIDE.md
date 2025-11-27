@@ -159,3 +159,4 @@ npm run test:e2e
 This keeps your CI focused on the most critical invariants while still allowing full browser coverage when you’re ready.
 
 
+

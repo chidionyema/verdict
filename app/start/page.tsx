@@ -276,13 +276,8 @@ export default function StartPage() {
       sessionStorage.removeItem('pendingFile');
       sessionStorage.removeItem('draftRequest');
 
-      // Redirect to success page with context and tier
-      const successUrl = `/success?category=${encodeURIComponent(
-        category
-      )}&mediaType=${encodeURIComponent(mediaType)}&context=${encodeURIComponent(
-        context
-      )}&requestId=${encodeURIComponent(request.id || 'unknown')}&tier=${encodeURIComponent(tier)}`;
-      router.push(successUrl);
+      // Redirect to My Requests page so users can track progress and verdicts
+      router.push('/my-requests');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong');
       setSubmitting(false);

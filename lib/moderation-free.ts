@@ -1,5 +1,3 @@
-'use client';
-
 interface ModerationResult {
   approved: boolean;
   reason?: string;

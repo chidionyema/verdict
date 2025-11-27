@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { log } from '@/lib/logger';
 
 // GET /api/judge/my-responses - Get judge's submitted verdicts (with per-verdict earnings)
 export async function GET(request: NextRequest) {
@@ -45,7 +46,7 @@ export async function GET(request: NextRequest) {
       .range(offset, offset + limit - 1);
 
     if (error) {
-      console.error('Fetch responses error:', error);
+      log.error('Failed to fetch judge responses', error);
       return NextResponse.json(
         { error: 'Failed to fetch responses' },
         { status: 500 }
@@ -64,7 +65,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ responses: mapped });
   } catch (error) {
-    console.error('GET /api/judge/my-responses error:', error);
+    log.error('Judge my-responses endpoint error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { log } from '@/lib/logger';
 import { z } from 'zod';
 import Stripe from 'stripe';
 
@@ -208,7 +209,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid request data', details: (error as any).errors }, { status: 400 });
     }
 
-    console.error('Checkout creation error:', error);
+    log.error('Checkout session creation failed', error);
     return NextResponse.json({ error: 'Failed to create checkout session' }, { status: 500 });
   }
 }

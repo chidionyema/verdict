@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { log } from '@/lib/logger';
 import { z } from 'zod';
 import Stripe from 'stripe';
 
@@ -46,13 +47,13 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('Error fetching payment methods:', error);
+      log.error('Failed to fetch payment methods', error);
       return NextResponse.json({ error: 'Failed to fetch payment methods' }, { status: 500 });
     }
 
     return NextResponse.json({ payment_methods: paymentMethods });
   } catch (error) {
-    console.error('Payment methods error:', error);
+    log.error('Payment methods GET endpoint error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -111,7 +112,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      console.error('Error creating payment method:', error);
+      log.error('Failed to create payment method', error);
       return NextResponse.json({ error: 'Failed to save payment method' }, { status: 500 });
     }
 
@@ -123,8 +124,8 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    
-    console.error('Payment method creation error:', error);
+
+    log.error('Payment method creation endpoint error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
@@ -161,7 +162,7 @@ export async function DELETE(request: NextRequest) {
     try {
       await getStripe().paymentMethods.detach((paymentMethod as any).stripe_payment_method_id);
     } catch (stripeError) {
-      console.warn('Failed to detach from Stripe:', stripeError);
+      log.warn('Failed to detach payment method from Stripe', { error: stripeError });
       // Continue with deletion even if Stripe fails
     }
 
@@ -172,13 +173,13 @@ export async function DELETE(request: NextRequest) {
       .eq('id', paymentMethodId);
 
     if (error) {
-      console.error('Error deleting payment method:', error);
+      log.error('Failed to delete payment method', error);
       return NextResponse.json({ error: 'Failed to delete payment method' }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Payment method deletion error:', error);
+    log.error('Payment method deletion endpoint error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
