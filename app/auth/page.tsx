@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store';
 import { v4 as uuidv4 } from 'uuid';
@@ -137,7 +138,21 @@ export default function AuthPage() {
           </div>
 
           <p className="text-xs text-gray-500 mt-6 text-center">
-            By continuing, you agree to our Terms of Service and Privacy Policy
+            By continuing, you agree to our{" "}
+            <Link
+              href="/legal/terms"
+              className="underline underline-offset-2 hover:text-gray-700"
+            >
+              Terms of Service
+            </Link>{" "}
+            and{" "}
+            <Link
+              href="/legal/privacy"
+              className="underline underline-offset-2 hover:text-gray-700"
+            >
+              Privacy Policy
+            </Link>
+            .
           </p>
         </div>
       </div>

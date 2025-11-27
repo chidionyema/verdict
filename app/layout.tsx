@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Link from "next/link";
 import "./globals.css";
 import Navigation from "@/components/Navigation";
 import FloatingActionButton from "@/components/FloatingActionButton";
 import { ToastContainer } from "@/components/ui/toast";
+import { CookieConsentBanner } from "@/components/cookie-consent";
+import { AnalyticsProvider } from "@/components/analytics-provider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -70,8 +73,40 @@ export default function RootLayout({
       >
         <Navigation />
         <main>{children}</main>
+
+        {/* Global footer with legal links */}
+        <footer className="border-t border-gray-200 bg-white/80 backdrop-blur-sm mt-8">
+          <div className="max-w-6xl mx-auto px-4 py-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-gray-500">
+            <p className="text-center sm:text-left">
+              © {new Date().getFullYear()} Verdict. All rights reserved.
+            </p>
+            <div className="flex items-center gap-4">
+              <Link
+                href="/legal/terms"
+                className="hover:text-gray-900 underline-offset-4 hover:underline"
+              >
+                Terms of Service
+              </Link>
+              <Link
+                href="/legal/privacy"
+                className="hover:text-gray-900 underline-offset-4 hover:underline"
+              >
+                Privacy Policy
+              </Link>
+              <Link
+                href="/legal/cookies"
+                className="hover:text-gray-900 underline-offset-4 hover:underline"
+              >
+                Cookie Policy
+              </Link>
+            </div>
+          </div>
+        </footer>
+
         <FloatingActionButton />
         <ToastContainer />
+        <CookieConsentBanner />
+        <AnalyticsProvider />
       </body>
     </html>
   );
