@@ -7,7 +7,7 @@ import OutcomePrediction from '@/components/OutcomePrediction';
 import ViralGrowthHub from '@/components/ViralGrowthHub';
 import QualityScoring from '@/components/QualityScoring';
 import { RealTimeWaitingStatus } from '@/components/request/RealTimeWaitingStatus';
-import { VERDICT_TIER_PRICING, PRICE_PER_CREDIT_USD } from '@/lib/validations';
+import { VERDICT_TIER_PRICING } from '@/lib/validations';
 
 function SuccessContent() {
   const searchParams = useSearchParams();
@@ -36,7 +36,7 @@ function SuccessContent() {
       estimatedRating: 8.5,
       tier,
       tierConfig,
-      estimatedDollars: tierConfig.credits * PRICE_PER_CREDIT_USD,
+      estimatedDollars: tierConfig.price,
     });
 
     // Show analytics after a brief moment

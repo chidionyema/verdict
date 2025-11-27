@@ -18,7 +18,7 @@ import type { JudgePreferences as JudgePreferencesType } from '@/components/requ
 import { TrustBadge, TrustBadgeGroup } from '@/components/shared/TrustBadge';
 import { EncouragingCounter } from '@/components/shared/EncouragingCounter';
 import { DecisionFramingHelper } from '@/components/request/DecisionFramingHelper';
-import { VERDICT_TIERS, VERDICT_TIER_PRICING, PRICE_PER_CREDIT_USD } from '@/lib/validations';
+import { VERDICT_TIERS, VERDICT_TIER_PRICING } from '@/lib/validations';
 
 const categories = [
   { id: 'appearance', label: 'Appearance', icon: Heart, description: 'Dating, events, professional looks' },
@@ -610,7 +610,7 @@ export default function StartPage() {
                 <div className="flex flex-col sm:flex-row gap-2">
                   {(['basic', 'standard', 'premium'] as const).map((t) => {
                     const config = VERDICT_TIER_PRICING[t];
-                    const totalDollars = config.credits * PRICE_PER_CREDIT_USD;
+                    const totalDollars = config.price;
                     const isSelected = tier === t;
                     return (
                       <button
@@ -767,7 +767,7 @@ export default function StartPage() {
                     <div className="text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 max-w-xs text-right">
                       {(() => {
                         const config = VERDICT_TIER_PRICING[tier];
-                        const totalDollars = config.credits * PRICE_PER_CREDIT_USD;
+                        const totalDollars = config.price;
                         return (
                           <>
                             <span className="font-semibold">

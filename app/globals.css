@@ -1,5 +1,88 @@
 @import "tailwindcss";
 
+/* RTL Support - Logical properties for bidirectional layouts */
+/* Use these utility classes instead of directional (left/right) ones */
+
+/* Margin utilities with logical properties */
+.ms-1 { margin-inline-start: 0.25rem; }
+.ms-2 { margin-inline-start: 0.5rem; }
+.ms-3 { margin-inline-start: 0.75rem; }
+.ms-4 { margin-inline-start: 1rem; }
+.ms-5 { margin-inline-start: 1.25rem; }
+.ms-6 { margin-inline-start: 1.5rem; }
+.ms-auto { margin-inline-start: auto; }
+
+.me-1 { margin-inline-end: 0.25rem; }
+.me-2 { margin-inline-end: 0.5rem; }
+.me-3 { margin-inline-end: 0.75rem; }
+.me-4 { margin-inline-end: 1rem; }
+.me-5 { margin-inline-end: 1.25rem; }
+.me-6 { margin-inline-end: 1.5rem; }
+.me-auto { margin-inline-end: auto; }
+
+/* Padding utilities with logical properties */
+.ps-1 { padding-inline-start: 0.25rem; }
+.ps-2 { padding-inline-start: 0.5rem; }
+.ps-3 { padding-inline-start: 0.75rem; }
+.ps-4 { padding-inline-start: 1rem; }
+.ps-5 { padding-inline-start: 1.25rem; }
+.ps-6 { padding-inline-start: 1.5rem; }
+
+.pe-1 { padding-inline-end: 0.25rem; }
+.pe-2 { padding-inline-end: 0.5rem; }
+.pe-3 { padding-inline-end: 0.75rem; }
+.pe-4 { padding-inline-end: 1rem; }
+.pe-5 { padding-inline-end: 1.25rem; }
+.pe-6 { padding-inline-end: 1.5rem; }
+
+/* Text alignment with logical properties */
+.text-start { text-align: start; }
+.text-end { text-align: end; }
+
+/* Border radius with logical properties */
+.rounded-s { border-start-start-radius: 0.25rem; border-end-start-radius: 0.25rem; }
+.rounded-e { border-start-end-radius: 0.25rem; border-end-end-radius: 0.25rem; }
+.rounded-s-lg { border-start-start-radius: 0.5rem; border-end-start-radius: 0.5rem; }
+.rounded-e-lg { border-start-end-radius: 0.5rem; border-end-end-radius: 0.5rem; }
+
+/* Position utilities with logical properties */
+.start-0 { inset-inline-start: 0; }
+.start-auto { inset-inline-start: auto; }
+.end-0 { inset-inline-end: 0; }
+.end-auto { inset-inline-end: auto; }
+
+/* Border utilities with logical properties */
+.border-s { border-inline-start-width: 1px; }
+.border-e { border-inline-end-width: 1px; }
+.border-s-0 { border-inline-start-width: 0; }
+.border-e-0 { border-inline-end-width: 0; }
+
+/* Flexbox and grid direction utilities for RTL */
+[dir="rtl"] .flex-row { flex-direction: row-reverse; }
+[dir="rtl"] .flex-row-reverse { flex-direction: row; }
+
+/* Override specific RTL behavior where needed */
+[dir="rtl"] .rtl\:flex-row { flex-direction: row !important; }
+[dir="rtl"] .rtl\:flex-row-reverse { flex-direction: row-reverse !important; }
+
+/* Icon flip for RTL */
+[dir="rtl"] .rtl-flip { transform: scaleX(-1); }
+[dir="rtl"] .rtl\:rotate-180 { transform: rotate(180deg); }
+
+/* Space utilities with logical properties */
+.space-s-2 > * + * { margin-inline-start: 0.5rem; }
+.space-s-4 > * + * { margin-inline-start: 1rem; }
+.space-e-2 > * + * { margin-inline-end: 0.5rem; }
+.space-e-4 > * + * { margin-inline-end: 1rem; }
+
+/* Float utilities (less common but included for completeness) */
+.float-start { float: inline-start; }
+.float-end { float: inline-end; }
+
+/* Scroll utilities */
+.scroll-ps-4 { scroll-padding-inline-start: 1rem; }
+.scroll-pe-4 { scroll-padding-inline-end: 1rem; }
+
 :root {
   --background: #ffffff;
   --foreground: #171717;

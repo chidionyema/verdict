@@ -38,19 +38,22 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate file type
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/heic', 'image/webp'];
+    const imageTypes = ['image/jpeg', 'image/png', 'image/heic', 'image/webp'];
+    const audioTypes = ['audio/webm', 'audio/mpeg', 'audio/mp4', 'audio/ogg'];
+    const allowedTypes = [...imageTypes, ...audioTypes];
     if (!allowedTypes.includes(file.type)) {
       return NextResponse.json(
-        { error: 'Only JPEG, PNG, HEIC, and WebP images are allowed' },
+        { error: 'Only JPEG, PNG, HEIC, WebP images or supported audio (webm, mp3, mp4, ogg) are allowed' },
         { status: 400 }
       );
     }
 
-    // Validate file size (5MB max)
-    const maxSize = 5 * 1024 * 1024;
+    // Validate file size
+    const isAudio = audioTypes.includes(file.type);
+    const maxSize = isAudio ? 10 * 1024 * 1024 : 5 * 1024 * 1024; // 10MB audio, 5MB image
     if (file.size > maxSize) {
       return NextResponse.json(
-        { error: 'File must be 5MB or smaller' },
+        { error: isAudio ? 'Audio must be 10MB or smaller' : 'Image must be 5MB or smaller' },
         { status: 400 }
       );
     }

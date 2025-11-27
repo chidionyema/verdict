@@ -4,7 +4,12 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useStore } from '@/lib/store';
+import { VERDICT_TIER_PRICING } from '@/lib/validations';
 import { DollarSign, TrendingUp, Clock, Award, ArrowRight, History, RefreshCw } from 'lucide-react';
+
+const JUDGE_PAYOUT_VALUES = Object.values(VERDICT_TIER_PRICING).map((t) => t.judgePayout);
+const MIN_JUDGE_PAYOUT = Math.min(...JUDGE_PAYOUT_VALUES);
+const MAX_JUDGE_PAYOUT = Math.max(...JUDGE_PAYOUT_VALUES);
 
 export default function JudgeDashboard() {
   const router = useRouter();
@@ -275,8 +280,11 @@ export default function JudgeDashboard() {
               <div>
                 <h2 className="text-lg font-semibold text-gray-900 mb-1">Welcome, Judge</h2>
                 <p className="text-sm text-gray-700">
-                  Most verdicts pay <span className="font-semibold">$0.40–$0.60</span> and take about{' '}
-                  <span className="font-semibold">3–5 minutes</span>. Great verdicts are clear, kind, and actionable.
+                  Most verdicts pay{' '}
+                  <span className="font-semibold">
+                    ${MIN_JUDGE_PAYOUT.toFixed(2)}–${MAX_JUDGE_PAYOUT.toFixed(2)}
+                  </span>{' '}
+                  and take about <span className="font-semibold">3–5 minutes</span>. Great verdicts are clear, kind, and actionable.
                 </p>
                 <ul className="mt-3 text-xs text-gray-600 list-disc list-inside space-y-1">
                   <li>Give a clear recommendation or direction (no fence‑sitting).</li>
@@ -360,7 +368,8 @@ export default function JudgeDashboard() {
               <div>
                 <h2 className="text-xl font-semibold">Available Requests</h2>
                 <p className="text-sm text-gray-500 mt-1">
-                  Help people with life decisions and earn about $0.40–$0.60 per verdict
+                  Help people with life decisions and earn about $
+                  {MIN_JUDGE_PAYOUT.toFixed(2)}–${MAX_JUDGE_PAYOUT.toFixed(2)} per verdict
                 </p>
               </div>
               <div className="flex items-center gap-3">
@@ -450,7 +459,7 @@ export default function JudgeDashboard() {
                       <div className="flex flex-col items-stretch sm:items-end gap-2 min-w-[140px]">
                         <div className="text-left sm:text-right">
                           <p className="text-lg font-semibold text-green-600 leading-tight">
-                            $0.75
+                            ${MAX_JUDGE_PAYOUT.toFixed(2)}
                           </p>
                           <p className="text-xs text-gray-500">
                             Potential earnings

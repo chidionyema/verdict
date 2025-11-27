@@ -14,6 +14,7 @@ interface VerdictResponse {
   quality_score: number | null;
   judge_earning: number;
   request_id: string;
+  voice_url?: string | null;
   verdict_requests?: {
     category: string;
     subcategory: string | null;
@@ -354,6 +355,14 @@ export default function MyVerdictsPage() {
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
                     Your verdict
                   </p>
+                  {verdict.voice_url && (
+                    <div className="mb-3 p-3 bg-purple-50 rounded-lg border border-purple-200">
+                      <p className="text-xs font-semibold text-purple-800 mb-1">
+                        Voice note you recorded
+                      </p>
+                      <audio controls src={verdict.voice_url} className="w-full" />
+                    </div>
+                  )}
                   <p className="text-gray-800 leading-relaxed bg-gray-50 rounded-lg p-4 border border-gray-100">
                     {verdict.feedback}
                   </p>

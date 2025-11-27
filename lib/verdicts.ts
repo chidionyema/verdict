@@ -117,7 +117,7 @@ export async function createVerdictRequest(
       category,
       subcategory: subcategory || null,
       media_type,
-      media_url: media_type === 'photo' ? media_url || null : null,
+      media_url: media_type === 'photo' || media_type === 'audio' ? media_url || null : null,
       text_content: media_type === 'text' ? text_content || null : null,
       context,
       status: 'in_progress',
@@ -147,6 +147,7 @@ export interface AddJudgeVerdictInput {
   rating: number | null;
   feedback: string;
   tone: VerdictResponse['tone'];
+  voiceUrl?: string | null;
 }
 
 export interface AddJudgeVerdictResult {
@@ -165,7 +166,7 @@ export async function addJudgeVerdict(
   supabase: DbClient,
   input: AddJudgeVerdictInput
 ): Promise<AddJudgeVerdictResult> {
-  const { requestId, judgeId, rating, feedback, tone } = input;
+  const { requestId, judgeId, rating, feedback, tone, voiceUrl } = input;
 
   // Fetch the request
   const { data: verdictRequest, error: requestError } = await (supabase as any)
@@ -220,6 +221,7 @@ export async function addJudgeVerdict(
       rating: rating ?? null,
       feedback,
       tone,
+      voice_url: voiceUrl || null,
     })
     .select()
     .single();

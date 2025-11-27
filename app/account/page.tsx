@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { CreditCard, LogOut, Check } from 'lucide-react';
-import { CREDIT_PACKAGES } from '@/lib/validations';
+import { CREDIT_PACKAGES, VERDICT_TIERS, VERDICT_TIER_PRICING, PRICE_PER_CREDIT_USD } from '@/lib/validations';
 import type { Profile } from '@/lib/database.types';
 
 function AccountContent() {
@@ -133,8 +133,9 @@ function AccountContent() {
 
           <h3 className="font-medium text-gray-900 mb-2">Buy More Credits</h3>
           <p className="text-sm text-gray-600 mb-4">
-            <span className="font-semibold">1 credit = 1 Basic request</span> (3 expert verdicts).
-            Higher tiers use more credits per request but always show you the total before you pay.
+            <span className="font-semibold">1 credit = 1 Basic request</span> (
+            {VERDICT_TIERS.basic.verdicts} expert verdicts). Higher tiers use more credits per
+            request but always show you the total before you pay.
           </p>
 
           {/* Value Comparison */}
@@ -154,7 +155,8 @@ function AccountContent() {
               <div>
                 <span className="text-indigo-600 font-semibold">Verdict:</span>{' '}
                 <span className="font-bold text-indigo-700">
-                  ~$3.49 for 3 expert verdicts (Basic request)
+                  ~${VERDICT_TIER_PRICING.basic.price.toFixed(2)} for{' '}
+                  {VERDICT_TIERS.basic.verdicts} expert verdicts (Basic request)
                 </span>
               </div>
             </div>
@@ -215,18 +217,24 @@ function AccountContent() {
               <tbody>
                 <tr className="border-t border-gray-200">
                   <td className="px-4 py-2">Basic</td>
-                  <td className="px-4 py-2">3 expert verdicts</td>
-                  <td className="px-4 py-2">1 credit</td>
+                  <td className="px-4 py-2">
+                    {VERDICT_TIERS.basic.verdicts} expert verdicts
+                  </td>
+                  <td className="px-4 py-2">{VERDICT_TIER_PRICING.basic.credits} credit</td>
                 </tr>
                 <tr className="border-t border-gray-200">
                   <td className="px-4 py-2">Standard</td>
-                  <td className="px-4 py-2">5 expert verdicts</td>
-                  <td className="px-4 py-2">2 credits</td>
+                  <td className="px-4 py-2">
+                    {VERDICT_TIERS.standard.verdicts} expert verdicts
+                  </td>
+                  <td className="px-4 py-2">{VERDICT_TIER_PRICING.standard.credits} credits</td>
                 </tr>
                 <tr className="border-t border-gray-200">
                   <td className="px-4 py-2">Premium</td>
-                  <td className="px-4 py-2">7 expert verdicts</td>
-                  <td className="px-4 py-2">3 credits</td>
+                  <td className="px-4 py-2">
+                    {VERDICT_TIERS.premium.verdicts} expert verdicts
+                  </td>
+                  <td className="px-4 py-2">{VERDICT_TIER_PRICING.premium.credits} credits</td>
                 </tr>
               </tbody>
             </table>

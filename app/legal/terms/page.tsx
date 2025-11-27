@@ -1,6 +1,9 @@
 'use client';
 
 import { FileText, AlertTriangle, Scale, Users, Shield, DollarSign } from 'lucide-react';
+import { MIN_PAYOUT_CENTS } from '@/lib/validations';
+
+const MIN_PAYOUT_DOLLARS = (MIN_PAYOUT_CENTS / 100).toFixed(2);
 
 export default function TermsOfServicePage() {
   return (
@@ -146,7 +149,7 @@ export default function TermsOfServicePage() {
                 <ul className="list-disc list-inside text-gray-600 space-y-1">
                   <li>Judges earn money for each qualified verdict response</li>
                   <li>Earnings depend on response quality and user ratings</li>
-                  <li>Minimum payout threshold is $10.00</li>
+                  <li>Minimum payout threshold is ${MIN_PAYOUT_DOLLARS}</li>
                   <li>Payments are processed through Stripe Connect</li>
                   <li>Platform fees apply to all judge earnings</li>
                 </ul>

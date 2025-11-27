@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS verdict_requests (
   -- Content
   category TEXT NOT NULL,
   subcategory TEXT,
-  media_type TEXT NOT NULL CHECK (media_type IN ('photo', 'text')),
+  media_type TEXT NOT NULL CHECK (media_type IN ('photo', 'text', 'audio')),
   media_url TEXT,
   text_content TEXT,
   context TEXT,
@@ -97,6 +97,7 @@ CREATE TABLE IF NOT EXISTS verdict_responses (
   rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 10),
   feedback TEXT NOT NULL,
   tone TEXT CHECK (tone IN ('encouraging', 'honest', 'constructive')),
+  voice_url TEXT,
   
   -- Quality Metrics
   helpfulness_rating INTEGER CHECK (helpfulness_rating >= 1 AND helpfulness_rating <= 5),
@@ -249,6 +250,145 @@ CREATE TABLE IF NOT EXISTS payments (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Atomic Credit Operations
+-- Purpose: Prevent race conditions in credit deductions and additions
+
+-- Function: Add credits atomically (for Stripe payments)
+CREATE OR REPLACE FUNCTION add_credits(p_user_id UUID, p_credits INT)
+RETURNS TABLE(success BOOLEAN, new_balance INT, message TEXT) AS $$
+DECLARE
+  current_balance INT;
+  updated_balance INT;
+BEGIN
+  -- Lock the row for update
+  SELECT credits INTO current_balance
+  FROM profiles
+  WHERE id = p_user_id
+  FOR UPDATE;
+
+  -- Check if profile exists
+  IF NOT FOUND THEN
+    RETURN QUERY SELECT FALSE, 0, 'Profile not found';
+    RETURN;
+  END IF;
+
+  -- Add credits
+  UPDATE profiles
+  SET credits = credits + p_credits,
+      updated_at = NOW()
+  WHERE id = p_user_id
+  RETURNING credits INTO updated_balance;
+
+  RETURN QUERY SELECT TRUE, updated_balance, 'Credits added successfully';
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function: Deduct credits atomically (for creating requests)
+CREATE OR REPLACE FUNCTION deduct_credits(p_user_id UUID, p_credits INT)
+RETURNS TABLE(success BOOLEAN, new_balance INT, message TEXT) AS $$
+DECLARE
+  current_balance INT;
+  updated_balance INT;
+BEGIN
+  -- Lock the row for update to prevent race conditions
+  SELECT credits INTO current_balance
+  FROM profiles
+  WHERE id = p_user_id
+  FOR UPDATE;
+
+  -- Check if profile exists
+  IF NOT FOUND THEN
+    RETURN QUERY SELECT FALSE, 0, 'Profile not found';
+    RETURN;
+  END IF;
+
+  -- Check if sufficient credits
+  IF current_balance < p_credits THEN
+    RETURN QUERY SELECT FALSE, current_balance, 'Insufficient credits';
+    RETURN;
+  END IF;
+
+  -- Deduct credits
+  UPDATE profiles
+  SET credits = credits - p_credits,
+      updated_at = NOW()
+  WHERE id = p_user_id
+  RETURNING credits INTO updated_balance;
+
+  RETURN QUERY SELECT TRUE, updated_balance, 'Credits deducted successfully';
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function: Refund credits (for failed requests)
+CREATE OR REPLACE FUNCTION refund_credits(p_user_id UUID, p_credits INT, p_reason TEXT DEFAULT NULL)
+RETURNS TABLE(success BOOLEAN, new_balance INT, message TEXT) AS $$
+DECLARE
+  updated_balance INT;
+BEGIN
+  -- Lock the row for update
+  UPDATE profiles
+  SET credits = credits + p_credits,
+      updated_at = NOW()
+  WHERE id = p_user_id
+  RETURNING credits INTO updated_balance;
+
+  -- Check if update succeeded
+  IF NOT FOUND THEN
+    RETURN QUERY SELECT FALSE, 0, 'Profile not found';
+    RETURN;
+  END IF;
+
+  -- Log the refund if reason provided (placeholder for future logging)
+  IF p_reason IS NOT NULL THEN
+    NULL;
+  END IF;
+
+  RETURN QUERY SELECT TRUE, updated_balance, 'Credits refunded successfully';
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function: Process subscription renewal (for monthly credit grants)
+CREATE OR REPLACE FUNCTION process_subscription_renewal(p_subscription_id UUID)
+RETURNS TABLE(success BOOLEAN, message TEXT) AS $$
+DECLARE
+  v_user_id UUID;
+  v_monthly_credits INT;
+  v_updated_balance INT;
+BEGIN
+  -- Get subscription details
+  SELECT user_id, credits_per_month INTO v_user_id, v_monthly_credits
+  FROM subscriptions
+  WHERE id = p_subscription_id;
+
+  -- Check if subscription exists
+  IF NOT FOUND THEN
+    RETURN QUERY SELECT FALSE, 'Subscription not found';
+    RETURN;
+  END IF;
+
+  -- Add monthly credits atomically
+  UPDATE profiles
+  SET credits = credits + v_monthly_credits,
+      updated_at = NOW()
+  WHERE id = v_user_id
+  RETURNING credits INTO v_updated_balance;
+
+  -- Check if update succeeded
+  IF NOT FOUND THEN
+    RETURN QUERY SELECT FALSE, 'Profile not found';
+    RETURN;
+  END IF;
+
+  RETURN QUERY SELECT TRUE, 'Subscription renewed successfully';
+END;
+$$ LANGUAGE plpgsql;
+
+-- Comments for documentation
+COMMENT ON FUNCTION add_credits IS 'Atomically add credits to user profile - safe for concurrent operations';
+COMMENT ON FUNCTION deduct_credits IS 'Atomically deduct credits with balance check - prevents race conditions';
+COMMENT ON FUNCTION refund_credits IS 'Atomically refund credits with optional reason logging';
+COMMENT ON FUNCTION process_subscription_renewal IS 'Process monthly subscription renewal and add credits atomically';
 
 -- Payment Methods
 CREATE TABLE IF NOT EXISTS payment_methods (
@@ -927,6 +1067,15 @@ CREATE INDEX IF NOT EXISTS idx_judge_earnings_judge_id ON judge_earnings(judge_i
 CREATE INDEX IF NOT EXISTS idx_subscriptions_user_id ON subscriptions(user_id);
 CREATE INDEX IF NOT EXISTS idx_subscriptions_stripe_id ON subscriptions(stripe_subscription_id);
 
+-- Stripe idempotency indexes (nullable unique constraints)
+CREATE UNIQUE INDEX IF NOT EXISTS idx_transactions_stripe_session_unique
+ON transactions(stripe_session_id)
+WHERE stripe_session_id IS NOT NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_transactions_stripe_payment_intent_unique
+ON transactions(stripe_payment_intent_id)
+WHERE stripe_payment_intent_id IS NOT NULL;
+
 -- Moderation indexes
 CREATE INDEX IF NOT EXISTS idx_content_reports_status ON content_reports(status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id, read, created_at DESC);
@@ -1068,6 +1217,20 @@ CREATE POLICY "judges_own_demographics" ON judge_demographics
 
 CREATE POLICY "judges_own_availability" ON judge_availability
   FOR ALL USING (auth.uid() = judge_id);
+
+-- Admins can view all judge demographics for matching/analytics
+CREATE POLICY "admins_view_all_demographics" ON judge_demographics
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM profiles
+      WHERE profiles.id = auth.uid()
+      AND profiles.is_admin = true
+    )
+  );
+
+-- Anyone can view available judges (for anonymous matching summaries)
+CREATE POLICY "public_view_available_judges" ON judge_availability
+  FOR SELECT USING (is_available = true);
 
 CREATE POLICY "users_own_request_preferences" ON request_judge_preferences
   FOR ALL USING (

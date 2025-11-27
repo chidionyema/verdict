@@ -1,0 +1,404 @@
+{
+  "Metadata": {
+    "title": "Verdict - קבל חוכמה מאנשים אמיתיים בדקות",
+    "titleTemplate": "{title} | Verdict",
+    "description": "הפוך החלטות חיים קשות לברורות יותר. קבל משוב כנה מ-10 אנשים אמיתיים תוך דקות בודדות. בחירות קריירה, מערכות יחסים, החלטות חיים - שאל כל דבר.",
+    "keywords": "עזרה בהחלטות, ייעוץ חיים, משוב כנה, חוכמת ההמון, ייעוץ קריירה, ייעוץ מערכות יחסים, החלטות חיים, משוב אנונימי"
+  },
+  "Navigation": {
+    "discover": "גלה",
+    "becomeJudge": "הפוך לשופט",
+    "signIn": "התחבר",
+    "getStarted": "התחל",
+    "myRequests": "הבקשות שלי",
+    "judge": "שפוט",
+    "account": "חשבון",
+    "credits": "קרדיטים",
+    "active": "פעיל",
+    "pending": "ממתין",
+    "newRequest": "בקשה חדשה",
+    "dashboard": "לוח בקרה",
+    "performance": "ביצועים",
+    "judgeDashboard": "לוח בקרת שופט",
+    "closeMenu": "סגור תפריט",
+    "openMenu": "פתח תפריט",
+    "signOut": "התנתק"
+  },
+  "Landing": {
+    "hero": {
+      "title": "קבל חוכמה מאנשים אמיתיים בדקות",
+      "subtitle": "הפוך החלטות חיים קשות לברורות יותר. קבל משוב כנה מ-10 אנשים אמיתיים תוך דקות בודדות.",
+      "cta": "קבל את פסק הדין שלך",
+      "secondaryCta": "ראה איך זה עובד"
+    },
+    "howItWorks": {
+      "title": "איך זה עובד",
+      "step1Title": "שתף את המצב שלך",
+      "step1Description": "תאר על מה אתה צריך משוב. פרופיל היכרויות? בחירת קריירה? החלטת חיים?",
+      "step2Title": "קבל פסקי דין ממומחים",
+      "step2Description": "אנשים אמיתיים בודקים את ההגשה שלך ומספקים משוב כנה ומחושב.",
+      "step3Title": "קבל החלטות טובות יותר",
+      "step3Description": "השתמש בחוכמת ההמון כדי להתקדם בביטחון."
+    },
+    "judgeSection": {
+      "title": "רוצה להיות שופט?",
+      "subtitle": "עזור לאחרים לקבל החלטות טובות יותר והרוויח פרסים",
+      "benefit1": "סקור הגשות בתחומי העניין שלך",
+      "benefit2": "קבל תשלום על כל תגובה איכותית",
+      "benefit3": "גמיש - שפוט כשיש לך זמן",
+      "cta": "התחל לשפוט"
+    },
+    "faq": {
+      "title": "שאלות נפוצות",
+      "q1": "עד כמה זה באמת אנונימי?",
+      "a1": "לחלוטין. שופטים לעולם לא רואים את שמך או מידע מזהה כלשהו. אתה יכול לשתף כמה הקשר שתרצה.",
+      "q2": "מה אם לא אקבל 3 תגובות?",
+      "a2": "מובטח שתקבל את מספר פסקי הדין ששילמת עליהם. אם לא נוכל לספק, תקבל החזר מלא.",
+      "q3": "איך אתם מבטיחים איכות משוב?",
+      "a3": "השופטים שלנו עוברים תהליך הכשרה ומדורגים על איכות התגובות שלהם. רק שופטים בדירוג הגבוה ביותר מטפלים בבקשות שלך.",
+      "q4": "אילו סוגי תוכן אני יכול להגיש?",
+      "a4": "פרופילי היכרויות, תמונות, דוגמאות כתיבה, החלטות קריירה, בחירות חיים - כל דבר שאתה צריך עליו משוב כנה."
+    },
+    "finalCta": {
+      "title": "תפסיק לתהות. התחל לדעת.",
+      "subtitle": "קבל משוב כנה מאנשים אמיתיים היום.",
+      "cta": "קבל את פסק הדין הראשון שלך"
+    },
+    "redditComparison": {
+      "title": "למה לא לפרסם ב-Reddit?",
+      "verdict": "Verdict",
+      "reddit": "Reddit",
+      "privacy": "פרטי ואנונימי",
+      "privacyReddit": "פוסטים ציבוריים שכולם יכולים לראות",
+      "quality": "סוקרים מוסמכים ומאומתים",
+      "qualityReddit": "זרים אקראיים, איכות משתנה",
+      "speed": "תגובות בדקות",
+      "speedReddit": "ייתכן שלא תקבל תגובות לעולם",
+      "focus": "משוב ממוקד ובונה",
+      "focusReddit": "לעתים קרובות תגובות רעות או לא מועילות"
+    }
+  },
+  "Auth": {
+    "login": {
+      "title": "ברוך הבא בחזרה",
+      "subtitle": "התחבר לחשבון VERDICT שלך",
+      "email": "אימייל",
+      "password": "סיסמה",
+      "forgotPassword": "שכחת סיסמה?",
+      "submit": "התחבר",
+      "submitting": "מתחבר...",
+      "noAccount": "אין לך חשבון?",
+      "signUp": "הירשם",
+      "or": "או"
+    },
+    "signup": {
+      "title": "צור את החשבון שלך",
+      "subtitle": "הצטרף ל-Verdict והתחל לקבל משוב כנה",
+      "email": "אימייל",
+      "password": "סיסמה",
+      "confirmPassword": "אשר סיסמה",
+      "submit": "צור חשבון",
+      "submitting": "יוצר חשבון...",
+      "hasAccount": "כבר יש לך חשבון?",
+      "signIn": "התחבר",
+      "termsAgreement": "ביצירת חשבון, אתה מסכים ל{terms} ול{privacy} שלנו.",
+      "terms": "תנאי השירות",
+      "privacy": "מדיניות הפרטיות"
+    },
+    "forgotPassword": {
+      "title": "אפס את הסיסמה שלך",
+      "subtitle": "הזן את האימייל שלך ונשלח לך קישור לאיפוס",
+      "email": "אימייל",
+      "submit": "שלח קישור איפוס",
+      "submitting": "שולח...",
+      "backToLogin": "חזור להתחברות",
+      "success": "בדוק את האימייל שלך לקישור איפוס"
+    },
+    "resetPassword": {
+      "title": "הגדר סיסמה חדשה",
+      "subtitle": "הזן את הסיסמה החדשה שלך למטה",
+      "password": "סיסמה חדשה",
+      "confirmPassword": "אשר סיסמה חדשה",
+      "submit": "אפס סיסמה",
+      "submitting": "מאפס...",
+      "success": "הסיסמה אופסה בהצלחה"
+    },
+    "verifyEmail": {
+      "title": "אמת את האימייל שלך",
+      "subtitle": "שלחנו קישור אימות לאימייל שלך",
+      "checking": "בודק סטטוס אימות...",
+      "success": "האימייל אומת בהצלחה!",
+      "resend": "שלח מחדש אימייל אימות",
+      "resending": "שולח..."
+    }
+  },
+  "Account": {
+    "title": "חשבון",
+    "profile": "פרופיל",
+    "email": "אימייל",
+    "displayName": "שם תצוגה",
+    "memberSince": "חבר מאז",
+    "credits": "קרדיטים",
+    "creditsDescription": "השתמש בקרדיטים כדי לקבל משוב פסק דין",
+    "available": "זמינים",
+    "buyMore": "קנה עוד קרדיטים",
+    "creditExplanation": "1 קרדיט = 1 בקשה בסיסית (3 פסקי דין ממומחים)",
+    "comparison": {
+      "therapist": "מטפל: {price}/שעה",
+      "coach": "מאמן קריירה: {price}/שעה",
+      "verdict": "Verdict: {price} למשוב כנה"
+    },
+    "packages": {
+      "title": "חבילות קרדיטים",
+      "starter": "התחלתי",
+      "popular": "פופולרי",
+      "value": "ערך",
+      "pro": "מקצועי",
+      "mostPopular": "הכי פופולרי",
+      "bestValue": "ערך הכי טוב"
+    },
+    "howItWorks": {
+      "title": "איך קרדיטים ורמות עובדים",
+      "basic": "בסיסי",
+      "basicDescription": "3 פסקי דין לבקשה",
+      "standard": "סטנדרטי",
+      "standardDescription": "5 פסקי דין לבקשה",
+      "premium": "פרימיום",
+      "premiumDescription": "10 פסקי דין לבקשה"
+    },
+    "processing": "מעבד...",
+    "signOut": "התנתק",
+    "paymentSuccess": "התשלום הצליח! הקרדיטים שלך נוספו."
+  },
+  "Pricing": {
+    "title": "תמחור פשוט ושקוף",
+    "subtitle": "שלם רק על מה שאתה צריך",
+    "freeTrial": "ניסיון חינם",
+    "payPerRequest": "תשלום לפי בקשה",
+    "monthlyPlan": "תוכנית חודשית",
+    "startHere": "התחל כאן",
+    "simpleTransparent": "פשוט ושקוף",
+    "comingSoon": "בקרוב",
+    "opinions": "{count} דעות",
+    "unlimitedRequests": "בקשות ללא הגבלה",
+    "avgTime": "{time} בממוצע",
+    "testExperience": "בדוק את החוויה",
+    "honestFeedback": "משוב כנה מאנשים אמיתיים",
+    "free": "חינם",
+    "perRequest": "לבקשה",
+    "perMonth": "לחודש",
+    "bestValue": "ערך הכי טוב",
+    "moneyBack": "אחריות החזר כספי אם אינך מרוצה מהמשוב",
+    "getStarted": "התחל",
+    "tryFree": "נסה בחינם",
+    "subscribe": "הירשם"
+  },
+  "Request": {
+    "categories": {
+      "appearance": "מראה",
+      "appearanceDescription": "היכרויות, אירועים, מראה מקצועי",
+      "profile": "פרופיל",
+      "profileDescription": "אפליקציות היכרויות, רשתות חברתיות, מקצועי",
+      "writing": "כתיבה",
+      "writingDescription": "הודעות, ביוגרפיות, מכתבי מוטיבציה",
+      "decision": "החלטה",
+      "decisionDescription": "קריירה, מערכות יחסים, בחירות חיים"
+    },
+    "subcategories": {
+      "dating": "היכרויות",
+      "professional": "מקצועי",
+      "casual": "קז'ואל",
+      "event": "אירוע",
+      "tinder": "Tinder",
+      "bumble": "Bumble",
+      "hinge": "Hinge",
+      "linkedin": "LinkedIn",
+      "instagram": "Instagram",
+      "other": "אחר",
+      "message": "הודעה",
+      "bio": "ביוגרפיה",
+      "coverLetter": "מכתב מוטיבציה",
+      "email": "אימייל",
+      "career": "קריירה",
+      "relationship": "מערכת יחסים",
+      "financial": "פיננסי",
+      "lifestyle": "סגנון חיים"
+    },
+    "form": {
+      "whatFeedback": "על מה היית רוצה משוב?",
+      "selectCategory": "בחר קטגוריה",
+      "selectSubcategory": "בחר תת-קטגוריה",
+      "describeRequest": "תאר את הבקשה שלך",
+      "placeholder": "היה ספציפי לגבי מה אתה רוצה משוב...",
+      "uploadImage": "העלה תמונה (אופציונלי)",
+      "selectTier": "בחר את הרמה שלך",
+      "submit": "שלח בקשה",
+      "submitting": "שולח..."
+    },
+    "tiers": {
+      "basic": "בסיסי",
+      "basicDescription": "3 פסקי דין",
+      "standard": "סטנדרטי",
+      "standardDescription": "5 פסקי דין",
+      "premium": "פרימיום",
+      "premiumDescription": "10 פסקי דין"
+    },
+    "status": {
+      "open": "פתוח",
+      "closed": "סגור",
+      "cancelled": "בוטל",
+      "pending": "ממתין",
+      "completed": "הושלם"
+    },
+    "filters": {
+      "all": "הכל",
+      "open": "פתוחים",
+      "closed": "סגורים",
+      "cancelled": "בוטלו"
+    }
+  },
+  "Judge": {
+    "dashboard": {
+      "title": "לוח בקרת שופט",
+      "earnings": "רווחים",
+      "totalEarnings": "סך הרווחים",
+      "pendingPayout": "תשלום ממתין",
+      "qualityScore": "ציון איכות",
+      "verdictsGiven": "פסקי דין שניתנו",
+      "responseTime": "זמן תגובה ממוצע",
+      "available": "בקשות זמינות",
+      "noRequests": "אין בקשות זמינות כרגע",
+      "checkBack": "בדוק שוב בקרוב לבקשות חדשות"
+    },
+    "queue": {
+      "title": "בקשות זמינות",
+      "claim": "קח",
+      "skip": "דלג",
+      "viewDetails": "צפה בפרטים"
+    },
+    "respond": {
+      "title": "שלח את פסק הדין שלך",
+      "placeholder": "כתוב את המשוב הכנה והבונה שלך...",
+      "rating": "דירוג כללי",
+      "submit": "שלח פסק דין",
+      "submitting": "שולח..."
+    },
+    "performance": {
+      "title": "ביצועים",
+      "metrics": "המדדים שלך",
+      "feedback": "משוב אחרון",
+      "tips": "טיפים לשיפור"
+    },
+    "becomeJudge": {
+      "title": "הפוך לשופט",
+      "subtitle": "עזור לאחרים לקבל החלטות טובות יותר והרוויח כסף",
+      "requirements": "דרישות",
+      "req1": "להיות בן 18 לפחות",
+      "req2": "להשלים את תהליך ההכשרה",
+      "req3": "לשמור על דירוג איכות מעל 4.0",
+      "benefits": "יתרונות",
+      "ben1": "הרוויח כסף על כל פסק דין איכותי",
+      "ben2": "לוח זמנים גמיש - עבוד מתי שתרצה",
+      "ben3": "עזור לאנשים לקבל החלטות טובות יותר",
+      "apply": "הגש מועמדות עכשיו",
+      "applying": "מגיש..."
+    }
+  },
+  "Legal": {
+    "termsOfService": "תנאי שירות",
+    "privacyPolicy": "מדיניות פרטיות",
+    "cookiePolicy": "מדיניות עוגיות",
+    "communityGuidelines": "הנחיות קהילה",
+    "lastUpdated": "עודכן לאחרונה: {date}",
+    "footer": {
+      "copyright": "© {year} Verdict. כל הזכויות שמורות.",
+      "terms": "תנאי שירות",
+      "privacy": "מדיניות פרטיות",
+      "cookies": "מדיניות עוגיות"
+    }
+  },
+  "Cookies": {
+    "banner": {
+      "title": "אנחנו מעריכים את הפרטיות שלך",
+      "description": "אנחנו משתמשים בעוגיות כדי לשפר את חוויית הגלישה שלך, לנתח תנועה באתר ולהתאים אישית תוכן. בלחיצה על \"קבל הכל\", אתה מסכים לשימוש שלנו בעוגיות.",
+      "learnMore": "למד עוד ב{link} שלנו.",
+      "acceptAll": "קבל הכל",
+      "essentialOnly": "חיוניות בלבד",
+      "customize": "התאם אישית"
+    },
+    "settings": {
+      "title": "העדפות עוגיות",
+      "essential": "עוגיות חיוניות",
+      "essentialDescription": "נדרשות לתפקוד האתר. לא ניתן להשבית.",
+      "alwaysActive": "תמיד פעיל",
+      "analytics": "עוגיות אנליטיקה",
+      "analyticsDescription": "עוזרות לנו להבין כיצד מבקרים מתקשרים עם האתר שלנו.",
+      "marketing": "עוגיות שיווק",
+      "marketingDescription": "משמשות להצגת פרסומות מותאמות אישית.",
+      "rejectAll": "דחה הכל",
+      "savePreferences": "שמור העדפות"
+    }
+  },
+  "Common": {
+    "loading": "טוען...",
+    "error": "אירעה שגיאה",
+    "tryAgain": "נסה שוב",
+    "cancel": "בטל",
+    "save": "שמור",
+    "delete": "מחק",
+    "edit": "ערוך",
+    "close": "סגור",
+    "back": "חזרה",
+    "next": "הבא",
+    "submit": "שלח",
+    "search": "חפש",
+    "noResults": "לא נמצאו תוצאות",
+    "required": "חובה",
+    "optional": "אופציונלי",
+    "yes": "כן",
+    "no": "לא",
+    "or": "או",
+    "and": "ו"
+  },
+  "Errors": {
+    "notLoggedIn": "לא מחובר",
+    "apiError": "שגיאת API",
+    "networkError": "שגיאת רשת. אנא בדוק את החיבור שלך.",
+    "unauthorized": "אין לך הרשאה לבצע פעולה זו.",
+    "notFound": "המשאב המבוקש לא נמצא.",
+    "serverError": "שגיאת שרת. אנא נסה שוב מאוחר יותר.",
+    "validationError": "אנא בדוק את הקלט שלך ונסה שוב.",
+    "paymentFailed": "התשלום נכשל. אנא נסה שוב.",
+    "uploadFailed": "ההעלאה נכשלה. אנא נסה שוב.",
+    "sessionExpired": "פג תוקף ההפעלה שלך. אנא התחבר שוב."
+  },
+  "Validation": {
+    "required": "שדה זה נדרש",
+    "email": "אנא הזן כתובת אימייל תקינה",
+    "minLength": "חייב להיות לפחות {min} תווים",
+    "maxLength": "חייב להיות לא יותר מ-{max} תווים",
+    "passwordMismatch": "הסיסמאות אינן תואמות",
+    "invalidContent": "התוכן מכיל שפה לא הולמת",
+    "imageTooLarge": "התמונה חייבת להיות פחות מ-{size}MB",
+    "invalidFormat": "פורמט קובץ לא חוקי"
+  },
+  "Time": {
+    "justNow": "הרגע",
+    "minutesAgo": "לפני {count} דקות",
+    "hoursAgo": "לפני {count} שעות",
+    "daysAgo": "לפני {count} ימים",
+    "weeksAgo": "לפני {count} שבועות",
+    "monthsAgo": "לפני {count} חודשים",
+    "yearsAgo": "לפני {count} שנים"
+  },
+  "Email": {
+    "subjects": {
+      "welcome": "ברוך הבא ל-Verdict!",
+      "passwordReset": "אפס את הסיסמה שלך",
+      "verifyEmail": "אמת את כתובת האימייל שלך",
+      "paymentReceived": "התשלום התקבל — קרדיטים נוספו!",
+      "verdictReady": "פסק הדין שלך מוכן!",
+      "newRequest": "בקשה חדשה זמינה לשיפוט"
+    }
+  }
+}

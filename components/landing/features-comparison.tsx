@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
+import { VERDICT_TIERS } from '@/lib/validations';
 import { TouchButton } from '@/components/ui/touch-button';
 import { Badge } from '@/components/ui/badge';
 import { 
@@ -19,10 +20,12 @@ import {
   Zap
 } from 'lucide-react';
 
+const BASIC_VERDICTS = VERDICT_TIERS.basic.verdicts;
+
 const COMPARISON_DATA = [
   {
     feature: "Get honest opinions",
-    verdict: { available: true, description: "3 honest opinions from real people" },
+    verdict: { available: true, description: `${BASIC_VERDICTS} honest opinions from real people` },
     friends: { available: false, description: "Biased opinions to protect your feelings" },
     social: { available: false, description: "Filtered responses for social image" },
     reddit: { available: false, description: "Random strangers, variable quality" }
@@ -64,7 +67,7 @@ const COMPARISON_DATA = [
   },
   {
     feature: "Guaranteed responses",
-    verdict: { available: true, description: "Guaranteed 3 responses" },
+    verdict: { available: true, description: `Guaranteed ${BASIC_VERDICTS} responses` },
     friends: { available: false, description: "No guarantee" },
     social: { available: false, description: "No guarantee" },
     reddit: { available: false, description: "Might get 0 responses" }
@@ -90,12 +93,12 @@ const PAIN_POINTS = [
     problem: "Your social circle often thinks the same way you do",
     solution: "Diverse judges from different backgrounds and experiences"
   },
-  {
-    icon: Clock,
-    title: "Slow or no responses",
-    problem: "Friends might ignore your request or take forever to respond",
-    solution: "Guaranteed 3 thoughtful responses within hours, not days"
-  }
+      {
+        icon: Clock,
+        title: "Slow or no responses",
+        problem: "Friends might ignore your request or take forever to respond",
+        solution: `Guaranteed ${BASIC_VERDICTS} thoughtful responses within hours, not days`
+      }
 ];
 
 export function FeaturesComparison() {
@@ -308,7 +311,7 @@ export function FeaturesComparison() {
             </h3>
             <p className="text-gray-600 mb-6 max-w-2xl mx-auto">
               Stop getting sugar-coated opinions. Start getting straight answers that help you improve.
-              Try 3 verdicts completely free - no strings attached.
+              Try {BASIC_VERDICTS} verdicts completely free - no strings attached.
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 items-center justify-center">

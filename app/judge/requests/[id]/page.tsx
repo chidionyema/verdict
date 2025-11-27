@@ -138,6 +138,11 @@ export default function JudgeVerdictPage({
                 alt="Submission"
                 className="w-full rounded-lg"
               />
+            ) : request.media_type === 'audio' && request.media_url ? (
+              <div className="p-4 bg-purple-50 rounded-lg">
+                <p className="text-xs font-semibold text-purple-800 mb-2">Voice note from seeker</p>
+                <audio controls src={request.media_url} className="w-full" />
+              </div>
             ) : (
               <div className="p-4 bg-gray-50 rounded-lg min-h-[200px]">
                 <p className="text-gray-700">{request.text_content}</p>

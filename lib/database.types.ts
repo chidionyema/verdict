@@ -68,7 +68,7 @@ export interface Database {
           status: 'open' | 'in_progress' | 'closed' | 'cancelled';
           category: 'appearance' | 'profile' | 'writing' | 'decision';
           subcategory: string | null;
-          media_type: 'photo' | 'text';
+          media_type: 'photo' | 'text' | 'audio';
           media_url: string | null;
           text_content: string | null;
           context: string;
@@ -86,7 +86,7 @@ export interface Database {
           status?: 'open' | 'in_progress' | 'closed' | 'cancelled';
           category: 'appearance' | 'profile' | 'writing' | 'decision';
           subcategory?: string | null;
-          media_type: 'photo' | 'text';
+          media_type: 'photo' | 'text' | 'audio';
           media_url?: string | null;
           text_content?: string | null;
           context: string;
@@ -104,7 +104,7 @@ export interface Database {
           status?: 'open' | 'in_progress' | 'closed' | 'cancelled';
           category?: 'appearance' | 'profile' | 'writing' | 'decision';
           subcategory?: string | null;
-          media_type?: 'photo' | 'text';
+          media_type?: 'photo' | 'text' | 'audio';
           media_url?: string | null;
           text_content?: string | null;
           context?: string;
@@ -124,6 +124,7 @@ export interface Database {
           rating: number | null;
           feedback: string;
           tone: 'honest' | 'constructive' | 'encouraging';
+          voice_url: string | null;
           is_flagged: boolean;
           flagged_reason: string | null;
         };
@@ -135,6 +136,7 @@ export interface Database {
           rating?: number | null;
           feedback: string;
           tone: 'honest' | 'constructive' | 'encouraging';
+          voice_url?: string | null;
           is_flagged?: boolean;
           flagged_reason?: string | null;
         };
@@ -146,6 +148,7 @@ export interface Database {
           rating?: number | null;
           feedback?: string;
           tone?: 'honest' | 'constructive' | 'encouraging';
+          voice_url?: string | null;
           is_flagged?: boolean;
           flagged_reason?: string | null;
         };

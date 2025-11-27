@@ -2,6 +2,10 @@
 
 import { Check, Clock, Sparkles } from 'lucide-react';
 import { TouchButton } from '@/components/ui/touch-button';
+import { VERDICT_TIER_PRICING, VERDICT_TIERS } from '@/lib/validations';
+
+const BASIC_PRICE = VERDICT_TIER_PRICING.basic.price;
+const BASIC_VERDICTS = VERDICT_TIERS.basic.verdicts;
 
 const PLANS = [
   {
@@ -18,23 +22,31 @@ const PLANS = [
   {
     name: 'Pay per request',
     badge: 'Simple & transparent',
-    verdicts: '3 opinions each',
-    delivery: '47min average',
-    features: ['No subscription needed', 'Pay only when you use it', 'Same quality as free trial'],
+    verdicts: `${BASIC_VERDICTS} opinions (Basic tier)`,
+    delivery: 'Most requests answered in under an hour',
+    features: [
+      'Pay only when you need a verdict',
+      'Choose Basic, Standard, or Premium inside the app',
+      'Same quality as your free trial',
+    ],
     limitations: [],
-    price: '$3.49',
-    priceDetail: 'per request',
+    price: `$${BASIC_PRICE.toFixed(2)}`,
+    priceDetail: 'per Basic request (higher tiers available in app)',
     highlight: true,
   },
   {
-    name: 'Monthly plan',
+    name: 'Power users',
     badge: 'Coming soon',
-    verdicts: 'Unlimited requests',
+    verdicts: 'Subscription plans',
     delivery: 'Priority queue',
-    features: ['Best value for regular users', 'Faster responses', 'Premium reviewers'],
-    limitations: [],
-    price: '$9.99',
-    priceDetail: 'per month',
+    features: [
+      'Best value for regular users',
+      'Faster responses',
+      'Premium reviewers',
+    ],
+    limitations: ['Subscriptions are not yet available – one-off requests only for now.'],
+    price: 'Coming soon',
+    priceDetail: '',
     highlight: false,
   },
 ];

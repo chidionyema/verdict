@@ -2,9 +2,14 @@
 
 import Link from 'next/link';
 import { CheckCircle, DollarSign, Star, Target, Clock, ShieldCheck } from 'lucide-react';
+import { VERDICT_TIERS, VERDICT_TIER_PRICING } from '@/lib/validations';
 
 // Force dynamic rendering to avoid Supabase client issues during build
 export const dynamic = 'force-dynamic';
+
+const BASIC = VERDICT_TIER_PRICING.basic;
+const STANDARD = VERDICT_TIER_PRICING.standard;
+const PREMIUM = VERDICT_TIER_PRICING.premium;
 
 export default function BecomeJudgePage() {
   return (
@@ -49,16 +54,22 @@ export default function BecomeJudgePage() {
             </h2>
             <ul className="space-y-2 text-sm text-gray-700">
               <li className="flex justify-between">
-                <span>Basic requests (3 verdicts)</span>
-                <span className="font-semibold">$0.50 per verdict</span>
+                <span>Basic requests ({VERDICT_TIERS.basic.verdicts} verdicts)</span>
+                <span className="font-semibold">
+                  ${BASIC.judgePayout.toFixed(2)} per verdict
+                </span>
               </li>
               <li className="flex justify-between">
-                <span>Standard requests (5 verdicts)</span>
-                <span className="font-semibold">$0.55 per verdict</span>
+                <span>Standard requests ({VERDICT_TIERS.standard.verdicts} verdicts)</span>
+                <span className="font-semibold">
+                  ${STANDARD.judgePayout.toFixed(2)} per verdict
+                </span>
               </li>
               <li className="flex justify-between">
-                <span>Premium requests (7 verdicts)</span>
-                <span className="font-semibold">$0.60 per verdict</span>
+                <span>Premium requests ({VERDICT_TIERS.premium.verdicts} verdicts)</span>
+                <span className="font-semibold">
+                  ${PREMIUM.judgePayout.toFixed(2)} per verdict
+                </span>
               </li>
             </ul>
             <p className="mt-3 text-xs text-gray-500">

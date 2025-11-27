@@ -4,7 +4,10 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store';
+import { VERDICT_TIERS } from '@/lib/validations';
 import { v4 as uuidv4 } from 'uuid';
+
+const FREE_TRIAL_VERDICTS = VERDICT_TIERS.basic.verdicts;
 
 export default function AuthPage() {
   const router = useRouter();
@@ -73,7 +76,7 @@ export default function AuthPage() {
             Create your account to see results
           </h2>
           <p className="text-gray-600 mb-8">
-            Your first 3 verdicts are free. No credit card required.
+            Your first {FREE_TRIAL_VERDICTS} verdicts are free. No credit card required.
           </p>
 
           <div className="space-y-3">

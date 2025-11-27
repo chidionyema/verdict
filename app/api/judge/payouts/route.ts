@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
 import Stripe from 'stripe';
 import { log } from '@/lib/logger';
+import { MIN_PAYOUT_CENTS } from '@/lib/validations';
 
 const getStripe = () => {
   if (!process.env.STRIPE_SECRET_KEY) {
@@ -14,7 +15,7 @@ const getStripe = () => {
 };
 
 const createPayoutSchema = z.object({
-  amount_cents: z.number().min(1000), // Minimum $10 payout
+  amount_cents: z.number().min(MIN_PAYOUT_CENTS), // Minimum payout threshold
   payout_method: z.enum(['stripe_express', 'bank_transfer', 'paypal']).default('stripe_express'),
 });
 
@@ -80,7 +81,7 @@ export async function GET(request: NextRequest) {
       },
       available_amount: availableAmount || 0,
       payout_account: payoutAccount,
-      minimum_payout: 1000, // $10.00 minimum
+      minimum_payout: MIN_PAYOUT_CENTS,
     });
 
   } catch (error) {

@@ -87,8 +87,8 @@ export function validateRating(rating: unknown): { valid: boolean; error?: strin
   return { valid: true };
 }
 
-export function validateMediaType(mediaType: string): mediaType is 'photo' | 'text' {
-  return mediaType === 'photo' || mediaType === 'text';
+export function validateMediaType(mediaType: string): mediaType is 'photo' | 'text' | 'audio' {
+  return mediaType === 'photo' || mediaType === 'text' || mediaType === 'audio';
 }
 
 function containsBannedWords(text: string): boolean {
@@ -122,13 +122,16 @@ export function validateImageFile(file: File): { valid: boolean; error?: string 
 }
 
 // Pricing model
-// Single credit base price used throughout the app for seeker-facing messaging.
+// Base price per credit for bulk credit packages (not per-request tiers).
+// Tiered request prices below may offer slight discounts vs this baseline.
 export const PRICE_PER_CREDIT_USD = 3.49;
 
-// Credit packages
-// Updated pricing: $3.49/credit minimum for 40-45% profit margin
-// With 3 verdicts per request (standard tier), this yields ~37% profit margin
-// Tiered pricing: Basic (3), Standard (5), Premium (7) verdicts
+// Judge payout system
+// Global minimum payout threshold (in cents) for judges.
+export const MIN_PAYOUT_CENTS = 1000; // $10.00 minimum
+
+// Credit packages (bulk purchase of generic credits)
+// These are independent from per-request tier prices below.
 export const CREDIT_PACKAGES = {
   starter: { credits: 5, price_cents: 1745, name: 'Starter' },    // $17.45 ($3.49/credit)
   popular: { credits: 10, price_cents: 3490, name: 'Popular' },   // $34.90 ($3.49/credit)
@@ -136,7 +139,7 @@ export const CREDIT_PACKAGES = {
   pro: { credits: 50, price_cents: 17450, name: 'Pro' },           // $174.50 ($3.49/credit)
 } as const;
 
-// Verdict tier definitions
+// Verdict tier definitions (how many verdicts per request)
 export const VERDICT_TIERS = {
   basic: { verdicts: 3, name: 'Basic', description: '3 honest opinions - Fast & affordable' },
   standard: { verdicts: 5, name: 'Standard', description: '5 honest opinions - Most popular' },
@@ -146,24 +149,31 @@ export const VERDICT_TIERS = {
 export type VerdictTier = keyof typeof VERDICT_TIERS;
 
 // Tier pricing / payout model (finance-approved)
+// Default targets (per request):
+// - Basic:   $3.99, 3 verdicts,  $0.45 per verdict to judges
+// - Standard:$6.99, 5 verdicts,  $0.50 per verdict to judges
+// - Premium: $9.99, 7 verdicts,  $0.55 per verdict to judges
 export const VERDICT_TIER_PRICING = {
   basic: {
     tier: 'basic' as const,
     credits: 1,
     verdicts: VERDICT_TIERS.basic.verdicts,
-    judgePayout: 0.5,
+    judgePayout: 0.45,
+    price: 3.99,
   },
   standard: {
     tier: 'standard' as const,
     credits: 2,
     verdicts: VERDICT_TIERS.standard.verdicts,
-    judgePayout: 0.55,
+    judgePayout: 0.5,
+    price: 6.99,
   },
   premium: {
     tier: 'premium' as const,
     credits: 3,
     verdicts: VERDICT_TIERS.premium.verdicts,
-    judgePayout: 0.6,
+    judgePayout: 0.55,
+    price: 9.99,
   },
 } as const;
 

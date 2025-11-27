@@ -1,0 +1,404 @@
+{
+  "Metadata": {
+    "title": "Verdict - 几分钟内获取真人智慧",
+    "titleTemplate": "{title} | Verdict",
+    "description": "让生活中的艰难决定变得更清晰。在几分钟内从10个真人那里获得诚实的反馈。职业选择、人际关系、生活决定 - 问任何问题。",
+    "keywords": "决策帮助, 生活建议, 诚实反馈, 群众智慧, 职业建议, 情感建议, 生活决定, 匿名反馈"
+  },
+  "Navigation": {
+    "discover": "发现",
+    "becomeJudge": "成为评审",
+    "signIn": "登录",
+    "getStarted": "开始",
+    "myRequests": "我的请求",
+    "judge": "评审",
+    "account": "账户",
+    "credits": "积分",
+    "active": "活跃",
+    "pending": "待处理",
+    "newRequest": "新请求",
+    "dashboard": "仪表板",
+    "performance": "绩效",
+    "judgeDashboard": "评审仪表板",
+    "closeMenu": "关闭菜单",
+    "openMenu": "打开菜单",
+    "signOut": "退出登录"
+  },
+  "Landing": {
+    "hero": {
+      "title": "几分钟内获取真人智慧",
+      "subtitle": "让生活中的艰难决定变得更清晰。在几分钟内从10个真人那里获得诚实的反馈。",
+      "cta": "获取您的评判",
+      "secondaryCta": "了解工作原理"
+    },
+    "howItWorks": {
+      "title": "工作原理",
+      "step1Title": "分享您的情况",
+      "step1Description": "描述您需要反馈的内容。约会资料？职业选择？生活决定？",
+      "step2Title": "获取专家评判",
+      "step2Description": "真人审查您的提交并提供诚实、深思熟虑的反馈。",
+      "step3Title": "做出更好的决定",
+      "step3Description": "利用群众智慧自信地前进。"
+    },
+    "judgeSection": {
+      "title": "想成为评审吗？",
+      "subtitle": "帮助他人做出更好的决定并获得奖励",
+      "benefit1": "审查您感兴趣领域的提交",
+      "benefit2": "每个优质回复都能获得报酬",
+      "benefit3": "灵活 - 有时间就评审",
+      "cta": "开始评审"
+    },
+    "faq": {
+      "title": "常见问题",
+      "q1": "真的有多匿名？",
+      "a1": "完全匿名。评审永远看不到您的姓名或任何身份信息。您可以分享任意多或少的背景信息。",
+      "q2": "如果我没有得到3个回复怎么办？",
+      "a2": "您保证会收到您付费的评判数量。如果我们无法交付，您将获得全额退款。",
+      "q3": "你们如何确保反馈质量？",
+      "a3": "我们的评审需要通过资格审核流程，并根据回复质量进行评级。只有顶级评审才能处理您的请求。",
+      "q4": "我可以提交什么类型的内容？",
+      "a4": "约会资料、照片、写作样本、职业决定、生活选择 - 任何您需要诚实反馈的内容。"
+    },
+    "finalCta": {
+      "title": "停止猜测，开始了解。",
+      "subtitle": "今天就从真人那里获得诚实的反馈。",
+      "cta": "获取您的第一个评判"
+    },
+    "redditComparison": {
+      "title": "为什么不在Reddit上发帖？",
+      "verdict": "Verdict",
+      "reddit": "Reddit",
+      "privacy": "私密且匿名",
+      "privacyReddit": "任何人都能看到的公开帖子",
+      "quality": "经过审核的合格评审",
+      "qualityReddit": "随机陌生人，质量参差不齐",
+      "speed": "几分钟内得到回复",
+      "speedReddit": "可能永远得不到回复",
+      "focus": "专注、建设性的反馈",
+      "focusReddit": "经常是刻薄或无用的评论"
+    }
+  },
+  "Auth": {
+    "login": {
+      "title": "欢迎回来",
+      "subtitle": "登录您的VERDICT账户",
+      "email": "电子邮件",
+      "password": "密码",
+      "forgotPassword": "忘记密码？",
+      "submit": "登录",
+      "submitting": "登录中...",
+      "noAccount": "没有账户？",
+      "signUp": "注册",
+      "or": "或"
+    },
+    "signup": {
+      "title": "创建账户",
+      "subtitle": "加入Verdict，开始获得诚实的反馈",
+      "email": "电子邮件",
+      "password": "密码",
+      "confirmPassword": "确认密码",
+      "submit": "创建账户",
+      "submitting": "创建中...",
+      "hasAccount": "已有账户？",
+      "signIn": "登录",
+      "termsAgreement": "创建账户即表示您同意我们的{terms}和{privacy}。",
+      "terms": "服务条款",
+      "privacy": "隐私政策"
+    },
+    "forgotPassword": {
+      "title": "重置密码",
+      "subtitle": "输入您的电子邮件，我们将发送重置链接",
+      "email": "电子邮件",
+      "submit": "发送重置链接",
+      "submitting": "发送中...",
+      "backToLogin": "返回登录",
+      "success": "请检查您的电子邮件获取重置链接"
+    },
+    "resetPassword": {
+      "title": "设置新密码",
+      "subtitle": "在下方输入您的新密码",
+      "password": "新密码",
+      "confirmPassword": "确认新密码",
+      "submit": "重置密码",
+      "submitting": "重置中...",
+      "success": "密码重置成功"
+    },
+    "verifyEmail": {
+      "title": "验证您的电子邮件",
+      "subtitle": "我们已向您的电子邮件发送了验证链接",
+      "checking": "检查验证状态...",
+      "success": "电子邮件验证成功！",
+      "resend": "重新发送验证邮件",
+      "resending": "发送中..."
+    }
+  },
+  "Account": {
+    "title": "账户",
+    "profile": "个人资料",
+    "email": "电子邮件",
+    "displayName": "显示名称",
+    "memberSince": "注册日期",
+    "credits": "积分",
+    "creditsDescription": "使用积分获取评判反馈",
+    "available": "可用",
+    "buyMore": "购买更多积分",
+    "creditExplanation": "1积分 = 1个基础请求（3个专家评判）",
+    "comparison": {
+      "therapist": "心理咨询师: {price}/小时",
+      "coach": "职业教练: {price}/小时",
+      "verdict": "Verdict: {price}获得诚实反馈"
+    },
+    "packages": {
+      "title": "积分套餐",
+      "starter": "入门",
+      "popular": "热门",
+      "value": "超值",
+      "pro": "专业",
+      "mostPopular": "最受欢迎",
+      "bestValue": "最超值"
+    },
+    "howItWorks": {
+      "title": "积分和等级如何运作",
+      "basic": "基础",
+      "basicDescription": "每个请求3个评判",
+      "standard": "标准",
+      "standardDescription": "每个请求5个评判",
+      "premium": "高级",
+      "premiumDescription": "每个请求10个评判"
+    },
+    "processing": "处理中...",
+    "signOut": "退出登录",
+    "paymentSuccess": "支付成功！您的积分已添加。"
+  },
+  "Pricing": {
+    "title": "简单透明的定价",
+    "subtitle": "只为您需要的付费",
+    "freeTrial": "免费试用",
+    "payPerRequest": "按请求付费",
+    "monthlyPlan": "月度计划",
+    "startHere": "从这里开始",
+    "simpleTransparent": "简单透明",
+    "comingSoon": "即将推出",
+    "opinions": "{count}条意见",
+    "unlimitedRequests": "无限请求",
+    "avgTime": "平均{time}",
+    "testExperience": "体验一下",
+    "honestFeedback": "来自真人的诚实反馈",
+    "free": "免费",
+    "perRequest": "每个请求",
+    "perMonth": "每月",
+    "bestValue": "最超值",
+    "moneyBack": "如果您对反馈不满意，可获得退款保证",
+    "getStarted": "开始",
+    "tryFree": "免费试用",
+    "subscribe": "订阅"
+  },
+  "Request": {
+    "categories": {
+      "appearance": "外貌",
+      "appearanceDescription": "约会、活动、职业形象",
+      "profile": "个人资料",
+      "profileDescription": "约会应用、社交媒体、职业",
+      "writing": "写作",
+      "writingDescription": "消息、简介、求职信",
+      "decision": "决定",
+      "decisionDescription": "职业、人际关系、生活选择"
+    },
+    "subcategories": {
+      "dating": "约会",
+      "professional": "职业",
+      "casual": "休闲",
+      "event": "活动",
+      "tinder": "Tinder",
+      "bumble": "Bumble",
+      "hinge": "Hinge",
+      "linkedin": "领英",
+      "instagram": "Instagram",
+      "other": "其他",
+      "message": "消息",
+      "bio": "简介",
+      "coverLetter": "求职信",
+      "email": "电子邮件",
+      "career": "职业",
+      "relationship": "人际关系",
+      "financial": "财务",
+      "lifestyle": "生活方式"
+    },
+    "form": {
+      "whatFeedback": "您想获得什么方面的反馈？",
+      "selectCategory": "选择类别",
+      "selectSubcategory": "选择子类别",
+      "describeRequest": "描述您的请求",
+      "placeholder": "具体说明您想要反馈的内容...",
+      "uploadImage": "上传图片（可选）",
+      "selectTier": "选择等级",
+      "submit": "提交请求",
+      "submitting": "提交中..."
+    },
+    "tiers": {
+      "basic": "基础",
+      "basicDescription": "3个评判",
+      "standard": "标准",
+      "standardDescription": "5个评判",
+      "premium": "高级",
+      "premiumDescription": "10个评判"
+    },
+    "status": {
+      "open": "开放",
+      "closed": "关闭",
+      "cancelled": "已取消",
+      "pending": "待处理",
+      "completed": "已完成"
+    },
+    "filters": {
+      "all": "全部",
+      "open": "开放",
+      "closed": "关闭",
+      "cancelled": "已取消"
+    }
+  },
+  "Judge": {
+    "dashboard": {
+      "title": "评审仪表板",
+      "earnings": "收益",
+      "totalEarnings": "总收益",
+      "pendingPayout": "待支付",
+      "qualityScore": "质量评分",
+      "verdictsGiven": "评判数",
+      "responseTime": "平均响应时间",
+      "available": "可用请求",
+      "noRequests": "目前没有可用请求",
+      "checkBack": "请稍后查看新请求"
+    },
+    "queue": {
+      "title": "可用请求",
+      "claim": "认领",
+      "skip": "跳过",
+      "viewDetails": "查看详情"
+    },
+    "respond": {
+      "title": "提交您的评判",
+      "placeholder": "写下您诚实、建设性的反馈...",
+      "rating": "总体评分",
+      "submit": "提交评判",
+      "submitting": "提交中..."
+    },
+    "performance": {
+      "title": "绩效",
+      "metrics": "您的指标",
+      "feedback": "最近反馈",
+      "tips": "改进建议"
+    },
+    "becomeJudge": {
+      "title": "成为评审",
+      "subtitle": "帮助他人做出更好的决定并赚钱",
+      "requirements": "要求",
+      "req1": "年满18岁",
+      "req2": "完成资格审核流程",
+      "req3": "保持4.0以上的质量评分",
+      "benefits": "好处",
+      "ben1": "每个优质评判都能获得报酬",
+      "ben2": "灵活的时间安排 - 随时工作",
+      "ben3": "帮助人们做出更好的决定",
+      "apply": "立即申请",
+      "applying": "申请中..."
+    }
+  },
+  "Legal": {
+    "termsOfService": "服务条款",
+    "privacyPolicy": "隐私政策",
+    "cookiePolicy": "Cookie政策",
+    "communityGuidelines": "社区准则",
+    "lastUpdated": "最后更新: {date}",
+    "footer": {
+      "copyright": "© {year} Verdict. 保留所有权利。",
+      "terms": "服务条款",
+      "privacy": "隐私政策",
+      "cookies": "Cookie政策"
+    }
+  },
+  "Cookies": {
+    "banner": {
+      "title": "我们重视您的隐私",
+      "description": "我们使用Cookie来增强您的浏览体验、分析网站流量并个性化内容。点击\"全部接受\"即表示您同意我们使用Cookie。",
+      "learnMore": "了解更多请查看我们的{link}。",
+      "acceptAll": "全部接受",
+      "essentialOnly": "仅必要",
+      "customize": "自定义"
+    },
+    "settings": {
+      "title": "Cookie偏好设置",
+      "essential": "必要Cookie",
+      "essentialDescription": "网站运行所必需的。无法禁用。",
+      "alwaysActive": "始终启用",
+      "analytics": "分析Cookie",
+      "analyticsDescription": "帮助我们了解访问者如何与我们的网站互动。",
+      "marketing": "营销Cookie",
+      "marketingDescription": "用于投放个性化广告。",
+      "rejectAll": "全部拒绝",
+      "savePreferences": "保存偏好设置"
+    }
+  },
+  "Common": {
+    "loading": "加载中...",
+    "error": "发生错误",
+    "tryAgain": "重试",
+    "cancel": "取消",
+    "save": "保存",
+    "delete": "删除",
+    "edit": "编辑",
+    "close": "关闭",
+    "back": "返回",
+    "next": "下一步",
+    "submit": "提交",
+    "search": "搜索",
+    "noResults": "未找到结果",
+    "required": "必填",
+    "optional": "可选",
+    "yes": "是",
+    "no": "否",
+    "or": "或",
+    "and": "和"
+  },
+  "Errors": {
+    "notLoggedIn": "未登录",
+    "apiError": "API错误",
+    "networkError": "网络错误。请检查您的连接。",
+    "unauthorized": "您没有权限执行此操作。",
+    "notFound": "请求的资源未找到。",
+    "serverError": "服务器错误。请稍后重试。",
+    "validationError": "请检查您的输入并重试。",
+    "paymentFailed": "支付失败。请重试。",
+    "uploadFailed": "上传失败。请重试。",
+    "sessionExpired": "您的会话已过期。请重新登录。"
+  },
+  "Validation": {
+    "required": "此字段为必填项",
+    "email": "请输入有效的电子邮件地址",
+    "minLength": "必须至少{min}个字符",
+    "maxLength": "不能超过{max}个字符",
+    "passwordMismatch": "密码不匹配",
+    "invalidContent": "内容包含不当语言",
+    "imageTooLarge": "图片必须小于{size}MB",
+    "invalidFormat": "文件格式无效"
+  },
+  "Time": {
+    "justNow": "刚刚",
+    "minutesAgo": "{count}分钟前",
+    "hoursAgo": "{count}小时前",
+    "daysAgo": "{count}天前",
+    "weeksAgo": "{count}周前",
+    "monthsAgo": "{count}个月前",
+    "yearsAgo": "{count}年前"
+  },
+  "Email": {
+    "subjects": {
+      "welcome": "欢迎加入Verdict！",
+      "passwordReset": "重置您的密码",
+      "verifyEmail": "验证您的电子邮件地址",
+      "paymentReceived": "收到付款 — 积分已添加！",
+      "verdictReady": "您的评判已准备就绪！",
+      "newRequest": "新的评审请求可用"
+    }
+  }
+}

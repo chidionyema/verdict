@@ -29,7 +29,7 @@ import VerdictRatingModal from '@/components/VerdictRatingModal';
 import { ThankJudgesButton } from '@/components/request/ThankJudgesButton';
 import { toast } from '@/components/ui/toast';
 import { createClient } from '@/lib/supabase/client';
-import { getTierConfigByVerdictCount, PRICE_PER_CREDIT_USD } from '@/lib/validations';
+import { getTierConfigByVerdictCount } from '@/lib/validations';
 
 interface VerdictWithNumber extends VerdictResponse {
   judge_number: number;
@@ -339,19 +339,14 @@ export default function RequestDetailPage({
               </span>
               {tierConfig && (
                 <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-gray-50 text-gray-700 border border-gray-200">
-                  {(() => {
-                    const dollars = tierConfig.credits * PRICE_PER_CREDIT_USD;
-                    return (
-                      <>
-                        <span className="text-xs capitalize">{tierConfig.tier} tier</span>
-                        <span className="text-xs">· {tierConfig.verdicts} verdicts</span>
-                        <span className="text-xs">
-                          · {tierConfig.credits} credit{tierConfig.credits !== 1 ? 's' : ''} (~$
-                          {dollars.toFixed(2)})
-                        </span>
-                      </>
-                    );
-                  })()}
+                  <>
+                    <span className="text-xs capitalize">{tierConfig.tier} tier</span>
+                    <span className="text-xs">· {tierConfig.verdicts} verdicts</span>
+                    <span className="text-xs">
+                      · {tierConfig.credits} credit{tierConfig.credits !== 1 ? 's' : ''} (~$
+                      {tierConfig.price.toFixed(2)})
+                    </span>
+                  </>
                 </span>
               )}
                 {verdicts.length > 0 && (
@@ -593,8 +588,10 @@ export default function RequestDetailPage({
                     : 'Submission'}
                 </h3>
                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                  request.media_type === 'photo' 
-                    ? 'bg-blue-100 text-blue-700' 
+                  request.media_type === 'photo'
+                    ? 'bg-blue-100 text-blue-700'
+                    : request.media_type === 'audio'
+                    ? 'bg-purple-100 text-purple-700'
                     : 'bg-green-100 text-green-700'
                 }`}>
                   {request.media_type}
@@ -617,6 +614,11 @@ export default function RequestDetailPage({
                       <ArrowLeft className="h-4 w-4 rotate-45" />
                     </button>
                   </div>
+                </div>
+              ) : request.media_type === 'audio' && request.media_url ? (
+                <div className="mb-4 p-4 bg-purple-50 rounded-xl border border-purple-200">
+                  <p className="text-xs font-semibold text-purple-800 mb-2">Voice note from seeker</p>
+                  <audio controls src={request.media_url} className="w-full" />
                 </div>
               ) : (
                 <div className="p-4 bg-gray-50 rounded-xl mb-4 border border-gray-200">
@@ -778,7 +780,7 @@ export default function RequestDetailPage({
               filteredAndSortedVerdicts.map((verdict) => {
                 const isMyVerdict = userContext.isJudge && verdict.id === userContext.myVerdictId;
                 return (
-                <div
+                  <div
                   key={verdict.id}
                   className={`bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow border p-6 ${
                     isMyVerdict 
@@ -827,8 +829,18 @@ export default function RequestDetailPage({
                     )}
                   </div>
 
-                  <div className="prose prose-sm max-w-none">
-                    <p className="text-gray-700 leading-relaxed">{verdict.feedback}</p>
+                  <div className="space-y-3">
+                    {verdict.voice_url && (
+                      <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
+                        <p className="text-xs font-semibold text-purple-800 mb-1">
+                          Voice note from judge
+                        </p>
+                        <audio controls src={verdict.voice_url} className="w-full" />
+                      </div>
+                    )}
+                    <div className="prose prose-sm max-w-none">
+                      <p className="text-gray-700 leading-relaxed">{verdict.feedback}</p>
+                    </div>
                   </div>
 
                   {/* Enhanced Actions Row */}

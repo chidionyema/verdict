@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { request_id, rating, feedback, tone } = body;
+    const { request_id, rating, feedback, tone, voice_url } = body;
 
     // Validate request_id
     if (!request_id) {
@@ -89,6 +89,7 @@ export async function POST(request: NextRequest) {
         rating,
         feedback,
         tone,
+        voiceUrl: voice_url,
       });
       verdict = result.verdict;
       updatedRequest = result.updatedRequest;

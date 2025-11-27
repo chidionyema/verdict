@@ -1,0 +1,404 @@
+{
+  "Metadata": {
+    "title": "Verdict - Get Wisdom from Real People in Minutes",
+    "titleTemplate": "{title} | Verdict",
+    "description": "Life's tough decisions made clearer. Get honest feedback from 10 real people in just minutes. Career choices, relationships, life decisions - ask anything.",
+    "keywords": "decision help, life advice, honest feedback, crowd wisdom, career advice, relationship advice, life decisions, anonymous feedback"
+  },
+  "Navigation": {
+    "discover": "Discover",
+    "becomeJudge": "Become a Judge",
+    "signIn": "Sign In",
+    "getStarted": "Get Started",
+    "myRequests": "My Requests",
+    "judge": "Judge",
+    "account": "Account",
+    "credits": "credits",
+    "active": "active",
+    "pending": "pending",
+    "newRequest": "New Request",
+    "dashboard": "Dashboard",
+    "performance": "Performance",
+    "judgeDashboard": "Judge Dashboard",
+    "closeMenu": "Close menu",
+    "openMenu": "Open menu",
+    "signOut": "Sign Out"
+  },
+  "Landing": {
+    "hero": {
+      "title": "Get Wisdom from Real People in Minutes",
+      "subtitle": "Life's tough decisions made clearer. Get honest feedback from 10 real people in just minutes.",
+      "cta": "Get Your Verdict",
+      "secondaryCta": "See How It Works"
+    },
+    "howItWorks": {
+      "title": "How It Works",
+      "step1Title": "Share Your Situation",
+      "step1Description": "Describe what you need feedback on. Dating profile? Career choice? Life decision?",
+      "step2Title": "Get Expert Verdicts",
+      "step2Description": "Real people review your submission and provide honest, thoughtful feedback.",
+      "step3Title": "Make Better Decisions",
+      "step3Description": "Use the wisdom of the crowd to move forward with confidence."
+    },
+    "judgeSection": {
+      "title": "Want to be a judge?",
+      "subtitle": "Help others make better decisions and earn rewards",
+      "benefit1": "Review submissions in your areas of interest",
+      "benefit2": "Get paid per quality response",
+      "benefit3": "Flexible - Judge when you have time",
+      "cta": "Start Judging"
+    },
+    "faq": {
+      "title": "Common Questions",
+      "q1": "How anonymous is it really?",
+      "a1": "Completely. Judges never see your name or any identifying information. You can share as much or as little context as you want.",
+      "q2": "What if I don't get 3 responses?",
+      "a2": "You're guaranteed to get the number of verdicts you paid for. If we can't deliver, you get a full refund.",
+      "q3": "How do you ensure quality feedback?",
+      "a3": "Our judges go through a qualification process and are rated on their response quality. Only top-rated judges handle your requests.",
+      "q4": "What types of content can I submit?",
+      "a4": "Dating profiles, photos, writing samples, career decisions, life choices - anything you need honest feedback on."
+    },
+    "finalCta": {
+      "title": "Stop Wondering. Start Knowing.",
+      "subtitle": "Get honest feedback from real people today.",
+      "cta": "Get Your First Verdict"
+    },
+    "redditComparison": {
+      "title": "Why not just post on Reddit?",
+      "verdict": "Verdict",
+      "reddit": "Reddit",
+      "privacy": "Private & anonymous",
+      "privacyReddit": "Public posts anyone can see",
+      "quality": "Vetted, qualified reviewers",
+      "qualityReddit": "Random strangers, variable quality",
+      "speed": "Responses in minutes",
+      "speedReddit": "May never get responses",
+      "focus": "Focused, constructive feedback",
+      "focusReddit": "Often mean or unhelpful comments"
+    }
+  },
+  "Auth": {
+    "login": {
+      "title": "Welcome back",
+      "subtitle": "Sign in to your VERDICT account",
+      "email": "Email",
+      "password": "Password",
+      "forgotPassword": "Forgot password?",
+      "submit": "Sign In",
+      "submitting": "Signing in...",
+      "noAccount": "Don't have an account?",
+      "signUp": "Sign up",
+      "or": "Or"
+    },
+    "signup": {
+      "title": "Create your account",
+      "subtitle": "Join Verdict and start getting honest feedback",
+      "email": "Email",
+      "password": "Password",
+      "confirmPassword": "Confirm Password",
+      "submit": "Create Account",
+      "submitting": "Creating account...",
+      "hasAccount": "Already have an account?",
+      "signIn": "Sign in",
+      "termsAgreement": "By creating an account, you agree to our {terms} and {privacy}.",
+      "terms": "Terms of Service",
+      "privacy": "Privacy Policy"
+    },
+    "forgotPassword": {
+      "title": "Reset your password",
+      "subtitle": "Enter your email and we'll send you a reset link",
+      "email": "Email",
+      "submit": "Send Reset Link",
+      "submitting": "Sending...",
+      "backToLogin": "Back to login",
+      "success": "Check your email for a reset link"
+    },
+    "resetPassword": {
+      "title": "Set new password",
+      "subtitle": "Enter your new password below",
+      "password": "New Password",
+      "confirmPassword": "Confirm New Password",
+      "submit": "Reset Password",
+      "submitting": "Resetting...",
+      "success": "Password reset successfully"
+    },
+    "verifyEmail": {
+      "title": "Verify your email",
+      "subtitle": "We've sent a verification link to your email",
+      "checking": "Checking verification status...",
+      "success": "Email verified successfully!",
+      "resend": "Resend verification email",
+      "resending": "Sending..."
+    }
+  },
+  "Account": {
+    "title": "Account",
+    "profile": "Profile",
+    "email": "Email",
+    "displayName": "Display Name",
+    "memberSince": "Member Since",
+    "credits": "Credits",
+    "creditsDescription": "Use credits to get verdict feedback",
+    "available": "available",
+    "buyMore": "Buy More Credits",
+    "creditExplanation": "1 credit = 1 Basic request (3 expert verdicts)",
+    "comparison": {
+      "therapist": "Therapist: {price}/hour",
+      "coach": "Career coach: {price}/hour",
+      "verdict": "Verdict: {price} for honest feedback"
+    },
+    "packages": {
+      "title": "Credit Packages",
+      "starter": "Starter",
+      "popular": "Popular",
+      "value": "Value",
+      "pro": "Pro",
+      "mostPopular": "Most Popular",
+      "bestValue": "Best Value"
+    },
+    "howItWorks": {
+      "title": "How credits and tiers work",
+      "basic": "Basic",
+      "basicDescription": "3 verdicts per request",
+      "standard": "Standard",
+      "standardDescription": "5 verdicts per request",
+      "premium": "Premium",
+      "premiumDescription": "10 verdicts per request"
+    },
+    "processing": "Processing...",
+    "signOut": "Sign Out",
+    "paymentSuccess": "Payment successful! Your credits have been added."
+  },
+  "Pricing": {
+    "title": "Simple, Transparent Pricing",
+    "subtitle": "Pay only for what you need",
+    "freeTrial": "Free Trial",
+    "payPerRequest": "Pay per request",
+    "monthlyPlan": "Monthly plan",
+    "startHere": "Start here",
+    "simpleTransparent": "Simple & transparent",
+    "comingSoon": "Coming soon",
+    "opinions": "{count} opinions",
+    "unlimitedRequests": "Unlimited requests",
+    "avgTime": "{time} average",
+    "testExperience": "Test the experience",
+    "honestFeedback": "Honest feedback from real people",
+    "free": "Free",
+    "perRequest": "per request",
+    "perMonth": "per month",
+    "bestValue": "Best value",
+    "moneyBack": "Money-back guarantee if you're not happy with the feedback",
+    "getStarted": "Get Started",
+    "tryFree": "Try Free",
+    "subscribe": "Subscribe"
+  },
+  "Request": {
+    "categories": {
+      "appearance": "Appearance",
+      "appearanceDescription": "Dating, events, professional looks",
+      "profile": "Profile",
+      "profileDescription": "Dating apps, social media, professional",
+      "writing": "Writing",
+      "writingDescription": "Messages, bios, cover letters",
+      "decision": "Decision",
+      "decisionDescription": "Career, relationships, life choices"
+    },
+    "subcategories": {
+      "dating": "Dating",
+      "professional": "Professional",
+      "casual": "Casual",
+      "event": "Event",
+      "tinder": "Tinder",
+      "bumble": "Bumble",
+      "hinge": "Hinge",
+      "linkedin": "LinkedIn",
+      "instagram": "Instagram",
+      "other": "Other",
+      "message": "Message",
+      "bio": "Bio",
+      "coverLetter": "Cover Letter",
+      "email": "Email",
+      "career": "Career",
+      "relationship": "Relationship",
+      "financial": "Financial",
+      "lifestyle": "Lifestyle"
+    },
+    "form": {
+      "whatFeedback": "What would you like feedback on?",
+      "selectCategory": "Select a category",
+      "selectSubcategory": "Select a subcategory",
+      "describeRequest": "Describe your request",
+      "placeholder": "Be specific about what you want feedback on...",
+      "uploadImage": "Upload an image (optional)",
+      "selectTier": "Select your tier",
+      "submit": "Submit Request",
+      "submitting": "Submitting..."
+    },
+    "tiers": {
+      "basic": "Basic",
+      "basicDescription": "3 verdicts",
+      "standard": "Standard",
+      "standardDescription": "5 verdicts",
+      "premium": "Premium",
+      "premiumDescription": "10 verdicts"
+    },
+    "status": {
+      "open": "Open",
+      "closed": "Closed",
+      "cancelled": "Cancelled",
+      "pending": "Pending",
+      "completed": "Completed"
+    },
+    "filters": {
+      "all": "All",
+      "open": "Open",
+      "closed": "Closed",
+      "cancelled": "Cancelled"
+    }
+  },
+  "Judge": {
+    "dashboard": {
+      "title": "Judge Dashboard",
+      "earnings": "Earnings",
+      "totalEarnings": "Total Earnings",
+      "pendingPayout": "Pending Payout",
+      "qualityScore": "Quality Score",
+      "verdictsGiven": "Verdicts Given",
+      "responseTime": "Avg Response Time",
+      "available": "Available Requests",
+      "noRequests": "No requests available right now",
+      "checkBack": "Check back soon for new requests"
+    },
+    "queue": {
+      "title": "Available Requests",
+      "claim": "Claim",
+      "skip": "Skip",
+      "viewDetails": "View Details"
+    },
+    "respond": {
+      "title": "Submit Your Verdict",
+      "placeholder": "Write your honest, constructive feedback...",
+      "rating": "Overall Rating",
+      "submit": "Submit Verdict",
+      "submitting": "Submitting..."
+    },
+    "performance": {
+      "title": "Performance",
+      "metrics": "Your Metrics",
+      "feedback": "Recent Feedback",
+      "tips": "Tips to Improve"
+    },
+    "becomeJudge": {
+      "title": "Become a Judge",
+      "subtitle": "Help others make better decisions and earn money",
+      "requirements": "Requirements",
+      "req1": "Be at least 18 years old",
+      "req2": "Complete the qualification process",
+      "req3": "Maintain a quality rating above 4.0",
+      "benefits": "Benefits",
+      "ben1": "Earn money for each quality verdict",
+      "ben2": "Flexible schedule - work when you want",
+      "ben3": "Help people make better decisions",
+      "apply": "Apply Now",
+      "applying": "Applying..."
+    }
+  },
+  "Legal": {
+    "termsOfService": "Terms of Service",
+    "privacyPolicy": "Privacy Policy",
+    "cookiePolicy": "Cookie Policy",
+    "communityGuidelines": "Community Guidelines",
+    "lastUpdated": "Last updated: {date}",
+    "footer": {
+      "copyright": "© {year} Verdict. All rights reserved.",
+      "terms": "Terms of Service",
+      "privacy": "Privacy Policy",
+      "cookies": "Cookie Policy"
+    }
+  },
+  "Cookies": {
+    "banner": {
+      "title": "We value your privacy",
+      "description": "We use cookies to enhance your browsing experience, analyze site traffic, and personalize content. By clicking \"Accept All\", you consent to our use of cookies.",
+      "learnMore": "Learn more in our {link}.",
+      "acceptAll": "Accept All",
+      "essentialOnly": "Essential Only",
+      "customize": "Customize"
+    },
+    "settings": {
+      "title": "Cookie Preferences",
+      "essential": "Essential Cookies",
+      "essentialDescription": "Required for the website to function. These cannot be disabled.",
+      "alwaysActive": "Always Active",
+      "analytics": "Analytics Cookies",
+      "analyticsDescription": "Help us understand how visitors interact with our website.",
+      "marketing": "Marketing Cookies",
+      "marketingDescription": "Used to deliver personalized advertisements.",
+      "rejectAll": "Reject All",
+      "savePreferences": "Save Preferences"
+    }
+  },
+  "Common": {
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "tryAgain": "Try Again",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "back": "Back",
+    "next": "Next",
+    "submit": "Submit",
+    "search": "Search",
+    "noResults": "No results found",
+    "required": "Required",
+    "optional": "Optional",
+    "yes": "Yes",
+    "no": "No",
+    "or": "or",
+    "and": "and"
+  },
+  "Errors": {
+    "notLoggedIn": "Not logged in",
+    "apiError": "API Error",
+    "networkError": "Network error. Please check your connection.",
+    "unauthorized": "You are not authorized to perform this action.",
+    "notFound": "The requested resource was not found.",
+    "serverError": "Server error. Please try again later.",
+    "validationError": "Please check your input and try again.",
+    "paymentFailed": "Payment failed. Please try again.",
+    "uploadFailed": "Upload failed. Please try again.",
+    "sessionExpired": "Your session has expired. Please sign in again."
+  },
+  "Validation": {
+    "required": "This field is required",
+    "email": "Please enter a valid email address",
+    "minLength": "Must be at least {min} characters",
+    "maxLength": "Must be no more than {max} characters",
+    "passwordMismatch": "Passwords do not match",
+    "invalidContent": "Content contains inappropriate language",
+    "imageTooLarge": "Image must be less than {size}MB",
+    "invalidFormat": "Invalid file format"
+  },
+  "Time": {
+    "justNow": "Just now",
+    "minutesAgo": "{count} minutes ago",
+    "hoursAgo": "{count} hours ago",
+    "daysAgo": "{count} days ago",
+    "weeksAgo": "{count} weeks ago",
+    "monthsAgo": "{count} months ago",
+    "yearsAgo": "{count} years ago"
+  },
+  "Email": {
+    "subjects": {
+      "welcome": "Welcome to Verdict!",
+      "passwordReset": "Reset your password",
+      "verifyEmail": "Verify your email address",
+      "paymentReceived": "Payment received — credits added!",
+      "verdictReady": "Your verdict is ready!",
+      "newRequest": "New request available for judging"
+    }
+  }
+}

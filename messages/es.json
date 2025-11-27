@@ -1,0 +1,404 @@
+{
+  "Metadata": {
+    "title": "Verdict - Obtén Sabiduría de Personas Reales en Minutos",
+    "titleTemplate": "{title} | Verdict",
+    "description": "Las decisiones difíciles de la vida más claras. Obtén comentarios honestos de 10 personas reales en solo minutos. Decisiones de carrera, relaciones, decisiones de vida - pregunta lo que quieras.",
+    "keywords": "ayuda para decisiones, consejos de vida, comentarios honestos, sabiduría colectiva, consejos de carrera, consejos de relaciones, decisiones de vida, comentarios anónimos"
+  },
+  "Navigation": {
+    "discover": "Descubrir",
+    "becomeJudge": "Ser Juez",
+    "signIn": "Iniciar Sesión",
+    "getStarted": "Comenzar",
+    "myRequests": "Mis Solicitudes",
+    "judge": "Juzgar",
+    "account": "Cuenta",
+    "credits": "créditos",
+    "active": "activo",
+    "pending": "pendiente",
+    "newRequest": "Nueva Solicitud",
+    "dashboard": "Panel",
+    "performance": "Rendimiento",
+    "judgeDashboard": "Panel de Juez",
+    "closeMenu": "Cerrar menú",
+    "openMenu": "Abrir menú",
+    "signOut": "Cerrar Sesión"
+  },
+  "Landing": {
+    "hero": {
+      "title": "Obtén Sabiduría de Personas Reales en Minutos",
+      "subtitle": "Las decisiones difíciles de la vida más claras. Obtén comentarios honestos de 10 personas reales en solo minutos.",
+      "cta": "Obtén Tu Veredicto",
+      "secondaryCta": "Ver Cómo Funciona"
+    },
+    "howItWorks": {
+      "title": "Cómo Funciona",
+      "step1Title": "Comparte Tu Situación",
+      "step1Description": "Describe sobre qué necesitas comentarios. ¿Perfil de citas? ¿Decisión de carrera? ¿Decisión de vida?",
+      "step2Title": "Recibe Veredictos de Expertos",
+      "step2Description": "Personas reales revisan tu envío y proporcionan comentarios honestos y reflexivos.",
+      "step3Title": "Toma Mejores Decisiones",
+      "step3Description": "Usa la sabiduría colectiva para avanzar con confianza."
+    },
+    "judgeSection": {
+      "title": "¿Quieres ser juez?",
+      "subtitle": "Ayuda a otros a tomar mejores decisiones y gana recompensas",
+      "benefit1": "Revisa envíos en tus áreas de interés",
+      "benefit2": "Recibe pago por cada respuesta de calidad",
+      "benefit3": "Flexible - Juzga cuando tengas tiempo",
+      "cta": "Comenzar a Juzgar"
+    },
+    "faq": {
+      "title": "Preguntas Frecuentes",
+      "q1": "¿Qué tan anónimo es realmente?",
+      "a1": "Completamente. Los jueces nunca ven tu nombre ni información identificativa. Puedes compartir tanto o tan poco contexto como quieras.",
+      "q2": "¿Qué pasa si no recibo 3 respuestas?",
+      "a2": "Tienes garantizado recibir el número de veredictos que pagaste. Si no podemos entregar, recibes un reembolso completo.",
+      "q3": "¿Cómo aseguran la calidad de los comentarios?",
+      "a3": "Nuestros jueces pasan por un proceso de calificación y son evaluados por la calidad de sus respuestas. Solo los jueces mejor calificados manejan tus solicitudes.",
+      "q4": "¿Qué tipos de contenido puedo enviar?",
+      "a4": "Perfiles de citas, fotos, muestras de escritura, decisiones de carrera, decisiones de vida - cualquier cosa sobre la que necesites comentarios honestos."
+    },
+    "finalCta": {
+      "title": "Deja de Preguntarte. Empieza a Saber.",
+      "subtitle": "Obtén comentarios honestos de personas reales hoy.",
+      "cta": "Obtén Tu Primer Veredicto"
+    },
+    "redditComparison": {
+      "title": "¿Por qué no publicar en Reddit?",
+      "verdict": "Verdict",
+      "reddit": "Reddit",
+      "privacy": "Privado y anónimo",
+      "privacyReddit": "Publicaciones públicas que cualquiera puede ver",
+      "quality": "Revisores calificados y verificados",
+      "qualityReddit": "Extraños aleatorios, calidad variable",
+      "speed": "Respuestas en minutos",
+      "speedReddit": "Puede que nunca recibas respuestas",
+      "focus": "Comentarios enfocados y constructivos",
+      "focusReddit": "A menudo comentarios crueles o inútiles"
+    }
+  },
+  "Auth": {
+    "login": {
+      "title": "Bienvenido de nuevo",
+      "subtitle": "Inicia sesión en tu cuenta de VERDICT",
+      "email": "Correo electrónico",
+      "password": "Contraseña",
+      "forgotPassword": "¿Olvidaste tu contraseña?",
+      "submit": "Iniciar Sesión",
+      "submitting": "Iniciando sesión...",
+      "noAccount": "¿No tienes cuenta?",
+      "signUp": "Regístrate",
+      "or": "O"
+    },
+    "signup": {
+      "title": "Crea tu cuenta",
+      "subtitle": "Únete a Verdict y comienza a recibir comentarios honestos",
+      "email": "Correo electrónico",
+      "password": "Contraseña",
+      "confirmPassword": "Confirmar Contraseña",
+      "submit": "Crear Cuenta",
+      "submitting": "Creando cuenta...",
+      "hasAccount": "¿Ya tienes cuenta?",
+      "signIn": "Iniciar sesión",
+      "termsAgreement": "Al crear una cuenta, aceptas nuestros {terms} y {privacy}.",
+      "terms": "Términos de Servicio",
+      "privacy": "Política de Privacidad"
+    },
+    "forgotPassword": {
+      "title": "Restablecer tu contraseña",
+      "subtitle": "Ingresa tu correo y te enviaremos un enlace de restablecimiento",
+      "email": "Correo electrónico",
+      "submit": "Enviar Enlace",
+      "submitting": "Enviando...",
+      "backToLogin": "Volver al inicio de sesión",
+      "success": "Revisa tu correo para el enlace de restablecimiento"
+    },
+    "resetPassword": {
+      "title": "Establecer nueva contraseña",
+      "subtitle": "Ingresa tu nueva contraseña abajo",
+      "password": "Nueva Contraseña",
+      "confirmPassword": "Confirmar Nueva Contraseña",
+      "submit": "Restablecer Contraseña",
+      "submitting": "Restableciendo...",
+      "success": "Contraseña restablecida exitosamente"
+    },
+    "verifyEmail": {
+      "title": "Verifica tu correo",
+      "subtitle": "Hemos enviado un enlace de verificación a tu correo",
+      "checking": "Verificando estado...",
+      "success": "¡Correo verificado exitosamente!",
+      "resend": "Reenviar correo de verificación",
+      "resending": "Enviando..."
+    }
+  },
+  "Account": {
+    "title": "Cuenta",
+    "profile": "Perfil",
+    "email": "Correo electrónico",
+    "displayName": "Nombre para mostrar",
+    "memberSince": "Miembro desde",
+    "credits": "Créditos",
+    "creditsDescription": "Usa créditos para obtener comentarios de veredicto",
+    "available": "disponibles",
+    "buyMore": "Comprar Más Créditos",
+    "creditExplanation": "1 crédito = 1 solicitud Básica (3 veredictos de expertos)",
+    "comparison": {
+      "therapist": "Terapeuta: {price}/hora",
+      "coach": "Coach de carrera: {price}/hora",
+      "verdict": "Verdict: {price} por comentarios honestos"
+    },
+    "packages": {
+      "title": "Paquetes de Créditos",
+      "starter": "Inicial",
+      "popular": "Popular",
+      "value": "Valor",
+      "pro": "Pro",
+      "mostPopular": "Más Popular",
+      "bestValue": "Mejor Valor"
+    },
+    "howItWorks": {
+      "title": "Cómo funcionan los créditos y niveles",
+      "basic": "Básico",
+      "basicDescription": "3 veredictos por solicitud",
+      "standard": "Estándar",
+      "standardDescription": "5 veredictos por solicitud",
+      "premium": "Premium",
+      "premiumDescription": "10 veredictos por solicitud"
+    },
+    "processing": "Procesando...",
+    "signOut": "Cerrar Sesión",
+    "paymentSuccess": "¡Pago exitoso! Tus créditos han sido agregados."
+  },
+  "Pricing": {
+    "title": "Precios Simples y Transparentes",
+    "subtitle": "Paga solo por lo que necesitas",
+    "freeTrial": "Prueba Gratis",
+    "payPerRequest": "Pago por solicitud",
+    "monthlyPlan": "Plan mensual",
+    "startHere": "Empieza aquí",
+    "simpleTransparent": "Simple y transparente",
+    "comingSoon": "Próximamente",
+    "opinions": "{count} opiniones",
+    "unlimitedRequests": "Solicitudes ilimitadas",
+    "avgTime": "{time} promedio",
+    "testExperience": "Prueba la experiencia",
+    "honestFeedback": "Comentarios honestos de personas reales",
+    "free": "Gratis",
+    "perRequest": "por solicitud",
+    "perMonth": "por mes",
+    "bestValue": "Mejor valor",
+    "moneyBack": "Garantía de devolución si no estás satisfecho con los comentarios",
+    "getStarted": "Comenzar",
+    "tryFree": "Probar Gratis",
+    "subscribe": "Suscribirse"
+  },
+  "Request": {
+    "categories": {
+      "appearance": "Apariencia",
+      "appearanceDescription": "Citas, eventos, looks profesionales",
+      "profile": "Perfil",
+      "profileDescription": "Apps de citas, redes sociales, profesional",
+      "writing": "Escritura",
+      "writingDescription": "Mensajes, biografías, cartas de presentación",
+      "decision": "Decisión",
+      "decisionDescription": "Carrera, relaciones, decisiones de vida"
+    },
+    "subcategories": {
+      "dating": "Citas",
+      "professional": "Profesional",
+      "casual": "Casual",
+      "event": "Evento",
+      "tinder": "Tinder",
+      "bumble": "Bumble",
+      "hinge": "Hinge",
+      "linkedin": "LinkedIn",
+      "instagram": "Instagram",
+      "other": "Otro",
+      "message": "Mensaje",
+      "bio": "Biografía",
+      "coverLetter": "Carta de Presentación",
+      "email": "Correo",
+      "career": "Carrera",
+      "relationship": "Relación",
+      "financial": "Financiero",
+      "lifestyle": "Estilo de Vida"
+    },
+    "form": {
+      "whatFeedback": "¿Sobre qué te gustaría recibir comentarios?",
+      "selectCategory": "Selecciona una categoría",
+      "selectSubcategory": "Selecciona una subcategoría",
+      "describeRequest": "Describe tu solicitud",
+      "placeholder": "Sé específico sobre lo que quieres comentarios...",
+      "uploadImage": "Subir una imagen (opcional)",
+      "selectTier": "Selecciona tu nivel",
+      "submit": "Enviar Solicitud",
+      "submitting": "Enviando..."
+    },
+    "tiers": {
+      "basic": "Básico",
+      "basicDescription": "3 veredictos",
+      "standard": "Estándar",
+      "standardDescription": "5 veredictos",
+      "premium": "Premium",
+      "premiumDescription": "10 veredictos"
+    },
+    "status": {
+      "open": "Abierto",
+      "closed": "Cerrado",
+      "cancelled": "Cancelado",
+      "pending": "Pendiente",
+      "completed": "Completado"
+    },
+    "filters": {
+      "all": "Todos",
+      "open": "Abiertos",
+      "closed": "Cerrados",
+      "cancelled": "Cancelados"
+    }
+  },
+  "Judge": {
+    "dashboard": {
+      "title": "Panel de Juez",
+      "earnings": "Ganancias",
+      "totalEarnings": "Ganancias Totales",
+      "pendingPayout": "Pago Pendiente",
+      "qualityScore": "Puntuación de Calidad",
+      "verdictsGiven": "Veredictos Dados",
+      "responseTime": "Tiempo de Respuesta Promedio",
+      "available": "Solicitudes Disponibles",
+      "noRequests": "No hay solicitudes disponibles ahora",
+      "checkBack": "Vuelve pronto para nuevas solicitudes"
+    },
+    "queue": {
+      "title": "Solicitudes Disponibles",
+      "claim": "Reclamar",
+      "skip": "Omitir",
+      "viewDetails": "Ver Detalles"
+    },
+    "respond": {
+      "title": "Enviar Tu Veredicto",
+      "placeholder": "Escribe tus comentarios honestos y constructivos...",
+      "rating": "Calificación General",
+      "submit": "Enviar Veredicto",
+      "submitting": "Enviando..."
+    },
+    "performance": {
+      "title": "Rendimiento",
+      "metrics": "Tus Métricas",
+      "feedback": "Comentarios Recientes",
+      "tips": "Consejos para Mejorar"
+    },
+    "becomeJudge": {
+      "title": "Conviértete en Juez",
+      "subtitle": "Ayuda a otros a tomar mejores decisiones y gana dinero",
+      "requirements": "Requisitos",
+      "req1": "Tener al menos 18 años",
+      "req2": "Completar el proceso de calificación",
+      "req3": "Mantener una calificación de calidad superior a 4.0",
+      "benefits": "Beneficios",
+      "ben1": "Gana dinero por cada veredicto de calidad",
+      "ben2": "Horario flexible - trabaja cuando quieras",
+      "ben3": "Ayuda a las personas a tomar mejores decisiones",
+      "apply": "Aplicar Ahora",
+      "applying": "Aplicando..."
+    }
+  },
+  "Legal": {
+    "termsOfService": "Términos de Servicio",
+    "privacyPolicy": "Política de Privacidad",
+    "cookiePolicy": "Política de Cookies",
+    "communityGuidelines": "Directrices de la Comunidad",
+    "lastUpdated": "Última actualización: {date}",
+    "footer": {
+      "copyright": "© {year} Verdict. Todos los derechos reservados.",
+      "terms": "Términos de Servicio",
+      "privacy": "Política de Privacidad",
+      "cookies": "Política de Cookies"
+    }
+  },
+  "Cookies": {
+    "banner": {
+      "title": "Valoramos tu privacidad",
+      "description": "Usamos cookies para mejorar tu experiencia de navegación, analizar el tráfico del sitio y personalizar el contenido. Al hacer clic en \"Aceptar Todo\", consientes nuestro uso de cookies.",
+      "learnMore": "Más información en nuestra {link}.",
+      "acceptAll": "Aceptar Todo",
+      "essentialOnly": "Solo Esenciales",
+      "customize": "Personalizar"
+    },
+    "settings": {
+      "title": "Preferencias de Cookies",
+      "essential": "Cookies Esenciales",
+      "essentialDescription": "Requeridas para que el sitio funcione. No se pueden desactivar.",
+      "alwaysActive": "Siempre Activas",
+      "analytics": "Cookies de Análisis",
+      "analyticsDescription": "Nos ayudan a entender cómo los visitantes interactúan con nuestro sitio.",
+      "marketing": "Cookies de Marketing",
+      "marketingDescription": "Usadas para entregar anuncios personalizados.",
+      "rejectAll": "Rechazar Todo",
+      "savePreferences": "Guardar Preferencias"
+    }
+  },
+  "Common": {
+    "loading": "Cargando...",
+    "error": "Ocurrió un error",
+    "tryAgain": "Intentar de Nuevo",
+    "cancel": "Cancelar",
+    "save": "Guardar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "close": "Cerrar",
+    "back": "Atrás",
+    "next": "Siguiente",
+    "submit": "Enviar",
+    "search": "Buscar",
+    "noResults": "No se encontraron resultados",
+    "required": "Requerido",
+    "optional": "Opcional",
+    "yes": "Sí",
+    "no": "No",
+    "or": "o",
+    "and": "y"
+  },
+  "Errors": {
+    "notLoggedIn": "No has iniciado sesión",
+    "apiError": "Error de API",
+    "networkError": "Error de red. Por favor verifica tu conexión.",
+    "unauthorized": "No estás autorizado para realizar esta acción.",
+    "notFound": "El recurso solicitado no fue encontrado.",
+    "serverError": "Error del servidor. Por favor intenta más tarde.",
+    "validationError": "Por favor verifica tu entrada e intenta de nuevo.",
+    "paymentFailed": "El pago falló. Por favor intenta de nuevo.",
+    "uploadFailed": "La subida falló. Por favor intenta de nuevo.",
+    "sessionExpired": "Tu sesión ha expirado. Por favor inicia sesión de nuevo."
+  },
+  "Validation": {
+    "required": "Este campo es requerido",
+    "email": "Por favor ingresa un correo electrónico válido",
+    "minLength": "Debe tener al menos {min} caracteres",
+    "maxLength": "Debe tener no más de {max} caracteres",
+    "passwordMismatch": "Las contraseñas no coinciden",
+    "invalidContent": "El contenido contiene lenguaje inapropiado",
+    "imageTooLarge": "La imagen debe ser menor a {size}MB",
+    "invalidFormat": "Formato de archivo inválido"
+  },
+  "Time": {
+    "justNow": "Ahora mismo",
+    "minutesAgo": "hace {count} minutos",
+    "hoursAgo": "hace {count} horas",
+    "daysAgo": "hace {count} días",
+    "weeksAgo": "hace {count} semanas",
+    "monthsAgo": "hace {count} meses",
+    "yearsAgo": "hace {count} años"
+  },
+  "Email": {
+    "subjects": {
+      "welcome": "¡Bienvenido a Verdict!",
+      "passwordReset": "Restablece tu contraseña",
+      "verifyEmail": "Verifica tu dirección de correo",
+      "paymentReceived": "¡Pago recibido — créditos agregados!",
+      "verdictReady": "¡Tu veredicto está listo!",
+      "newRequest": "Nueva solicitud disponible para juzgar"
+    }
+  }
+}
