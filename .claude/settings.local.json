@@ -10,7 +10,8 @@
       "Bash(rm:*)",
       "Bash(sed:*)",
       "Bash(grep:*)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Bash(findstr:*)"
     ],
     "deny": [],
     "ask": []

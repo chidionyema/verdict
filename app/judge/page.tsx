@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { DollarSign, Clock, Award, ArrowRight, ToggleLeft, ToggleRight, TrendingUp, Star, Zap, Filter, Search, Eye } from 'lucide-react';
+import { DollarSign, Clock, Award, ArrowRight, ToggleLeft, ToggleRight, TrendingUp, Star, Zap, Filter, Search } from 'lucide-react';
 import type { Profile } from '@/lib/database.types';
 
 interface QueueRequest {
@@ -450,10 +450,15 @@ export default function JudgeDashboardPage() {
                 <div>
                   <h2 className="text-xl font-semibold text-gray-900">Available Requests</h2>
                   <p className="text-sm text-gray-500 mt-1">
-                    {filteredQueue.length} of {queue.length} requests • Click to submit verdict
+                    Requests that are ready for you to claim and answer. Most verdicts pay about $0.45–$0.55 and take 3–5 minutes.
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
+                  <span className="inline-flex items-center px-3 py-1 rounded-full bg-gray-100 text-gray-700 text-xs font-medium">
+                    {queue.length === 0
+                      ? '0 requests available'
+                      : `${filteredQueue.length} of ${queue.length} request${queue.length > 1 ? 's' : ''} shown`}
+                  </span>
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
                     <span>Live updates</span>
@@ -517,7 +522,7 @@ export default function JudgeDashboardPage() {
                     No requests available right now
                   </h3>
                   <p className="text-gray-600 mb-4 max-w-md mx-auto">
-                    New requests appear here as users submit them. Check back soon!
+                    Keep this tab open — new requests will appear automatically, and we&apos;ll highlight them for you.
                   </p>
                   <div className="text-sm text-gray-500 space-y-1">
                     <p>💡 Tip: Keep this page open to see new requests instantly</p>
@@ -546,55 +551,46 @@ export default function JudgeDashboardPage() {
                   </button>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-4">
                   {filteredQueue.map((request) => (
                     <div
                       key={request.id}
-                      onClick={() => router.push(`/judge/requests/${request.id}`)}
-                      className="group relative bg-gradient-to-r from-white to-gray-50 border border-gray-200 rounded-xl p-6 hover:border-indigo-300 hover:shadow-lg cursor-pointer transition-all duration-200 hover:-translate-y-1"
+                      className="border rounded-xl p-4 md:p-5 hover:border-indigo-500 transition group"
                     >
-                      <div className="absolute top-3 right-3">
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          {
-                            'appearance': 'bg-rose-100 text-rose-700',
-                            'profile': 'bg-blue-100 text-blue-700', 
-                            'writing': 'bg-purple-100 text-purple-700',
-                            'decision': 'bg-green-100 text-green-700'
-                          }[request.category] || 'bg-gray-100 text-gray-700'
-                        }`}>
-                          {request.category}
-                        </span>
-                      </div>
-
-                      <div className="flex justify-between items-start pr-20">
+                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                         <div className="flex-1">
-                          <div className="flex items-center space-x-3 mb-3">
-                            <div className="flex items-center gap-2">
-                              <Eye className="h-4 w-4 text-indigo-500" />
-                              <span className="font-medium text-gray-900">{request.media_type}</span>
-                            </div>
-                            <div className="flex items-center gap-1 text-xs text-gray-500">
-                              <Clock className="h-3 w-3" />
-                              <span>{Math.floor((Date.now() - new Date(request.created_at).getTime()) / (1000 * 60))}m ago</span>
-                            </div>
+                          <div className="flex items-center flex-wrap gap-2">
+                            <p className="font-semibold capitalize text-gray-900">
+                              {request.category}
+                            </p>
+                            <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs">
+                              {request.media_type}
+                            </span>
                           </div>
-                          
-                          <p className="text-gray-600 mb-3 line-clamp-2 leading-relaxed">
+                          <p className="text-sm text-gray-600 mt-2 line-clamp-3">
                             {request.context}
                           </p>
-                          
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-4 text-xs">
-                              <span className="flex items-center gap-1 text-gray-500">
-                                <span className="w-2 h-2 bg-orange-400 rounded-full"></span>
-                                {request.received_verdict_count}/{request.target_verdict_count} verdicts
-                              </span>
-                              <span className="text-green-600 font-medium">
-                                $0.55 earnings
-                              </span>
-                            </div>
-                            <ArrowRight className="h-4 w-4 text-gray-400 group-hover:text-indigo-500 transition-colors" />
+                          <p className="text-xs text-gray-400 mt-2">
+                            Click &quot;Open request&quot; to review and submit your verdict (text and optional voice note).
+                          </p>
+                        </div>
+                        <div className="flex flex-col items-stretch sm:items-end gap-2 min-w-[140px]">
+                          <div className="text-left sm:text-right">
+                            <p className="text-lg font-semibold text-green-600 leading-tight">
+                              $0.55
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              Potential earnings
+                            </p>
                           </div>
+                          <button
+                            type="button"
+                            className="w-full inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition min-h-[40px]"
+                            onClick={() => router.push(`/judge/requests/${request.id}`)}
+                          >
+                            Open request
+                            <ArrowRight className="h-4 w-4" />
+                          </button>
                         </div>
                       </div>
                     </div>

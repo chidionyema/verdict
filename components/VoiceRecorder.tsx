@@ -165,7 +165,7 @@ export function VoiceRecorder({ onRecorded, maxDurationSeconds = 120 }: VoiceRec
 
       {!audioUrl && !isRecording && (
         <p className="text-xs text-gray-500">
-          Tip: You can still add a short text summary so judges can skim quickly.
+          Tip: You can still add a short text summary so others can skim quickly.
         </p>
       )}
     </div>

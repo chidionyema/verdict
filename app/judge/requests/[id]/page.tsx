@@ -3,7 +3,8 @@
 import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Clock, DollarSign, Send, ArrowLeft } from 'lucide-react';
+import { Clock, DollarSign, Send, ArrowLeft, Maximize2 } from 'lucide-react';
+import { VoiceRecorder } from '@/components/VoiceRecorder';
 import type { VerdictRequest } from '@/lib/database.types';
 
 export default function JudgeVerdictPage({
@@ -21,6 +22,9 @@ export default function JudgeVerdictPage({
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [voiceFile, setVoiceFile] = useState<File | null>(null);
+  const [voiceUrl, setVoiceUrl] = useState<string | null>(null);
+  const [showImageModal, setShowImageModal] = useState(false);
 
   useEffect(() => {
     fetchRequest();
@@ -54,6 +58,26 @@ export default function JudgeVerdictPage({
     setError('');
 
     try {
+      // Optional voice upload
+      let uploadedVoiceUrl: string | null = null;
+      if (voiceFile) {
+        const formData = new FormData();
+        formData.append('file', voiceFile);
+
+        const uploadRes = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!uploadRes.ok) {
+          const data = await uploadRes.json();
+          throw new Error(data.error || 'Failed to upload voice note');
+        }
+
+        const uploadData = await uploadRes.json();
+        uploadedVoiceUrl = uploadData.url;
+      }
+
       const res = await fetch('/api/judge/respond', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -62,6 +86,7 @@ export default function JudgeVerdictPage({
           rating,
           feedback,
           tone,
+          voice_url: uploadedVoiceUrl,
         }),
       });
 
@@ -103,16 +128,25 @@ export default function JudgeVerdictPage({
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <div className="bg-white border-b sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
-          <Link
-            href="/judge"
-            className="flex items-center text-gray-600 hover:text-gray-900"
-          >
-            <ArrowLeft className="h-5 w-5 mr-2" />
-            Back
-          </Link>
+      <div className="bg-white border-b sticky top-0 z-20">
+        <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Link
+              href="/judge"
+              className="flex items-center text-gray-600 hover:text-gray-900"
+            >
+              <ArrowLeft className="h-5 w-5 mr-2" />
+              Back to queue
+            </Link>
+            <span className="text-xs text-gray-400 hidden sm:inline">
+              Request ID: <span className="font-mono">{id.slice(0, 8)}…</span>
+            </span>
+          </div>
           <div className="flex items-center space-x-6">
+            <div className="hidden sm:flex flex-col items-end text-xs text-gray-500 mr-4">
+              <span>Estimated time: ~3–5 min</span>
+              <span>Goal: 1 clear decision + 2–3 reasons</span>
+            </div>
             <div className="flex items-center">
               <DollarSign className="h-5 w-5 mr-1 text-green-500" />
               <span className="font-semibold text-green-600">$0.50</span>
@@ -121,57 +155,87 @@ export default function JudgeVerdictPage({
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="max-w-5xl mx-auto px-4 py-8">
         {error && (
           <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4 text-sm">
             {error}
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Media Display */}
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h3 className="font-semibold mb-4">Submission to Review</h3>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+          {/* Media & context */}
+          <section className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+            <h2 className="text-sm font-semibold text-gray-900 mb-1">
+              Submission to Review
+            </h2>
+            <p className="text-xs text-gray-500 mb-4">
+              Take a moment to understand the seeker&apos;s situation before rating or writing.
+            </p>
+
             {request.media_type === 'photo' && request.media_url ? (
-              <img
-                src={request.media_url}
-                alt="Submission"
-                className="w-full rounded-lg"
-              />
+              <button
+                type="button"
+                onClick={() => setShowImageModal(true)}
+                className="relative w-full group cursor-zoom-in"
+              >
+                <img
+                  src={request.media_url}
+                  alt="Submission"
+                  className="w-full rounded-lg border border-gray-200 shadow-sm"
+                />
+                <div className="absolute bottom-3 right-3 inline-flex items-center gap-1 px-2 py-1 rounded-full bg-black/60 text-white text-xs opacity-80 group-hover:opacity-100">
+                  <Maximize2 className="h-3 w-3" />
+                  <span>Click to zoom</span>
+                </div>
+              </button>
             ) : request.media_type === 'audio' && request.media_url ? (
-              <div className="p-4 bg-purple-50 rounded-lg">
-                <p className="text-xs font-semibold text-purple-800 mb-2">Voice note from seeker</p>
+              <div className="p-4 bg-purple-50 rounded-lg border border-purple-100">
+                <p className="text-xs font-semibold text-purple-800 mb-2">
+                  Voice note from seeker
+                </p>
                 <audio controls src={request.media_url} className="w-full" />
               </div>
             ) : (
-              <div className="p-4 bg-gray-50 rounded-lg min-h-[200px]">
-                <p className="text-gray-700">{request.text_content}</p>
+              <div className="p-4 bg-gray-50 rounded-lg min-h-[200px] border border-dashed border-gray-200">
+                <p className="text-gray-700 whitespace-pre-wrap">
+                  {request.text_content}
+                </p>
               </div>
             )}
-            <div className="mt-4 p-4 bg-indigo-50 rounded-lg">
-              <p className="text-sm text-gray-600 mb-1">
+
+            <div className="mt-4 p-4 bg-indigo-50 rounded-lg border border-indigo-100 text-xs space-y-1">
+              <p className="text-indigo-900">
                 <strong>Category:</strong> {request.category}
               </p>
               {request.subcategory && (
-                <p className="text-sm text-gray-600 mb-1">
+                <p className="text-indigo-900">
                   <strong>Type:</strong> {request.subcategory}
                 </p>
               )}
-              <p className="text-sm text-gray-600">
-                <strong>Context:</strong> {request.context}
+              <p className="text-indigo-900">
+                <strong>Context:</strong>{' '}
+                <span className="text-indigo-800">{request.context}</span>
               </p>
             </div>
-          </div>
+          </section>
 
           {/* Verdict Form */}
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h3 className="font-semibold mb-6">Your Verdict</h3>
+          <section className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
+            <h2 className="text-sm font-semibold text-gray-900 mb-1">
+              Your Verdict
+            </h2>
+            <p className="text-xs text-gray-500 mb-4">
+              Give one clear recommendation, explain why in a few sentences, and keep your tone kind and direct. You can also add an optional voice note if that feels more natural.
+            </p>
 
             {/* Rating */}
             <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Rating: {rating}/10
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Step 1 · Overall rating: {rating}/10
               </label>
+              <p className="text-xs text-gray-500 mb-2">
+                Use your gut: 1–3 = not working, 4–6 = mixed, 7–10 = strong.
+              </p>
               <input
                 type="range"
                 min="1"
@@ -189,7 +253,7 @@ export default function JudgeVerdictPage({
             {/* Tone Selection */}
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Feedback Tone
+                Step 2 · Feedback tone
               </label>
               <div className="flex space-x-2">
                 {(['honest', 'constructive', 'encouraging'] as const).map((t) => (
@@ -215,7 +279,7 @@ export default function JudgeVerdictPage({
             {/* Feedback Text */}
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Your Feedback (min 50 characters)
+                Step 3 · Your written feedback (min 50 characters)
               </label>
               <textarea
                 value={feedback}
@@ -233,6 +297,32 @@ export default function JudgeVerdictPage({
               </p>
             </div>
 
+            {/* Optional voice note */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Step 4 · Optional voice note response
+              </label>
+              <VoiceRecorder
+                onRecorded={(file) => {
+                  setVoiceFile(file);
+                  if (voiceUrl) {
+                    URL.revokeObjectURL(voiceUrl);
+                  }
+                  const url = URL.createObjectURL(file);
+                  setVoiceUrl(url);
+                }}
+                maxDurationSeconds={180}
+              />
+              {voiceUrl && (
+                <div className="mt-3 p-3 bg-purple-50 rounded-lg border border-purple-200">
+                  <p className="text-xs font-semibold text-purple-800 mb-1">
+                    Your voice note preview
+                  </p>
+                  <audio controls src={voiceUrl} className="w-full" />
+                </div>
+              )}
+            </div>
+
             {/* Submit Button */}
             <button
               onClick={handleSubmit}
@@ -240,7 +330,7 @@ export default function JudgeVerdictPage({
               className={`w-full py-3 rounded-lg font-semibold transition flex items-center justify-center cursor-pointer ${
                 feedback.length < 50 || submitting
                   ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  : 'bg-indigo-600 text-white hover:bg-indigo-700'
+                  : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-md'
               }`}
             >
               {submitting ? (
@@ -252,9 +342,52 @@ export default function JudgeVerdictPage({
                 </>
               )}
             </button>
-          </div>
+
+            {/* Micro‑tips */}
+            <div className="mt-4 p-3 rounded-lg bg-gray-50 border border-dashed border-gray-200 text-xs text-gray-600 space-y-1">
+              <p className="font-semibold text-gray-700">Quick tips for world‑class verdicts:</p>
+              <ul className="list-disc list-inside space-y-1">
+                <li>State a clear recommendation in your first sentence.</li>
+                <li>Give 2–3 specific reasons tied to the seeker&apos;s context.</li>
+                <li>End with one concrete action the seeker can take next.</li>
+              </ul>
+            </div>
+          </section>
         </div>
       </div>
+
+      {/* Image zoom modal */}
+      {showImageModal && request.media_type === 'photo' && request.media_url && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/80 px-2 sm:px-4">
+          <button
+            type="button"
+            className="absolute inset-0 w-full h-full cursor-zoom-out"
+            onClick={() => setShowImageModal(false)}
+            aria-label="Close zoomed image"
+          />
+          <div className="relative z-50 max-w-6xl w-full flex flex-col items-center gap-3">
+            <div className="w-full h-[80vh] sm:h-[85vh] overflow-auto bg-black/40 rounded-lg border border-gray-700">
+              <img
+                src={request.media_url}
+                alt="Zoomed submission"
+                className="mx-auto max-w-none h-auto object-contain"
+                style={{ transform: 'scale(1.7)', transformOrigin: 'top left' }}
+              />
+            </div>
+            <div className="flex items-center justify-between w-full max-w-3xl text-xs text-gray-200">
+              <span>Scroll to pan. Click outside to close.</span>
+              <a
+                href={request.media_url}
+                target="_blank"
+                rel="noreferrer"
+                className="underline text-indigo-300 hover:text-indigo-100"
+              >
+                Open original in new tab
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
