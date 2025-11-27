@@ -180,10 +180,10 @@ export async function GET(request: NextRequest) {
         // Send initial data
         await fetchAndSendRequests();
 
-        // Set up polling interval (every 3 seconds)
+        // Set up polling interval (every 30 seconds to reduce DB load at scale)
         interval = setInterval(async () => {
           await fetchAndSendRequests();
-        }, 3000);
+        }, 30000);
 
         // Keep connection alive with heartbeat
         heartbeat = setInterval(() => {
