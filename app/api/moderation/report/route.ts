@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user already reported this content
-    const { data: existingReport } = await supabase
+    const { data: existingReport } = await (supabase as any)
       .from('content_reports')
       .select('id')
       .eq('content_type', contentType)
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create the report
-    const { data: report, error: reportError } = await supabase
+    const { data: report, error: reportError } = await (supabase as any)
       .from('content_reports')
       .insert({
         content_type: contentType,

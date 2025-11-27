@@ -71,20 +71,20 @@ export default function MyVerdictsPage() {
 
     // Filter by tab
     if (activeTab === 'waiting') {
-      filtered = filtered.filter(req => 
-        req.status === 'pending' || req.status === 'in_progress'
+      filtered = filtered.filter(req =>
+        req.status === 'open' || req.status === 'in_progress'
       );
     } else if (activeTab === 'complete') {
-      filtered = filtered.filter(req => 
-        req.status === 'completed' || req.status === 'closed'
+      filtered = filtered.filter(req =>
+        req.status === 'closed' || req.status === 'cancelled'
       );
     }
 
     // Search filter
     if (searchTerm) {
       filtered = filtered.filter(req =>
-        req.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        req.context?.toLowerCase().includes(searchTerm.toLowerCase())
+        req.context?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        req.category?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
@@ -95,11 +95,11 @@ export default function MyVerdictsPage() {
   const tabCounts: TabCounts = useMemo(() => {
     return {
       all: requests.length,
-      waiting: requests.filter(req => 
-        req.status === 'pending' || req.status === 'in_progress'
+      waiting: requests.filter(req =>
+        req.status === 'open' || req.status === 'in_progress'
       ).length,
-      complete: requests.filter(req => 
-        req.status === 'completed' || req.status === 'closed'
+      complete: requests.filter(req =>
+        req.status === 'closed' || req.status === 'cancelled'
       ).length,
     };
   }, [requests]);
@@ -316,7 +316,7 @@ export default function MyVerdictsPage() {
 
                       {/* Content Preview */}
                       <h3 className="font-medium text-gray-900 mb-2 line-clamp-2">
-                        {request.title || 'Untitled Request'}
+                        {request.category ? `${request.category.charAt(0).toUpperCase()}${request.category.slice(1)} Request` : 'Request'}
                       </h3>
                       
                       {request.context && (

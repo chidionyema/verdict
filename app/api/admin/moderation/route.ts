@@ -198,13 +198,11 @@ export async function POST(request: NextRequest) {
             })
             .eq('id', id);
 
-          // Refund credits
-          await (supabase as any)
-            .from('profiles')
-            .update({
-              credits: supabase.raw(`credits + ${request.credit_cost}`)
-            })
-            .eq('id', request.user_id);
+          // Refund credits using RPC for atomic operation
+          await (supabase as any).rpc('add_credits', {
+            p_user_id: request.user_id,
+            p_credits: request.credit_cost || 1
+          });
 
           // Log the refund
           await (supabase as any)

@@ -10,9 +10,11 @@ const buttonVariants = cva(
       variant: {
         primary: "bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm hover:shadow-md disabled:bg-indigo-300 disabled:cursor-not-allowed",
         secondary: "bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 shadow-sm hover:shadow-md disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed",
+        outline: "bg-transparent border border-gray-300 hover:bg-gray-50 text-gray-700 disabled:text-gray-400 disabled:cursor-not-allowed",
         ghost: "bg-transparent hover:bg-gray-100 text-gray-700 disabled:text-gray-400 disabled:cursor-not-allowed",
         destructive: "bg-red-600 hover:bg-red-700 text-white shadow-sm hover:shadow-md disabled:bg-red-300 disabled:cursor-not-allowed",
         link: "text-indigo-600 underline-offset-4 hover:underline hover:text-indigo-700",
+        default: "bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm hover:shadow-md disabled:bg-indigo-300 disabled:cursor-not-allowed",
       },
       size: {
         sm: "px-3 py-1.5 text-sm min-h-[36px] rounded-md",

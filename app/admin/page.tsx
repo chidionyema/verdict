@@ -2,21 +2,20 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { 
-  Users, 
-  MessageSquare, 
-  AlertTriangle, 
-  DollarSign, 
+import {
+  Users,
+  MessageSquare,
+  AlertTriangle,
+  DollarSign,
   TrendingUp,
   Flag,
   Clock,
-  EyeOff, 
+  EyeOff,
   CheckCircle,
   Shield,
   BarChart3,
   Settings,
   UserCheck,
-  Flag
 } from 'lucide-react';
 
 interface DashboardStats {

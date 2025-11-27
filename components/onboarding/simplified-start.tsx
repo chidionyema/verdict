@@ -93,7 +93,7 @@ export function SimplifiedStart() {
   const [subcategory, setSubcategory] = useState('');
   const [context, setContext] = useState('');
   const [uploading, setUploading] = useState(false);
-  const [judgePreferences, setJudgePreferences] = useState(null);
+  const [judgePreferences, setJudgePreferences] = useState<{ type: string; category: string } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [dragActive, setDragActive] = useState(false);
