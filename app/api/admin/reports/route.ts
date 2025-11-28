@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const { data: reports, error: fetchError } = await query as { data: Array<{ reported_content_type: string; reported_content_id: string; reporter?: { email?: string }; [key: string]: unknown }> | null; error: unknown };
+    const { data: reports, error: fetchError } = await query as { data: Array<{ content_type: string; content_id: string; reporter?: { email?: string }; [key: string]: unknown }> | null; error: unknown };
 
     if (fetchError) {
       log.error('Error fetching reports', fetchError);
@@ -65,21 +65,21 @@ export async function GET(request: NextRequest) {
         let contentPreview = '';
         
         try {
-          if (report.reported_content_type === 'verdict_request') {
+          if (report.content_type === 'verdict_request' || report.content_type === 'request') {
             const { data: request } = await supabase
               .from('verdict_requests')
               .select('text_content, context')
-              .eq('id', report.reported_content_id)
+              .eq('id', report.content_id)
               .single() as { data: { text_content?: string; context?: string } | null };
-            
+
             contentPreview = request?.text_content || request?.context || 'Image content';
           } else {
             const { data: response } = await supabase
               .from('verdict_responses')
               .select('feedback')
-              .eq('id', report.reported_content_id)
+              .eq('id', report.content_id)
               .single() as { data: { feedback?: string } | null };
-            
+
             contentPreview = response?.feedback || '';
           }
         } catch (error) {

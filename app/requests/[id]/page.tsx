@@ -316,6 +316,24 @@ export default function RequestDetailPage({
               <h1 className="text-2xl font-bold text-gray-900 mb-2">
                 {request.category.charAt(0).toUpperCase() + request.category.slice(1)} Feedback Request
               </h1>
+              {verdicts.length > 0 && (
+                <p className="text-sm text-gray-700 mb-1">
+                  <span className="font-semibold">
+                    Verdict:&nbsp;
+                    {averageRating >= 8
+                      ? 'Strong yes'
+                      : averageRating >= 6
+                      ? 'Mixed but leaning yes'
+                      : 'Proceed with caution'}
+                  </span>
+                  {` · ${averageRating.toFixed(1)}/10 from ${verdicts.length} judge${verdicts.length !== 1 ? 's' : ''}`}
+                </p>
+              )}
+              {verdicts.length > 0 && (
+                <p className="text-xs text-gray-500 mb-2">
+                  If you&apos;re still unsure, you can create a follow‑up request with updated photos, text, or a different option.
+                </p>
+              )}
             <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600">
                 <span className="flex items-center gap-1">
                   <Clock className="h-4 w-4" />

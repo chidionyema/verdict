@@ -53,7 +53,7 @@ export async function PATCH(
       .from('content_reports')
       .select('*')
       .eq('id', id)
-      .single() as { data: { status: string; reported_content_type: string; reported_content_id: string; report_reason?: string; [key: string]: unknown } | null; error: unknown };
+      .single() as { data: { status: string; content_type: string; content_id: string; reason?: string; [key: string]: unknown } | null; error: unknown };
 
     if (fetchError || !currentReport) {
       return NextResponse.json({ error: 'Report not found' }, { status: 404 });
@@ -141,13 +141,13 @@ export async function PATCH(
 
 async function handleModerationAction(
   supabase: any,
-  report: { reported_content_type: string; reported_content_id: string; report_reason?: string },
+  report: { content_type: string; content_id: string; reason?: string },
   resolution: string,
   moderatorId: string,
   moderatorNotes?: string
 ) {
-  const contentTable = report.reported_content_type === 'verdict_request' 
-    ? 'verdict_requests' 
+  const contentTable = (report.content_type === 'verdict_request' || report.content_type === 'request')
+    ? 'verdict_requests'
     : 'verdict_responses';
 
   switch (resolution) {
@@ -161,14 +161,14 @@ async function handleModerationAction(
           moderated_at: new Date().toISOString(),
           moderated_by: moderatorId,
         })
-        .eq('id', report.reported_content_id);
-      
+        .eq('id', report.content_id);
+
       // Add content flag
       await supabase
         .from('content_flags')
         .insert({
-          content_type: report.reported_content_type,
-          content_id: report.reported_content_id,
+          content_type: report.content_type,
+          content_id: report.content_id,
           flag_type: 'manual_review_required',
           confidence_score: 1.0,
           reviewed: true,
@@ -183,7 +183,7 @@ async function handleModerationAction(
       const { data: contentData } = await supabase
         .from(contentTable)
         .select('user_id')
-        .eq('id', report.reported_content_id)
+        .eq('id', report.content_id)
         .single();
 
       if (contentData?.user_id) {
@@ -193,10 +193,10 @@ async function handleModerationAction(
             user_id: contentData.user_id,
             moderator_id: moderatorId,
             action_type: 'warning',
-            reason: `Content reported: ${report.report_reason}`,
+            reason: `Content reported: ${report.reason}`,
             internal_notes: moderatorNotes,
-            related_content_type: report.reported_content_type,
-            related_content_id: report.reported_content_id,
+            related_content_type: report.content_type,
+            related_content_id: report.content_id,
           });
       }
       break;
@@ -206,7 +206,7 @@ async function handleModerationAction(
       const { data: suspendContentData } = await supabase
         .from(contentTable)
         .select('user_id')
-        .eq('id', report.reported_content_id)
+        .eq('id', report.content_id)
         .single();
 
       if (suspendContentData?.user_id) {
@@ -218,7 +218,7 @@ async function handleModerationAction(
           .from('profiles')
           .update({
             is_suspended: true,
-            suspension_reason: `Content reported: ${report.report_reason}`,
+            suspension_reason: `Content reported: ${report.reason}`,
             suspended_until: suspensionEnd.toISOString(),
           })
           .eq('id', suspendContentData.user_id);
@@ -231,10 +231,10 @@ async function handleModerationAction(
             action_type: 'temporary_suspension',
             duration_hours: 7 * 24,
             expires_at: suspensionEnd.toISOString(),
-            reason: `Content reported: ${report.report_reason}`,
+            reason: `Content reported: ${report.reason}`,
             internal_notes: moderatorNotes,
-            related_content_type: report.reported_content_type,
-            related_content_id: report.reported_content_id,
+            related_content_type: report.content_type,
+            related_content_id: report.content_id,
           });
       }
       break;
@@ -249,7 +249,7 @@ async function handleModerationAction(
           moderated_at: new Date().toISOString(),
           moderated_by: moderatorId,
         })
-        .eq('id', report.reported_content_id);
+        .eq('id', report.content_id);
       break;
   }
 }

@@ -230,10 +230,10 @@ export function SocialProofSection() {
             </p>
             
             <button
-              onClick={() => window.location.href = '/start'}
+              onClick={() => (window.location.href = '/start-simple')}
               className="bg-white text-purple-600 px-8 py-4 rounded-xl font-semibold hover:bg-gray-50 transition-colors inline-flex items-center gap-2 min-h-[56px]"
             >
-              Get My Free Verdicts Now
+              Get 3 free verdicts
               <ArrowRight className="w-5 h-5" />
             </button>
           </div>

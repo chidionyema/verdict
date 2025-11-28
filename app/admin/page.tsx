@@ -185,20 +185,6 @@ export default function AdminDashboard() {
       urgent: stats?.moderation.pending_reports || 0,
     },
     {
-      title: 'User Management',
-      description: 'View and manage user accounts',
-      icon: Users,
-      href: '/admin/users',
-      color: '#3b82f6',
-    },
-    {
-      title: 'Analytics',
-      description: 'View detailed platform analytics',
-      icon: BarChart3,
-      href: '/admin/analytics',
-      color: '#10b981',
-    },
-    {
       title: 'Financial Model',
       description: 'Analyze unit economics and pricing',
       icon: DollarSign,
@@ -206,11 +192,22 @@ export default function AdminDashboard() {
       color: '#10b981',
     },
     {
-      title: 'Settings',
-      description: 'Configure platform settings',
-      icon: Settings,
-      href: '/admin/settings',
-      color: '#6b7280',
+      title: 'User Management',
+      description: 'View and manage user accounts',
+      icon: Users,
+      href: '#',
+      color: '#9ca3af',
+      disabled: true,
+      comingSoon: true,
+    },
+    {
+      title: 'Analytics',
+      description: 'View detailed platform analytics',
+      icon: BarChart3,
+      href: '#',
+      color: '#9ca3af',
+      disabled: true,
+      comingSoon: true,
     },
   ];
 
@@ -267,29 +264,59 @@ export default function AdminDashboard() {
         <div className="mb-8">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Quick Actions</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {quickActions.map((action) => (
-              <Link
-                key={action.title}
-                href={action.href}
-                className="bg-white rounded-lg shadow-lg p-6 hover:shadow-xl transition-shadow cursor-pointer group"
-              >
-                <div className="flex items-center justify-between mb-4">
-                  <div 
-                    className="p-3 rounded-full group-hover:scale-110 transition-transform"
-                    style={{ backgroundColor: `${action.color}20` }}
+            {quickActions.map((action) => {
+              const isDisabled = 'disabled' in action && action.disabled;
+              const isComingSoon = 'comingSoon' in action && action.comingSoon;
+
+              if (isDisabled) {
+                return (
+                  <div
+                    key={action.title}
+                    className="bg-gray-50 rounded-lg shadow p-6 opacity-60 cursor-not-allowed"
                   >
-                    <action.icon className="h-6 w-6" style={{ color: action.color }} />
+                    <div className="flex items-center justify-between mb-4">
+                      <div
+                        className="p-3 rounded-full"
+                        style={{ backgroundColor: `${action.color}20` }}
+                      >
+                        <action.icon className="h-6 w-6" style={{ color: action.color }} />
+                      </div>
+                      {isComingSoon && (
+                        <span className="bg-gray-200 text-gray-600 text-xs font-medium px-2 py-1 rounded-full">
+                          Coming Soon
+                        </span>
+                      )}
+                    </div>
+                    <h3 className="font-semibold text-gray-500 mb-2">{action.title}</h3>
+                    <p className="text-sm text-gray-400">{action.description}</p>
                   </div>
-                  {action.urgent && action.urgent > 0 && (
-                    <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
-                      {action.urgent}
-                    </span>
-                  )}
-                </div>
-                <h3 className="font-semibold text-gray-900 mb-2">{action.title}</h3>
-                <p className="text-sm text-gray-600">{action.description}</p>
-              </Link>
-            ))}
+                );
+              }
+
+              return (
+                <Link
+                  key={action.title}
+                  href={action.href}
+                  className="bg-white rounded-lg shadow-lg p-6 hover:shadow-xl transition-shadow cursor-pointer group"
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <div
+                      className="p-3 rounded-full group-hover:scale-110 transition-transform"
+                      style={{ backgroundColor: `${action.color}20` }}
+                    >
+                      <action.icon className="h-6 w-6" style={{ color: action.color }} />
+                    </div>
+                    {'urgent' in action && action.urgent && action.urgent > 0 && (
+                      <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                        {action.urgent}
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="font-semibold text-gray-900 mb-2">{action.title}</h3>
+                  <p className="text-sm text-gray-600">{action.description}</p>
+                </Link>
+              );
+            })}
           </div>
         </div>
 

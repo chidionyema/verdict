@@ -133,7 +133,7 @@ export default function WorldClassLandingPage() {
           </p>
 
           <TouchButton
-            onClick={() => window.location.href = '/start'}
+          onClick={() => window.location.href = '/start-simple'}
             size="lg"
             className="bg-white text-indigo-600 font-bold shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300"
           >

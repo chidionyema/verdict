@@ -281,7 +281,7 @@ export default function HomePage() {
                   onClick={() => router.push('/start-simple')}
                   className="bg-white text-indigo-600 px-12 py-5 rounded-2xl text-xl font-bold hover:bg-gray-50 transition-all duration-300 shadow-xl hover:shadow-2xl transform hover:-translate-y-1 hover:scale-105 min-w-[320px] group"
                 >
-                  Get My 3 Free Verdicts Now
+                  Get 3 free verdicts
                   <span className="ml-2 group-hover:translate-x-1 transition-transform">→</span>
                 </button>
                 
@@ -318,7 +318,7 @@ export default function HomePage() {
           onClick={() => router.push('/start-simple')}
           className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-4 rounded-xl shadow-xl font-semibold text-base flex items-center justify-center gap-2 min-h-[48px] backdrop-blur-sm border border-white/20 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-0.5"
         >
-          Get Started – Free
+          Get 3 free verdicts
           <span className="text-lg">→</span>
         </button>
       </div>

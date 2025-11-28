@@ -109,6 +109,44 @@ export function SimplifiedStart() {
     });
   }, [supabase?.auth]);
 
+  // Restore any saved draft from signup/login flow
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const raw = sessionStorage.getItem('draftRequest');
+      if (!raw) return;
+      const draft = JSON.parse(raw);
+
+      if (draft.mediaType && (draft.mediaType === 'photo' || draft.mediaType === 'text' || draft.mediaType === 'audio')) {
+        setMediaType(draft.mediaType);
+      }
+      if (typeof draft.textContent === 'string') {
+        setTextContent(draft.textContent);
+      }
+      if (typeof draft.category === 'string') {
+        setCategory(draft.category);
+      }
+      if (typeof draft.subcategory === 'string') {
+        setSubcategory(draft.subcategory);
+      }
+      if (typeof draft.context === 'string') {
+        setContext(draft.context);
+      }
+
+      // If they already wrote context, drop them back into final step,
+      // otherwise go to the next logical step after media/category.
+      if (draft.context && draft.context.length >= 20) {
+        setStep(3);
+      } else if (draft.category) {
+        setStep(2);
+      } else if (draft.mediaType && (draft.textContent || (window as any).pendingFile)) {
+        setStep(2);
+      } 
+    } catch {
+      // Fail silently if draft parsing fails
+    }
+  }, []);
+
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -179,14 +217,17 @@ export function SimplifiedStart() {
     }
 
     if (!user) {
-      sessionStorage.setItem('draftRequest', JSON.stringify({
-        mediaType,
-        textContent: mediaType === 'text' ? textContent : null,
-        category,
-        subcategory,
-        context,
-      }));
-      router.push('/auth/signup?redirect=/start');
+      // Persist the draft so we can restore after signup/login
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('draftRequest', JSON.stringify({
+          mediaType,
+          textContent: mediaType === 'text' ? textContent : null,
+          category,
+          subcategory,
+          context,
+        }));
+      }
+      router.push('/auth/signup?redirect=/start-simple');
       return;
     }
 
@@ -259,9 +300,8 @@ export function SimplifiedStart() {
   const getStepTitle = () => {
     switch (step) {
       case 1: return "Share what you'd like feedback on";
-      case 2: return "What type of feedback do you need?";
-      case 3: return "Who should give you feedback?";
-      case 4: return "Add context for personalized insights";
+      case 2: return "Tell us what you need and who should review it";
+      case 3: return "Add context for personalized insights";
       default: return "";
     }
   };
@@ -269,11 +309,19 @@ export function SimplifiedStart() {
   const getStepSubtitle = () => {
     switch (step) {
       case 1: return "Upload a photo or paste your text to get started";
-      case 2: return "Choose the area where you need expert guidance";
-      case 3: return "Select your ideal reviewer preferences";
-      case 4: return "Help experts understand your specific situation";
+      case 2: return "Choose the area you want help with and how we should match your judges";
+      case 3: return "Help experts understand your specific situation";
       default: return "";
     }
+  };
+
+  const getStepProgressLabel = () => {
+    const labels: Record<number, string> = {
+      1: 'Step 1 of 3 · Upload',
+      2: 'Step 2 of 3 · Topic & judges',
+      3: 'Step 3 of 3 · Context',
+    };
+    return labels[step] ?? '';
   };
 
   if (showSuccess) {
@@ -321,7 +369,7 @@ export function SimplifiedStart() {
           
           {/* Progress Bar */}
           <div className="flex items-center gap-2">
-            {[1, 2, 3, 4].map((s) => (
+            {[1, 2, 3].map((s) => (
               <div key={s} className="flex items-center flex-1">
                 <div className={`h-2 rounded-full transition-all duration-500 flex-1 ${
                   step >= s 
@@ -333,10 +381,8 @@ export function SimplifiedStart() {
             ))}
           </div>
           <div className="flex justify-between mt-2 text-xs text-gray-500">
-            <span>Upload</span>
-            <span>Category</span>
-            <span>Preferences</span>
-            <span>Context</span>
+            <span>{getStepProgressLabel()}</span>
+            <span className="hidden sm:inline">Takes ~2 minutes total</span>
           </div>
         </div>
       </div>
@@ -413,6 +459,10 @@ export function SimplifiedStart() {
               <h3 className="text-2xl font-semibold text-gray-900 mb-6 text-center">
                 What would you like feedback on?
               </h3>
+              <p className="text-sm text-gray-600 text-center mb-6">
+                Most people start with a <span className="font-medium">photo or text</span>. 
+                Voice notes are great if you explain things better out loud.
+              </p>
               
               <div className="grid grid-cols-3 gap-4 mb-8">
                 <button
@@ -654,9 +704,10 @@ export function SimplifiedStart() {
           </div>
         )}
 
-        {/* Step 2: Category */}
+        {/* Step 2: Category + Quick Judge Preferences */}
         {step === 2 && (
-          <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom duration-700">
+          <div className="max-w-4xl mx-auto space-y-10 animate-in fade-in slide-in-from-bottom duration-700">
+            {/* Category selection */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {categories.map((cat) => {
                 const Icon = cat.icon;
@@ -667,7 +718,6 @@ export function SimplifiedStart() {
                     key={cat.id}
                     onClick={() => {
                       setCategory(cat.id);
-                      setTimeout(() => setStep(3), 600);
                     }}
                     className={`group relative p-8 rounded-2xl border-2 transition-all duration-500 text-left ${
                       isSelected 
@@ -697,7 +747,7 @@ export function SimplifiedStart() {
                         {isSelected && (
                           <div className="flex items-center gap-2 text-sm font-semibold text-indigo-600 animate-in fade-in duration-300">
                             <Check className="w-4 h-4" />
-                            Selected - Moving to next step
+                            Selected
                           </div>
                         )}
                       </div>
@@ -711,78 +761,76 @@ export function SimplifiedStart() {
                 );
               })}
             </div>
+
+            {/* Quick judge preferences, shown once a category is chosen */}
+            {category && (
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+                <div className="text-center space-y-4 mb-8">
+                  <div className="w-16 h-16 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-full flex items-center justify-center mx-auto">
+                    <Eye className="w-8 h-8 text-white" />
+                  </div>
+                  <h3 className="text-2xl font-semibold text-gray-900">
+                    Who should review your {category}?
+                  </h3>
+                  <p className="text-gray-600">
+                    We&apos;ll automatically match you with reviewers who fit best.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                  <div className="p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
+                    <div className="text-center space-y-3">
+                      <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto">
+                        <Briefcase className="w-6 h-6 text-blue-600" />
+                      </div>
+                      <h4 className="font-semibold text-gray-900">Industry experts</h4>
+                      <p className="text-sm text-gray-600">Professionals in your field (when relevant)</p>
+                    </div>
+                  </div>
+                  
+                  <div className="p-6 bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl border border-purple-100">
+                    <div className="text-center space-y-3">
+                      <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto">
+                        <Star className="w-6 h-6 text-purple-600" />
+                      </div>
+                      <h4 className="font-semibold text-gray-900">Top rated judges</h4>
+                      <p className="text-sm text-gray-600">People with consistently helpful feedback</p>
+                    </div>
+                  </div>
+                  
+                  <div className="p-6 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl border border-green-100">
+                    <div className="text-center space-y-3">
+                      <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto">
+                        <Clock className="w-6 h-6 text-green-600" />
+                      </div>
+                      <h4 className="font-semibold text-gray-900">Fast responders</h4>
+                      <p className="text-sm text-gray-600">Judges who typically reply within minutes</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="text-center">
+                  <button
+                    onClick={() => {
+                      setJudgePreferences({ type: 'auto', category });
+                      setTimeout(() => setStep(3), 400);
+                    }}
+                    className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all transform hover:scale-105"
+                  >
+                    Auto‑match me with 3 great judges
+                    <Sparkles className="w-5 h-5" />
+                  </button>
+                  <p className="text-sm text-gray-500 mt-3">
+                    We&apos;ll pick 3 judges based on your {category} request and past performance.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
-        {/* Step 3: Quick Judge Preferences */}
+        {/* Step 3: Context */}
         {step === 3 && (
-          <div className="max-w-3xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom duration-700">
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
-              <div className="text-center space-y-4 mb-8">
-                <div className="w-16 h-16 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-full flex items-center justify-center mx-auto">
-                  <Eye className="w-8 h-8 text-white" />
-                </div>
-                <h3 className="text-2xl font-semibold text-gray-900">
-                  Who should review your {category}?
-                </h3>
-                <p className="text-gray-600">
-                  We'll match you with the perfect experts for your needs
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                <div className="p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-100">
-                  <div className="text-center space-y-3">
-                    <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto">
-                      <Briefcase className="w-6 h-6 text-blue-600" />
-                    </div>
-                    <h4 className="font-semibold text-gray-900">Industry Experts</h4>
-                    <p className="text-sm text-gray-600">Professionals in your field</p>
-                  </div>
-                </div>
-                
-                <div className="p-6 bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl border border-purple-100">
-                  <div className="text-center space-y-3">
-                    <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mx-auto">
-                      <Star className="w-6 h-6 text-purple-600" />
-                    </div>
-                    <h4 className="font-semibold text-gray-900">Top Rated</h4>
-                    <p className="text-sm text-gray-600">Highest rated reviewers</p>
-                  </div>
-                </div>
-                
-                <div className="p-6 bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl border border-green-100">
-                  <div className="text-center space-y-3">
-                    <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-                      <Clock className="w-6 h-6 text-green-600" />
-                    </div>
-                    <h4 className="font-semibold text-gray-900">Quick Response</h4>
-                    <p className="text-sm text-gray-600">Fastest turnaround time</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="text-center">
-                <button
-                  onClick={() => {
-                    setJudgePreferences({ type: 'auto', category });
-                    setTimeout(() => setStep(4), 400);
-                  }}
-                  className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all transform hover:scale-105"
-                >
-                  Auto-match me with perfect experts
-                  <Sparkles className="w-5 h-5" />
-                </button>
-                <p className="text-sm text-gray-500 mt-3">
-                  We'll select the best 3 experts based on your {category} request
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Step 4: Context */}
-        {step === 4 && (
           <div className="max-w-3xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom duration-700">
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
               {/* Subcategory Tags */}

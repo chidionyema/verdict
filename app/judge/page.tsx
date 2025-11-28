@@ -513,6 +513,39 @@ export default function JudgeDashboardPage() {
             </div>
 
             <div className="p-6">
+              {/* Next best request spotlight */}
+              {filteredQueue.length > 0 && (
+                <div className="mb-6 p-4 bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 rounded-xl border border-indigo-100 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                  <div>
+                    <p className="text-xs font-semibold text-indigo-600 uppercase tracking-wide mb-1">
+                      Next best request for you
+                    </p>
+                    <p className="text-sm text-gray-900 font-medium">
+                      {filteredQueue[0].category.charAt(0).toUpperCase() + filteredQueue[0].category.slice(1)} · {filteredQueue[0].media_type}
+                    </p>
+                    <p className="text-xs text-gray-600 mt-1 line-clamp-2">
+                      {filteredQueue[0].context}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-2">
+                      Earn about <span className="font-semibold text-green-700">$0.55</span> in ~3–5 minutes.
+                    </p>
+                  </div>
+                  <div className="flex md:flex-col items-end gap-2">
+                    <button
+                      type="button"
+                      className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition min-w-[160px]"
+                      onClick={() => router.push(`/judge/requests/${filteredQueue[0].id}`)}
+                    >
+                      Start now
+                      <ArrowRight className="h-4 w-4 ml-2" />
+                    </button>
+                    <p className="text-[11px] text-gray-500 md:text-right">
+                      Or pick any request from the list below.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {queue.length === 0 ? (
                 <div className="text-center py-12">
                   <div className="w-24 h-24 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-6">

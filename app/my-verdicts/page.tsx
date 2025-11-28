@@ -158,8 +158,10 @@ export default function MyVerdictsPage() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">My Verdicts</h1>
-            <p className="text-gray-600">Track your requests and view feedback</p>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">My Requests</h1>
+            <p className="text-gray-600">
+              Browse all the requests you&apos;ve created and the feedback you&apos;ve received.
+            </p>
           </div>
           
           <TouchButton
@@ -265,7 +267,7 @@ export default function MyVerdictsPage() {
                   </div>
                   <h3 className="text-lg font-medium text-gray-900 mb-2">No requests yet</h3>
                   <p className="text-gray-600 mb-6">
-                    Get started by creating your first request for honest feedback
+                    Get started by creating your first request for honest feedback.
                   </p>
                   <TouchButton
                     onClick={() => window.location.href = '/start-simple'}

@@ -114,14 +114,14 @@ export function PricingTableSection() {
               </ul>
 
               <TouchButton
-                onClick={() => (window.location.href = '/start')}
+                onClick={() => (window.location.href = '/start-simple')}
                 className={`w-full justify-center mt-auto min-h-[48px] ${
                   plan.highlight
                     ? 'bg-indigo-600 hover:bg-indigo-700 text-white'
                     : 'bg-white border border-gray-300 text-gray-900 hover:bg-gray-50'
                 }`}
               >
-                {plan.name === 'Starter' ? 'Start for Free' : 'Get Started'}
+                {plan.name === 'Free trial' ? 'Start free trial' : 'Get 3 more verdicts'}
               </TouchButton>
 
               <p className="mt-3 text-[11px] text-gray-400">

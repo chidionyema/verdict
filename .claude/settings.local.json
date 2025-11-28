@@ -11,7 +11,8 @@
       "Bash(sed:*)",
       "Bash(grep:*)",
       "Bash(python3:*)",
-      "Bash(findstr:*)"
+      "Bash(findstr:*)",
+      "Bash(git restore:*)"
     ],
     "deny": [],
     "ask": []

@@ -216,9 +216,9 @@ export default function DashboardPage() {
         {/* Header */}
         <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center mb-8 gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Your Verdicts</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
             <p className="text-gray-600 mt-1">
-              {profile?.credits || 0} credits remaining • {filteredAndSortedRequests.length} of {requests.length} requests
+              Overview of your requests and progress • {profile?.credits || 0} credits remaining • {filteredAndSortedRequests.length} of {requests.length} requests
             </p>
           </div>
           

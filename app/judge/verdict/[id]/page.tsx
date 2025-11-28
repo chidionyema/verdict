@@ -18,8 +18,8 @@ export default function VerdictSubmissionPage({
   const claimRequest = useStore((state) => state.claimRequest);
 
   const [rating, setRating] = useState(7);
-  const [advice, setAdvice] = useState('');
-  const [reasoning, setReasoning] = useState('');
+  const [verdictSummary, setVerdictSummary] = useState('');
+  const [reasons, setReasons] = useState('');
   const [tone, setTone] = useState<'honest' | 'constructive' | 'encouraging'>(
     'constructive'
   );
@@ -38,7 +38,7 @@ export default function VerdictSubmissionPage({
     }
   }, [timeRemaining]);
 
-  const totalLength = advice.length + reasoning.length;
+  const totalLength = verdictSummary.length + reasons.length;
 
   const calculateEarnings = () => {
     let base = 0.5;
@@ -48,20 +48,20 @@ export default function VerdictSubmissionPage({
   };
 
   const handleSubmit = async () => {
-    if (advice.length < 50) {
-      alert('Please provide at least 50 characters in your advice section');
+    if (verdictSummary.trim().length < 10) {
+      alert('Please start with one clear sentence for your verdict (at least 10 characters)');
       return;
     }
-    if (reasoning.length < 20) {
-      alert('Please provide at least 20 characters explaining your reasoning');
+    if (reasons.length < 40) {
+      alert('Please provide at least 40 characters explaining your reasoning');
       return;
     }
 
     setSubmitting(true);
 
     try {
-      // Combine advice and reasoning for storage
-      const combinedFeedback = `${advice}\n\nReasoning: ${reasoning}`;
+      // Combine summary and reasons for storage
+      const combinedFeedback = `${verdictSummary.trim()}\n\nReasons:\n${reasons.trim()}`;
 
       // Optional voice upload
       let uploadedVoiceUrl: string | null = null;
@@ -276,50 +276,42 @@ export default function VerdictSubmissionPage({
             {/* Response Templates */}
             <ResponseTemplates
               category={request.category}
-              onInsert={(text) => setAdvice(advice + text)}
+              onInsert={(text) => setVerdictSummary((prev) => (prev ? `${prev} ${text}` : text))}
               className="mb-6"
             />
 
-            {/* Advice Section */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Your advice: What would you do and why?
-              </label>
-              <textarea
-                value={advice}
-                onChange={(e) => setAdvice(e.target.value)}
-                placeholder="Share your perspective on what decision you would make and your main reasoning..."
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                rows={4}
-              />
-              <p
-                className={`text-sm mt-1 ${
-                  advice.length < 50 ? 'text-red-500' : advice.length > 200 ? 'text-green-600' : 'text-blue-600'
-                }`}
-              >
-                {advice.length}/500 characters {advice.length < 50 ? '(min 50)' : advice.length > 200 ? '✓ Great detail' : '✓ Good start'}
-              </p>
-            </div>
-
-            {/* Reasoning Section */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Your reasoning: Based on my experience...
-              </label>
-              <textarea
-                value={reasoning}
-                onChange={(e) => setReasoning(e.target.value)}
-                placeholder="Explain why based on your personal experience, observations, or expertise..."
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                rows={3}
-              />
-              <p
-                className={`text-sm mt-1 ${
-                  reasoning.length < 20 ? 'text-red-500' : reasoning.length > 100 ? 'text-green-600' : 'text-blue-600'
-                }`}
-              >
-                {reasoning.length}/300 characters {reasoning.length < 20 ? '(min 20)' : reasoning.length > 100 ? '✓ Excellent' : '✓'}
-              </p>
+            {/* Verdict summary + reasons */}
+            <div className="mb-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Your verdict in one clear sentence
+                </label>
+                <input
+                  value={verdictSummary}
+                  onChange={(e) => setVerdictSummary(e.target.value)}
+                  placeholder="e.g. “I would go with outfit A for this interview because it looks more polished and confident.”"
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Why: give 2–3 specific reasons (min 40 characters)
+                </label>
+                <textarea
+                  value={reasons}
+                  onChange={(e) => setReasons(e.target.value)}
+                  placeholder="Explain your reasoning with 2–3 concrete points the seeker can act on..."
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  rows={5}
+                />
+                <p
+                  className={`text-sm mt-1 ${
+                    reasons.length < 40 ? 'text-red-500' : reasons.length > 150 ? 'text-green-600' : 'text-blue-600'
+                  }`}
+                >
+                  {reasons.length}/500 characters {reasons.length < 40 ? '(min 40)' : reasons.length > 150 ? '✓ Great detail' : '✓ Good start'}
+                </p>
+              </div>
             </div>
 
             {/* Optional voice note */}
@@ -366,9 +358,9 @@ export default function VerdictSubmissionPage({
             {/* Submit Button */}
             <button
               onClick={handleSubmit}
-              disabled={advice.length < 50 || reasoning.length < 20 || submitting}
+              disabled={verdictSummary.trim().length < 10 || reasons.length < 40 || submitting}
               className={`w-full py-3 rounded-lg font-semibold transition flex items-center justify-center cursor-pointer ${
-                advice.length < 50 || reasoning.length < 20 || submitting
+                verdictSummary.trim().length < 10 || reasons.length < 40 || submitting
                   ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                   : 'bg-indigo-600 text-white hover:bg-indigo-700'
               }`}
