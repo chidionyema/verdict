@@ -76,7 +76,6 @@ const subcategories: Record<string, string[]> = {
 
 export default function StartPage() {
   const router = useRouter();
-  const supabase = createClient();
   
   // Redirect to simplified flow for better conversion
   useEffect(() => {
@@ -100,6 +99,10 @@ export default function StartPage() {
   const [tier, setTier] = useState<'basic' | 'standard' | 'premium'>('basic');
 
   useEffect(() => {
+    // Only initialize Supabase client in browser
+    if (typeof window === 'undefined') return;
+    
+    const supabase = createClient();
     supabase.auth.getUser().then(({ data: { user } }) => {
       setUser(user);
       
@@ -134,7 +137,7 @@ export default function StartPage() {
         }
       }
     });
-  }, [supabase.auth]);
+  }, []);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
