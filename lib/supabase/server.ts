@@ -4,18 +4,33 @@ import { cookies } from 'next/headers';
 import type { Database } from '../database.types';
 
 /**
- * Get the Supabase URL with connection pooling for serverless environments.
- * Connection pooling reduces connection overhead in serverless/edge deployments.
+ * Get the Supabase URL used by the JS client.
  *
- * Set SUPABASE_POOLER_URL in production for better performance:
- * https://[project-ref].pooler.supabase.com
+ * IMPORTANT:
+ * - Supabase JS expects an HTTP/HTTPS URL like:
+ *   https://<project-ref>.supabase.co
+ * - Do NOT pass a Postgres connection string (postgres://...)
+ * - If SUPABASE_POOLER_URL is set to a non-HTTP URL, we ignore it
+ *   and fall back to NEXT_PUBLIC_SUPABASE_URL.
  */
 function getSupabaseUrl(): string {
-  // Use pooler URL if available (recommended for production serverless)
-  if (process.env.SUPABASE_POOLER_URL) {
-    return process.env.SUPABASE_POOLER_URL;
+  const poolerUrl = process.env.SUPABASE_POOLER_URL;
+
+  // Only use pooler URL if it's a valid HTTP(S) URL
+  if (poolerUrl && /^https?:\/\//.test(poolerUrl)) {
+    return poolerUrl;
   }
-  return process.env.NEXT_PUBLIC_SUPABASE_URL!;
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+
+  if (!supabaseUrl) {
+    throw new Error(
+      'Missing NEXT_PUBLIC_SUPABASE_URL for Supabase client. ' +
+        'Set NEXT_PUBLIC_SUPABASE_URL to https://<project-ref>.supabase.co in your environment.'
+    );
+  }
+
+  return supabaseUrl;
 }
 
 export async function createClient(): Promise<SupabaseClient<Database>> {
