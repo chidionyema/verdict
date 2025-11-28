@@ -117,9 +117,31 @@ export default function Navigation() {
           <div className="flex items-center">
             <Link
               href={user ? '/my-requests' : '/'}
-              className="text-2xl font-bold text-indigo-600"
+              className="group relative inline-block logo-focus-ring"
             >
-              Verdict
+              <div className="relative">
+                {/* Premium shadow layers for depth */}
+                <span className="absolute inset-0 text-2xl font-black tracking-tight opacity-10 blur-sm transform translate-x-1 translate-y-1">
+                  <span className="text-indigo-600">Ask</span>
+                  <span className="text-slate-800">Verdict</span>
+                </span>
+                
+                {/* Main logo text with premium styling */}
+                <span className="relative z-10 text-2xl font-black tracking-tight logo-animate">
+                  <span className="inline-block text-indigo-600 transition-all duration-300 group-hover:text-indigo-700 group-hover:transform group-hover:-translate-x-0.5">
+                    Ask
+                  </span>
+                  <span className="inline-block text-slate-800 transition-all duration-300 group-hover:text-slate-900 group-hover:transform group-hover:translate-x-0.5">
+                    Verdict
+                  </span>
+                </span>
+                
+                {/* Premium underline with gradient */}
+                <span className="absolute -bottom-1 left-0 w-full h-0.5 bg-gradient-to-r from-indigo-600 via-purple-500 to-slate-800 transform scale-x-0 transition-transform duration-500 origin-left group-hover:scale-x-100" />
+                
+                {/* Subtle glow effect on hover */}
+                <span className="absolute inset-0 rounded-lg bg-gradient-to-r from-indigo-600/0 to-purple-600/0 group-hover:from-indigo-600/10 group-hover:to-purple-600/10 blur-xl transition-all duration-500" />
+              </div>
             </Link>
           </div>
 
