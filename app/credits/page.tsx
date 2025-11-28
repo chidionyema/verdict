@@ -1,8 +1,5 @@
 'use client';
 
-// Force dynamic rendering to prevent SSG issues with Supabase
-export const dynamic = 'force-dynamic';
-
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Check, Star, Zap, Shield } from 'lucide-react';
