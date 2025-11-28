@@ -83,7 +83,6 @@ const subcategories: Record<string, string[]> = {
 
 export function SimplifiedStart() {
   const router = useRouter();
-  const supabase = createClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [user, setUser] = useState<User | null>(null);
@@ -102,12 +101,14 @@ export function SimplifiedStart() {
   const [showSuccess, setShowSuccess] = useState(false);
 
   useEffect(() => {
-    if (!supabase) return;
+    // Only initialize Supabase client in browser
+    if (typeof window === 'undefined') return;
     
+    const supabase = createClient();
     supabase.auth.getUser().then(({ data: { user } }) => {
       setUser(user);
     });
-  }, [supabase?.auth]);
+  }, []);
 
   // Restore any saved draft from signup/login flow
   useEffect(() => {
