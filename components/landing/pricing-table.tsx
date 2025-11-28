@@ -9,50 +9,6 @@ import type { Locale } from '@/i18n.config';
 
 const BASIC_VERDICTS = VERDICT_TIERS.basic.verdicts;
 
-const PLANS = [
-  {
-    name: 'Free trial',
-    badge: 'Start here',
-    verdicts: '3 opinions',
-    delivery: '47min average',
-    features: ['Test the experience', 'Honest feedback from real people', 'Completely anonymous'],
-    limitations: [],
-    price: 'Free',
-    priceDetail: 'No credit card required',
-    highlight: false,
-  },
-  {
-    name: 'Pay per request',
-    badge: 'Simple & transparent',
-    verdicts: `${BASIC_VERDICTS} opinions (Basic tier)`,
-    delivery: 'Most requests answered in under an hour',
-    features: [
-      'Pay only when you need a verdict',
-      'Choose Basic, Standard, or Premium inside the app',
-      'Same quality as your free trial',
-    ],
-    limitations: [],
-    price: `$${BASIC_PRICE.toFixed(2)}`,
-    priceDetail: 'per Basic request (higher tiers available in app)',
-    highlight: true,
-  },
-  {
-    name: 'Power users',
-    badge: 'Coming soon',
-    verdicts: 'Subscription plans',
-    delivery: 'Priority queue',
-    features: [
-      'Best value for regular users',
-      'Faster responses',
-      'Premium reviewers',
-    ],
-    limitations: ['Subscriptions are not yet available – one-off requests only for now.'],
-    price: 'Coming soon',
-    priceDetail: '',
-    highlight: false,
-  },
-];
-
 export function PricingTableSection() {
   const locale = useLocale() as Locale;
   const verdictPricing = getVerdictTierPricing(locale);
