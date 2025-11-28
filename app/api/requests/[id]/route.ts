@@ -49,10 +49,14 @@ export async function GET(
     // after we've already verified that the caller is allowed to view this request.
     let verdicts: any[] | null = null;
     let verdictsError: any = null;
+    const receivedCount = (verdictRequest as any).received_verdict_count || 0;
 
     try {
       const serviceClient = createServiceClient() as any;
-      const result = await (serviceClient as any)
+      
+      // Try fetching all verdicts first (without status filter)
+      // The status column might not exist or might be causing issues
+      let result = await (serviceClient as any)
         .from('verdict_responses')
         .select('*')
         .eq('request_id', id)
@@ -60,18 +64,60 @@ export async function GET(
       
       verdicts = result.data;
       verdictsError = result.error;
-    } catch (serviceClientError) {
-      log.error('Service client creation failed', serviceClientError);
-      // Fallback: try with regular client (might work if RLS allows)
+      
+      // Filter out 'removed' verdicts in memory if status field exists
+      if (verdicts && verdicts.length > 0) {
+        verdicts = verdicts.filter((v: any) => v.status !== 'removed');
+      }
+      
+      // If we got an error or no results but count says there should be verdicts, log details
+      if (receivedCount > 0 && (!verdicts || verdicts.length === 0)) {
+        log.error('Verdict count mismatch - no verdicts found', {
+          request_id: id,
+          received_verdict_count: receivedCount,
+          verdicts_found: verdicts?.length || 0,
+          query_error: verdictsError,
+          service_key_set: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+        });
+        
+        // Try a direct count query to see if verdicts actually exist
+        const countResult = await (serviceClient as any)
+          .from('verdict_responses')
+          .select('id', { count: 'exact', head: true })
+          .eq('request_id', id);
+        
+        log.info('Direct count query result', {
+          request_id: id,
+          count: countResult.count,
+          count_error: countResult.error,
+        });
+      }
+    } catch (serviceClientError: any) {
+      log.error('Service client creation/query failed', {
+        error: serviceClientError?.message || serviceClientError,
+        request_id: id,
+        has_service_key: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+      });
+      
+      // Fallback: try with regular client (might work if RLS allows for this user)
       try {
         const result = await (supabase as any)
           .from('verdict_responses')
           .select('*')
           .eq('request_id', id)
+          .neq('status', 'removed') // Exclude removed verdicts
           .order('created_at', { ascending: true });
         
         verdicts = result.data;
         verdictsError = result.error;
+        
+        if (result.error) {
+          log.error('Regular client also failed', {
+            error: result.error,
+            request_id: id,
+            user_id: user.id,
+          });
+        }
       } catch (fallbackError) {
         log.error('Fallback verdict fetch also failed', fallbackError);
         verdictsError = fallbackError;
