@@ -38,14 +38,16 @@ export default function MyVerdictsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState('');
 
-  const supabase = createClient();
-
   useEffect(() => {
-    fetchRequests();
+    // Only initialize Supabase client in browser
+    if (typeof window !== 'undefined') {
+      fetchRequests();
+    }
   }, []);
 
   const fetchRequests = async () => {
     try {
+      const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 

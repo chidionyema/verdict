@@ -28,14 +28,17 @@ export default function CreditsPage() {
   const [user, setUser] = useState<any>(null);
   const [currentCredits, setCurrentCredits] = useState(0);
   const router = useRouter();
-  const supabase = createClient();
 
   useEffect(() => {
-    fetchUser();
-    fetchPackages();
+    // Only initialize Supabase client in browser
+    if (typeof window !== 'undefined') {
+      fetchUser();
+      fetchPackages();
+    }
   }, []);
 
   const fetchUser = async () => {
+    const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     setUser(user);
     
