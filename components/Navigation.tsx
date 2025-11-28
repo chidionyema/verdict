@@ -136,11 +136,15 @@ export default function Navigation() {
               <>
                 {/* User Status Widget */}
                 <div className="flex items-center space-x-4">
-                  {/* Credits */}
+                  {/* Request credits / remaining requests */}
                   <div className="flex items-center bg-green-50 text-green-700 px-4 py-2 rounded-full text-sm min-h-[36px]">
                     <CreditCard className="h-4 w-4 mr-2" />
-                    <span className="font-medium">{userProfile?.credits || 0}</span>
-                    <span className="text-xs text-green-600 ml-1">credits</span>
+                    <span className="font-medium">
+                      {userProfile?.credits || 0}
+                    </span>
+                    <span className="text-xs text-green-600 ml-1">
+                      {userProfile?.credits === 1 ? 'request left' : 'requests left'}
+                    </span>
                   </div>
                   
                   {/* Active Requests */}
@@ -274,7 +278,10 @@ export default function Navigation() {
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center bg-green-50 text-green-700 px-4 py-2 rounded-full">
                       <CreditCard className="h-5 w-5 mr-2" />
-                      <span className="font-medium">{userProfile?.credits || 0} credits</span>
+                      <span className="font-medium">
+                        {userProfile?.credits || 0}{' '}
+                        {userProfile?.credits === 1 ? 'request left' : 'requests left'}
+                      </span>
                     </div>
                     
                     <div className="flex items-center space-x-3">

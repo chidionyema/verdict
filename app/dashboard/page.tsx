@@ -218,7 +218,10 @@ export default function DashboardPage() {
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
             <p className="text-gray-600 mt-1">
-              Overview of your requests and progress • {profile?.credits || 0} credits remaining • {filteredAndSortedRequests.length} of {requests.length} requests
+              Overview of your requests and progress •{' '}
+              {profile?.credits || 0}{' '}
+              {profile?.credits === 1 ? 'request left' : 'requests left'} •{' '}
+              {filteredAndSortedRequests.length} of {requests.length} requests
             </p>
           </div>
           
@@ -365,7 +368,7 @@ export default function DashboardPage() {
               Create Your First Request
             </Link>
             <div className="mt-6 space-y-1">
-              <p className="text-sm text-gray-500">✨ 3 free credits included</p>
+              <p className="text-sm text-gray-500">✨ 3 free requests included</p>
               <p className="text-sm text-gray-500">⏱️ Results in under 15 minutes</p>
             </div>
           </div>

@@ -355,7 +355,7 @@ export default function DiscoverPage() {
           <h2 className="text-2xl font-bold mb-4">Ready to Get Your Verdict?</h2>
           <p className="text-indigo-100 mb-6 max-w-2xl mx-auto">
             Join thousands of users getting honest feedback on photos, profiles, and writing. 
-            Start with 3 free credits!
+            Start with 3 free requests!
           </p>
           <Link
             href="/start-simple"

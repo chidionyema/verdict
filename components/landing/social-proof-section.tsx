@@ -225,15 +225,15 @@ export function SocialProofSection() {
               Ready to Get Unfiltered Feedback?
             </h3>
             <p className="text-purple-100 mb-6 max-w-2xl mx-auto">
-              Be among the first to get honest opinions. 
-              Start with 3 free verdicts - no credit card required.
+              Be among the first to get honest opinions.
+              Start with 3 free requests — no credit card required.
             </p>
             
             <button
               onClick={() => (window.location.href = '/start-simple')}
               className="bg-white text-purple-600 px-8 py-4 rounded-xl font-semibold hover:bg-gray-50 transition-colors inline-flex items-center gap-2 min-h-[56px]"
             >
-              Get 3 free verdicts
+              Get 3 free requests
               <ArrowRight className="w-5 h-5" />
             </button>
           </div>

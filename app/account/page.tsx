@@ -2,20 +2,28 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useLocale } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
 import { CreditCard, LogOut, Check } from 'lucide-react';
-import { CREDIT_PACKAGES, VERDICT_TIERS, VERDICT_TIER_PRICING, PRICE_PER_CREDIT_USD } from '@/lib/validations';
+import { CREDIT_PACKAGES, VERDICT_TIERS, VERDICT_TIER_PRICING } from '@/lib/validations';
+import { getCreditPackagePricing, getVerdictTierPricing } from '@/lib/pricing';
+import type { Locale } from '@/i18n.config';
 import type { Profile } from '@/lib/database.types';
 
 function AccountContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const success = searchParams.get('success');
+  const locale = useLocale() as Locale;
 
   const supabase = createClient();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState<string | null>(null);
+
+  // Localized pricing for the current locale
+  const verdictPricing = getVerdictTierPricing(locale);
+  const creditPricing = getCreditPackagePricing(locale);
 
   useEffect(() => {
     fetchProfile();
@@ -116,12 +124,14 @@ function AccountContent() {
           </div>
         </div>
 
-        {/* Credits Section */}
+        {/* Credits / request balances */}
         <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="text-xl font-semibold">Credits</h2>
-              <p className="text-gray-500">Use credits to get verdict feedback</p>
+              <h2 className="text-xl font-semibold">Request credits</h2>
+              <p className="text-gray-500">
+                Each credit lets you create one Basic request (3 expert verdicts).
+              </p>
             </div>
             <div className="text-right">
               <p className="text-4xl font-bold text-indigo-600">
@@ -155,8 +165,8 @@ function AccountContent() {
               <div>
                 <span className="text-indigo-600 font-semibold">Verdict:</span>{' '}
                 <span className="font-bold text-indigo-700">
-                  ~${VERDICT_TIER_PRICING.basic.price.toFixed(2)} for{' '}
-                  {VERDICT_TIERS.basic.verdicts} expert verdicts (Basic request)
+                  ~{verdictPricing.basic.price.formatted} for{' '}
+                  {verdictPricing.basic.verdicts} expert verdicts (Basic request)
                 </span>
               </div>
             </div>
@@ -177,11 +187,11 @@ function AccountContent() {
                 )}
                 <h4 className="font-semibold text-lg">{pkg.name}</h4>
                 <p className="text-3xl font-bold mt-2">
-                  ${(pkg.price_cents / 100).toFixed(2)}
+                  {creditPricing[id as keyof typeof creditPricing].price.formatted}
                 </p>
                 <p className="text-gray-500 text-sm">{pkg.credits} credits</p>
                 <p className="text-gray-400 text-xs mt-1">
-                  ${((pkg.price_cents / 100) / pkg.credits).toFixed(2)}/credit
+                  Includes {pkg.credits} credits • price shown in your local currency
                 </p>
                 <button
                   onClick={() => handlePurchase(id)}

@@ -110,9 +110,19 @@ export default function WaitingPage() {
               ))}
             </div>
 
-            <p className="text-gray-600 text-sm">
+            <p className="text-gray-600 text-sm mb-4">
               Your results will be ready soon. Quality feedback takes time!
             </p>
+
+            {/* Allow seekers to jump into the detail view once any verdict has arrived */}
+            {currentRequest.verdicts.length > 0 && currentRequest.id && (
+              <button
+                onClick={() => router.push(`/requests/${currentRequest.id}`)}
+                className="inline-flex items-center px-4 py-2 mt-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition"
+              >
+                View verdicts so far
+              </button>
+            )}
 
             {currentRequest.status === 'completed' && (
               <p className="text-green-600 font-semibold mt-4">

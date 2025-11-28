@@ -288,7 +288,9 @@ export function SimplifiedStart() {
       // Success animation
       setShowSuccess(true);
       setTimeout(() => {
-        router.push(`/waiting?request=${request.id}`);
+        // Send users to their request list where real-time status is shown,
+        // instead of the old simulated waiting page that relied on in-memory state.
+        router.push('/my-requests');
       }, 2000);
 
     } catch (err) {
@@ -770,10 +772,10 @@ export function SimplifiedStart() {
                     <Eye className="w-8 h-8 text-white" />
                   </div>
                   <h3 className="text-2xl font-semibold text-gray-900">
-                    Who should review your {category}?
+                    How we choose your judges
                   </h3>
                   <p className="text-gray-600">
-                    We&apos;ll automatically match you with reviewers who fit best.
+                    You don&apos;t need to pick anything here — we automatically balance expertise, quality, and speed for your {category} request.
                   </p>
                 </div>
 
@@ -784,7 +786,7 @@ export function SimplifiedStart() {
                         <Briefcase className="w-6 h-6 text-blue-600" />
                       </div>
                       <h4 className="font-semibold text-gray-900">Industry experts</h4>
-                      <p className="text-sm text-gray-600">Professionals in your field (when relevant)</p>
+                      <p className="text-sm text-gray-600">Professionals in your field when it&apos;s relevant.</p>
                     </div>
                   </div>
                   
@@ -794,7 +796,7 @@ export function SimplifiedStart() {
                         <Star className="w-6 h-6 text-purple-600" />
                       </div>
                       <h4 className="font-semibold text-gray-900">Top rated judges</h4>
-                      <p className="text-sm text-gray-600">People with consistently helpful feedback</p>
+                      <p className="text-sm text-gray-600">People with consistently helpful feedback.</p>
                     </div>
                   </div>
                   
@@ -804,7 +806,7 @@ export function SimplifiedStart() {
                         <Clock className="w-6 h-6 text-green-600" />
                       </div>
                       <h4 className="font-semibold text-gray-900">Fast responders</h4>
-                      <p className="text-sm text-gray-600">Judges who typically reply within minutes</p>
+                      <p className="text-sm text-gray-600">Judges who typically reply within minutes.</p>
                     </div>
                   </div>
                 </div>
@@ -817,11 +819,11 @@ export function SimplifiedStart() {
                     }}
                     className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all transform hover:scale-105"
                   >
-                    Auto‑match me with 3 great judges
+                    Continue · Auto‑match my judges
                     <Sparkles className="w-5 h-5" />
                   </button>
                   <p className="text-sm text-gray-500 mt-3">
-                    We&apos;ll pick 3 judges based on your {category} request and past performance.
+                    We&apos;ll pick 3 judges for you — you can always see who responded later.
                   </p>
                 </div>
               </div>

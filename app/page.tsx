@@ -270,10 +270,10 @@ export default function HomePage() {
             
             <div className="relative z-10">
               <h2 className="text-4xl font-bold mb-6 animate-fade-in">
-                Stop Wondering. Start Knowing.
+                Start with 3 free requests
               </h2>
               <p className="text-xl mb-8 text-indigo-100 max-w-2xl mx-auto animate-fade-in-up">
-                Join the movement for honest feedback. Get straight answers in minutes, not days.
+                Join the movement for honest feedback. Your first 3 Basic requests are on us — each includes 3 honest opinions from real people.
               </p>
               
               <div className="space-y-6">
@@ -281,14 +281,14 @@ export default function HomePage() {
                   onClick={() => router.push('/start-simple')}
                   className="bg-white text-indigo-600 px-12 py-5 rounded-2xl text-xl font-bold hover:bg-gray-50 transition-all duration-300 shadow-xl hover:shadow-2xl transform hover:-translate-y-1 hover:scale-105 min-w-[320px] group"
                 >
-                  Get 3 free verdicts
+                  Get 3 free requests
                   <span className="ml-2 group-hover:translate-x-1 transition-transform">→</span>
                 </button>
                 
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-8 text-indigo-100 animate-fade-in-up">
                   <div className="flex items-center gap-2 group hover:text-white transition-colors">
                     <CheckCircle className="h-5 w-5 group-hover:scale-110 transition-transform" />
-                    <span>3 free verdicts included</span>
+                    <span>3 free requests to start</span>
                   </div>
                   <div className="flex items-center gap-2 group hover:text-white transition-colors">
                     <Shield className="h-5 w-5 group-hover:scale-110 transition-transform" />
@@ -318,7 +318,7 @@ export default function HomePage() {
           onClick={() => router.push('/start-simple')}
           className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-4 rounded-xl shadow-xl font-semibold text-base flex items-center justify-center gap-2 min-h-[48px] backdrop-blur-sm border border-white/20 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-0.5"
         >
-          Get 3 free verdicts
+          Get 3 free requests
           <span className="text-lg">→</span>
         </button>
       </div>

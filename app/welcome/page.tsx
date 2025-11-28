@@ -100,8 +100,8 @@ export default function WelcomePage() {
     },
     {
       id: 'credits',
-      title: 'You Have 3 Free Credits',
-      description: 'Each credit gets you 3 honest opinions',
+      title: 'You Have 3 Free Requests',
+      description: 'Each request gets you 3 honest opinions',
       completed: true,
     },
     {
@@ -130,7 +130,7 @@ export default function WelcomePage() {
             🎉 Welcome to Verdict!
           </h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            You're all set up with 3 free credits. Let's get you started on your first honest feedback experience.
+            You're all set up with 3 free requests — each includes 3 honest opinions. Let's get you started on your first feedback experience.
           </p>
         </div>
 
@@ -306,10 +306,10 @@ export default function WelcomePage() {
 
         {/* Trust Indicators */}
         <div className="mt-12 text-center">
-          <div className="flex items-center justify-center gap-8 text-sm text-gray-600">
+            <div className="flex items-center justify-center gap-8 text-sm text-gray-600">
             <div className="flex items-center gap-2">
               <CreditCard className="h-4 w-4 text-green-600" />
-              <span>3 Free Credits</span>
+              <span>3 Free Requests</span>
             </div>
             <div className="flex items-center gap-2">
               <Camera className="h-4 w-4 text-blue-600" />

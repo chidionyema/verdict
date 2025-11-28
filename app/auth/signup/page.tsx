@@ -64,7 +64,9 @@ function SignupContent() {
       <div className="max-w-md w-full">
         <div className="bg-white rounded-lg shadow-lg p-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Create your account</h2>
-          <p className="text-gray-600 mb-8">Get 3 free verdicts when you sign up</p>
+          <p className="text-gray-600 mb-8">
+            Get 3 free requests (each with 3 verdicts) when you sign up
+          </p>
 
           {error && (
             <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4 text-sm">

@@ -312,7 +312,7 @@ export function InteractiveDemo() {
             onClick={() => (window.location.href = '/start-simple')}
             className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-6 py-3"
           >
-            Get 3 free verdicts
+            Get 3 free requests
             <ArrowRight className="ml-2 w-4 h-4" />
           </TouchButton>
         </div>

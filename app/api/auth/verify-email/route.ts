@@ -44,9 +44,9 @@ export async function POST(request: NextRequest) {
         target_user_id: user.id,
         notification_type: 'welcome',
         notification_title: 'Email verified! 🎉',
-        notification_message: 'Your email has been verified. Welcome to Verdict! You have 3 free credits to start.',
-        action_label: 'Get Your First Verdict',
-        action_url: '/start',
+        notification_message: 'Your email has been verified. Welcome to Verdict! You now have 3 free requests (3 verdicts each) to start.',
+        action_label: 'Create Your First Request',
+        action_url: '/start-simple',
         notification_priority: 'high'
       });
     }

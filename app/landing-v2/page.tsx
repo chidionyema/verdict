@@ -129,15 +129,15 @@ export default function WorldClassLandingPage() {
           </h2>
           <p className="text-xl text-indigo-100 mb-10 max-w-2xl mx-auto">
             Join our beta and be among the first to get unfiltered feedback.
-            Start with 3 free opinions - no credit card required.
+            Start with 3 free requests — no credit card required.
           </p>
 
           <TouchButton
-          onClick={() => window.location.href = '/start-simple'}
+            onClick={() => window.location.href = '/start-simple'}
             size="lg"
             className="bg-white text-indigo-600 font-bold shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300"
           >
-            Get 3 free opinions
+            Get 3 free requests
             <ArrowRight className="w-5 h-5 ml-2" />
           </TouchButton>
 
