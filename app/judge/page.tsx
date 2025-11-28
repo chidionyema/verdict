@@ -304,6 +304,16 @@ export default function JudgeDashboardPage() {
     );
   }
 
+  const getJudgeLevel = () => {
+    const verdicts = stats.verdicts_given || 0;
+    const quality = stats.average_quality_score || 0;
+
+    if (verdicts >= 100 && quality >= 8.5) return 'Trusted Judge';
+    if (verdicts >= 30 && quality >= 8) return 'Rising Judge';
+    if (verdicts >= 5) return 'Getting Started';
+    return 'New Judge';
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="max-w-7xl mx-auto px-4">
@@ -312,7 +322,11 @@ export default function JudgeDashboardPage() {
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Judge Dashboard</h1>
             <p className="text-gray-600 mt-1">
-              Earn money by giving honest feedback
+              Turn thoughtful feedback into earnings — fast, anonymous second opinions for seekers.
+            </p>
+            <p className="mt-2 inline-flex items-center gap-2 text-sm text-indigo-700 bg-indigo-50 px-3 py-1 rounded-full">
+              <Award className="h-4 w-4" />
+              <span>Your level: {getJudgeLevel()}</span>
             </p>
           </div>
           <button
@@ -403,7 +417,7 @@ export default function JudgeDashboardPage() {
                 {stats.average_quality_score ? `${stats.average_quality_score.toFixed(1)}/10` : 'N/A'}
               </p>
               <p className="text-xs text-purple-600 mt-1">
-                Based on {stats.verdicts_given} verdicts
+                Based on {stats.verdicts_given} verdicts — higher scores unlock better requests over time.
               </p>
             </div>
           </div>

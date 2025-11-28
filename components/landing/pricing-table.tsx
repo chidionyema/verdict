@@ -34,12 +34,13 @@ export function PricingTableSection() {
       delivery: 'Most requests answered in under an hour',
       features: [
         'Pay only when you need a verdict',
+        'Each request = 3 people reviewing your situation',
         'Choose Basic, Standard, or Premium inside the app',
         'Same quality as your free trial',
       ],
       limitations: [],
       price: basicPriceFormatted,
-      priceDetail: 'per Basic request (higher tiers available in app)',
+      priceDetail: 'per Basic request (3 detailed opinions; higher tiers available in app)',
       highlight: true,
     },
     {
@@ -132,7 +133,8 @@ export function PricingTableSection() {
               </TouchButton>
 
               <p className="mt-3 text-[11px] text-gray-400">
-                Money‑back guarantee if you’re not happy with the feedback. No questions asked.
+                Each Basic request gives you 3 detailed opinions from real people — roughly the price of a coffee.
+                Money‑back guarantee if you’re not happy with the feedback.
               </p>
             </div>
           ))}

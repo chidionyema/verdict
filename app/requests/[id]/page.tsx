@@ -30,6 +30,7 @@ import { ThankJudgesButton } from '@/components/request/ThankJudgesButton';
 import { toast } from '@/components/ui/toast';
 import { createClient } from '@/lib/supabase/client';
 import { getTierConfigByVerdictCount } from '@/lib/validations';
+import { isExperimentEnabled } from '@/lib/experiments';
 
 interface VerdictWithNumber extends VerdictResponse {
   judge_number: number;
@@ -949,19 +950,33 @@ export default function RequestDetailPage({
           </div>
         </div>
 
-        {/* Enhanced Action Section */}
+        {/* Enhanced Action Section / Next steps rail */}
         {request.status === 'closed' && verdicts.length > 0 && (
           <div className="mt-12 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-8 border border-indigo-200">
-            <div className="text-center max-w-2xl mx-auto">
+            <div className="text-center max-w-3xl mx-auto">
               <div className="flex items-center justify-center w-16 h-16 bg-indigo-600 text-white rounded-full mx-auto mb-4">
                 <CheckCircle className="h-8 w-8" />
               </div>
               <h3 className="text-2xl font-bold text-gray-900 mb-3">
-                Request Complete!
+                {isExperimentEnabled('rail_bold')
+                  ? 'You have the verdicts. Now decide what to do with them.'
+                  : "Request complete — what&apos;s your next step?"}
               </h3>
               <p className="text-gray-600 mb-6 leading-relaxed">
-                You've received {verdicts.length} expert verdict{verdicts.length !== 1 ? 's' : ''} with an average rating of {averageRating.toFixed(1)}/10.
-                Ready to get feedback on something else?
+                {isExperimentEnabled('rail_bold') ? (
+                  <>
+                    You&apos;ve received {verdicts.length} expert verdict
+                    {verdicts.length !== 1 ? 's' : ''} with an average rating of {averageRating.toFixed(1)}/10.
+                    The most effective next step is to either test an updated version of this decision or apply what you
+                    learned to a fresh question.
+                  </>
+                ) : (
+                  <>
+                    You&apos;ve received {verdicts.length} expert verdict
+                    {verdicts.length !== 1 ? 's' : ''} with an average rating of {averageRating.toFixed(1)}/10.
+                    Most people either run a quick follow‑up question or apply this feedback to a new decision.
+                  </>
+                )}
               </p>
 
               {/* Thank Judges Button */}
@@ -973,20 +988,44 @@ export default function RequestDetailPage({
                 />
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-left">
+                <Link
+                  href={`/start-simple?category=${encodeURIComponent(request.category)}`}
+                  className="flex flex-col gap-2 bg-indigo-600 text-white px-6 py-4 rounded-xl font-medium hover:bg-indigo-700 transition shadow-lg"
+                >
+                  <div className="flex items-center gap-2">
+                    <Target className="h-5 w-5" />
+                    <span>Ask a follow‑up on this</span>
+                  </div>
+                  <p className="text-xs text-indigo-100">
+                    Great if you want to test an updated version of your photo, message, or decision.
+                  </p>
+                </Link>
+
                 <Link
                   href="/start-simple"
-                  className="flex items-center gap-2 bg-indigo-600 text-white px-6 py-3 rounded-xl font-medium hover:bg-indigo-700 transition shadow-lg"
+                  className="flex flex-col gap-2 bg-white text-gray-800 px-6 py-4 rounded-xl font-medium hover:bg-gray-50 transition border border-gray-200"
                 >
-                  <Target className="h-5 w-5" />
-                  Create New Request
+                  <div className="flex items-center gap-2">
+                    <Target className="h-5 w-5 text-indigo-600" />
+                    <span>Get feedback on something new</span>
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    Start a fresh request for another career choice, relationship question, or life decision.
+                  </p>
                 </Link>
+
                 <Link
                   href="/my-requests"
-                  className="flex items-center gap-2 bg-white text-gray-700 px-6 py-3 rounded-xl font-medium hover:bg-gray-50 transition border border-gray-300"
+                  className="flex flex-col gap-2 bg-white text-gray-800 px-6 py-4 rounded-xl font-medium hover:bg-gray-50 transition border border-gray-200"
                 >
-                  <ArrowLeft className="h-5 w-5" />
-                  View All Requests
+                  <div className="flex items-center gap-2">
+                    <ArrowLeft className="h-5 w-5 text-gray-600" />
+                    <span>Review all your past requests</span>
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    Re‑read older verdicts or spot patterns across multiple decisions.
+                  </p>
                 </Link>
               </div>
             </div>

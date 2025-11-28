@@ -12,6 +12,7 @@ import { I18nProvider } from "@/components/i18n-provider";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { isRTL, type Locale, locales } from "@/i18n.config";
 import { generateAlternateLinks } from "@/lib/i18n-metadata";
+import { NORTH_STAR_TAGLINE } from "@/lib/copy";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -26,10 +27,10 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'),
   title: {
-    default: "Verdict - Get Wisdom from Real People in Minutes",
+    default: "Verdict - Fast, anonymous second opinions from real people",
     template: "%s | Verdict",
   },
-  description: "Life's tough decisions made clearer. Get honest feedback from 10 real people in just minutes. Career choices, relationships, life decisions - ask anything.",
+  description: NORTH_STAR_TAGLINE,
   keywords: ["decision help", "life advice", "honest feedback", "crowd wisdom", "career advice", "relationship advice", "life decisions", "anonymous feedback"],
   authors: [{ name: "Verdict" }],
   creator: "Verdict",
@@ -40,14 +41,14 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_US",
     url: "/",
-    title: "Verdict - Get Wisdom from Real People in Minutes",
-    description: "Life's tough decisions made clearer. Get honest feedback from 10 real people in just minutes.",
+    title: "Verdict - Fast, anonymous second opinions from real people",
+    description: NORTH_STAR_TAGLINE,
     siteName: "Verdict",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Verdict - Get Wisdom from Real People in Minutes",
-    description: "Life's tough decisions made clearer. Get honest feedback from 10 real people in just minutes.",
+    title: "Verdict - Fast, anonymous second opinions from real people",
+    description: NORTH_STAR_TAGLINE,
     creator: "@verdict",
   },
   robots: {

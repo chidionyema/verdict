@@ -5,10 +5,10 @@ import { useRouter } from 'next/navigation';
 import { X, Sparkles, ArrowRight } from 'lucide-react';
 
 const EXAMPLES = [
-  'Job offer?',
-  'Relationship question?',
-  'Should I move cities?',
-  'Career change decision?',
+  'Job offer vs startup?',
+  'Is this dating profile working?',
+  'Does this outfit fit the interview?',
+  'Is this pricing page clear?',
 ];
 
 export function FeatureDiscoveryBanner() {
@@ -71,7 +71,7 @@ export function FeatureDiscoveryBanner() {
             onClick={handleCTA}
             className="flex items-center gap-2 px-4 py-2 bg-white text-indigo-600 rounded-lg font-semibold hover:bg-indigo-50 transition-colors text-sm whitespace-nowrap"
           >
-            Learn More
+            Start a request
             <ArrowRight className="w-4 h-4" />
           </button>
 

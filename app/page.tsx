@@ -175,7 +175,9 @@ export default function HomePage() {
               <div className="flex items-start gap-4 mb-4">
                 <Eye className="h-5 w-5 text-indigo-500 mt-1" />
                 <div className="flex-1">
-                  <p className="text-gray-600 italic mb-2">"Should I wear this outfit to my job interview?"</p>
+              <p className="text-gray-600 italic mb-2">
+                "Should I wear this outfit to my job interview?"
+              </p>
                   <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg p-4 border border-indigo-100">
                     <div className="text-sm text-gray-700">
                       <strong>Overall Rating:</strong> 8.5/10 
@@ -199,6 +201,42 @@ export default function HomePage() {
               <div className="mt-4 text-center">
                 <span className="text-xs text-gray-500">+ 2 more detailed responses</span>
               </div>
+            </div>
+          </div>
+
+          {/* Use‑case quick links */}
+          <div className="mt-16 max-w-5xl mx-auto">
+            <h2 className="text-xl font-semibold text-center mb-6 text-gray-900">
+              Popular ways people use Verdict
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+              <button
+                onClick={() => router.push('/dating-feedback')}
+                className="text-left bg-white/80 backdrop-blur rounded-2xl p-4 shadow-sm border border-white/40 hover:shadow-md transition"
+              >
+                <p className="font-semibold text-gray-900 mb-1">Dating profile feedback</p>
+                <p className="text-gray-600">
+                  Test photos and bios before you put them on apps like Hinge or Tinder.
+                </p>
+              </button>
+              <button
+                onClick={() => router.push('/appearance-check')}
+                className="text-left bg-white/80 backdrop-blur rounded-2xl p-4 shadow-sm border border-white/40 hover:shadow-md transition"
+              >
+                <p className="font-semibold text-gray-900 mb-1">Appearance & outfit checks</p>
+                <p className="text-gray-600">
+                  Sense‑check interview outfits, first‑date looks, or event dress codes.
+                </p>
+              </button>
+              <button
+                onClick={() => router.push('/career-decisions')}
+                className="text-left bg-white/80 backdrop-blur rounded-2xl p-4 shadow-sm border border-white/40 hover:shadow-md transition"
+              >
+                <p className="font-semibold text-gray-900 mb-1">Career & startup decisions</p>
+                <p className="text-gray-600">
+                  Compare offers, test pricing pages, or get another view on big moves.
+                </p>
+              </button>
             </div>
           </div>
 

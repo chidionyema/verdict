@@ -7,23 +7,23 @@ import { useRouter } from 'next/navigation';
 import Script from 'next/script';
 import { NORTH_STAR_TAGLINE } from '@/lib/copy';
 
-export default function CareerDecisionsPage() {
+export default function StartupDecisionsPage() {
   const router = useRouter();
 
   return (
     <div className="min-h-screen bg-white">
       <Script
-        id="career-decisions-schema"
+        id="startup-decisions-schema"
         type="application/ld+json"
         strategy="afterInteractive"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify({
             '@context': 'https://schema.org',
             '@type': 'Service',
-            name: 'Verdict – Career Decision Feedback',
+            name: 'Verdict – Startup & Product Decisions',
             description:
-              'Get anonymous feedback from expert judges on your career decisions: job offers, interviews, salary negotiations, and moving cities.',
-            serviceType: 'Career advice',
+              'Get outside feedback on your pitch, landing page, pricing, or product decisions before you launch.',
+            serviceType: 'Startup and product advice',
           }),
         }}
       />
@@ -33,61 +33,58 @@ export default function CareerDecisionsPage() {
       <section className="py-16 bg-gray-50 border-t border-gray-100">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-            Make your next career move with confidence
+            Pressure‑test your startup decisions
           </h1>
           <p className="text-lg text-gray-600 mb-6">
-            Job offer, promotion, changing careers, or moving cities — Verdict gives you fast,
-            anonymous second opinions from people who&apos;ve been there.
+            Before you ship that pricing page, pitch deck, or new feature, get fast, anonymous second opinions from real
+            people. {NORTH_STAR_TAGLINE}
           </p>
 
-          {/* Problem framing / examples */}
           <div className="grid md:grid-cols-2 gap-6 mb-10">
             <div>
               <h2 className="text-xl font-semibold text-gray-900 mb-3">
                 Perfect for questions like:
               </h2>
               <ul className="list-disc list-inside text-gray-700 space-y-2">
-                <li>“Should I take this higher‑pay but riskier startup offer?”</li>
-                <li>“Does this salary negotiation email sound fair or pushy?”</li>
-                <li>“Is it too soon to switch industries into product management?”</li>
-                <li>“Should I move cities for this role, or stay where I am?”</li>
+                <li>“Does this landing page explain what we do clearly?”</li>
+                <li>“Is this pricing table confusing or fair?”</li>
+                <li>“Which of these taglines feels more trustworthy?”</li>
+                <li>“Would you sign up after seeing this email or onboarding flow?”</li>
               </ul>
             </div>
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-5">
               <h3 className="text-sm font-semibold text-gray-900 mb-2">
-                What a career verdict looks like
+                What a startup verdict looks like
               </h3>
               <p className="text-xs uppercase tracking-wide text-indigo-600 mb-1">
                 Sample (anonymised)
               </p>
               <p className="text-sm text-gray-700 italic mb-3">
-                “I have two offers: a stable corporate job vs a risky startup with equity.
-                I&apos;m 28 and not sure which to pick.”
+                “Here&apos;s our new pricing page. As a potential customer, is this clear and would you consider buying?”
               </p>
               <div className="space-y-2 text-sm">
                 <p className="font-semibold text-gray-900">
-                  Verdict: <span className="text-green-700">Lean toward the startup, with guardrails.</span>
+                  Verdict: <span className="text-purple-700">Your offer is interesting, but the pricing feels risky.</span>
                 </p>
                 <ul className="list-disc list-inside text-gray-700 space-y-1">
-                  <li>“Your risk profile (age, no dependents) makes this a good time to try.”</li>
-                  <li>“Ask for a 6‑month review and clear leveling so you&apos;re not stuck.”</li>
-                  <li>“If you don&apos;t take it, write down why — so you don&apos;t second‑guess later.”</li>
+                  <li>“The three tiers look similar — I&apos;m not sure which one is for me.”</li>
+                  <li>“Annual‑only pricing without a monthly option makes me hesitate to try it.”</li>
+                  <li>“The &quot;no credit card required&quot; line is great; move it higher on the page.”</li>
                 </ul>
               </div>
             </div>
           </div>
 
-          {/* CTA */}
           <div className="flex flex-col sm:flex-row sm:items-center gap-4">
             <button
-              onClick={() => router.push('/start-simple?category=decision')}
+              onClick={() => router.push('/start-simple?category=decision&subcategory=business')}
               className="bg-indigo-600 text-white px-8 py-3 rounded-xl font-semibold hover:bg-indigo-700 transition min-h-[48px]"
             >
-              Get career feedback in minutes
+              Get feedback on your startup decision
             </button>
             <p className="text-sm text-gray-500 max-w-md">
-              You&apos;ll upload your situation, pick “Career / decision”, and get 3 anonymous, detailed opinions
-              you can actually act on.
+              Paste your pitch, link your landing page, or describe the decision, then choose “Decision / financial or
+              business” to get 3 outside opinions.
             </p>
           </div>
         </div>
@@ -98,6 +95,5 @@ export default function CareerDecisionsPage() {
     </div>
   );
 }
-
 
 

@@ -79,7 +79,7 @@ export default function BecomeJudgePage() {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 mb-10">
+        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 mb-6">
           <h2 className="text-xl font-semibold text-gray-900 mb-3 flex items-center gap-2">
             <ShieldCheck className="h-5 w-5 text-indigo-600" />
             Requirements & expectations
@@ -102,6 +102,36 @@ export default function BecomeJudgePage() {
             We continuously monitor judge quality and may pause judging access if feedback falls
             below our bar.
           </p>
+        </div>
+
+        {/* Example of a great verdict */}
+        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 mb-10">
+          <h2 className="text-xl font-semibold text-gray-900 mb-3 flex items-center gap-2">
+            <Star className="h-5 w-5 text-yellow-500" />
+            What a great verdict looks like
+          </h2>
+          <p className="text-xs uppercase tracking-wide text-indigo-600 mb-2">
+            Sample (anonymised)
+          </p>
+          <p className="text-sm text-gray-700 italic mb-3">
+            “Should I send this message to a hiring manager on LinkedIn, or does it sound too pushy?”
+          </p>
+          <div className="space-y-2 text-sm text-gray-800">
+            <p className="font-semibold">
+              Verdict in one sentence:
+              <span className="ml-1 text-gray-900">
+                This message is almost there — friendly, but a touch long and slightly apologetic.
+              </span>
+            </p>
+            <ul className="list-disc list-inside space-y-1">
+              <li>“Your opener is strong; it shows you&apos;ve done your homework on their role and company.”</li>
+              <li>“The middle paragraph repeats your CV; you can cut that and keep the focus on your ask.”</li>
+              <li>“End with one clear, low‑pressure question (e.g. &quot;Would you be open to a quick chat next week?&quot;).”</li>
+            </ul>
+            <p className="text-xs text-gray-500 mt-2">
+              Great verdicts are specific, actionable, and respectful — seekers should leave knowing exactly what to do next.
+            </p>
+          </div>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">

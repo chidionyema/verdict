@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { TouchButton } from '@/components/ui/touch-button';
 import { Badge } from '@/components/ui/badge';
+import { NORTH_STAR_TAGLINE } from '@/lib/copy';
 import { 
   ArrowRight, 
   Sparkles, 
@@ -14,6 +15,7 @@ import {
   Shield,
   CheckCircle
 } from 'lucide-react';
+import { isExperimentEnabled } from '@/lib/experiments';
 
 const MAIN_HEADLINE = "Get honest opinions in minutes";
 
@@ -64,14 +66,18 @@ export function HeroSection() {
           {/* Clear Main Headline */}
           <div className="mb-6">
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-gray-900 tracking-tight">
-              {MAIN_HEADLINE}
+              {isExperimentEnabled('hero_v2')
+                ? 'Fast, anonymous second opinions from real people'
+                : MAIN_HEADLINE}
             </h1>
           </div>
 
           {/* Sub-headline with rotating use case */}
           <div className="mb-8">
             <p className="text-xl md:text-2xl text-gray-600 max-w-3xl mx-auto">
-              Real people, real feedback, completely anonymous.
+              {isExperimentEnabled('hero_v2')
+                ? NORTH_STAR_TAGLINE
+                : 'Real people, real feedback, completely anonymous.'}
               <br />
               <span className="font-semibold text-indigo-600 transition-all duration-500">
                 "{USE_CASES[currentUseCase]}"
