@@ -46,7 +46,7 @@ export default function CreditsPage() {
         .eq('id', user.id)
         .single();
       
-      setCurrentCredits(profile?.credits || 0);
+      setCurrentCredits((profile as { credits: number } | null)?.credits || 0);
     }
   };
 

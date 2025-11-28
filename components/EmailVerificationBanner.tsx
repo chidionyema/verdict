@@ -32,7 +32,7 @@ export default function EmailVerificationBanner({ className = '' }: EmailVerific
         .eq('id', user.id)
         .single();
 
-      const verified = Boolean(profile?.email_verified);
+      const verified = Boolean((profile as { email_verified: boolean } | null)?.email_verified);
       setIsVerified(verified);
       setShowBanner(!verified);
     } catch (err) {

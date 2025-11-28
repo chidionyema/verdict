@@ -136,7 +136,6 @@ export async function GET(
     }
 
     // Log if there's a mismatch between count and actual verdicts
-    const receivedCount = (verdictRequest as any).received_verdict_count || 0;
     const actualVerdictsCount = verdicts?.length || 0;
     if (receivedCount > 0 && actualVerdictsCount === 0) {
       log.warn('Verdict count mismatch', {
