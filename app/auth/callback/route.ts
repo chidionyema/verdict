@@ -13,27 +13,28 @@ export async function GET(request: NextRequest) {
     return errorRedirect(requestUrl, 'missing_code');
   }
 
-  const supabase = await createClient();
-  const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-
-  if (error) {
-    console.error('OAuth exchange error:', error);
-    return errorRedirect(requestUrl, 'exchange_failed');
-  }
-
-  if (!data?.user) {
-    return errorRedirect(requestUrl, 'no_user');
-  }
-
   const getSafeRedirect = (path?: string | null) => {
     if (!path) return null;
     if (!path.startsWith('/')) return null;
     return path;
   };
 
-  const safeRedirect = getSafeRedirect(redirectParam);
-
   try {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+
+    if (error) {
+      console.error('OAuth exchange error:', error);
+      return errorRedirect(requestUrl, 'exchange_failed');
+    }
+
+    if (!data?.user) {
+      return errorRedirect(requestUrl, 'no_user');
+    }
+
+    const safeRedirect = getSafeRedirect(redirectParam);
+
     // Check if this is a new user by looking at their profile
     const { data: profile } = await supabase
       .from('profiles')
@@ -57,8 +58,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL('/dashboard', requestUrl.origin));
     
   } catch (error) {
-    console.error('Profile check error:', error);
-    // Continue anyway - user is authenticated
-    return NextResponse.redirect(new URL('/dashboard', requestUrl.origin));
+    console.error('Auth callback handler error:', error);
+    // Fallback: user likely authenticated but something went wrong server-side
+    return errorRedirect(requestUrl, 'server_error');
   }
 }
