@@ -54,7 +54,8 @@ export function FeatureDiscoveryBanner() {
 
             {/* Message */}
             <div className="flex-1">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
+              {/* Reserve vertical space so rotating text doesn't change banner height */}
+              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 min-h-[2.5rem]">
                 <span className="font-semibold text-sm sm:text-base">
                   New: Get help with any life decision
                 </span>

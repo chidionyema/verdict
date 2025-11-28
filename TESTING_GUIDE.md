@@ -158,5 +158,70 @@ npm run test:e2e
 
 This keeps your CI focused on the most critical invariants while still allowing full browser coverage when you’re ready.
 
+---
+
+### 7. Critical coverage checklist (what absolutely must be tested)
+
+Use this as a quick QA sanity check before shipping:
+
+#### 7.1 Seeker flows
+
+- **Request creation**
+  - ✅ Can create a request via `/start-simple` with:
+    - Photo upload
+    - Text-only
+    - (If enabled) Voice note
+  - ✅ Validation fires for too‑short text/context and missing media.
+  - ✅ When logged out, draft is saved and restored after signup/login, and the user returns to `/start-simple` (not a dead `/start` route).
+- **Request lifecycle**
+  - ✅ New requests appear in `My Requests` and `Dashboard` with correct status (`open` / `in_progress` / `closed`).
+  - ✅ `/waiting` shows correct progress and redirects to `/requests/[id]` once complete.
+  - ✅ `/requests/[id]` shows:
+    - One‑line verdict summary (e.g. “Strong yes · 8.5/10 from 3 judges”)
+    - All verdicts, tones, and ratings
+    - Working CTAs (“Create new request”, navigation back to `My Requests`).  
+
+#### 7.2 Judge flows
+
+- **Qualification and access**
+  - ✅ Non‑logged‑in users hitting `/judge` are prompted to sign up / sign in and redirected back to `/judge` after.
+  - ✅ New judges must pass the qualification quiz; failing scores cannot access the queue.
+  - ✅ Demographics step works and a qualified judge can reach the **Judge Dashboard**.
+- **Queue + submission**
+  - ✅ Judge Dashboard shows the **“Next best request”** card and opens the correct `/judge/requests/[id]` when “Start now” is clicked.
+  - ✅ Submitting a verdict requires:
+    - Rating
+    - One‑sentence verdict summary
+    - Reasons above the minimum length
+  - ✅ After submission:
+    - The request disappears from the available queue (or is marked appropriately).
+    - `requests/[id]` shows the new verdict to the seeker.
+
+#### 7.3 Money / credits / safety
+
+- ✅ Creating a request **deducts the right number of credits** based on the chosen tier.
+- ✅ Failed request creation (DB error, validation, etc.) **does not permanently consume credits** (refund path works).
+- ✅ A judge **cannot**:
+  - Judge their own request.
+  - Submit multiple verdicts for the same request.
+
+#### 7.4 Regression watch‑outs
+
+When adding or refactoring features, pay special attention to:
+
+- Changes to `/start-simple`, `/waiting`, `/requests/[id]`, `/my-requests`, `/judge`, and `/judge/verdict/[id]` – these are the **core money and trust flows**.
+- Any change that touches:
+  - Credit accounting (`lib/verdicts.ts`, pricing, tier config).
+  - Judge stats/earnings.
+  - Auth/redirect logic around `/start-simple` and `/judge`.
+
+Before major releases, ensure **at least**:
+
+- `npm run test:unit`
+- `npm run test:sim`
+- `npm run test:e2e` (against a test DB and running dev server)
+
+all pass without flakiness.
+
 
 
