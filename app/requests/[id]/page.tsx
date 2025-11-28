@@ -140,6 +140,10 @@ export default function RequestDetailPage({
           setError('Request not found');
         } else if (res.status === 403) {
           setError('You do not have access to this request');
+        } else if (res.status === 401) {
+          setError('Please sign in to view this request');
+          // Redirect to login if unauthorized
+          router.push(`/auth/login?redirect=${encodeURIComponent(`/requests/${id}`)}`);
         } else {
           setError('Failed to load request');
         }
@@ -149,9 +153,21 @@ export default function RequestDetailPage({
 
       const data = await res.json();
       setRequest(data.request);
-      setVerdicts(data.verdicts || []);
+      const fetchedVerdicts = data.verdicts || [];
+      setVerdicts(fetchedVerdicts);
+      
+      // Log mismatch for debugging
+      if (data.request?.received_verdict_count > 0 && fetchedVerdicts.length === 0) {
+        console.warn('Verdict count mismatch:', {
+          request_id: id,
+          received_count: data.request.received_verdict_count,
+          verdicts_returned: fetchedVerdicts.length,
+        });
+      }
+      
       setLoading(false);
     } catch (err) {
+      console.error('Error fetching request:', err);
       setError('Failed to load request');
       setLoading(false);
     }
@@ -763,14 +779,18 @@ export default function RequestDetailPage({
                   </div>
                   <h3 className="font-medium text-gray-900 mb-2">
                     {userContext.isSeeker 
-                      ? 'Waiting for verdicts' 
+                      ? request.received_verdict_count > 0
+                        ? 'Verdicts are being processed'
+                        : 'Waiting for verdicts'
                       : userContext.isJudge 
                       ? 'No verdicts yet' 
                       : 'Waiting for verdicts'}
                   </h3>
                   <p className="text-gray-500 text-sm">
                     {userContext.isSeeker
-                      ? 'Judges are reviewing your submission. New verdicts will appear here automatically.'
+                      ? request.received_verdict_count > 0
+                        ? `We're showing ${request.received_verdict_count} verdict${request.received_verdict_count > 1 ? 's' : ''} should be available, but they're not loading yet. Please refresh the page or contact support if this persists.`
+                        : 'Judges are reviewing your submission. New verdicts will appear here automatically.'
                       : userContext.isJudge
                       ? 'Be the first to provide feedback on this request.'
                       : 'Judges are reviewing this submission. New verdicts will appear here automatically.'}
@@ -779,6 +799,14 @@ export default function RequestDetailPage({
                     <div className="mt-4 text-xs text-gray-400">
                       🔄 Checking for updates every 5 seconds
                     </div>
+                  )}
+                  {request.received_verdict_count > 0 && verdicts.length === 0 && (
+                    <button
+                      onClick={fetchRequest}
+                      className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition text-sm font-medium"
+                    >
+                      Refresh to load verdicts
+                    </button>
                   )}
                   {userContext.isJudge && request.status !== 'closed' && (
                     <Link

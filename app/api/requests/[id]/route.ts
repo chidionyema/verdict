@@ -47,16 +47,58 @@ export async function GET(
 
     // Fetch verdicts for this request using service client to avoid RLS edge-cases,
     // after we've already verified that the caller is allowed to view this request.
-    const serviceClient = createServiceClient() as any;
+    let verdicts: any[] | null = null;
+    let verdictsError: any = null;
 
-    const { data: verdicts, error: verdictsError } = await (serviceClient as any)
-      .from('verdict_responses')
-      .select('*')
-      .eq('request_id', id)
-      .order('created_at', { ascending: true });
+    try {
+      const serviceClient = createServiceClient() as any;
+      const result = await (serviceClient as any)
+        .from('verdict_responses')
+        .select('*')
+        .eq('request_id', id)
+        .order('created_at', { ascending: true });
+      
+      verdicts = result.data;
+      verdictsError = result.error;
+    } catch (serviceClientError) {
+      log.error('Service client creation failed', serviceClientError);
+      // Fallback: try with regular client (might work if RLS allows)
+      try {
+        const result = await (supabase as any)
+          .from('verdict_responses')
+          .select('*')
+          .eq('request_id', id)
+          .order('created_at', { ascending: true });
+        
+        verdicts = result.data;
+        verdictsError = result.error;
+      } catch (fallbackError) {
+        log.error('Fallback verdict fetch also failed', fallbackError);
+        verdictsError = fallbackError;
+      }
+    }
 
     if (verdictsError) {
-      log.error('Fetch verdicts error', verdictsError);
+      log.error('Fetch verdicts error', verdictsError, {
+        request_id: id,
+        user_id: user.id,
+        received_count: (verdictRequest as any).received_verdict_count,
+        service_role_key_set: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+      });
+      // Don't fail the request, but log the issue - return empty array
+      // This allows the page to load even if verdicts can't be fetched
+    }
+
+    // Log if there's a mismatch between count and actual verdicts
+    const receivedCount = (verdictRequest as any).received_verdict_count || 0;
+    const actualVerdictsCount = verdicts?.length || 0;
+    if (receivedCount > 0 && actualVerdictsCount === 0) {
+      log.warn('Verdict count mismatch', {
+        request_id: id,
+        received_verdict_count: receivedCount,
+        actual_verdicts_found: actualVerdictsCount,
+        verdicts_error: verdictsError,
+      });
     }
 
     // For seekers, don't expose judge IDs (anonymize)
@@ -64,11 +106,11 @@ export async function GET(
       ...(v as any),
       judge_id: undefined,
       judge_number: index + 1,
-    }));
+    })) || [];
 
     return NextResponse.json({
       request: verdictRequest,
-      verdicts: anonymizedVerdicts || [],
+      verdicts: anonymizedVerdicts,
     });
   } catch (error) {
     log.error('GET /api/requests/[id] error', error);
