@@ -174,7 +174,7 @@ export function SocialProofSection() {
         <Card className="mb-16 border-0 shadow-lg">
           <CardContent className="p-6">
             <div className="mb-6">
-              <h3 className="text-xl font-semibold text-gray-900">Popular verdict categories</h3>
+              <h3 className="text-xl font-semibold text-gray-900">Popular feedback categories</h3>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

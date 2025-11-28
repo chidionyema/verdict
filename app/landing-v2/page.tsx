@@ -56,7 +56,7 @@ export default function WorldClassLandingPage() {
             </div>
             
             <div className="bg-green-50 border border-green-200 rounded-xl p-6">
-              <h3 className="text-lg font-semibold text-green-900 mb-4">Verdict</h3>
+              <h3 className="text-lg font-semibold text-green-900 mb-4">AskVerdict</h3>
               <ul className="space-y-2 text-green-700">
                 <li>• Completely private submissions</li>
                 <li>• Verified reviewers with quality scores</li>

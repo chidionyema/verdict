@@ -88,42 +88,42 @@ async function generateWelcomeEmail(
   const content: Record<Locale, { greeting: string; intro: string; cta: string }> = {
     en: {
       greeting: `Hi ${name}`,
-      intro: "Welcome to Verdict! We're excited to have you. Get honest feedback from real people on your dating profile, life decisions, or anything else you need a second opinion on.",
+      intro: "Welcome to AskVerdict! We're excited to have you. Get honest feedback from real people on your dating profile, life decisions, or anything else you need a second opinion on.",
       cta: 'Get Started',
     },
     es: {
       greeting: `Hola ${name}`,
-      intro: "¡Bienvenido a Verdict! Estamos emocionados de tenerte. Obtén comentarios honestos de personas reales sobre tu perfil de citas, decisiones de vida o cualquier otra cosa en la que necesites una segunda opinión.",
+      intro: "¡Bienvenido a AskVerdict! Estamos emocionados de tenerte. Obtén comentarios honestos de personas reales sobre tu perfil de citas, decisiones de vida o cualquier otra cosa en la que necesites una segunda opinión.",
       cta: 'Comenzar',
     },
     de: {
       greeting: `Hallo ${name}`,
-      intro: "Willkommen bei Verdict! Wir freuen uns, dass du dabei bist. Erhalte ehrliches Feedback von echten Menschen zu deinem Dating-Profil, Lebensentscheidungen oder allem anderen, worauf du eine zweite Meinung brauchst.",
+      intro: "Willkommen bei AskVerdict! Wir freuen uns, dass du dabei bist. Erhalte ehrliches Feedback von echten Menschen zu deinem Dating-Profil, Lebensentscheidungen oder allem anderen, worauf du eine zweite Meinung brauchst.",
       cta: 'Loslegen',
     },
     fr: {
       greeting: `Bonjour ${name}`,
-      intro: "Bienvenue sur Verdict ! Nous sommes ravis de vous avoir. Obtenez des retours honnêtes de vraies personnes sur votre profil de rencontre, vos décisions de vie, ou tout ce sur quoi vous avez besoin d'un deuxième avis.",
+      intro: "Bienvenue sur AskVerdict ! Nous sommes ravis de vous avoir. Obtenez des retours honnêtes de vraies personnes sur votre profil de rencontre, vos décisions de vie, ou tout ce sur quoi vous avez besoin d'un deuxième avis.",
       cta: 'Commencer',
     },
     ja: {
       greeting: `こんにちは ${name}さん`,
-      intro: "Verdictへようこそ！ご参加いただきありがとうございます。マッチングプロフィール、人生の決断、その他セカンドオピニオンが必要なことについて、本物の人々から正直なフィードバックを受け取りましょう。",
+      intro: "AskVerdictへようこそ！ご参加いただきありがとうございます。マッチングプロフィール、人生の決断、その他セカンドオピニオンが必要なことについて、本物の人々から正直なフィードバックを受け取りましょう。",
       cta: '始める',
     },
     zh: {
       greeting: `你好 ${name}`,
-      intro: "欢迎来到Verdict！很高兴有你加入。获取真人对你的约会资料、人生决定或任何其他需要第二意见的事情的诚实反馈。",
+      intro: "欢迎来到AskVerdict！很高兴有你加入。获取真人对你的约会资料、人生决定或任何其他需要第二意见的事情的诚实反馈。",
       cta: '开始',
     },
     ar: {
       greeting: `مرحباً ${name}`,
-      intro: "مرحباً بك في Verdict! نحن متحمسون لانضمامك. احصل على تعليقات صادقة من أشخاص حقيقيين حول ملفك الشخصي للتعارف، أو قرارات الحياة، أو أي شيء آخر تحتاج فيه إلى رأي ثانٍ.",
+      intro: "مرحباً بك في AskVerdict! نحن متحمسون لانضمامك. احصل على تعليقات صادقة من أشخاص حقيقيين حول ملفك الشخصي للتعارف، أو قرارات الحياة، أو أي شيء آخر تحتاج فيه إلى رأي ثانٍ.",
       cta: 'ابدأ',
     },
     he: {
       greeting: `שלום ${name}`,
-      intro: "ברוך הבא ל-Verdict! אנחנו שמחים שהצטרפת. קבל משוב כנה מאנשים אמיתיים על פרופיל ההיכרויות שלך, החלטות חיים, או כל דבר אחר שאתה צריך עליו דעה שנייה.",
+      intro: "ברוך הבא ל-AskVerdict! אנחנו שמחים שהצטרפת. קבל משוב כנה מאנשים אמיתיים על פרופיל ההיכרויות שלך, החלטות חיים, או כל דבר אחר שאתה צריך עליו דעה שנייה.",
       cta: 'התחל',
     },
   };
@@ -138,7 +138,7 @@ async function generateWelcomeEmail(
     <body>
       <div class="container">
         <div class="header">
-          <div class="logo">Verdict</div>
+          <div class="logo">AskVerdict</div>
         </div>
         <div class="content">
           <h1>${c.greeting}!</h1>
@@ -148,7 +148,7 @@ async function generateWelcomeEmail(
           </p>
         </div>
         <div class="footer">
-          <p>© ${new Date().getFullYear()} Verdict. All rights reserved.</p>
+          <p>© ${new Date().getFullYear()} AskVerdict. All rights reserved.</p>
         </div>
       </div>
     </body>
@@ -158,7 +158,7 @@ async function generateWelcomeEmail(
   const text = `${c.greeting}!\n\n${c.intro}\n\n${c.cta}: ${process.env.NEXT_PUBLIC_APP_URL}/start`;
 
   return {
-    subject: subjects.welcome || 'Welcome to Verdict!',
+    subject: subjects.welcome || 'Welcome to AskVerdict!',
     html,
     text,
   };
@@ -234,7 +234,7 @@ async function generatePasswordResetEmail(
     <body>
       <div class="container">
         <div class="header">
-          <div class="logo">Verdict</div>
+          <div class="logo">AskVerdict</div>
         </div>
         <div class="content">
           <h1>${c.title}</h1>
@@ -245,7 +245,7 @@ async function generatePasswordResetEmail(
           <p style="color: #6b7280; font-size: 14px;">${c.warning}</p>
         </div>
         <div class="footer">
-          <p>© ${new Date().getFullYear()} Verdict. All rights reserved.</p>
+          <p>© ${new Date().getFullYear()} AskVerdict. All rights reserved.</p>
         </div>
       </div>
     </body>
@@ -323,7 +323,7 @@ async function generateVerifyEmailTemplate(
     <body>
       <div class="container">
         <div class="header">
-          <div class="logo">Verdict</div>
+          <div class="logo">AskVerdict</div>
         </div>
         <div class="content">
           <h1>${c.title}</h1>
@@ -333,7 +333,7 @@ async function generateVerifyEmailTemplate(
           </p>
         </div>
         <div class="footer">
-          <p>© ${new Date().getFullYear()} Verdict. All rights reserved.</p>
+          <p>© ${new Date().getFullYear()} AskVerdict. All rights reserved.</p>
         </div>
       </div>
     </body>
@@ -419,7 +419,7 @@ async function generatePaymentReceivedEmail(
     <body>
       <div class="container">
         <div class="header">
-          <div class="logo">Verdict</div>
+          <div class="logo">AskVerdict</div>
         </div>
         <div class="content">
           <h1>${c.title}</h1>
@@ -430,7 +430,7 @@ async function generatePaymentReceivedEmail(
           </p>
         </div>
         <div class="footer">
-          <p>© ${new Date().getFullYear()} Verdict. All rights reserved.</p>
+          <p>© ${new Date().getFullYear()} AskVerdict. All rights reserved.</p>
         </div>
       </div>
     </body>

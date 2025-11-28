@@ -111,7 +111,7 @@ export function FeaturesComparison() {
         {/* Header */}
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold mb-4 bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-            Why Verdict Beats Asking Friends or Posting on Reddit
+            Why AskVerdict Beats Asking Friends or Posting on Reddit
           </h2>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
             Unlike posting on Reddit, your question stays private and you're guaranteed real responses — not trolls or silence.
@@ -188,7 +188,7 @@ export function FeaturesComparison() {
                 </div>
                 <div className="bg-gradient-to-br from-purple-600 to-pink-600 text-white p-4 rounded-xl text-center">
                   <Zap className="w-6 h-6 mx-auto mb-2" />
-                  <h3 className="font-bold">Verdict</h3>
+                  <h3 className="font-bold">AskVerdict</h3>
                   <Badge className="bg-white text-purple-600 mt-2">Recommended</Badge>
                 </div>
                 <div className="bg-gray-100 p-4 rounded-xl text-center">

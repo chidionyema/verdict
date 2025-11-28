@@ -14,7 +14,7 @@ export default function Footer() {
           <div className="col-span-1 md:col-span-2">
             <Link href="/" className="flex items-center text-white font-bold text-xl mb-4">
               <Scale className="h-6 w-6 mr-2" />
-              Verdict
+              AskVerdict
             </Link>
             <p className="text-gray-400 mb-4 max-w-md">
               Get honest feedback from real people in minutes. Life's tough decisions made clearer 
@@ -22,7 +22,7 @@ export default function Footer() {
             </p>
             <div className="flex space-x-4">
               <a 
-                href="mailto:support@verdict.app" 
+                href="mailto:support@askverdict.app" 
                 className="text-gray-400 hover:text-white transition-colors"
                 aria-label="Contact Support"
               >
@@ -103,7 +103,7 @@ export default function Footer() {
         <div className="border-t border-gray-800 mt-8 pt-8">
           <div className="flex flex-col sm:flex-row justify-between items-center">
             <p className="text-gray-400 text-sm">
-              © {currentYear} Verdict Inc. All rights reserved.
+              © {currentYear} AskVerdict Inc. All rights reserved.
             </p>
             <div className="flex items-center space-x-6 mt-4 sm:mt-0">
               <Link 
@@ -119,7 +119,7 @@ export default function Footer() {
                 Privacy
               </Link>
               <a 
-                href="mailto:support@verdict.app" 
+                href="mailto:support@askverdict.app" 
                 className="text-gray-400 hover:text-white text-sm transition-colors"
               >
                 Contact

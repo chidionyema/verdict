@@ -27,13 +27,13 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'),
   title: {
-    default: "Verdict - Fast, anonymous second opinions from real people",
-    template: "%s | Verdict",
+    default: "AskVerdict - Fast, anonymous second opinions from real people",
+    template: "%s | AskVerdict",
   },
   description: NORTH_STAR_TAGLINE,
   keywords: ["decision help", "life advice", "honest feedback", "crowd wisdom", "career advice", "relationship advice", "life decisions", "anonymous feedback"],
-  authors: [{ name: "Verdict" }],
-  creator: "Verdict",
+  authors: [{ name: "AskVerdict" }],
+  creator: "AskVerdict",
   alternates: {
     languages: generateAlternateLinks('/'),
   },
@@ -41,13 +41,13 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_US",
     url: "/",
-    title: "Verdict - Fast, anonymous second opinions from real people",
+    title: "AskVerdict - Fast, anonymous second opinions from real people",
     description: NORTH_STAR_TAGLINE,
-    siteName: "Verdict",
+    siteName: "AskVerdict",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Verdict - Fast, anonymous second opinions from real people",
+    title: "AskVerdict - Fast, anonymous second opinions from real people",
     description: NORTH_STAR_TAGLINE,
     creator: "@verdict",
   },
@@ -76,7 +76,7 @@ export default async function RootLayout({
   // Get footer translations with type safety
   const legalMessages = (messages as Record<string, unknown>).Legal as Record<string, unknown> | undefined;
   const footerMessages = {
-    copyright: (legalMessages?.footer as Record<string, string>)?.copyright || `© {year} Verdict. All rights reserved.`,
+    copyright: (legalMessages?.footer as Record<string, string>)?.copyright || `© {year} AskVerdict. All rights reserved.`,
     terms: (legalMessages?.footer as Record<string, string>)?.terms || 'Terms of Service',
     privacy: (legalMessages?.footer as Record<string, string>)?.privacy || 'Privacy Policy',
     cookies: (legalMessages?.footer as Record<string, string>)?.cookies || 'Cookie Policy',

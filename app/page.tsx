@@ -26,7 +26,7 @@ export default function HomePage() {
           __html: JSON.stringify({
             "@context": "https://schema.org",
             "@type": "Product",
-            name: "Verdict – Anonymous Feedback from Real People",
+            name: "AskVerdict – Anonymous Feedback from Real People",
             description:
               "Get 3 honest opinions on your photo, text, or decision in under an hour. Anonymous, fast, and unfiltered feedback.",
             aggregateRating: {

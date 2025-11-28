@@ -10,10 +10,10 @@ export function JudgeSelectionSection() {
         <div className="grid gap-10 lg:grid-cols-[3fr,2fr] items-start">
           <div>
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              How We Select Verdict Judges
+              How We Select AskVerdict Judges
             </h2>
             <p className="text-lg text-gray-600 mb-6">
-              Not everyone can be a Verdict judge. We carefully screen and continuously monitor
+              Not everyone can be an AskVerdict judge. We carefully screen and continuously monitor
               every judge so you get high‑quality, constructive feedback—not low‑effort replies.
             </p>
 

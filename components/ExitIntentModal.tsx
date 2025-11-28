@@ -48,10 +48,10 @@ export function ExitIntentModal({ className = '' }: ExitIntentModalProps) {
           Before you go
         </p>
         <h2 className="text-2xl font-bold text-gray-900 mb-3">
-          Get your first verdict free
+          Get your first feedback free
         </h2>
         <p className="text-gray-600 mb-4 text-sm">
-          Try Verdict on one decision—job offer, outfit, email, or profile—completely free. No
+          Try AskVerdict on one decision—job offer, outfit, email, or profile—completely free. No
           credit card required.
         </p>
 

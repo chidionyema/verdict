@@ -54,7 +54,7 @@ export default function FloatingActionButton({ className = '' }: FloatingActionB
   const quickActions = [
     {
       id: 'photo',
-      label: 'Photo Verdict',
+      label: 'Photo Feedback',
       icon: Camera,
       description: 'Get feedback on photos',
       action: () => router.push('/start-simple?type=photo'),
@@ -62,7 +62,7 @@ export default function FloatingActionButton({ className = '' }: FloatingActionB
     },
     {
       id: 'text',
-      label: 'Text Verdict',
+      label: 'Text Feedback',
       icon: MessageSquare,
       description: 'Get feedback on text',
       action: () => router.push('/start-simple?type=text'),

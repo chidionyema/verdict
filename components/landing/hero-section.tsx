@@ -141,7 +141,7 @@ export function HeroSection() {
           {/* Popular Categories */}
           <div className="mt-8 p-4 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-xl max-w-lg mx-auto">
             <div className="text-center text-blue-800">
-              <div className="font-medium mb-2">Popular verdict categories:</div>
+              <div className="font-medium mb-2">Popular feedback categories:</div>
               <div className="text-sm flex flex-wrap justify-center gap-2">
                 <span>• Dating profiles</span>
                 <span>• Job interview prep</span>
