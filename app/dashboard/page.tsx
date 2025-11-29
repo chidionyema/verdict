@@ -265,28 +265,37 @@ export default function DashboardPage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Status Filter */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">Status</label>
-                <div className="space-y-2">
+                <h3 className="text-lg font-bold text-gray-900 mb-4">Filter by Status</h3>
+                <div className="grid grid-cols-1 gap-3">
                   {[
-                    { value: 'all', label: 'All Requests', color: 'gray' },
-                    { value: 'open', label: 'Awaiting Judges', color: 'yellow' },
-                    { value: 'in_progress', label: 'Being Judged', color: 'blue' },
-                    { value: 'closed', label: 'Completed', color: 'green' },
-                    { value: 'cancelled', label: 'Cancelled', color: 'red' },
-                  ].map(({ value, label, color }) => (
+                    { value: 'all', label: 'All Requests', color: 'gray', icon: <Target className="h-4 w-4" /> },
+                    { value: 'open', label: 'Awaiting Judges', color: 'yellow', icon: <Clock className="h-4 w-4" /> },
+                    { value: 'in_progress', label: 'Being Judged', color: 'blue', icon: <Activity className="h-4 w-4" /> },
+                    { value: 'closed', label: 'Completed', color: 'green', icon: <CheckCircle className="h-4 w-4" /> },
+                    { value: 'cancelled', label: 'Cancelled', color: 'red', icon: <XCircle className="h-4 w-4" /> },
+                  ].map(({ value, label, color, icon }) => (
                     <button
                       key={value}
                       onClick={() => setFilterStatus(value as FilterStatus)}
-                      className={`w-full text-left px-4 py-3 rounded-xl transition flex items-center justify-between min-h-[48px] ${
+                      className={`w-full text-left px-6 py-4 rounded-2xl transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 flex items-center justify-between ${
                         filterStatus === value
-                          ? `bg-${color}-100 text-${color}-800 border-${color}-200 border`
-                          : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+                          ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg'
+                          : 'bg-gray-50 text-gray-700 hover:bg-white border border-gray-200'
                       }`}
                     >
-                      <span>{label}</span>
-                      <span className={`text-xs px-2 py-1 rounded-full ${
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                          filterStatus === value
+                            ? 'bg-white/20'
+                            : 'bg-indigo-100'
+                        }`}>
+                          {icon}
+                        </div>
+                        <span className="font-semibold">{label}</span>
+                      </div>
+                      <span className={`text-sm px-3 py-1.5 rounded-full font-bold ${
                         filterStatus === value
-                          ? `bg-${color}-200 text-${color}-800`
+                          ? 'bg-white/20 text-white'
                           : 'bg-gray-200 text-gray-600'
                       }`}>
                         {getStatusCount(value as FilterStatus)}
@@ -348,37 +357,63 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Requests Grid */}
+        {/* Premium Requests Grid */}
         {requests.length === 0 ? (
-          <div className="bg-white rounded-lg shadow-lg p-12 text-center">
-            <div className="w-24 h-24 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <FileText className="h-12 w-12 text-indigo-600" />
-            </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">
-              Ready to get your first verdict?
-            </h3>
-            <p className="text-gray-600 mb-6 max-w-md mx-auto">
-              Upload a photo, share some text, or ask for advice on a decision. 
-              Get honest feedback from 10 real people in minutes.
-            </p>
-            <Link
-              href="/start-simple"
-              className="inline-block bg-indigo-600 text-white px-8 py-4 rounded-xl font-semibold hover:bg-indigo-700 transition shadow-lg min-h-[48px]"
-            >
-              Create Your First Request
-            </Link>
-            <div className="mt-6 space-y-1">
-              <p className="text-sm text-gray-500">✨ 3 free requests included</p>
-              <p className="text-sm text-gray-500">⏱️ Results in under 15 minutes</p>
+          <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl border border-white/50 p-12 text-center relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 via-purple-500/5 to-pink-500/5" />
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-64 bg-gradient-to-br from-indigo-400 to-purple-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20" />
+            
+            <div className="max-w-2xl mx-auto relative z-10">
+              <div className="w-32 h-32 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-8 shadow-2xl animate-pulse">
+                <Sparkles className="h-16 w-16 text-white" />
+              </div>
+              
+              <div className="mb-8">
+                <h3 className="text-4xl font-bold text-gray-900 mb-4">
+                  Ready for Your First Verdict?
+                </h3>
+                <p className="text-xl text-gray-600 leading-relaxed">
+                  Transform uncertainty into confidence. Upload content, ask questions, get expert feedback from real people in minutes.
+                </p>
+              </div>
+              
+              <Link
+                href="/start-simple"
+                className="inline-flex items-center gap-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-10 py-5 rounded-2xl hover:shadow-2xl transition-all duration-300 font-bold text-lg hover:-translate-y-1 group mb-8"
+              >
+                <Sparkles className="h-6 w-6 animate-spin" />
+                Create Your First Request
+                <ArrowRight className="h-6 w-6 group-hover:translate-x-1 transition-transform" />
+              </Link>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-white/50 backdrop-blur rounded-2xl p-6 border border-white/50">
+                  <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center mb-4 mx-auto">
+                    <Crown className="h-6 w-6 text-white" />
+                  </div>
+                  <h4 className="font-bold text-gray-900 mb-2">3 Free Requests Included</h4>
+                  <p className="text-gray-600 text-sm">No upfront cost, start immediately</p>
+                </div>
+                
+                <div className="bg-white/50 backdrop-blur rounded-2xl p-6 border border-white/50">
+                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center mb-4 mx-auto">
+                    <Clock className="h-6 w-6 text-white" />
+                  </div>
+                  <h4 className="font-bold text-gray-900 mb-2">Results in 15 Minutes</h4>
+                  <p className="text-gray-600 text-sm">Lightning-fast expert feedback</p>
+                </div>
+              </div>
             </div>
           </div>
         ) : filteredAndSortedRequests.length === 0 ? (
-          <div className="bg-white rounded-lg shadow-lg p-12 text-center">
-            <Search className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+          <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl border border-white/50 p-12 text-center">
+            <div className="w-20 h-20 bg-gradient-to-br from-gray-100 to-slate-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <Search className="h-10 w-10 text-gray-400" />
+            </div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-3">
               No requests match your filters
             </h3>
-            <p className="text-gray-600 mb-6">
+            <p className="text-gray-600 mb-8">
               Try adjusting your search terms or filters to find what you're looking for
             </p>
             <div className="flex justify-center gap-4">
@@ -388,13 +423,13 @@ export default function DashboardPage() {
                   setFilterStatus('all');
                   setSortBy('newest');
                 }}
-                className="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition"
+                className="bg-white text-gray-700 px-6 py-3 rounded-2xl hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 border border-gray-200 font-semibold"
               >
                 Clear Filters
               </button>
               <Link
                 href="/start-simple"
-                className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition"
+                className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-3 rounded-2xl hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 font-semibold"
               >
                 New Request
               </Link>
@@ -413,86 +448,169 @@ export default function DashboardPage() {
               </div>
             )}
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredAndSortedRequests.map((request) => (
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
+              {filteredAndSortedRequests.map((request) => {
+                const categoryConfig = {
+                  appearance: { icon: <Eye className="h-5 w-5" />, color: 'from-pink-500 to-rose-500', emoji: '👔' },
+                  profile: { icon: <Heart className="h-5 w-5" />, color: 'from-red-500 to-pink-500', emoji: '💼' },
+                  writing: { icon: <FileText className="h-5 w-5" />, color: 'from-blue-500 to-cyan-500', emoji: '✍️' },
+                  decision: { icon: <Target className="h-5 w-5" />, color: 'from-green-500 to-emerald-500', emoji: '🤔' },
+                }[request.category] || { icon: <Sparkles className="h-5 w-5" />, color: 'from-gray-500 to-slate-500', emoji: '📝' };
+                
+                return (
               <Link
                 key={request.id}
                 href={`/requests/${request.id}`}
-                className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition"
+                className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl border border-white/50 overflow-hidden hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 group relative"
               >
-                {/* Thumbnail */}
-                <div className="h-40 bg-gray-100 flex items-center justify-center">
+                <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${categoryConfig.color} rounded-full mix-blend-multiply filter blur-3xl opacity-5 group-hover:opacity-10 transition-opacity`} />
+                {/* Enhanced Thumbnail */}
+                <div className="h-48 bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center relative overflow-hidden">
                   {request.media_type === 'photo' && request.media_url ? (
-                    <img
-                      src={request.media_url}
-                      alt="Request"
-                      className="w-full h-full object-cover"
-                    />
+                    <>
+                      <img
+                        src={request.media_url}
+                        alt="Request"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300" />
+                    </>
                   ) : (
-                    <div className="p-4 text-center">
-                      <FileText className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                      <p className="text-sm text-gray-500 line-clamp-3">
-                        {request.text_content}
+                    <div className="p-6 text-center relative z-10">
+                      <div className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${categoryConfig.color} text-white flex items-center justify-center mx-auto mb-4 shadow-lg group-hover:scale-110 transition-transform`}>
+                        <span className="text-2xl">{categoryConfig.emoji}</span>
+                      </div>
+                      <p className="text-sm text-gray-700 line-clamp-3 leading-relaxed">
+                        {request.text_content || request.context}
                       </p>
                     </div>
                   )}
                 </div>
 
-                {/* Info */}
-                <div className="p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-sm font-medium text-indigo-600 capitalize bg-indigo-50 px-3 py-1 rounded-full">
-                      {request.category}
-                    </span>
-                    <div className={`flex items-center text-sm px-3 py-1 rounded-full bg-${getStatusColor(request.status)}-50 text-${getStatusColor(request.status)}-700`}>
+                {/* Enhanced Info Section */}
+                <div className="p-6 relative z-10">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <span className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-sm bg-gradient-to-r ${categoryConfig.color} text-white shadow-lg`}>
+                        {categoryConfig.icon}
+                        {request.category.charAt(0).toUpperCase() + request.category.slice(1)}
+                      </span>
+                    </div>
+                    <div className={`flex items-center gap-2 text-sm px-3 py-2 rounded-xl font-semibold shadow-sm ${
+                      request.status === 'closed' 
+                        ? 'bg-green-100 text-green-700 border border-green-200'
+                        : request.status === 'in_progress'
+                        ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                        : request.status === 'cancelled'
+                        ? 'bg-red-100 text-red-700 border border-red-200'
+                        : 'bg-yellow-100 text-yellow-700 border border-yellow-200'
+                    }`}>
                       {getStatusIcon(request.status)}
-                      <span className="ml-2 font-medium">{getStatusLabel(request.status)}</span>
+                      <span>{getStatusLabel(request.status)}</span>
                     </div>
                   </div>
                   
-                  <p className="text-sm text-gray-600 line-clamp-2 mb-4">
+                  <p className="text-sm text-gray-700 line-clamp-2 mb-6 leading-relaxed">
                     {request.context}
                   </p>
                   
-                  {/* Progress Bar */}
-                  <div className="mb-3">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-xs font-medium text-gray-600">
-                        Verdict Progress
+                  {/* Enhanced Progress Bar */}
+                  <div className="mb-6">
+                    <div className="flex justify-between items-center mb-3">
+                      <span className="text-sm font-bold text-gray-700">
+                        Expert Opinions
                       </span>
-                      <span className="text-xs text-gray-500">
+                      <span className="text-lg font-bold text-gray-900">
                         {request.received_verdict_count}/{request.target_verdict_count}
                       </span>
                     </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div 
-                        className={`h-2 rounded-full transition-all duration-300 ${
-                          request.status === 'closed' ? 'bg-green-500' : 
-                          request.status === 'cancelled' ? 'bg-red-500' : 
-                          'bg-indigo-500'
-                        }`}
-                        style={{ width: `${getProgressPercentage(request.received_verdict_count, request.target_verdict_count)}%` }}
-                      ></div>
+                    
+                    <div className="relative">
+                      <div className="w-full bg-gray-200 rounded-full h-3 shadow-inner">
+                        <div 
+                          className={`h-3 rounded-full transition-all duration-1000 ease-out relative overflow-hidden ${
+                            request.status === 'closed' 
+                              ? 'bg-gradient-to-r from-green-500 to-emerald-500' 
+                              : request.status === 'cancelled'
+                              ? 'bg-gradient-to-r from-red-500 to-pink-500'
+                              : 'bg-gradient-to-r from-indigo-500 to-purple-500'
+                          }`}
+                          style={{ width: `${getProgressPercentage(request.received_verdict_count, request.target_verdict_count)}%` }}
+                        >
+                          <div className="absolute inset-0 bg-white/30 animate-shimmer" />
+                        </div>
+                      </div>
+                      
+                      {/* Progress Dots */}
+                      <div className="absolute top-1/2 -translate-y-1/2 w-full flex justify-between px-1">
+                        {[...Array(request.target_verdict_count)].map((_, i) => (
+                          <div
+                            key={i}
+                            className={`w-2 h-2 rounded-full ${
+                              i < request.received_verdict_count
+                                ? 'bg-white shadow-lg'
+                                : 'bg-gray-300'
+                            }`}
+                          />
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                  
-                  <div className="flex items-center justify-between text-xs text-gray-400">
-                    <span>{new Date(request.created_at).toLocaleDateString()}</span>
-                    {request.status === 'closed' && (
-                      <span className="text-green-600 font-medium">✓ Ready to view</span>
-                    )}
-                    {request.status === 'in_progress' && (
-                      <span className="text-blue-600 font-medium animate-pulse">⏱ Active</span>
-                    )}
+                    
+                    <div className="flex items-center justify-between mt-3">
+                      <span className="text-xs text-gray-500">
+                        {new Date(request.created_at).toLocaleDateString()}
+                      </span>
+                      {request.status === 'closed' && (
+                        <span className="text-xs font-bold text-green-600 flex items-center gap-1">
+                          <CheckCircle className="h-3 w-3" />
+                          Complete!
+                        </span>
+                      )}
+                      {request.status === 'in_progress' && (
+                        <span className="text-xs font-bold text-blue-600 flex items-center gap-1">
+                          <Activity className="h-3 w-3 animate-pulse" />
+                          Active
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </Link>
-              ))}
+                );
+              })}
             </div>
           </>
         )}
         </div>
       </div>
+      
+      {/* Premium Styling */}
+      <style jsx>{`
+        .animate-shimmer {
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+          background-size: 200% 100%;
+          animation: shimmer 2s infinite;
+        }
+        
+        @keyframes shimmer {
+          0% { background-position: -200% 0; }
+          100% { background-position: 200% 0; }
+        }
+        
+        .line-clamp-2 {
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+        
+        .line-clamp-3 {
+          display: -webkit-box;
+          -webkit-line-clamp: 3;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+      `}</style>
     </div>
   );
 }

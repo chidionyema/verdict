@@ -50,10 +50,44 @@ export function VoiceRecorder({ onRecorded, maxDurationSeconds = 120 }: VoiceRec
 
   const startRecording = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream, {
-        mimeType: 'audio/webm',
+      // Check if mediaDevices is supported
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('Your browser does not support voice recording. Please use Chrome, Firefox, or Safari.');
+      }
+
+      // Check if we're on HTTPS (required for microphone access)
+      if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
+        throw new Error('Voice recording requires HTTPS. Please access the site securely.');
+      }
+
+      // Request microphone permission with better error handling
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        }
       });
+
+      // Check if MediaRecorder is supported
+      if (!window.MediaRecorder) {
+        stream.getTracks().forEach(track => track.stop());
+        throw new Error('Voice recording is not supported in your browser.');
+      }
+
+      // Try webm first, fall back to other formats
+      let mimeType = 'audio/webm';
+      if (!MediaRecorder.isTypeSupported('audio/webm')) {
+        if (MediaRecorder.isTypeSupported('audio/mp4')) {
+          mimeType = 'audio/mp4';
+        } else if (MediaRecorder.isTypeSupported('audio/ogg')) {
+          mimeType = 'audio/ogg';
+        } else {
+          mimeType = '';
+        }
+      }
+
+      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
       chunksRef.current = [];
 
       recorder.ondataavailable = (event) => {
@@ -66,23 +100,53 @@ export function VoiceRecorder({ onRecorded, maxDurationSeconds = 120 }: VoiceRec
         stopTimer();
         stream.getTracks().forEach((t) => t.stop());
 
-        const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+        const blob = new Blob(chunksRef.current, { type: mimeType || 'audio/webm' });
         const url = URL.createObjectURL(blob);
         setAudioUrl(url);
 
         const file = new File([blob], `voice-note-${Date.now()}.webm`, {
-          type: 'audio/webm',
+          type: mimeType || 'audio/webm',
         });
         onRecorded(file, elapsed * 1000);
+      };
+
+      recorder.onerror = (event) => {
+        console.error('MediaRecorder error:', event);
+        stream.getTracks().forEach(track => track.stop());
+        setIsRecording(false);
+        stopTimer();
+        alert('Recording failed. Please try again.');
       };
 
       mediaRecorderRef.current = recorder;
       recorder.start();
       setIsRecording(true);
       startTimer();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error starting recording', err);
-      alert('Could not access microphone. Please check your browser permissions.');
+      setIsRecording(false);
+      stopTimer();
+      
+      // Provide specific error messages
+      let errorMessage = 'Could not access microphone. ';
+      
+      if (err.name === 'NotAllowedError') {
+        errorMessage += 'Please click the microphone icon in your browser\'s address bar and allow microphone access, then try again.';
+      } else if (err.name === 'NotFoundError') {
+        errorMessage += 'No microphone found. Please connect a microphone and try again.';
+      } else if (err.name === 'NotReadableError') {
+        errorMessage += 'Microphone is already in use by another application. Please close other apps using the microphone and try again.';
+      } else if (err.name === 'OverconstrainedError') {
+        errorMessage += 'Microphone settings are not supported. Please try with a different microphone.';
+      } else if (err.name === 'AbortError') {
+        errorMessage += 'Recording was interrupted. Please try again.';
+      } else if (err.message) {
+        errorMessage += err.message;
+      } else {
+        errorMessage += 'Please check your browser permissions and try again.';
+      }
+      
+      alert(errorMessage);
     }
   };
 

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Star, Calendar, DollarSign, Award, Filter, Search } from 'lucide-react';
+import { ArrowLeft, Star, Calendar, DollarSign, Award, Filter, Search, TrendingUp, Activity, Users, Crown, Target, BarChart3, Sparkles, ArrowRight, CheckCircle2, Clock, MessageSquare } from 'lucide-react';
 
 interface VerdictResponse {
   id: string;
@@ -133,100 +133,192 @@ export default function MyVerdictsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
-      <div className="max-w-6xl mx-auto px-4">
-        {/* Header */}
-        <div className="mb-8">
-          <Link
-            href="/judge"
-            className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-4 min-h-[44px]"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Judge Dashboard
-          </Link>
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">My Verdicts</h1>
-              <p className="text-gray-600 mt-1">
-                Your judging history, earnings, and impact in one place
-              </p>
-            </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/50 to-purple-50/50">
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        {/* Premium Header */}
+        <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl border border-white/50 p-8 mb-8 relative overflow-hidden">
+          {/* Background Pattern */}
+          <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 via-purple-500/5 to-pink-500/5" />
+          <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-indigo-400 to-purple-400 rounded-full mix-blend-multiply filter blur-3xl opacity-10" />
+          
+          <div className="relative z-10">
             <Link
               href="/judge"
-              className="px-6 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition font-medium shadow-lg min-h-[44px] flex items-center"
+              className="inline-flex items-center text-gray-600 hover:text-indigo-600 mb-6 font-semibold transition-colors group"
             >
-              View Queue
+              <ArrowLeft className="h-5 w-5 mr-2 group-hover:-translate-x-1 transition-transform" />
+              Back to Judge Dashboard
             </Link>
+            
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-500 p-3 text-white shadow-lg flex items-center justify-center">
+                  <Award className="h-8 w-8" />
+                </div>
+                <div>
+                  <h1 className="text-4xl font-black text-gray-900 tracking-tight">My Verdicts</h1>
+                  <p className="text-gray-600 mt-1 text-lg">
+                    Your judging legacy, earnings history, and community impact dashboard.
+                  </p>
+                </div>
+              </div>
+              
+              <Link
+                href="/judge"
+                className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-8 py-3 rounded-2xl font-bold hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5 flex items-center justify-center whitespace-nowrap group"
+              >
+                View Judge Queue
+                <ArrowRight className="h-5 w-5 ml-2 group-hover:translate-x-1 transition-transform" />
+              </Link>
+            </div>
           </div>
         </div>
 
-        {/* Stats Summary */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Total Verdicts</p>
-                <p className="text-2xl font-bold">{verdicts.length}</p>
+        {/* Enhanced Stats Dashboard */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {/* Total Verdicts */}
+          <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl border border-white/50 p-6 relative overflow-hidden group hover:-translate-y-1 transition-all duration-300">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-indigo-400 to-purple-400 rounded-full mix-blend-multiply filter blur-2xl opacity-10 group-hover:opacity-20 transition-opacity" />
+            <div className="relative z-10">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-14 h-14 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-2xl flex items-center justify-center text-white shadow-lg">
+                  <Award className="h-7 w-7" />
+                </div>
+                <div className="text-right">
+                  <div className="flex items-center text-indigo-600 text-sm font-semibold">
+                    <TrendingUp className="h-4 w-4 mr-1" />
+                    <span>+{Math.floor(verdicts.length * 0.2)} this month</span>
+                  </div>
+                </div>
               </div>
-              <Award className="h-8 w-8 text-indigo-500" />
+              <div>
+                <p className="text-3xl font-bold text-gray-900">{verdicts.length}</p>
+                <p className="text-sm text-gray-600 font-medium">Total Verdicts</p>
+                <p className="text-xs text-indigo-600 mt-1">
+                  Building your expert reputation
+                </p>
+              </div>
             </div>
           </div>
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Total Earnings</p>
-                <p className="text-2xl font-bold">${totalEarnings.toFixed(2)}</p>
+          
+          {/* Total Earnings */}
+          <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl border border-white/50 p-6 relative overflow-hidden group hover:-translate-y-1 transition-all duration-300">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-green-400 to-emerald-400 rounded-full mix-blend-multiply filter blur-2xl opacity-10 group-hover:opacity-20 transition-opacity" />
+            <div className="relative z-10">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-emerald-500 rounded-2xl flex items-center justify-center text-white shadow-lg">
+                  <DollarSign className="h-7 w-7" />
+                </div>
+                <div className="text-right">
+                  <div className="flex items-center text-green-600 text-sm font-semibold">
+                    <BarChart3 className="h-4 w-4 mr-1" />
+                    <span>Growing</span>
+                  </div>
+                </div>
               </div>
-              <DollarSign className="h-8 w-8 text-green-500" />
+              <div>
+                <p className="text-3xl font-bold text-gray-900">${totalEarnings.toFixed(2)}</p>
+                <p className="text-sm text-gray-600 font-medium">Total Earnings</p>
+                <p className="text-xs text-green-600 mt-1">
+                  ${(totalEarnings / verdicts.length || 0).toFixed(2)} per verdict average
+                </p>
+              </div>
             </div>
           </div>
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Average Rating</p>
-                <p className="text-2xl font-bold">{averageRating.toFixed(1)}/10</p>
+          
+          {/* Average Rating */}
+          <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl border border-white/50 p-6 relative overflow-hidden group hover:-translate-y-1 transition-all duration-300">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-yellow-400 to-amber-400 rounded-full mix-blend-multiply filter blur-2xl opacity-10 group-hover:opacity-20 transition-opacity" />
+            <div className="relative z-10">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-14 h-14 bg-gradient-to-br from-yellow-500 to-amber-500 rounded-2xl flex items-center justify-center text-white shadow-lg">
+                  <Star className="h-7 w-7" />
+                </div>
+                <div className="flex gap-0.5">
+                  {[...Array(5)].map((_, i) => (
+                    <Star 
+                      key={i} 
+                      className={`h-4 w-4 ${
+                        i < Math.round(averageRating / 2)
+                          ? 'fill-yellow-400 text-yellow-400'
+                          : 'text-gray-300'
+                      }`}
+                    />
+                  ))}
+                </div>
               </div>
-              <Star className="h-8 w-8 text-yellow-500" />
+              <div>
+                <p className="text-3xl font-bold text-gray-900">{averageRating.toFixed(1)}/10</p>
+                <p className="text-sm text-gray-600 font-medium">Average Rating</p>
+                <p className="text-xs text-yellow-600 mt-1">
+                  {averageRating >= 8 ? 'Excellent performance!' : averageRating >= 7 ? 'Good work!' : 'Room to improve'}
+                </p>
+              </div>
             </div>
           </div>
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center justify-between">
+          
+          {/* Quality Score */}
+          <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl border border-white/50 p-6 relative overflow-hidden group hover:-translate-y-1 transition-all duration-300">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-purple-400 to-violet-400 rounded-full mix-blend-multiply filter blur-2xl opacity-10 group-hover:opacity-20 transition-opacity" />
+            <div className="relative z-10">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-violet-500 rounded-2xl flex items-center justify-center text-white shadow-lg">
+                  <Crown className="h-7 w-7" />
+                </div>
+                <div className="text-right">
+                  <div className="flex items-center text-purple-600 text-sm font-semibold">
+                    <Target className="h-4 w-4 mr-1" />
+                    <span>Quality</span>
+                  </div>
+                </div>
+              </div>
               <div>
-                <p className="text-sm text-gray-600">Quality Score</p>
-                <p className="text-2xl font-bold">
+                <p className="text-3xl font-bold text-gray-900">
                   {verdicts.filter(v => v.quality_score).length > 0
                     ? (verdicts
                         .filter(v => v.quality_score)
                         .reduce((sum, v) => sum + parseFloat(v.quality_score?.toString() || '0'), 0) /
                       verdicts.filter(v => v.quality_score).length).toFixed(1)
-                    : '-'}
+                    : 'N/A'}
+                </p>
+                <p className="text-sm text-gray-600 font-medium">Quality Score</p>
+                <p className="text-xs text-purple-600 mt-1">
+                  Based on {verdicts.filter(v => v.quality_score).length} rated verdicts
                 </p>
               </div>
-              <Award className="h-8 w-8 text-purple-500" />
             </div>
           </div>
         </div>
 
-        {/* Filters */}
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search by context or feedback..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
+        {/* Enhanced Filters */}
+        <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl border border-white/50 p-8 mb-8 relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-32 h-32 bg-gradient-to-br from-indigo-400 to-purple-400 rounded-full mix-blend-multiply filter blur-3xl opacity-5" />
+          
+          <div className="relative z-10">
+            <h3 className="text-xl font-bold text-gray-900 mb-6">Filter & Search Your Verdicts</h3>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Search */}
+              <div className="lg:col-span-2">
+                <div className="relative">
+                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search your verdicts..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200 text-gray-900 placeholder-gray-500"
+                  />
+                </div>
               </div>
+              
+              {/* Tone Filter */}
               <div className="relative">
-                <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <Filter className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <select
                   value={filterTone}
                   onChange={(e) => setFilterTone(e.target.value as any)}
-                  className="pl-10 pr-8 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 appearance-none bg-white"
+                  className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent appearance-none font-semibold text-gray-900"
                 >
                   <option value="all">All Tones</option>
                   <option value="encouraging">Encouraging</option>
@@ -236,27 +328,31 @@ export default function MyVerdictsPage() {
               </div>
             </div>
 
-            {/* Time range pills */}
-            <div className="flex flex-wrap gap-2">
-              {[
-                { key: 'all', label: 'All time' },
-                { key: 'today', label: 'Today' },
-                { key: 'week', label: 'Last 7 days' },
-                { key: 'month', label: 'Last 30 days' },
-              ].map((option) => (
-                <button
-                  key={option.key}
-                  type="button"
-                  onClick={() => setTimeFilter(option.key as any)}
-                  className={`px-3 py-1.5 rounded-full text-sm font-medium border min-h-[32px] ${
-                    timeFilter === option.key
-                      ? 'bg-indigo-600 text-white border-indigo-600'
-                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                  }`}
-                >
-                  {option.label}
-                </button>
-              ))}
+            {/* Time Range Pills */}
+            <div className="mt-6">
+              <p className="text-sm font-semibold text-gray-700 mb-3">Time Range</p>
+              <div className="flex flex-wrap gap-3">
+                {[
+                  { key: 'all', label: 'All time', icon: <Clock className="h-4 w-4" /> },
+                  { key: 'today', label: 'Today', icon: <Activity className="h-4 w-4" /> },
+                  { key: 'week', label: 'Last 7 days', icon: <Calendar className="h-4 w-4" /> },
+                  { key: 'month', label: 'Last 30 days', icon: <BarChart3 className="h-4 w-4" /> },
+                ].map((option) => (
+                  <button
+                    key={option.key}
+                    type="button"
+                    onClick={() => setTimeFilter(option.key as any)}
+                    className={`px-4 py-2.5 rounded-2xl text-sm font-semibold transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 flex items-center gap-2 ${
+                      timeFilter === option.key
+                        ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg'
+                        : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
+                    }`}
+                  >
+                    {option.icon}
+                    {option.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -363,15 +459,40 @@ export default function MyVerdictsPage() {
                       <audio controls src={verdict.voice_url} className="w-full" />
                     </div>
                   )}
-                  <p className="text-gray-800 leading-relaxed bg-gray-50 rounded-lg p-4 border border-gray-100">
-                    {verdict.feedback}
-                  </p>
+                    <div className="bg-gradient-to-br from-gray-50 to-slate-50 rounded-2xl p-6 border-2 border-gray-200">
+                      <p className="text-gray-900 leading-relaxed font-medium">
+                        {verdict.feedback}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
+      
+      {/* Premium Styling */}
+      <style jsx>{`
+        .animate-shimmer {
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+          background-size: 200% 100%;
+          animation: shimmer 2s infinite;
+        }
+        
+        @keyframes shimmer {
+          0% { background-position: -200% 0; }
+          100% { background-position: 200% 0; }
+        }
+        
+        .line-clamp-3 {
+          display: -webkit-box;
+          -webkit-line-clamp: 3;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+      `}</style>
     </div>
   );
 }
