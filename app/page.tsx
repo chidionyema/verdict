@@ -207,7 +207,7 @@ export default function HomePage() {
           {/* Use‑case quick links */}
           <div className="mt-16 max-w-5xl mx-auto">
             <h2 className="text-xl font-semibold text-center mb-6 text-gray-900">
-              Popular ways people use Verdict
+              Popular ways people use AskVerdict
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
               <button

@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+
+export const dynamic = 'force-dynamic';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { ChevronRight, User, CreditCard, Camera, CheckCircle, ArrowRight } from 'lucide-react';
@@ -23,7 +25,6 @@ interface OnboardingStep {
 
 export default function WelcomePage() {
   const router = useRouter();
-  const supabase = createClient();
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<Profile>({
     display_name: '',
@@ -37,6 +38,9 @@ export default function WelcomePage() {
 
   useEffect(() => {
     const getUser = async () => {
+      if (typeof window === 'undefined') return;
+      
+      const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         router.push('/auth/login');
@@ -65,11 +69,12 @@ export default function WelcomePage() {
     };
 
     getUser();
-  }, [router, supabase]);
+  }, [router]);
 
   const updateProfile = async (updates: Partial<Profile>) => {
-    if (!user) return;
+    if (!user || typeof window === 'undefined') return;
     
+    const supabase = createClient();
     const { error } = await (supabase
       .from('profiles')
       .update as any)(updates)
