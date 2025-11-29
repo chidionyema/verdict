@@ -459,16 +459,14 @@ export default function MyVerdictsPage() {
                       <audio controls src={verdict.voice_url} className="w-full" />
                     </div>
                   )}
-                    <div className="bg-gradient-to-br from-gray-50 to-slate-50 rounded-2xl p-6 border-2 border-gray-200">
-                      <p className="text-gray-900 leading-relaxed font-medium">
-                        {verdict.feedback}
-                      </p>
-                    </div>
+                  <div className="bg-gradient-to-br from-gray-50 to-slate-50 rounded-2xl p-6 border-2 border-gray-200">
+                    <p className="text-gray-900 leading-relaxed font-medium">
+                      {verdict.feedback}
+                    </p>
                   </div>
                 </div>
               </div>
-              );
-            })}
+            ))}
           </div>
         )}
       </div>

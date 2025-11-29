@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
-import { Plus, Image, FileText, Clock, CheckCircle, XCircle, Search, Filter, SortAsc, SortDesc } from 'lucide-react';
+import { Plus, Image, FileText, Clock, CheckCircle, XCircle, Search, Filter, SortAsc, SortDesc, Sparkles, TrendingUp, Activity, Users, Award, Target, BarChart3, Star, ArrowRight, Crown, Heart, MessageSquare, Eye } from 'lucide-react';
 import type { VerdictRequest, Profile } from '@/lib/database.types';
 import Breadcrumb from '@/components/Breadcrumb';
 import { FeatureDiscoveryBanner } from '@/components/discovery/FeatureDiscoveryBanner';

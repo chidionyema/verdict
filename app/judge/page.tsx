@@ -33,7 +33,9 @@ import {
   Timer,
   CheckCircle2,
   XCircle,
-  AlertCircle
+  AlertCircle,
+  Heart,
+  Users
 } from 'lucide-react';
 import type { Profile } from '@/lib/database.types';
 
@@ -1238,5 +1240,6 @@ export default function JudgeDashboardPage() {
           50% { transform: translateY(-5px); }
         }
       `}</style>
+    </div>
   );
 }
