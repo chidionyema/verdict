@@ -71,6 +71,13 @@ const COMPARISON_DATA = [
     friends: { available: false, description: "No guarantee" },
     social: { available: false, description: "No guarantee" },
     reddit: { available: false, description: "Might get 0 responses" }
+  },
+  {
+    feature: "Control feedback tone",
+    verdict: { available: true, description: "Choose: Be Encouraging, Direct, or Brutally Honest" },
+    friends: { available: false, description: "They use their own tone" },
+    social: { available: false, description: "Random, unpredictable" },
+    reddit: { available: false, description: "Can't control tone" }
   }
 ];
 
@@ -79,7 +86,7 @@ const PAIN_POINTS = [
     icon: Heart,
     title: "Friends are too nice",
     problem: "Your friends care about your feelings more than giving honest feedback",
-    solution: "Our anonymous judges have no reason to lie to you"
+    solution: "Our anonymous reviewers have no reason to lie to you"
   },
   {
     icon: Users,
@@ -91,13 +98,19 @@ const PAIN_POINTS = [
     icon: AlertCircle,
     title: "Biased perspectives", 
     problem: "Your social circle often thinks the same way you do",
-    solution: "Diverse judges from different backgrounds and experiences"
+    solution: "Vetted reviewers from different backgrounds and experiences"
   },
       {
         icon: Clock,
         title: "Slow or no responses",
         problem: "Friends might ignore your request or take forever to respond",
         solution: `Guaranteed ${BASIC_VERDICTS} thoughtful responses within hours, not days`
+      },
+      {
+        icon: MessageSquare,
+        title: "Can't control feedback tone",
+        problem: "You want brutally honest feedback but get sugar-coated responses, or vice versa",
+        solution: "You choose: Be Encouraging, Be Direct, or Be Brutally Honest. Reviewers match your preference."
       }
 ];
 

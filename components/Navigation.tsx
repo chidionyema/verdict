@@ -4,14 +4,14 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { Menu, X, User, CreditCard, Clock, Plus, Bell, ChevronDown } from 'lucide-react';
+import { Menu, X, User, CreditCard, Clock, Plus, Bell, ChevronDown, Zap } from 'lucide-react';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import NotificationCenter from './NotificationCenter';
 import SearchBar from './SearchBar';
 
 interface UserProfile {
   credits: number;
-  is_judge: boolean;
+  is_reviewer: boolean;
 }
 
 interface UserStats {
@@ -38,7 +38,7 @@ export default function Navigation() {
       // Fetch profile
       const { data: profile } = await supabase
         .from('profiles')
-        .select('credits, is_judge')
+        .select('credits, is_reviewer')
         .eq('id', userId)
         .single();
       
@@ -53,7 +53,7 @@ export default function Navigation() {
         .eq('user_id', userId)
         .in('status', ['pending', 'in_progress']);
 
-      // Fetch pending verdicts count (for judges)
+      // Fetch pending feedback count (for reviewers)
       const { count: pendingVerdictsCount } = await supabase
         .from('verdict_requests')
         .select('*', { count: 'exact', head: true })
@@ -78,31 +78,31 @@ export default function Navigation() {
     try {
       const supabase = createClient();
       
-      // Get initial user
-      supabase.auth.getUser().then(({ data: { user } }) => {
-        setUser(user);
-        if (user) {
-          fetchUserData(user.id);
-        }
-        setLoading(false);
-      });
+    // Get initial user
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user);
+      if (user) {
+        fetchUserData(user.id);
+      }
+      setLoading(false);
+    });
 
-      // Listen for auth changes
-      const {
-        data: { subscription },
-      } = supabase.auth.onAuthStateChange((_event, session) => {
-        const currentUser = session?.user ?? null;
-        setUser(currentUser);
-        
-        if (currentUser) {
-          fetchUserData(currentUser.id);
-        } else {
-          setUserProfile(null);
-          setUserStats({ activeRequests: 0, pendingVerdicts: 0 });
-        }
-      });
+    // Listen for auth changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
+      
+      if (currentUser) {
+        fetchUserData(currentUser.id);
+      } else {
+        setUserProfile(null);
+        setUserStats({ activeRequests: 0, pendingVerdicts: 0 });
+      }
+    });
 
-      return () => subscription.unsubscribe();
+    return () => subscription.unsubscribe();
     } catch (error) {
       console.error('Error initializing Supabase client:', error);
       setLoading(false);
@@ -132,7 +132,7 @@ export default function Navigation() {
                     Ask
                   </span>
                   <span className="inline-block text-slate-800 transition-all duration-300 group-hover:text-slate-900 group-hover:transform group-hover:translate-x-0.5">
-                    Verdict
+              Verdict
                   </span>
                 </span>
                 
@@ -158,16 +158,16 @@ export default function Navigation() {
               <>
                 {/* User Status Widget */}
                 <div className="flex items-center space-x-4">
-                  {/* Request credits / remaining requests */}
-                  <div className="flex items-center bg-green-50 text-green-700 px-4 py-2 rounded-full text-sm min-h-[36px]">
-                    <CreditCard className="h-4 w-4 mr-2" />
-                    <span className="font-medium">
+                  {/* Credits Display - More prominent */}
+                  <Link href="/account" className="flex items-center bg-gradient-to-r from-yellow-50 to-amber-50 text-amber-700 px-5 py-2 rounded-full text-sm min-h-[36px] hover:from-yellow-100 hover:to-amber-100 transition-all border border-amber-200 shadow-sm">
+                    <Zap className="h-4 w-4 mr-2 text-amber-600" />
+                    <span className="font-bold text-lg">
                       {userProfile?.credits || 0}
                     </span>
-                    <span className="text-xs text-green-600 ml-1">
-                      {userProfile?.credits === 1 ? 'request left' : 'requests left'}
+                    <span className="text-xs text-amber-600 ml-1 font-medium">
+                      {userProfile?.credits === 1 ? 'credit' : 'credits'}
                     </span>
-                  </div>
+                  </Link>
                   
                   {/* Active Requests */}
                   {userStats.activeRequests > 0 && (
@@ -181,15 +181,15 @@ export default function Navigation() {
                     </Link>
                   )}
                   
-                  {/* Judge Notifications */}
-                  {userProfile?.is_judge && userStats.pendingVerdicts > 0 && (
+                  {/* Reviewer Notifications */}
+                  {userProfile?.is_reviewer && userStats.pendingVerdicts > 0 && (
                     <Link 
-                      href="/judge"
+                      href="/reviewer"
                       className="flex items-center bg-purple-50 text-purple-700 px-4 py-2 rounded-full text-sm hover:bg-purple-100 transition relative min-h-[36px]"
                     >
                       <Bell className="h-4 w-4 mr-2" />
                       <span className="font-medium">{userStats.pendingVerdicts}</span>
-                      <span className="text-xs text-purple-600 ml-1">pending</span>
+                      <span className="text-xs text-purple-600 ml-1">to review</span>
                     </Link>
                   )}
                   
@@ -208,20 +208,33 @@ export default function Navigation() {
 
                 {/* Navigation Links */}
                 <Link
-                  href="/my-requests"
-                  className="flex items-center text-gray-700 hover:text-indigo-600 transition min-h-[36px]"
+                  href="/feed"
+                  className="text-gray-700 hover:text-indigo-600 transition flex items-center min-h-[36px] font-medium"
                 >
-                  My Requests
+                  Discover
                 </Link>
                 <Link
-                  href="/judge"
-                  className="flex items-center text-gray-700 hover:text-indigo-600 transition min-h-[36px]"
+                  href="/submit"
+                  className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition flex items-center text-sm min-h-[36px] font-medium"
                 >
-                  Judge
+                  Submit
+                </Link>
+                <Link
+                  href="/reviewer"
+                  className="text-gray-700 hover:text-indigo-600 transition flex items-center min-h-[36px] font-medium"
+                >
+                  Judge Queue
+                </Link>
+                <div className="w-px h-6 bg-gray-300 mx-2"></div>
+                <Link
+                  href="/my-requests"
+                  className="text-gray-600 hover:text-gray-800 transition flex items-center min-h-[36px] text-sm"
+                >
+                  My Submissions
                 </Link>
                 <Link
                   href="/account"
-                  className="flex items-center text-gray-700 hover:text-indigo-600 transition min-h-[36px]"
+                  className="text-gray-700 hover:text-indigo-600 transition flex items-center min-h-[36px]"
                 >
                   <User className="h-5 w-5 mr-1" />
                   Account
@@ -230,32 +243,38 @@ export default function Navigation() {
             ) : (
               <>
                 <Link
-                  href="/discover"
-                  className="text-gray-700 hover:text-indigo-600 transition"
+                  href="/feed"
+                  className="text-gray-700 hover:text-indigo-600 transition flex items-center min-h-[36px] font-medium"
                 >
                   Discover
                 </Link>
-                {userProfile?.is_judge ? (
+                <Link
+                  href="/submit"
+                  className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition flex items-center text-sm min-h-[36px] font-medium"
+                >
+                  Submit
+                </Link>
+                {userProfile?.is_reviewer ? (
                   <div className="relative group">
                     <button className="text-gray-700 hover:text-indigo-600 transition flex items-center">
-                      Judge Dashboard
+                      Reviewer Dashboard
                       <ChevronDown className="h-4 w-4 ml-1" />
                     </button>
                     <div className="absolute top-full left-0 mt-2 w-48 bg-white rounded-lg shadow-lg border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
-                      <Link href="/judge" className="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-50">
+                      <Link href="/reviewer" className="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-50">
                         Dashboard
                       </Link>
-                      <Link href="/judge/performance" className="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-50">
+                      <Link href="/reviewer/performance" className="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-50">
                         Performance
                       </Link>
                     </div>
                   </div>
                 ) : (
                   <Link
-                    href="/judge"
+                    href="/become-reviewer"
                     className="text-gray-700 hover:text-indigo-600 transition"
                   >
-                    Become a Judge
+                    Become a Reviewer
                   </Link>
                 )}
                 <Link
@@ -329,16 +348,16 @@ export default function Navigation() {
                   </Link>
                 </div>
 
-                {userProfile?.is_judge && userStats.pendingVerdicts > 0 && (
+                {userProfile?.is_reviewer && userStats.pendingVerdicts > 0 && (
                   <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 mb-6">
                     <Link
-                      href="/judge"
+                      href="/reviewer"
                       className="flex items-center justify-between text-purple-700 min-h-[48px]"
                       onClick={() => setMobileMenuOpen(false)}
                     >
                       <div className="flex items-center">
                         <Bell className="h-5 w-5 mr-3" />
-                        <span className="font-medium text-base">Judge Queue</span>
+                        <span className="font-medium text-base">Review Queue</span>
                       </div>
                       <span className="bg-purple-100 text-purple-800 px-3 py-2 rounded-full text-sm font-bold">
                         {userStats.pendingVerdicts}
@@ -355,11 +374,11 @@ export default function Navigation() {
                   My Requests
                 </Link>
                 <Link
-                  href="/judge"
+                  href="/reviewer"
                   className="block py-4 text-gray-700 hover:text-indigo-600 text-lg font-medium border-b border-gray-200 min-h-[48px] flex items-center"
                   onClick={() => setMobileMenuOpen(false)}
                 >
-                  Judge
+                  Review
                 </Link>
                 <Link
                   href="/account"
@@ -372,11 +391,25 @@ export default function Navigation() {
             ) : (
               <>
                 <Link
-                  href="/judge"
+                  href="/feed"
                   className="block py-4 text-gray-700 hover:text-indigo-600 text-lg font-medium border-b border-gray-200 min-h-[48px] flex items-center"
                   onClick={() => setMobileMenuOpen(false)}
                 >
-                  Become a Judge
+                  Discover
+                </Link>
+                <Link
+                  href="/start?mode=roast"
+                  className="block py-4 text-red-600 hover:text-red-700 text-lg font-semibold border-b border-gray-200 min-h-[48px] flex items-center"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  🔥 Roast Me
+                </Link>
+                <Link
+                  href="/become-reviewer"
+                  className="block py-4 text-gray-700 hover:text-indigo-600 text-lg font-medium border-b border-gray-200 min-h-[48px] flex items-center"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Become a Reviewer
                 </Link>
                 <Link
                   href="/auth/login"
@@ -400,3 +433,4 @@ export default function Navigation() {
     </nav>
   );
 }
+

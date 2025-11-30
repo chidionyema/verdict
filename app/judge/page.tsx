@@ -127,7 +127,7 @@ export default function JudgeDashboardPage() {
       }
     });
 
-  const fetchData = useCallback(async () => {
+  const fetchData = async () => {
     // Only run in browser
     if (typeof window === 'undefined') {
       setLoading(false);
@@ -137,29 +137,57 @@ export default function JudgeDashboardPage() {
     try {
       const supabase = createClient();
       
-      // Get profile
-      const { data: { user } } = await supabase.auth.getUser();
+      // Get profile with timeout
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError) {
+        console.error('Auth error:', authError);
+        setLoading(false);
+        return;
+      }
+      
       if (user) {
-        const { data: profileData } = await supabase
+        const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', user.id)
-          .single() as { data: Profile | null };
+          .single() as { data: Profile | null; error: any };
+          
+        if (profileError) {
+          console.error('Profile fetch error:', profileError);
+          setLoading(false);
+          return;
+        }
+        
         setProfile(profileData);
 
         // Only fetch queue and stats if judge
         if (profileData?.is_judge) {
-          const res = await fetch('/api/judge/queue');
-          if (res.ok) {
-            const { requests } = await res.json();
-            setQueue(requests || []);
+          try {
+            const res = await fetch('/api/judge/queue', { 
+              signal: AbortSignal.timeout(10000) // 10 second timeout
+            });
+            if (res.ok) {
+              const { requests } = await res.json();
+              setQueue(requests || []);
+            } else {
+              console.error('Queue fetch failed:', res.status, res.statusText);
+            }
+          } catch (queueError) {
+            console.error('Queue fetch error:', queueError);
           }
 
-          // Fetch judge stats
-          const statsRes = await fetch('/api/judge/stats');
-          if (statsRes.ok) {
-            const statsData = await statsRes.json();
-            setStats(prev => ({ ...prev, ...statsData }));
+          try {
+            const statsRes = await fetch('/api/judge/stats', { 
+              signal: AbortSignal.timeout(10000) // 10 second timeout
+            });
+            if (statsRes.ok) {
+              const statsData = await statsRes.json();
+              setStats(prev => ({ ...prev, ...statsData }));
+            } else {
+              console.error('Stats fetch failed:', statsRes.status, statsRes.statusText);
+            }
+          } catch (statsError) {
+            console.error('Stats fetch error:', statsError);
           }
         }
       }
@@ -168,59 +196,72 @@ export default function JudgeDashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  };
 
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+  }, []);
 
+  // Temporarily disabled SSE to debug loading issues
+  /*
   useEffect(() => {
     // Set up SSE for real-time updates
     if (typeof window !== 'undefined' && profile?.is_judge) {
-      const eventSource = new EventSource('/api/judge/queue/stream');
+      let eventSource: EventSource;
       
-      eventSource.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          
-          if (data.type === 'requests') {
-            setQueue(data.requests || []);
-          } else if (data.type === 'connected') {
-            console.log('SSE connected:', data.message);
-          } else if (data.type === 'heartbeat') {
-            // Connection is alive
-          } else if (data.type === 'reconnect') {
-            console.log('SSE reconnect requested:', data.message);
-            eventSource.close();
-            // Trigger a manual refetch
-            fetchData();
+      try {
+        eventSource = new EventSource('/api/judge/queue/stream');
+        
+        eventSource.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            
+            if (data.type === 'requests') {
+              setQueue(data.requests || []);
+            } else if (data.type === 'connected') {
+              console.log('SSE connected:', data.message);
+            } else if (data.type === 'heartbeat') {
+              // Connection is alive
+            } else if (data.type === 'reconnect') {
+              console.log('SSE reconnect requested:', data.message);
+              eventSource.close();
+              // Trigger a manual refetch
+              fetchData();
+            }
+          } catch (error) {
+            console.error('Error parsing SSE data:', error);
           }
-        } catch (error) {
-          console.error('Error parsing SSE data:', error);
-        }
-      };
+        };
 
-      eventSource.onerror = (error) => {
-        console.error('SSE error:', error);
-        eventSource.close();
-      };
+        eventSource.onerror = (error) => {
+          console.error('SSE error:', error);
+          if (eventSource) {
+            eventSource.close();
+          }
+        };
 
-      return () => {
-        eventSource.close();
-      };
+        return () => {
+          if (eventSource) {
+            eventSource.close();
+          }
+        };
+      } catch (error) {
+        console.error('Error creating SSE connection:', error);
+      }
     }
   }, [profile?.is_judge]);
+  */
 
   useEffect(() => {
-    // Set up auto-refresh every 5 seconds
+    // Set up auto-refresh every 30 seconds (less aggressive)
     if (profile?.is_judge) {
       const interval = setInterval(() => {
         fetchData();
-      }, 5000);
+      }, 30000);
 
       return () => clearInterval(interval);
     }
-  }, [fetchData, profile?.is_judge]);
+  }, [profile?.is_judge]);
 
   const toggleJudge = async () => {
     if (!profile) return;
@@ -1043,7 +1084,7 @@ export default function JudgeDashboardPage() {
                         key={request.id}
                         className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg border border-white/50 p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5 group relative overflow-hidden"
                       >
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${categoryConfig.color} rounded-full mix-blend-multiply filter blur-3xl opacity-5 group-hover:opacity-10 transition-opacity" />
+                        <div className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${categoryConfig.color} rounded-full mix-blend-multiply filter blur-3xl opacity-5 group-hover:opacity-10 transition-opacity`} />
                         
                         <div className="relative z-10">
                           <div className="flex items-start gap-4 mb-4">

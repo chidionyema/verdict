@@ -97,7 +97,7 @@ const FEATURED_TESTIMONIALS = [
 const TRUST_METRICS = [
   {
     icon: MessageSquare,
-    label: 'Verdicts delivered',
+    label: 'Reviews delivered',
     value: '2,847',
     trend: '+127 this week',
     color: 'text-blue-600',
@@ -106,7 +106,7 @@ const TRUST_METRICS = [
   },
   {
     icon: Star,
-    label: 'Judge rating',
+    label: 'Reviewer rating',
     value: '4.9/5',
     trend: 'Consistent quality',
     color: 'text-yellow-600',
@@ -136,7 +136,7 @@ const TRUST_METRICS = [
 // Platform statistics component
 function PlatformStats() {
   const stats = [
-    { value: "127", label: "verdicts delivered this week", icon: "📊" },
+    { value: "127", label: "reviews delivered this week", icon: "📊" },
     { value: "34", label: "career decisions helped", icon: "💼" },
     { value: "18", label: "dating profiles optimized", icon: "💕" },
     { value: "23", label: "business emails reviewed", icon: "📧" },
@@ -352,7 +352,7 @@ export function SocialProofSection() {
                     </div>
                     <div>
                       <div className="font-medium text-gray-900">Quality controlled</div>
-                      <div className="text-sm text-gray-600">Verified judges with ratings</div>
+                      <div className="text-sm text-gray-600">Verified reviewers with ratings</div>
                     </div>
                   </div>
                   
@@ -381,18 +381,18 @@ export function SocialProofSection() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-gray-300 mb-8">
               <div className="flex flex-col items-center">
                 <CheckCircle className="w-6 h-6 text-green-400 mb-2" />
-                <div className="font-medium">No accounts required</div>
-                <div className="text-sm">Start immediately</div>
+                <div className="font-semibold text-lg">No accounts required</div>
+                <div className="text-sm font-medium">Start immediately, no signup needed</div>
               </div>
               <div className="flex flex-col items-center">
                 <Shield className="w-6 h-6 text-green-400 mb-2" />
-                <div className="font-medium">Zero data sold</div>
-                <div className="text-sm">Your privacy protected</div>
+                <div className="font-semibold text-lg">Zero data sold</div>
+                <div className="text-sm font-medium">We never sell your data to anyone</div>
               </div>
               <div className="flex flex-col items-center">
                 <Clock className="w-6 h-6 text-green-400 mb-2" />
-                <div className="font-medium">Auto-delete</div>
-                <div className="text-sm">Gone after 30 days</div>
+                <div className="font-semibold text-lg">Auto-delete</div>
+                <div className="text-sm font-medium">Submissions automatically deleted after 30 days</div>
               </div>
             </div>
             

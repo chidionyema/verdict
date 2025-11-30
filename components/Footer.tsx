@@ -9,7 +9,7 @@ export default function Footer() {
   return (
     <footer className="bg-gray-900 text-gray-300 py-12 border-t border-gray-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-8">
           {/* Brand */}
           <div className="col-span-1 md:col-span-2">
             <Link href="/" className="flex items-center text-white font-bold text-xl mb-4">
@@ -60,6 +60,28 @@ export default function Footer() {
               <li>
                 <Link href="/help" className="text-gray-400 hover:text-white transition-colors">
                   Help & Support
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          {/* Categories */}
+          <div>
+            <h3 className="text-white font-semibold mb-4">Categories</h3>
+            <ul className="space-y-3">
+              <li>
+                <Link href="/dating" className="text-gray-400 hover:text-white transition-colors">
+                  Dating Profiles
+                </Link>
+              </li>
+              <li>
+                <Link href="/career" className="text-gray-400 hover:text-white transition-colors">
+                  Career & Resume
+                </Link>
+              </li>
+              <li>
+                <Link href="/style" className="text-gray-400 hover:text-white transition-colors">
+                  Style & Outfits
                 </Link>
               </li>
             </ul>

@@ -25,7 +25,7 @@ function SuccessContent() {
     const mediaType = searchParams.get('mediaType') || 'photo';
     const context = searchParams.get('context') || '';
     const requestId = searchParams.get('requestId') || 'req_' + Date.now();
-    const tier = (searchParams.get('tier') as 'basic' | 'standard' | 'premium') || 'basic';
+    const tier = (searchParams.get('tier') as 'basic' | 'detailed') || 'basic';
     const tierConfig = VERDICT_TIER_PRICING[tier];
 
     setRequestData({

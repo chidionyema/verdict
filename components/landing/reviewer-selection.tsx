@@ -3,18 +3,18 @@
 import { ShieldCheck, Star, Users, Target, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 
-export function JudgeSelectionSection() {
+export function ReviewerSelectionSection() {
   return (
     <section className="py-16 bg-white border-t border-gray-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid gap-10 lg:grid-cols-[3fr,2fr] items-start">
           <div>
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              How We Select AskVerdict Judges
+              Who Are Our Reviewers?
             </h2>
             <p className="text-lg text-gray-600 mb-6">
-              Not everyone can be an AskVerdict judge. We carefully screen and continuously monitor
-              every judge so you get high‑quality, constructive feedback—not low‑effort replies.
+              Our reviewers are vetted for empathy, clarity, and constructive communication. 
+              They're verified humans who pass our quality screening—not random strangers or bots.
             </p>
 
             <ul className="space-y-3 text-gray-700">
@@ -38,14 +38,14 @@ export function JudgeSelectionSection() {
 
             <div className="mt-8 flex flex-col sm:flex-row gap-4 sm:items-center">
               <Link
-                href="/become-a-judge"
+                href="/become-reviewer"
                 className="inline-flex items-center justify-center px-6 py-3 rounded-xl bg-indigo-600 text-white font-semibold hover:bg-indigo-700 transition min-h-[48px]"
               >
-                Become a Judge – Learn how it works
+                Become a Reviewer – Learn how it works
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Link>
               <p className="text-sm text-gray-500 max-w-sm">
-                We’re selectively inviting new judges. High‑quality, consistent feedback is rewarded
+                We're selectively inviting new reviewers. High‑quality, consistent feedback is rewarded
                 with more requests and higher earnings.
               </p>
             </div>
@@ -53,28 +53,28 @@ export function JudgeSelectionSection() {
 
           <div className="bg-indigo-50 rounded-2xl p-6 md:p-8 shadow-sm">
             <p className="text-sm font-semibold text-indigo-700 mb-3">
-              Judge Quality Dashboard (last 30 days)
+              Reviewer Quality Dashboard (last 30 days)
             </p>
             <dl className="space-y-4 text-sm">
               <div className="flex items-center justify-between">
-                <dt className="text-gray-600">Average judge rating</dt>
+                <dt className="text-gray-600">Average reviewer rating</dt>
                 <dd className="font-semibold text-gray-900">4.8 / 5.0</dd>
               </div>
               <div className="flex items-center justify-between">
-                <dt className="text-gray-600">Judges passing onboarding</dt>
+                <dt className="text-gray-600">Reviewers passing onboarding</dt>
                 <dd className="font-semibold text-gray-900">17%</dd>
               </div>
               <div className="flex items-center justify-between">
-                <dt className="text-gray-600">Judges removed for low quality</dt>
+                <dt className="text-gray-600">Reviewers removed for low quality</dt>
                 <dd className="font-semibold text-gray-900">2.3%</dd>
               </div>
               <div className="flex items-center justify-between">
-                <dt className="text-gray-600">Average words per verdict</dt>
+                <dt className="text-gray-600">Average words per review</dt>
                 <dd className="font-semibold text-gray-900">162 words</dd>
               </div>
             </dl>
             <p className="mt-6 text-xs text-gray-500">
-              We continuously audit responses and remove judges who don’t meet our quality bar. Your
+              We continuously audit responses and remove reviewers who don't meet our quality bar. Your
               feedback is always reviewed by humans—not bots.
             </p>
           </div>
@@ -83,5 +83,3 @@ export function JudgeSelectionSection() {
     </section>
   );
 }
-
-

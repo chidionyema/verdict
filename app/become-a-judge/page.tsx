@@ -8,8 +8,7 @@ import { VERDICT_TIERS, VERDICT_TIER_PRICING } from '@/lib/validations';
 export const dynamic = 'force-dynamic';
 
 const BASIC = VERDICT_TIER_PRICING.basic;
-const STANDARD = VERDICT_TIER_PRICING.standard;
-const PREMIUM = VERDICT_TIER_PRICING.premium;
+const DETAILED = VERDICT_TIER_PRICING.detailed;
 
 export default function BecomeJudgePage() {
   return (
@@ -54,21 +53,15 @@ export default function BecomeJudgePage() {
             </h2>
             <ul className="space-y-2 text-sm text-gray-700">
               <li className="flex justify-between">
-                <span>Basic requests ({VERDICT_TIERS.basic.verdicts} verdicts)</span>
+                <span>Basic requests ({VERDICT_TIERS.basic.verdicts} quick ratings)</span>
                 <span className="font-semibold">
-                  ${BASIC.judgePayout.toFixed(2)} per verdict
+                  ${BASIC.judgePayout.toFixed(2)} per rating
                 </span>
               </li>
               <li className="flex justify-between">
-                <span>Standard requests ({VERDICT_TIERS.standard.verdicts} verdicts)</span>
+                <span>Detailed requests ({VERDICT_TIERS.detailed.verdicts} written reviews)</span>
                 <span className="font-semibold">
-                  ${STANDARD.judgePayout.toFixed(2)} per verdict
-                </span>
-              </li>
-              <li className="flex justify-between">
-                <span>Premium requests ({VERDICT_TIERS.premium.verdicts} verdicts)</span>
-                <span className="font-semibold">
-                  ${PREMIUM.judgePayout.toFixed(2)} per verdict
+                  ${DETAILED.judgePayout.toFixed(2)} per review
                 </span>
               </li>
             </ul>

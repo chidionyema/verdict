@@ -49,7 +49,7 @@ const DEMO_STEPS = [
               rows={3}
             />
             <TouchButton className="w-full bg-indigo-600 text-white">
-              Get 3 opinions → 
+              Get 3 comprehensive reports → 
             </TouchButton>
           </div>
         </div>
@@ -59,9 +59,9 @@ const DEMO_STEPS = [
   },
   {
     id: 2,
-    title: "Real Judges Review",
+    title: "Vetted Reviewers Respond",
     subtitle: "3 verified people give honest feedback",
-    description: "Your request goes to our pool of quality-rated judges who provide thoughtful responses.",
+    description: "Your request goes to our pool of quality-rated reviewers who provide thoughtful responses.",
     mockups: {
       mobile: (
         <div className="bg-gray-50 rounded-2xl p-4 max-w-sm mx-auto">
@@ -71,7 +71,7 @@ const DEMO_STEPS = [
                 J1
               </div>
               <div className="flex-1">
-                <div className="font-medium text-gray-900">Judge reviewing...</div>
+                <div className="font-medium text-gray-900">Reviewer analyzing...</div>
                 <div className="text-sm text-gray-500">Fashion expert • 4.8★ rating</div>
               </div>
             </div>
@@ -113,19 +113,19 @@ const DEMO_STEPS = [
         </div>
       )
     },
-    features: ["Quality-rated judges", "Diverse perspectives", "Fast responses"]
+    features: ["Quality-rated reviewers", "Diverse perspectives", "Fast responses"]
   },
   {
     id: 3,
     title: "Get Your Verdict",
-    subtitle: "Read all 3 opinions and decide",
+    subtitle: "Read all 3 comprehensive reports and decide",
     description: "Receive thoughtful, detailed feedback that helps you make better decisions.",
     mockups: {
       mobile: (
         <div className="bg-white rounded-2xl shadow-xl p-6 max-w-sm mx-auto">
           <div className="mb-4">
             <h3 className="text-lg font-semibold text-gray-900">Your verdicts are ready!</h3>
-            <p className="text-sm text-gray-600">3 judges have responded</p>
+            <p className="text-sm text-gray-600">3 reviewers have responded</p>
           </div>
           
           <div className="space-y-3">

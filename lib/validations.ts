@@ -141,39 +141,30 @@ export const CREDIT_PACKAGES = {
 
 // Verdict tier definitions (how many verdicts per request)
 export const VERDICT_TIERS = {
-  basic: { verdicts: 3, name: 'Basic', description: '3 honest opinions - Fast & affordable' },
-  standard: { verdicts: 5, name: 'Standard', description: '5 honest opinions - Most popular' },
-  premium: { verdicts: 7, name: 'Premium', description: '7 honest opinions - Comprehensive' },
+  basic: { verdicts: 3, name: 'Basic', description: '3 quick votes/ratings - Simple decisions' },
+  detailed: { verdicts: 3, name: 'Detailed', description: '3 written reviews - Complex decisions' },
 } as const;
 
 export type VerdictTier = keyof typeof VERDICT_TIERS;
 
 // Tier pricing / payout model (finance-approved)
 // Default targets (per request):
-// - Basic:   $3.99, 3 verdicts,  $0.45 per verdict to judges
-// - Standard:$6.99, 5 verdicts,  $0.50 per verdict to judges
-// - Premium: $9.99, 7 verdicts,  $0.55 per verdict to judges
+// - Basic:   $1.99, 3 reviews,  $0.25 per review to reviewers (quick votes/ratings)
+// - Detailed:$4.99, 3 reviews,  $0.75 per review to reviewers (full written feedback)
 export const VERDICT_TIER_PRICING = {
   basic: {
     tier: 'basic' as const,
     credits: 1,
     verdicts: VERDICT_TIERS.basic.verdicts,
-    judgePayout: 0.45,
-    price: 3.99,
+    judgePayout: 0.25,
+    price: 1.99,
   },
-  standard: {
-    tier: 'standard' as const,
-    credits: 2,
-    verdicts: VERDICT_TIERS.standard.verdicts,
-    judgePayout: 0.5,
-    price: 6.99,
-  },
-  premium: {
-    tier: 'premium' as const,
-    credits: 3,
-    verdicts: VERDICT_TIERS.premium.verdicts,
-    judgePayout: 0.55,
-    price: 9.99,
+  detailed: {
+    tier: 'detailed' as const,
+    credits: 1,
+    verdicts: VERDICT_TIERS.basic.verdicts,
+    judgePayout: 0.75,
+    price: 4.99,
   },
 } as const;
 

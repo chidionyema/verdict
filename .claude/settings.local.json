@@ -12,7 +12,8 @@
       "Bash(grep:*)",
       "Bash(python3:*)",
       "Bash(findstr:*)",
-      "Bash(git restore:*)"
+      "Bash(git restore:*)",
+      "Bash(mkdir:*)"
     ],
     "deny": [],
     "ask": []

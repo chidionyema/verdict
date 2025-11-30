@@ -27,7 +27,9 @@ import {
   Mic,
 } from 'lucide-react';
 import { VoiceRecorder } from '@/components/VoiceRecorder';
+import { ModeIndicator } from '@/components/mode/ModeIndicator';
 import type { User } from '@supabase/supabase-js';
+import type { Mode } from '@/lib/mode-colors';
 
 const categories = [
   { 
@@ -93,12 +95,14 @@ export function SimplifiedStart() {
   const [category, setCategory] = useState('');
   const [subcategory, setSubcategory] = useState('');
   const [context, setContext] = useState('');
+  const [requestedTone, setRequestedTone] = useState<'encouraging' | 'honest' | 'brutally_honest'>('honest');
   const [uploading, setUploading] = useState(false);
   const [judgePreferences, setJudgePreferences] = useState<{ type: string; category: string } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [dragActive, setDragActive] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [submissionMode, setSubmissionMode] = useState<Mode | null>(null);
 
   useEffect(() => {
     // Only initialize Supabase client in browser
@@ -108,6 +112,15 @@ export function SimplifiedStart() {
     supabase.auth.getUser().then(({ data: { user } }) => {
       setUser(user);
     });
+    
+    // Check URL params for visibility mode
+    const params = new URLSearchParams(window.location.search);
+    const visibility = params.get('visibility');
+    if (visibility === 'public') {
+      setSubmissionMode('community');
+    } else if (visibility === 'private') {
+      setSubmissionMode('private');
+    }
   }, []);
 
   // Restore any saved draft from signup/login flow
@@ -132,6 +145,9 @@ export function SimplifiedStart() {
       }
       if (typeof draft.context === 'string') {
         setContext(draft.context);
+      }
+      if (draft.requestedTone && ['encouraging', 'honest', 'brutally_honest'].includes(draft.requestedTone)) {
+        setRequestedTone(draft.requestedTone);
       }
 
       // If they already wrote context, drop them back into final step,
@@ -226,6 +242,7 @@ export function SimplifiedStart() {
           category,
           subcategory,
           context,
+          requestedTone,
         }));
       }
       router.push('/auth/signup?redirect=/start-simple');
@@ -276,6 +293,7 @@ export function SimplifiedStart() {
           text_content: mediaType === 'text' ? textContent : null,
           context,
           judge_preferences: judgePreferences,
+          requested_tone: requestedTone,
         }),
       });
 
@@ -393,6 +411,11 @@ export function SimplifiedStart() {
       <div className="max-w-4xl mx-auto px-6 py-12">
         {/* Header */}
         <div className="text-center mb-12 animate-in fade-in slide-in-from-bottom duration-700">
+          {submissionMode && (
+            <div className="mb-6 flex justify-center">
+              <ModeIndicator mode={submissionMode} />
+            </div>
+          )}
           <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-gray-900 via-gray-900 to-gray-600 bg-clip-text text-transparent mb-4">
             {getStepTitle()}
           </h1>
@@ -916,6 +939,108 @@ export function SimplifiedStart() {
                   </div>
                 )}
               </div>
+
+              {/* Tone Selection */}
+              {context.length >= 20 && (
+                <div className="space-y-4 pt-6 border-t border-gray-200">
+                  <div>
+                    <label className="block text-lg font-semibold text-gray-900 mb-3">
+                      How honest should reviewers be?
+                    </label>
+                    <p className="text-sm text-gray-600 mb-4">
+                      Choose the tone of feedback you want to receive
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <button
+                      onClick={() => setRequestedTone('encouraging')}
+                      className={`p-4 rounded-xl border-2 transition-all text-left ${
+                        requestedTone === 'encouraging'
+                          ? 'border-green-500 bg-green-50 shadow-md'
+                          : 'border-gray-200 bg-white hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                          requestedTone === 'encouraging' ? 'bg-green-100' : 'bg-gray-100'
+                        }`}>
+                          <Heart className={`w-5 h-5 ${
+                            requestedTone === 'encouraging' ? 'text-green-600' : 'text-gray-400'
+                          }`} />
+                        </div>
+                        <h4 className={`font-semibold ${
+                          requestedTone === 'encouraging' ? 'text-green-900' : 'text-gray-900'
+                        }`}>
+                          Be Encouraging
+                        </h4>
+                      </div>
+                      <p className={`text-sm ${
+                        requestedTone === 'encouraging' ? 'text-green-700' : 'text-gray-600'
+                      }`}>
+                        Gentle, supportive feedback with positive reinforcement
+                      </p>
+                    </button>
+
+                    <button
+                      onClick={() => setRequestedTone('honest')}
+                      className={`p-4 rounded-xl border-2 transition-all text-left ${
+                        requestedTone === 'honest'
+                          ? 'border-blue-500 bg-blue-50 shadow-md'
+                          : 'border-gray-200 bg-white hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                          requestedTone === 'honest' ? 'bg-blue-100' : 'bg-gray-100'
+                        }`}>
+                          <MessageSquare className={`w-5 h-5 ${
+                            requestedTone === 'honest' ? 'text-blue-600' : 'text-gray-400'
+                          }`} />
+                        </div>
+                        <h4 className={`font-semibold ${
+                          requestedTone === 'honest' ? 'text-blue-900' : 'text-gray-900'
+                        }`}>
+                          Be Direct
+                        </h4>
+                      </div>
+                      <p className={`text-sm ${
+                        requestedTone === 'honest' ? 'text-blue-700' : 'text-gray-600'
+                      }`}>
+                        Straightforward, balanced feedback (recommended)
+                      </p>
+                    </button>
+
+                    <button
+                      onClick={() => setRequestedTone('brutally_honest')}
+                      className={`p-4 rounded-xl border-2 transition-all text-left ${
+                        requestedTone === 'brutally_honest'
+                          ? 'border-red-500 bg-red-50 shadow-md'
+                          : 'border-gray-200 bg-white hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                          requestedTone === 'brutally_honest' ? 'bg-red-100' : 'bg-gray-100'
+                        }`}>
+                          <Zap className={`w-5 h-5 ${
+                            requestedTone === 'brutally_honest' ? 'text-red-600' : 'text-gray-400'
+                          }`} />
+                        </div>
+                        <h4 className={`font-semibold ${
+                          requestedTone === 'brutally_honest' ? 'text-red-900' : 'text-gray-900'
+                        }`}>
+                          Be Brutally Honest
+                        </h4>
+                      </div>
+                      <p className={`text-sm ${
+                        requestedTone === 'brutally_honest' ? 'text-red-700' : 'text-gray-600'
+                      }`}>
+                        No sugar-coating — give it to me straight
+                      </p>
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* Submit Button */}
               <div className="flex justify-center pt-8">

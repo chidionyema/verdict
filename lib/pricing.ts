@@ -21,9 +21,8 @@ const EXCHANGE_RATES: Record<CurrencyCode, number> = {
 // Base prices in USD cents
 export const BASE_PRICES_USD = {
   verdict: {
-    basic: 399,      // $3.99
-    standard: 699,   // $6.99
-    premium: 999,    // $9.99
+    basic: 199,      // $1.99 - Quick votes/ratings for simple decisions
+    detailed: 499,   // $4.99 - Full written feedback for complex decisions
   },
   credits: {
     starter: { amount: 5, price: 1745 },     // $17.45
@@ -32,9 +31,8 @@ export const BASE_PRICES_USD = {
     pro: { amount: 50, price: 17450 },       // $174.50
   },
   judgePayout: {
-    basic: 45,       // $0.45
-    standard: 50,    // $0.50
-    premium: 55,     // $0.55
+    basic: 25,       // $0.25 per reviewer for basic feedback
+    detailed: 75,    // $0.75 per reviewer for detailed feedback
   },
 };
 
@@ -85,15 +83,10 @@ export function getVerdictTierPricing(locale: Locale, currency?: CurrencyCode) {
       judgePayout: getLocalizedPrice(BASE_PRICES_USD.judgePayout.basic, locale, targetCurrency),
       verdicts: 3,
     },
-    standard: {
-      price: getLocalizedPrice(BASE_PRICES_USD.verdict.standard, locale, targetCurrency),
-      judgePayout: getLocalizedPrice(BASE_PRICES_USD.judgePayout.standard, locale, targetCurrency),
-      verdicts: 5,
-    },
-    premium: {
-      price: getLocalizedPrice(BASE_PRICES_USD.verdict.premium, locale, targetCurrency),
-      judgePayout: getLocalizedPrice(BASE_PRICES_USD.judgePayout.premium, locale, targetCurrency),
-      verdicts: 10,
+    detailed: {
+      price: getLocalizedPrice(BASE_PRICES_USD.verdict.detailed, locale, targetCurrency),
+      judgePayout: getLocalizedPrice(BASE_PRICES_USD.judgePayout.detailed, locale, targetCurrency),
+      verdicts: 3,
     },
   };
 }

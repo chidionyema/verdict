@@ -203,7 +203,7 @@ export default function JudgeVerdictPage({
               </div>
             )}
 
-            <div className="mt-4 p-4 bg-indigo-50 rounded-lg border border-indigo-100 text-xs space-y-1">
+            <div className="mt-4 p-4 bg-indigo-50 rounded-lg border border-indigo-100 text-xs space-y-2">
               <p className="text-indigo-900">
                 <strong>Category:</strong> {request.category}
               </p>
@@ -211,6 +211,22 @@ export default function JudgeVerdictPage({
                 <p className="text-indigo-900">
                   <strong>Type:</strong> {request.subcategory}
                 </p>
+              )}
+              {request.requested_tone && (
+                <div className="flex items-center gap-2">
+                  <strong className="text-indigo-900">Requested Tone:</strong>
+                  <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                    request.requested_tone === 'encouraging' 
+                      ? 'bg-green-100 text-green-800'
+                      : request.requested_tone === 'brutally_honest'
+                      ? 'bg-red-100 text-red-800'
+                      : 'bg-blue-100 text-blue-800'
+                  }`}>
+                    {request.requested_tone === 'encouraging' ? 'Be Encouraging' :
+                     request.requested_tone === 'brutally_honest' ? 'Be Brutally Honest' :
+                     'Be Direct'}
+                  </span>
+                </div>
               )}
               <p className="text-indigo-900">
                 <strong>Context:</strong>{' '}
@@ -225,7 +241,11 @@ export default function JudgeVerdictPage({
               Your Verdict
             </h2>
             <p className="text-xs text-gray-500 mb-4">
-              Give one clear recommendation, explain why in a few sentences, and keep your tone kind and direct. You can also add an optional voice note if that feels more natural.
+              {request.requested_tone === 'encouraging' 
+                ? 'The seeker wants encouraging, supportive feedback. Be gentle and focus on positives while still being helpful.'
+                : request.requested_tone === 'brutally_honest'
+                ? 'The seeker wants brutally honest feedback with no sugar-coating. Be direct and straightforward in your assessment.'
+                : 'Give one clear recommendation, explain why in a few sentences, and keep your tone kind and direct. You can also add an optional voice note if that feels more natural.'}
             </p>
 
             {/* Rating */}

@@ -56,7 +56,7 @@ export function ExitIntentModal({ className = '' }: ExitIntentModalProps) {
         </p>
 
         <ul className="text-sm text-gray-700 space-y-1 mb-5">
-          <li>• 3 expert opinions in under an hour</li>
+          <li>• 3 comprehensive feedback reports in under an hour</li>
           <li>• 100% anonymous & private</li>
           <li>• Money‑back guarantee if you’re not happy</li>
         </ul>

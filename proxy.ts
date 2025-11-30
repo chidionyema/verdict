@@ -9,8 +9,8 @@ const PROTECTED_ROUTES = [
   '/results',
   '/waiting',
   '/account',
-  '/judge',
-  '/become-a-judge',
+  '/reviewer',
+  '/become-reviewer',
   '/start',
   '/success',
 ];
@@ -18,14 +18,27 @@ const PROTECTED_ROUTES = [
 // Routes that require admin access
 const ADMIN_ROUTES = ['/admin'];
 
-// Routes that require judge access
-const JUDGE_ROUTES = ['/judge/dashboard', '/judge/verdict', '/judge/my-verdicts', '/judge/performance'];
+// Routes that require reviewer access
+const REVIEWER_ROUTES = ['/reviewer/dashboard', '/reviewer/feedback', '/reviewer/my-feedback', '/reviewer/performance'];
 
 // Auth pages
 const AUTH_ROUTES = ['/auth/login', '/auth/signup'];
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // Handle redirects for old judge URLs to new reviewer URLs
+  if (pathname.startsWith('/judge')) {
+    const url = request.nextUrl.clone();
+    url.pathname = pathname.replace('/judge', '/reviewer');
+    return NextResponse.redirect(url);
+  }
+  
+  if (pathname === '/become-a-judge') {
+    const url = request.nextUrl.clone();
+    url.pathname = '/become-reviewer';
+    return NextResponse.redirect(url);
+  }
 
   let response = NextResponse.next({ request });
 
@@ -97,7 +110,7 @@ export async function proxy(request: NextRequest) {
   // Check route type
   const isProtectedRoute = PROTECTED_ROUTES.some((route) => pathname.startsWith(route));
   const isAdminRoute = ADMIN_ROUTES.some((route) => pathname.startsWith(route));
-  const isJudgeRoute = JUDGE_ROUTES.some((route) => pathname.startsWith(route));
+  const isReviewerRoute = REVIEWER_ROUTES.some((route) => pathname.startsWith(route));
   const isAuthRoute = AUTH_ROUTES.some((route) => pathname.startsWith(route));
 
   // Redirect unauthenticated users from protected routes
@@ -123,17 +136,17 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  // Check judge access for judge-specific routes
-  if (isJudgeRoute && user) {
+  // Check reviewer access for reviewer-specific routes
+  if (isReviewerRoute && user) {
     const { data: profile } = await supabase
       .from('profiles')
-      .select('is_judge')
+      .select('is_reviewer')
       .eq('id', user.id)
       .single();
 
-    if (!profile?.is_judge) {
+    if (!profile?.is_reviewer) {
       const url = request.nextUrl.clone();
-      url.pathname = '/become-a-judge';
+      url.pathname = '/become-reviewer';
       return NextResponse.redirect(url);
     }
   }

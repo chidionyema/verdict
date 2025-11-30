@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, Clock, Sparkles } from 'lucide-react';
+import { Check, Clock, Sparkles, Shirt, Briefcase, Heart, MessageSquare, Star, ArrowRight } from 'lucide-react';
 import { useLocale } from 'next-intl';
 import { TouchButton } from '@/components/ui/touch-button';
 import { VERDICT_TIERS } from '@/lib/validations';
@@ -15,48 +15,58 @@ export function PricingTableSection() {
 
   const basicPriceFormatted = verdictPricing.basic.price.formatted;
 
-  const PLANS = [
+  const detailedPricing = verdictPricing.detailed ? verdictPricing.detailed.price.formatted : '$4.99';
+
+  const PATHS = [
     {
-      name: 'Free trial',
-      badge: 'Start here',
-      verdicts: '3 opinions',
-      delivery: '47min average',
-      features: ['Test the experience', 'Honest feedback from real people', 'Completely anonymous'],
-      limitations: [],
-      price: 'Free',
-      priceDetail: 'No credit card required',
+      name: 'Earn Credits (Free)',
+      badge: 'Community Mode',
+      path: 'free',
+      cost: '£0',
+      costDetail: 'Your time (~30 min)',
+      verdicts: '3 comprehensive reports',
+      delivery: 'After earning credits',
+      steps: [
+        'Review 5 submissions in feed',
+        'Earn 1 credit automatically',
+        'Submit your request (public)',
+        'Get 3 feedback reports',
+      ],
+      features: [
+        '✅ No payment required',
+        '✅ Community participation',
+        '✅ Earn unlimited credits',
+        '⏱️ Requires ~30 minutes (judging)',
+        '👁️ Public (appears in feed)',
+      ],
+      ctaText: 'Start Reviewing Free',
+      ctaAction: () => window.location.href = '/feed',
       highlight: false,
     },
     {
-      name: 'Pay per request',
-      badge: 'Simple & transparent',
-      verdicts: `${BASIC_VERDICTS} opinions (Basic tier)`,
-      delivery: 'Most requests answered in under an hour',
-      features: [
-        'Pay only when you need a verdict',
-        'Each request = 3 people reviewing your situation',
-        'Choose Basic, Standard, or Premium inside the app',
-        'Same quality as your free trial',
+      name: 'Pay Privately (£3)',
+      badge: 'Instant Access',
+      path: 'paid',
+      cost: '£3',
+      costDetail: 'One-time payment',
+      verdicts: '3 comprehensive reports',
+      delivery: '<1 hour average',
+      steps: [
+        'Pay £3 (no judging required)',
+        'Submit your request privately',
+        'Get 3 feedback reports',
+        'Completely confidential',
       ],
-      limitations: [],
-      price: basicPriceFormatted,
-      priceDetail: 'per Basic request (3 detailed opinions; higher tiers available in app)',
+      features: [
+        '✅ No time required',
+        '✅ Completely private',
+        '✅ Faster responses (<1 hour)',
+        '✅ Skip judging entirely',
+        '💰 Costs £3 per request',
+      ],
+      ctaText: 'Submit Privately',
+      ctaAction: () => window.location.href = '/submit',
       highlight: true,
-    },
-    {
-      name: 'Power users',
-      badge: 'Coming soon',
-      verdicts: 'Subscription plans',
-      delivery: 'Priority queue',
-      features: [
-        'Best value for regular users',
-        'Faster responses',
-        'Premium reviewers',
-      ],
-      limitations: ['Subscriptions are not yet available – one-off requests only for now.'],
-      price: 'Coming soon',
-      priceDetail: '',
-      highlight: false,
     },
   ];
 
@@ -65,77 +75,83 @@ export function PricingTableSection() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-10">
           <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3">
-            Simple, Transparent Pricing
+            Two Ways to Get Feedback
           </h2>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Try free, then pay only when you need more opinions. No hidden fees, no complex tiers.
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-4">
+            Choose the path that fits your needs: Earn free credits by judging others, or pay £3 for instant private results. Both get you 3 honest feedback reports.
           </p>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-3">
-          {PLANS.map((plan) => (
+        <div className="grid gap-6 md:grid-cols-2 max-w-5xl mx-auto">
+          {PATHS.map((path) => (
             <div
-              key={plan.name}
-              className={`rounded-2xl p-6 md:p-8 bg-white shadow-sm border ${
-                plan.highlight
-                  ? 'border-indigo-500 ring-2 ring-indigo-100 relative'
-                  : 'border-gray-200'
-              } testimonial-card`}
+              key={path.name}
+              className={`rounded-2xl p-6 md:p-8 bg-white shadow-lg border-2 ${
+                path.highlight
+                  ? 'border-purple-500 ring-2 ring-purple-100 relative'
+                  : 'border-green-200'
+              }`}
             >
-              {plan.highlight && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-indigo-600 text-white text-xs font-semibold shadow-md">
-                  Best value
+              {path.highlight && (
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-purple-600 text-white text-xs font-semibold shadow-md">
+                  Instant
                 </div>
               )}
 
               <div className="mb-4">
-                <h3 className="text-xl font-bold text-gray-900">{plan.name}</h3>
-                <p className="text-xs uppercase tracking-wide text-indigo-600 mt-1 flex items-center gap-1">
-                  <Sparkles className="h-3 w-3" />
-                  {plan.badge}
+                <h3 className="text-2xl font-bold text-gray-900 mb-1">{path.name}</h3>
+                <p className="text-xs uppercase tracking-wide text-gray-600 mt-1">
+                  {path.badge}
                 </p>
               </div>
 
-              <div className="mb-4">
-                <p className="text-3xl font-bold text-gray-900">{plan.price}</p>
-                <p className="text-sm text-gray-500">{plan.priceDetail}</p>
+              <div className="mb-6">
+                <p className="text-4xl font-bold text-gray-900">{path.cost}</p>
+                <p className="text-sm text-gray-500">{path.costDetail}</p>
               </div>
 
-              <div className="mb-4">
-                <p className="font-semibold text-gray-900">{plan.verdicts}</p>
-                <p className="text-sm text-gray-600 flex items-center gap-1 mt-1">
+              <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                <p className="font-semibold text-gray-900 mb-2">{path.verdicts}</p>
+                <p className="text-sm text-gray-600 flex items-center gap-1">
                   <Clock className="h-4 w-4 text-indigo-500" />
-                  {plan.delivery}
+                  {path.delivery}
                 </p>
               </div>
 
-              <ul className="space-y-2 text-sm text-gray-700 mb-4">
-                {plan.features.map((feature) => (
-                  <li key={feature} className="flex items-start gap-2">
-                    <Check className="h-4 w-4 text-green-500 mt-0.5" />
-                    <span>{feature}</span>
+              {/* Steps */}
+              <div className="mb-6 space-y-3">
+                {path.steps.map((step, idx) => (
+                  <div key={idx} className="flex items-start gap-3">
+                    <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold ${
+                      path.path === 'free' ? 'bg-green-100 text-green-700' : 'bg-purple-100 text-purple-700'
+                    }`}>
+                      {idx + 1}
+                    </div>
+                    <p className="text-sm text-gray-700">{step}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Features */}
+              <ul className="space-y-2 text-sm mb-6">
+                {path.features.map((feature, idx) => (
+                  <li key={idx} className="text-gray-700">
+                    {feature}
                   </li>
                 ))}
-                {plan.limitations.length > 0 && (
-                  <li className="text-xs text-gray-500 mt-1">{plan.limitations.join(' • ')}</li>
-                )}
               </ul>
 
               <TouchButton
-                onClick={() => (window.location.href = '/start-simple')}
+                onClick={path.ctaAction}
                 className={`w-full justify-center mt-auto min-h-[48px] ${
-                  plan.highlight
-                    ? 'bg-indigo-600 hover:bg-indigo-700 text-white'
-                    : 'bg-white border border-gray-300 text-gray-900 hover:bg-gray-50'
+                  path.highlight
+                    ? 'bg-purple-600 hover:bg-purple-700 text-white'
+                    : 'bg-green-600 hover:bg-green-700 text-white'
                 }`}
               >
-                {plan.name === 'Free trial' ? 'Start free trial' : 'Get 3 more verdicts'}
+                {path.ctaText}
+                <ArrowRight className="h-4 w-4 ml-2" />
               </TouchButton>
-
-              <p className="mt-3 text-[11px] text-gray-400">
-                Each Basic request gives you 3 detailed opinions from real people — roughly the price of a coffee.
-                Money‑back guarantee if you’re not happy with the feedback.
-              </p>
             </div>
           ))}
         </div>

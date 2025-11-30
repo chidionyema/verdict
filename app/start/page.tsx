@@ -96,11 +96,18 @@ export default function StartPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
-  const [tier, setTier] = useState<'basic' | 'standard' | 'premium'>('basic');
+  const [tier, setTier] = useState<'basic' | 'detailed'>('basic');
+  const [feedbackStyle, setFeedbackStyle] = useState<'help' | 'roast'>('help');
 
   useEffect(() => {
     // Only initialize Supabase client in browser
     if (typeof window === 'undefined') return;
+    
+    // Check for roast mode query parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('mode') === 'roast') {
+      setFeedbackStyle('roast');
+    }
     
     const supabase = createClient();
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -202,6 +209,7 @@ export default function StartPage() {
         title,
         context,
         tier,
+        feedbackStyle,
       }));
       router.push('/auth/signup?redirect=/start/submit');
       return;
@@ -263,6 +271,8 @@ export default function StartPage() {
           context: fullContext,
           judge_preferences: judgePreferences,
           tier,
+          roast_mode: feedbackStyle === 'roast',
+          visibility: 'private', // TODO: Add public/private choice later
         }),
       });
 
@@ -320,7 +330,8 @@ export default function StartPage() {
             {step === 1 && 'Step 1: Add your photo or text'}
             {step === 2 && 'Step 2: Choose what kind of feedback you want'}
             {step === 3 && 'Step 3: Tell us who should judge you'}
-            {step === 4 && 'Step 4: Explain your situation for sharper advice'}
+            {step === 4 && 'Step 4: Choose your feedback style'}
+            {step === 5 && 'Step 5: Explain your situation for sharper advice'}
           </p>
         </div>
 
@@ -580,15 +591,144 @@ export default function StartPage() {
           )}
 
           {/* Step 4: Context */}
+          {/* Step 4: Feedback Style (Help Me vs Roast Me) */}
           {step === 4 && (
+            <>
+              <div className="text-center mb-8">
+                <p className="text-sm text-gray-500 mb-2">
+                  {mediaType === 'photo' ? 'Photo' : 'Text'} ready ✓ • {category} feedback selected ✓ • Judges selected ✓
+                </p>
+                <h2 className="text-2xl font-bold text-gray-900">Choose Your Feedback Style</h2>
+                <p className="text-gray-600 mt-2">
+                  How do you want people to give you feedback?
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                {/* Help Me Mode */}
+                <button
+                  onClick={() => setFeedbackStyle('help')}
+                  className={`p-6 rounded-xl border-2 text-left transition-all duration-200 ${
+                    feedbackStyle === 'help'
+                      ? 'border-green-500 bg-green-50 ring-2 ring-green-100'
+                      : 'border-gray-200 hover:border-green-300'
+                  }`}
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                      <span className="text-2xl">🤝</span>
+                    </div>
+                    <div>
+                      <h3 className={`text-lg font-semibold mb-2 ${
+                        feedbackStyle === 'help' ? 'text-green-900' : 'text-gray-900'
+                      }`}>
+                        Help Me Mode
+                      </h3>
+                      <p className={`text-sm ${
+                        feedbackStyle === 'help' ? 'text-green-700' : 'text-gray-600'
+                      }`}>
+                        Constructive, supportive feedback. Kind but honest advice to help you improve.
+                      </p>
+                      <div className="mt-3 space-y-1">
+                        <div className={`text-xs ${feedbackStyle === 'help' ? 'text-green-600' : 'text-gray-500'}`}>
+                          ✓ Thoughtful suggestions
+                        </div>
+                        <div className={`text-xs ${feedbackStyle === 'help' ? 'text-green-600' : 'text-gray-500'}`}>
+                          ✓ Actionable improvements
+                        </div>
+                        <div className={`text-xs ${feedbackStyle === 'help' ? 'text-green-600' : 'text-gray-500'}`}>
+                          ✓ Encouraging tone
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </button>
+
+                {/* Roast Me Mode */}
+                <button
+                  onClick={() => setFeedbackStyle('roast')}
+                  className={`p-6 rounded-xl border-2 text-left transition-all duration-200 ${
+                    feedbackStyle === 'roast'
+                      ? 'border-red-500 bg-red-50 ring-2 ring-red-100'
+                      : 'border-gray-200 hover:border-red-300'
+                  }`}
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                      <span className="text-2xl">🔥</span>
+                    </div>
+                    <div>
+                      <h3 className={`text-lg font-semibold mb-2 ${
+                        feedbackStyle === 'roast' ? 'text-red-900' : 'text-gray-900'
+                      }`}>
+                        Roast Me Mode
+                      </h3>
+                      <p className={`text-sm ${
+                        feedbackStyle === 'roast' ? 'text-red-700' : 'text-gray-600'
+                      }`}>
+                        Brutal honesty. No filter. Get the raw truth that others won't tell you.
+                      </p>
+                      <div className="mt-3 space-y-1">
+                        <div className={`text-xs ${feedbackStyle === 'roast' ? 'text-red-600' : 'text-gray-500'}`}>
+                          ⚡ Unfiltered opinions
+                        </div>
+                        <div className={`text-xs ${feedbackStyle === 'roast' ? 'text-red-600' : 'text-gray-500'}`}>
+                          ⚡ Entertainment value
+                        </div>
+                        <div className={`text-xs ${feedbackStyle === 'roast' ? 'text-red-600' : 'text-gray-500'}`}>
+                          ⚡ Shareable content
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              </div>
+
+              {feedbackStyle === 'roast' && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
+                  <div className="flex gap-3">
+                    <span className="text-amber-600 text-xl">⚠️</span>
+                    <div>
+                      <h4 className="font-semibold text-amber-900 mb-1">Roast Mode Warning</h4>
+                      <p className="text-sm text-amber-800 leading-relaxed">
+                        You're asking for brutal honesty. Responses may be blunt, sarcastic, or harsh. 
+                        Only choose this if you can handle unfiltered criticism and want entertainment value.
+                      </p>
+                      <p className="text-xs text-amber-700 mt-2 font-medium">
+                        💡 Tip: Roast content often goes viral on social media!
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-between">
+                <button
+                  onClick={() => setStep(3)}
+                  className="flex items-center gap-2 px-4 py-2 text-gray-500 hover:text-gray-700 transition"
+                >
+                  ← Back to judge preferences
+                </button>
+                <button
+                  onClick={() => setStep(5)}
+                  className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium"
+                >
+                  Continue →
+                </button>
+              </div>
+            </>
+          )}
+
+          {/* Step 5: Context (formerly Step 4) */}
+          {step === 5 && (
             <>
               {/* Progress Summary */}
               <div className="text-center mb-6">
                 <p className="text-sm text-gray-500 mb-2">
-                  {mediaType === 'photo' ? 'Photo' : 'Text'} ready ✓ • {category} feedback selected ✓ • Judges selected ✓
+                  {mediaType === 'photo' ? 'Photo' : 'Text'} ready ✓ • {category} feedback selected ✓ • Judges selected ✓ • {feedbackStyle === 'roast' ? 'Roast mode' : 'Help mode'} ✓
                 </p>
                 <h2 className="text-2xl font-bold text-gray-900">
-                  Step 4 · {category === 'decision' ? 'Explain your situation' : 'Add context for better feedback'}
+                  Step 5 · {category === 'decision' ? 'Explain your situation' : 'Add context for better feedback'}
                 </h2>
                 <p className="text-gray-600 mt-2">
                   In 2–5 sentences, tell judges what&apos;s at stake, what you&apos;re unsure about, and what outcome you want.
@@ -606,7 +746,7 @@ export default function StartPage() {
                   How many perspectives do you want?
                 </label>
                 <div className="flex flex-col sm:flex-row gap-2">
-                  {(['basic', 'standard', 'premium'] as const).map((t) => {
+                  {(['basic', 'detailed'] as const).map((t) => {
                     const config = VERDICT_TIER_PRICING[t];
                     const totalDollars = config.price;
                     const isSelected = tier === t;
@@ -636,8 +776,8 @@ export default function StartPage() {
                   })}
                 </div>
                 <p className="mt-2 text-xs text-gray-500">
-                  {tier === 'standard'
-                    ? 'Most people choose Standard for big career or relationship decisions.'
+                  {tier === 'detailed'
+                    ? 'Detailed feedback is perfect for big career or relationship decisions.'
                     : 'You can always start with Basic and upgrade on your next request.'}
                 </p>
               </div>
@@ -753,10 +893,10 @@ export default function StartPage() {
 
               <div className="flex justify-between items-center">
                 <button
-                  onClick={() => setStep(3)}
+                  onClick={() => setStep(4)}
                   className="flex items-center gap-2 px-4 py-2 text-gray-500 hover:text-gray-700 transition"
                 >
-                  ← Back to judges
+                  ← Back to feedback style
                 </button>
                 
                 <div className="flex flex-col items-end gap-2">

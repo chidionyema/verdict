@@ -26,27 +26,27 @@ interface DemoStep {
   duration: number;
 }
 
-const DEMO_VERDICT_RESPONSES = [
+const DEMO_FEEDBACK_RESPONSES = [
   {
     id: 1,
     rating: 9,
     tone: 'encouraging',
     text: "Love this look! The color combination is perfect and very professional. You'll definitely make a great first impression at the interview.",
-    judge: "A1"
+    reviewer: "A1"
   },
   {
     id: 2,
     rating: 8,
     tone: 'constructive', 
     text: "Overall great choice! Maybe consider a slightly different tie pattern - something more subtle might be even better for finance.",
-    judge: "B7"
+    reviewer: "B7"
   },
   {
     id: 3,
     rating: 10,
     tone: 'encouraging',
     text: "Perfect! This outfit shows confidence without being flashy. The fit is spot-on and very appropriate for corporate culture.",
-    judge: "C3"
+    reviewer: "C3"
   }
 ];
 
@@ -69,7 +69,7 @@ const DEMO_STEPS: DemoStep[] = [
   {
     id: 2,
     title: "Real People Review",
-    description: "3 verified reviewers anonymously evaluate your submission",
+    description: "3 vetted reviewers anonymously provide detailed feedback on your submission",
     duration: 3000,
     visual: (
       <div className="space-y-3">
@@ -78,7 +78,7 @@ const DEMO_STEPS: DemoStep[] = [
             <Clock className="w-4 h-4 text-yellow-700" />
           </div>
           <div className="flex-1">
-            <p className="text-sm font-medium">Judge A1 reviewing...</p>
+            <p className="text-sm font-medium">Reviewer A1 providing feedback...</p>
             <div className="w-full bg-yellow-200 rounded-full h-2 mt-1">
               <div className="bg-yellow-600 h-2 rounded-full w-3/4 animate-pulse"></div>
             </div>
@@ -88,13 +88,13 @@ const DEMO_STEPS: DemoStep[] = [
           <div className="w-8 h-8 bg-green-200 rounded-full flex items-center justify-center">
             <CheckCircle className="w-4 h-4 text-green-700" />
           </div>
-          <p className="text-sm font-medium">Judge B7 completed</p>
+          <p className="text-sm font-medium">Reviewer B7 completed review</p>
         </div>
         <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
           <div className="w-8 h-8 bg-blue-200 rounded-full flex items-center justify-center">
             <MessageSquare className="w-4 h-4 text-blue-700" />
           </div>
-          <p className="text-sm font-medium">Judge C3 writing feedback...</p>
+          <p className="text-sm font-medium">Reviewer C3 writing review...</p>
         </div>
       </div>
     )
@@ -115,19 +115,19 @@ const DEMO_STEPS: DemoStep[] = [
             <Badge className="bg-green-100 text-green-800">Great choice!</Badge>
           </div>
           <div className="space-y-2">
-            {DEMO_VERDICT_RESPONSES.map((verdict) => (
-              <div key={verdict.id} className="text-sm bg-gray-50 rounded p-2">
+            {DEMO_FEEDBACK_RESPONSES.map((feedback) => (
+              <div key={feedback.id} className="text-sm bg-gray-50 rounded p-2">
                 <div className="flex items-center gap-2 mb-1">
                   <Avatar className="w-5 h-5">
-                    <AvatarFallback className="text-xs">{verdict.judge}</AvatarFallback>
+                    <AvatarFallback className="text-xs">{feedback.reviewer}</AvatarFallback>
                   </Avatar>
-                  <span className="font-medium">{verdict.rating}/10</span>
-                  <Badge variant="outline" className="text-xs">{verdict.tone}</Badge>
+                  <span className="font-medium">{feedback.rating}/10</span>
+                  <Badge variant="outline" className="text-xs">{feedback.tone}</Badge>
                 </div>
-                <p className="text-gray-700">{verdict.text}</p>
+                <p className="text-gray-700">{feedback.text}</p>
               </div>
             ))}
-            <p className="text-xs text-gray-500 text-center pt-2">All 3 honest responses shown</p>
+            <p className="text-xs text-gray-500 text-center pt-2">All 3 comprehensive reports shown</p>
           </div>
         </div>
       </div>
@@ -186,7 +186,7 @@ export function InteractiveDemo() {
           See How It Works in 30 Seconds
         </h2>
         <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-          Watch a real verdict request from submission to results
+          Watch a real feedback request from submission to results
         </p>
       </div>
 
@@ -303,7 +303,7 @@ export function InteractiveDemo() {
       {currentStep === DEMO_STEPS.length - 1 && progress === 100 && (
         <div className="text-center mt-8 p-6 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-200">
           <h3 className="text-xl font-semibold text-gray-900 mb-2">
-            Ready to get your own verdict?
+            Ready to get your own feedback?
           </h3>
           <p className="text-gray-600 mb-4">
             Join thousands who've gotten honest feedback in minutes

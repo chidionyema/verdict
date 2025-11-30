@@ -13,6 +13,21 @@ export interface CreateRequestInput {
   text_content?: string | null;
   context: string;
   /**
+   * Optional tone preference for feedback: 'encouraging', 'honest', or 'brutally_honest'
+   * Defaults to 'honest' if not specified
+   */
+  requestedTone?: 'encouraging' | 'honest' | 'brutally_honest';
+  /**
+   * Whether this is roast mode (brutal feedback) or help mode (constructive)
+   * Defaults to false (help mode)
+   */
+  roastMode?: boolean;
+  /**
+   * Whether the submission is public (appears in feed) or private
+   * Defaults to 'private'
+   */
+  visibility?: 'public' | 'private';
+  /**
    * Optional override for how many verdicts this request should target.
    * Defaults to 3 to match current pricing.
    */
@@ -49,6 +64,9 @@ export async function createVerdictRequest(
     media_url,
     text_content,
     context,
+    requestedTone,
+    roastMode,
+    visibility,
     targetVerdictCount,
     creditsToCharge,
   } = input;
@@ -111,7 +129,7 @@ export async function createVerdictRequest(
 
   // Create the request
   const { data: newRequest, error: createRequestError } = await (supabase as any)
-    .from('verdict_requests')
+    .from('feedback_requests')
     .insert({
       user_id: userId,
       category,
@@ -120,6 +138,10 @@ export async function createVerdictRequest(
       media_url: media_type === 'photo' || media_type === 'audio' ? media_url || null : null,
       text_content: media_type === 'text' ? text_content || null : null,
       context,
+      question: context, // For now, context serves as question
+      requested_tone: requestedTone || 'honest',
+      roast_mode: roastMode || false,
+      visibility: visibility || 'private',
       status: 'in_progress',
       target_verdict_count: targetCount,
       received_verdict_count: 0,

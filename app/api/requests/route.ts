@@ -108,6 +108,9 @@ export async function POST(request: NextRequest) {
       text_content,
       context,
       tier,
+      requested_tone,
+      roast_mode,
+      visibility,
     } = body;
 
     // Validate category
@@ -173,6 +176,12 @@ export async function POST(request: NextRequest) {
 
     // Delegate to domain logic for credits + request creation
     try {
+      // Validate and normalize requested tone
+      const validTones = ['encouraging', 'honest', 'brutally_honest'];
+      const normalizedTone = requested_tone && validTones.includes(requested_tone) 
+        ? requested_tone as 'encouraging' | 'honest' | 'brutally_honest'
+        : 'honest';
+
       const { request: createdRequest } = await createVerdictRequest(
         supabase as any,
         {
@@ -184,6 +193,9 @@ export async function POST(request: NextRequest) {
           media_url,
           text_content,
           context,
+          requestedTone: normalizedTone,
+          roastMode: roast_mode || false,
+          visibility: visibility || 'private',
           // Use finance-approved tier config
           creditsToCharge: tierConfig.credits,
           targetVerdictCount: tierConfig.verdicts,

@@ -23,22 +23,22 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.7,
     },
     {
-      url: `${baseUrl}/career-decisions`,
+      url: `${baseUrl}/dating`,
       lastModified: new Date(),
       changeFrequency: 'weekly',
-      priority: 0.8,
+      priority: 0.9,
     },
     {
-      url: `${baseUrl}/dating-feedback`,
+      url: `${baseUrl}/career`,
       lastModified: new Date(),
       changeFrequency: 'weekly',
-      priority: 0.8,
+      priority: 0.9,
     },
     {
-      url: `${baseUrl}/outfit-check`,
+      url: `${baseUrl}/style`,
       lastModified: new Date(),
       changeFrequency: 'weekly',
-      priority: 0.8,
+      priority: 0.9,
     },
   ];
 }

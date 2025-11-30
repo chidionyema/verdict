@@ -228,23 +228,16 @@ function AccountContent() {
                 <tr className="border-t border-gray-200">
                   <td className="px-4 py-2">Basic</td>
                   <td className="px-4 py-2">
-                    {VERDICT_TIERS.basic.verdicts} expert verdicts
+                    {VERDICT_TIERS.basic.verdicts} quick ratings
                   </td>
                   <td className="px-4 py-2">{VERDICT_TIER_PRICING.basic.credits} credit</td>
                 </tr>
                 <tr className="border-t border-gray-200">
-                  <td className="px-4 py-2">Standard</td>
+                  <td className="px-4 py-2">Detailed</td>
                   <td className="px-4 py-2">
-                    {VERDICT_TIERS.standard.verdicts} expert verdicts
+                    {VERDICT_TIERS.detailed.verdicts} written reviews
                   </td>
-                  <td className="px-4 py-2">{VERDICT_TIER_PRICING.standard.credits} credits</td>
-                </tr>
-                <tr className="border-t border-gray-200">
-                  <td className="px-4 py-2">Premium</td>
-                  <td className="px-4 py-2">
-                    {VERDICT_TIERS.premium.verdicts} expert verdicts
-                  </td>
-                  <td className="px-4 py-2">{VERDICT_TIER_PRICING.premium.credits} credits</td>
+                  <td className="px-4 py-2">{VERDICT_TIER_PRICING.detailed.credits} credit</td>
                 </tr>
               </tbody>
             </table>
