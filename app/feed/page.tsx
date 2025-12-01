@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Heart, X, MessageSquare, Clock, Eye, Users, Zap } from 'lucide-react';
 import { CreditBalance } from '@/components/credits/CreditBalance';
 import { JudgeReputation } from '@/components/reputation/JudgeReputation';
@@ -15,6 +15,8 @@ type FeedRequest = Database['public']['Tables']['feedback_requests']['Row'] & {
   user_has_judged?: boolean;
 };
 
+// Client component - no dynamic export needed
+
 export default function FeedPage() {
   const [user, setUser] = useState<any>(null);
   const [feedItems, setFeedItems] = useState<FeedRequest[]>([]);
@@ -23,27 +25,44 @@ export default function FeedPage() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [judgeStats, setJudgeStats] = useState({ today: 0, streak: 0, totalJudgments: 0 });
   const [creditsEarned, setCreditsEarned] = useState(0);
-
-  const supabase = createClient();
+  const supabaseRef = useRef<ReturnType<typeof createClient> | null>(null);
 
   useEffect(() => {
+    // Only initialize Supabase client in browser
+    if (typeof window === 'undefined') {
+      setLoading(false);
+      return;
+    }
+
     async function init() {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
-      
-      if (user) {
-        await loadFeedItems();
-        await loadJudgeStats(user.id);
-      } else {
-        // Redirect to login
-        window.location.href = '/auth/login';
+      try {
+        // Initialize Supabase client only in browser
+        if (!supabaseRef.current) {
+          supabaseRef.current = createClient();
+        }
+        const supabase = supabaseRef.current;
+
+        const { data: { user } } = await supabase.auth.getUser();
+        setUser(user);
+        
+        if (user) {
+          await loadFeedItems(supabase);
+          await loadJudgeStats(user.id, supabase);
+        } else {
+          // Redirect to login
+          window.location.href = '/auth/login';
+        }
+      } catch (error) {
+        console.error('Error initializing feed:', error);
+        setLoading(false);
       }
     }
     init();
   }, []);
 
-  async function loadFeedItems() {
+  async function loadFeedItems(supabase: ReturnType<typeof createClient>) {
     try {
+      if (!supabase) return;
       // Fetch public submissions that haven't been judged by current user
       const { data: requestsData, error: requestsError } = await supabase
         .from('feedback_requests')
@@ -83,8 +102,9 @@ export default function FeedPage() {
     }
   }
 
-  async function loadJudgeStats(userId: string) {
+  async function loadJudgeStats(userId: string, supabase: ReturnType<typeof createClient>) {
     try {
+      if (!supabase) return;
       const reputation = await creditManager.getJudgeReputation(userId);
       
       // Calculate today's judgments count
@@ -118,11 +138,12 @@ export default function FeedPage() {
   }
 
   async function handleJudgment(verdict: 'like' | 'dislike', feedback?: string) {
-    if (!user || judging || currentIndex >= feedItems.length) return;
+    if (!user || judging || currentIndex >= feedItems.length || !supabaseRef.current) return;
 
     setJudging(true);
     try {
       const currentItem = feedItems[currentIndex];
+      const supabase = supabaseRef.current;
       
       // Submit judgment
       const { data: responseData, error: responseError } = await (supabase
@@ -188,7 +209,7 @@ export default function FeedPage() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-xl font-bold text-gray-900">Discover</h1>
-              <p className="text-sm text-gray-500">Judge others to earn credits</p>
+              <p className="text-sm text-gray-500">Review others to earn credits</p>
             </div>
             <CreditBalance compact />
           </div>
@@ -205,7 +226,9 @@ export default function FeedPage() {
               onCreditEarned={() => {
                 setCreditsEarned(prev => prev + 1);
                 // Reload credits
-                loadJudgeStats(user.id);
+                if (supabaseRef.current) {
+                  loadJudgeStats(user.id, supabaseRef.current);
+                }
               }}
             />
           </div>
@@ -281,7 +304,7 @@ export default function FeedPage() {
               className="flex flex-col items-center gap-1 text-indigo-600"
             >
               <Heart className="h-5 w-5" />
-              <span className="text-xs">Judge</span>
+              <span className="text-xs">Review</span>
             </button>
             <button
               onClick={() => window.location.href = '/dashboard'}
