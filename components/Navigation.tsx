@@ -157,9 +157,12 @@ export default function Navigation() {
             ) : user ? (
               <>
                 {/* User Status Widget */}
-                <div className="flex items-center space-x-4">
-                  {/* Credits Display - More prominent */}
-                  <Link href="/account" className="flex items-center bg-gradient-to-r from-yellow-50 to-amber-50 text-amber-700 px-5 py-2 rounded-full text-sm min-h-[36px] hover:from-yellow-100 hover:to-amber-100 transition-all border border-amber-200 shadow-sm">
+                <div className="flex items-center space-x-4 mr-4">
+                  {/* Credits Display */}
+                  <Link
+                    href="/account"
+                    className="flex items-center bg-gradient-to-r from-yellow-50 to-amber-50 text-amber-700 px-4 py-2 rounded-full text-sm min-h-[36px] hover:from-yellow-100 hover:to-amber-100 transition-all border border-amber-200 shadow-sm"
+                  >
                     <Zap className="h-4 w-4 mr-2 text-amber-600" />
                     <span className="font-bold text-lg">
                       {userProfile?.credits || 0}
@@ -195,43 +198,36 @@ export default function Navigation() {
                   
                   {/* Notifications */}
                   <NotificationCenter />
-                  
-                  {/* Quick New Request */}
-                  <Link
-                    href="/start-simple"
-                    className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition flex items-center text-sm min-h-[36px]"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    New Request
-                  </Link>
                 </div>
 
-                {/* Navigation Links */}
+                {/* Primary action + main navigation */}
+                <Link
+                  href="/start-simple"
+                  className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition flex items-center text-sm min-h-[36px] font-semibold shadow-sm"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  New Request
+                </Link>
+                <Link
+                  href="/my-requests"
+                  className="text-gray-700 hover:text-indigo-600 transition flex items-center min-h-[36px] font-medium"
+                >
+                  Dashboard
+                </Link>
                 <Link
                   href="/feed"
                   className="text-gray-700 hover:text-indigo-600 transition flex items-center min-h-[36px] font-medium"
                 >
                   Discover
                 </Link>
-                <Link
-                  href="/submit"
-                  className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition flex items-center text-sm min-h-[36px] font-medium"
-                >
-                  Submit
-                </Link>
-                <Link
-                  href="/reviewer"
-                  className="text-gray-700 hover:text-indigo-600 transition flex items-center min-h-[36px] font-medium"
-                >
-                  Judge Queue
-                </Link>
-                <div className="w-px h-6 bg-gray-300 mx-2"></div>
-                <Link
-                  href="/my-requests"
-                  className="text-gray-600 hover:text-gray-800 transition flex items-center min-h-[36px] text-sm"
-                >
-                  My Submissions
-                </Link>
+                {userProfile?.is_reviewer && (
+                  <Link
+                    href="/reviewer"
+                    className="text-gray-700 hover:text-indigo-600 transition flex items-center min-h-[36px] font-medium"
+                  >
+                    Review
+                  </Link>
+                )}
                 <Link
                   href="/account"
                   className="text-gray-700 hover:text-indigo-600 transition flex items-center min-h-[36px]"
@@ -249,10 +245,10 @@ export default function Navigation() {
                   Discover
                 </Link>
                 <Link
-                  href="/submit"
+                  href="/start-simple"
                   className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition flex items-center text-sm min-h-[36px] font-medium"
                 >
-                  Submit
+                  Start a request
                 </Link>
                 {userProfile?.is_reviewer ? (
                   <div className="relative group">
@@ -371,7 +367,7 @@ export default function Navigation() {
                   className="block py-4 text-gray-700 hover:text-indigo-600 text-lg font-medium border-b border-gray-200 min-h-[48px] flex items-center"
                   onClick={() => setMobileMenuOpen(false)}
                 >
-                  My Requests
+                  Dashboard
                 </Link>
                 <Link
                   href="/reviewer"
@@ -433,4 +429,5 @@ export default function Navigation() {
     </nav>
   );
 }
+
 

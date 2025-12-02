@@ -56,7 +56,7 @@ const SAMPLE_FEEDBACKS: SampleFeedback[] = [
     question: 'Is this outfit appropriate for a tech startup interview?',
     context: 'I want to look professional but not too formal. The company culture seems relaxed.',
     mediaType: 'photo',
-    price: 1.99,
+    price: 3.0,
     reviews: [
       {
         reviewerId: 'r1234',
@@ -118,7 +118,7 @@ const SAMPLE_FEEDBACKS: SampleFeedback[] = [
     question: 'Is this outfit appropriate for a tech startup interview?',
     context: 'I want to look professional but not too formal. The company culture seems relaxed.',
     mediaType: 'photo',
-    price: 4.99,
+    price: 5.99,
     reviews: [
       {
         reviewerId: 'r1234',
@@ -181,7 +181,7 @@ const SAMPLE_FEEDBACKS: SampleFeedback[] = [
     question: 'How can I improve my dating profile bio?',
     context: "Current bio: 'Adventure seeker, coffee enthusiast, dog dad. Looking for someone to explore hidden restaurants and debate whether pineapple belongs on pizza.'",
     mediaType: 'text',
-    price: 1.99,
+    price: 3.0,
     reviews: [
       {
         reviewerId: 'r3456',
@@ -243,7 +243,7 @@ const SAMPLE_FEEDBACKS: SampleFeedback[] = [
     question: 'How can I improve my dating profile bio?',
     context: "Current bio: 'Adventure seeker, coffee enthusiast, dog dad. Looking for someone to explore hidden restaurants and debate whether pineapple belongs on pizza.'",
     mediaType: 'text',
-    price: 4.99,
+    price: 5.99,
     reviews: [
       {
         reviewerId: 'r3456',
@@ -355,7 +355,7 @@ export function SampleFeedbackShowcase() {
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              Basic ($1.99)
+              Basic (£3)
             </button>
             <button
               onClick={() => setSelectedSample(1)}
@@ -365,7 +365,7 @@ export function SampleFeedbackShowcase() {
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              Detailed ($4.99)
+              Detailed (£5.99)
             </button>
           </div>
         </div>
@@ -415,9 +415,9 @@ export function SampleFeedbackShowcase() {
                 <p className="text-white/90">{sample.context}</p>
               </div>
               <div className="text-right">
-                <p className="text-3xl font-bold">${sample.price}</p>
+                <p className="text-3xl font-bold">£{sample.price.toFixed(2)}</p>
                 <p className="text-sm text-white/80">
-                  {sample.tier === 'basic' ? 'Quick ratings' : 'Written reviews'}
+                  {sample.tier === 'basic' ? '3 concise reviews' : '3 detailed reviews'}
                 </p>
               </div>
             </div>
@@ -532,7 +532,7 @@ export function SampleFeedbackShowcase() {
                 onClick={() => window.location.href = '/start-simple'}
                 className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-8 py-4 rounded-xl font-bold text-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5 flex items-center justify-center gap-2"
               >
-                Get Started - From $1.99
+                Get Started – From £3
                 <ArrowRight className="h-5 w-5" />
               </button>
               <button

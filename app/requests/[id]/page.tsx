@@ -262,7 +262,7 @@ export default function RequestDetailPage({
                 Try Again
               </button>
               <Link
-                href="/dashboard"
+                href="/my-requests"
                 className="px-4 py-2 bg-white text-red-600 border border-red-300 rounded-lg hover:bg-red-50 transition font-medium min-h-[44px] flex items-center justify-center"
               >
                 Back to Dashboard
@@ -297,7 +297,7 @@ export default function RequestDetailPage({
                 className="flex items-center text-gray-600 hover:text-gray-900 transition min-h-[44px]"
               >
                 <ArrowLeft className="h-5 w-5 mr-2" />
-                Back to My Requests
+                Back to Dashboard
               </Link>
             ) : userContext.isJudge ? (
               <Link

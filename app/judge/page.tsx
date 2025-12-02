@@ -397,7 +397,7 @@ export default function JudgeDashboardPage() {
               <ArrowRight className="h-4 w-4 ml-2" />
             </button>
             <button
-              onClick={() => router.push('/dashboard')}
+              onClick={() => router.push('/my-requests')}
               className="w-full bg-gray-100 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-200 transition"
             >
               Back to Dashboard

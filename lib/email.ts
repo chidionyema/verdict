@@ -143,7 +143,7 @@ export const emailTemplates = {
           <div style="text-align: center; margin: 32px 0;">
             <a href="${APP_URL}/requests/${data.requestId}" style="display: inline-block; background: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500;">View My Request</a>
           </div>
-          <p style="color: #6B7280; font-size: 14px;">You can also find this under <strong>My Requests</strong> in the app.</p>
+          <p style="color: #6B7280; font-size: 14px;">You can also find this in your <strong>Dashboard</strong> in the app.</p>
           <p style="color: #6B7280; font-size: 14px; margin-top: 32px;">— The Verdict Team</p>
         </body>
       </html>

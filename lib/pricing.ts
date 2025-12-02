@@ -21,7 +21,7 @@ const EXCHANGE_RATES: Record<CurrencyCode, number> = {
 // Base prices in USD cents
 export const BASE_PRICES_USD = {
   verdict: {
-    basic: 199,      // $1.99 - Quick votes/ratings for simple decisions
+    basic: 300,      // £3.00 - 3 concise reviews for simple decisions
     detailed: 499,   // $4.99 - Full written feedback for complex decisions
   },
   credits: {

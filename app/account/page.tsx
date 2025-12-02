@@ -228,7 +228,7 @@ function AccountContent() {
                 <tr className="border-t border-gray-200">
                   <td className="px-4 py-2">Basic</td>
                   <td className="px-4 py-2">
-                    {VERDICT_TIERS.basic.verdicts} quick ratings
+                    {VERDICT_TIERS.basic.verdicts} concise reviews
                   </td>
                   <td className="px-4 py-2">{VERDICT_TIER_PRICING.basic.credits} credit</td>
                 </tr>

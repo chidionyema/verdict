@@ -149,7 +149,7 @@ export default function WaitingPage() {
               </p>
               <p className="text-xs text-indigo-700">
                 We&apos;ll email you as soon as your results are ready. You&apos;ll always find them
-                under <span className="font-semibold">My Requests</span>.
+                in your <span className="font-semibold">Dashboard</span>.
               </p>
             </div>
 

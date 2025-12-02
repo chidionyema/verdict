@@ -106,7 +106,8 @@ function SuccessContent() {
             <p className="font-semibold">You’re safe to close this tab.</p>
             <p className="text-blue-800 mt-1">
               We&apos;ll email you as soon as new verdicts arrive and when all verdicts are ready.
-              You can always find this request again under <span className="font-semibold">My Requests</span>.
+              You can always find this request again in your{' '}
+              <span className="font-semibold">Dashboard</span>.
             </p>
           </div>
           <button
@@ -114,7 +115,7 @@ function SuccessContent() {
             onClick={() => router.push('/my-requests')}
             className="mt-1 sm:mt-0 px-4 py-2 rounded-lg bg-white text-blue-800 text-sm font-medium border border-blue-300 hover:bg-blue-100 transition"
           >
-            Go to My Requests
+            Go to Dashboard
           </button>
         </div>
 

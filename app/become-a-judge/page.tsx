@@ -53,15 +53,15 @@ export default function BecomeJudgePage() {
             </h2>
             <ul className="space-y-2 text-sm text-gray-700">
               <li className="flex justify-between">
-                <span>Basic requests ({VERDICT_TIERS.basic.verdicts} quick ratings)</span>
+                <span>Basic requests ({VERDICT_TIERS.basic.verdicts} concise reviews)</span>
                 <span className="font-semibold">
-                  ${BASIC.judgePayout.toFixed(2)} per rating
+                  £{BASIC.judgePayout.toFixed(2)} per review
                 </span>
               </li>
               <li className="flex justify-between">
                 <span>Detailed requests ({VERDICT_TIERS.detailed.verdicts} written reviews)</span>
                 <span className="font-semibold">
-                  ${DETAILED.judgePayout.toFixed(2)} per review
+                  £{DETAILED.judgePayout.toFixed(2)} per review
                 </span>
               </li>
             </ul>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 import { toast } from '@/components/ui/toast';
@@ -10,9 +10,7 @@ import {
   XCircle,
   Eye,
   Calendar,
-  Filter,
   Search,
-  TrendingUp,
   Star,
   Share2,
   Copy,
@@ -36,11 +34,9 @@ export default function MyRequestsPage() {
   const [error, setError] = useState('');
   const [filter, setFilter] = useState<'all' | 'open' | 'closed' | 'cancelled'>('all');
   const [searchTerm, setSearchTerm] = useState('');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const previousCountsRef = useRef<Record<string, number>>({});
 
   const fetchData = async () => {
-    // Only run in browser
     if (typeof window === 'undefined') {
       setLoading(false);
       return;
@@ -48,30 +44,22 @@ export default function MyRequestsPage() {
 
     try {
       const supabase = createClient();
-      
-      // Get user first
       const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
-      
+
       if (!user) {
         setError('Not logged in');
         setLoading(false);
         return;
       }
 
-      console.log('Current user:', user.id);
-
-      // Fetch requests using the fixed API
       const res = await fetch('/api/requests');
-      console.log('API Response status:', res.status);
       
       if (res.ok) {
         const data = await res.json();
-        console.log('API Response data:', data);
         const fetchedRequests = data.requests || [];
         setRequests(fetchedRequests);
-        
-        // Store initial counts for comparison
+
         const counts: Record<string, number> = {};
         fetchedRequests.forEach((req: any) => {
           counts[req.id] = req.received_verdict_count || 0;
@@ -79,20 +67,16 @@ export default function MyRequestsPage() {
         previousCountsRef.current = counts;
       } else {
         const errorData = await res.json();
-        console.error('API Error:', errorData);
         setError(`API Error: ${errorData.error || 'Unknown error'}`);
       }
-      
-      // Also try direct Supabase query
-      console.log('Trying direct Supabase query...');
+
+      // Optional extra logging only for debugging
       const { data: directRequests, error: directError } = await supabase
         .from('verdict_requests')
         .select('*')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
-      
       console.log('Direct Supabase query result:', { directRequests, directError });
-      
     } catch (err) {
       console.error('Fetch error:', err);
       setError(err instanceof Error ? err.message : 'Unknown error');
@@ -105,15 +89,14 @@ export default function MyRequestsPage() {
     fetchData();
   }, []);
 
-  // Set up real-time subscription for verdict updates
+  // Real-time verdict updates
   useEffect(() => {
-    // Only run in browser
     if (typeof window === 'undefined') return;
     if (!user?.id) return;
 
     try {
       const supabase = createClient();
-      
+
       const channel = supabase
         .channel('my-requests-updates')
         .on(
@@ -127,33 +110,25 @@ export default function MyRequestsPage() {
           (payload) => {
             const updatedRequest = payload.new as any;
             const oldRequest = payload.old as any;
-            
-            // Check if verdict count increased
-            const oldCount = oldRequest?.received_verdict_count || previousCountsRef.current[updatedRequest.id] || 0;
+
+            const oldCount =
+              oldRequest?.received_verdict_count ||
+              previousCountsRef.current[updatedRequest.id] ||
+              0;
             const newCount = updatedRequest?.received_verdict_count || 0;
-            
+
             if (newCount > oldCount) {
-              // Update the request in state
               setRequests((prev) => {
                 const updated = prev.map((req) =>
-                  req.id === updatedRequest.id
-                    ? { ...req, ...updatedRequest }
-                    : req
+                  req.id === updatedRequest.id ? { ...req, ...updatedRequest } : req
                 );
-                
-                // Update previous counts
                 previousCountsRef.current[updatedRequest.id] = newCount;
-                
                 return updated;
               });
 
-              // Show notification
               const verdictsReceived = newCount - oldCount;
               if (newCount >= updatedRequest.target_verdict_count) {
-                toast.success(
-                  `🎉 All verdicts received! Your request is complete.`,
-                  5000
-                );
+                toast.success('🎉 All verdicts received! Your request is complete.', 5000);
               } else {
                 toast.success(
                   `✨ You received ${verdictsReceived} new verdict${verdictsReceived > 1 ? 's' : ''}! (${newCount}/${updatedRequest.target_verdict_count})`,
@@ -165,7 +140,6 @@ export default function MyRequestsPage() {
         )
         .subscribe();
 
-      // Polling fallback - refresh every 30 seconds to catch any missed updates
       const pollInterval = setInterval(() => {
         fetchData();
       }, 30000);
@@ -191,7 +165,6 @@ export default function MyRequestsPage() {
     const target = request.target_verdict_count || 0;
 
     if (normalized === 'cancelled') return 'Cancelled';
-
     if (normalized === 'closed') return 'Completed';
 
     if (normalized === 'open') {
@@ -203,45 +176,30 @@ export default function MyRequestsPage() {
     return request.status;
   };
 
-  // Filter and search logic
-  const filteredRequests = requests.filter(request => {
+  const filteredRequests = requests.filter((request) => {
     const normalized = normalizeStatus(request.status);
     const matchesFilter = filter === 'all' || normalized === filter;
-    const matchesSearch = searchTerm === '' || 
+    const matchesSearch =
+      searchTerm === '' ||
       request.context.toLowerCase().includes(searchTerm.toLowerCase()) ||
       request.category.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesFilter && matchesSearch;
   });
 
-  // Calculate stats
   const stats = {
     total: requests.length,
-    open: requests.filter((r) => {
-      const s = normalizeStatus(r.status);
-      return s === 'open';
-    }).length,
-    closed: requests.filter((r) => {
-      const s = normalizeStatus(r.status);
-      return s === 'closed';
-    }).length,
-    avgRating: requests.length > 0 ? (requests.reduce((acc, r) => acc + (r.avg_rating || 8.2), 0) / requests.length).toFixed(1) : '8.2',
-    totalVerdicts: requests.reduce((acc, r) => acc + (r.received_verdict_count || 0), 0)
-  };
-
-  const getStatusIcon = (status: string) => {
-    const normalized = normalizeStatus(status);
-    switch (status) {
-      case 'open':
-      case 'in_progress':
-        return <Clock className="h-4 w-4 text-yellow-500" />;
-      case 'closed':
-      case 'completed':
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case 'cancelled':
-        return <XCircle className="h-4 w-4 text-red-500" />;
-      default:
-        return <Clock className="h-4 w-4 text-gray-400" />;
-    }
+    open: requests.filter((r) => normalizeStatus(r.status) === 'open').length,
+    closed: requests.filter((r) => normalizeStatus(r.status) === 'closed').length,
+    avgRating:
+      requests.length > 0
+        ? (
+            requests.reduce((acc, r) => acc + (r.avg_rating || 8.2), 0) / requests.length
+          ).toFixed(1)
+        : '8.2',
+    totalVerdicts: requests.reduce(
+      (acc, r) => acc + (r.received_verdict_count || 0),
+      0
+    ),
   };
 
   const getStatusColor = (status: string) => {
@@ -296,12 +254,42 @@ export default function MyRequestsPage() {
     }
   };
 
+  // Next best action card
+  const nextActionRequest = useMemo(() => {
+    if (!requests.length) return null;
+
+    const scored = requests.map((req: any) => {
+      const normalized = normalizeStatus(req.status);
+      const received = req.received_verdict_count || 0;
+      const target = req.target_verdict_count || 0;
+      const progressRatio = target ? received / target : 0;
+
+      let score = 0;
+      if (normalized === 'open') {
+        score += 50;
+        if (received === 0) score += 10;
+        else if (progressRatio < 1) score += 30;
+      } else if (normalized === 'closed') {
+        score += 20;
+      }
+
+      const createdAt = new Date(req.created_at).getTime() || 0;
+      return { req, score, createdAt };
+    });
+
+    scored.sort((a, b) =>
+      b.score !== a.score ? b.score - a.score : b.createdAt - a.createdAt
+    );
+
+    return scored[0]?.req || null;
+  }, [requests]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-          <p className="text-gray-500">Loading your requests...</p>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto mb-4" />
+          <p className="text-gray-500">Loading your dashboard…</p>
         </div>
       </div>
     );
@@ -311,7 +299,7 @@ export default function MyRequestsPage() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-gray-500 mb-4">Please log in to view your requests</p>
+          <p className="text-gray-500 mb-4">Please log in to view your dashboard</p>
           <Link href="/auth/login" className="bg-indigo-600 text-white px-4 py-2 rounded">
             Log In
           </Link>
@@ -327,7 +315,7 @@ export default function MyRequestsPage() {
         <div className="max-w-7xl mx-auto px-4 py-6">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">My Requests</h1>
+              <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
               <p className="text-gray-600 mt-1">
                 This is your home base – track every request and its verdicts in one place.
               </p>
@@ -339,7 +327,7 @@ export default function MyRequestsPage() {
               + New Request
             </Link>
           </div>
-          {/* Stats Row */}
+
           {requests.length > 0 && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl p-4">
@@ -364,7 +352,9 @@ export default function MyRequestsPage() {
                 <div className="flex items-center gap-3">
                   <Star className="h-8 w-8 text-purple-600" />
                   <div>
-                    <p className="text-2xl font-bold text-purple-900">{stats.totalVerdicts}</p>
+                    <p className="text-2xl font-bold text-purple-900">
+                      {stats.totalVerdicts}
+                    </p>
                     <p className="text-purple-700 text-sm">Verdicts Received</p>
                   </div>
                 </div>
@@ -402,8 +392,8 @@ export default function MyRequestsPage() {
                 Start your feedback journey
               </h3>
               <p className="text-gray-600 mb-8 leading-relaxed">
-                Get expert insights on your appearance, writing, or important decisions. 
-                Join thousands who've improved with professional feedback.
+                Get expert insights on your appearance, writing, or important decisions. Join
+                thousands who&apos;ve improved with professional feedback.
               </p>
               <Link
                 href="/start-simple"
@@ -412,24 +402,40 @@ export default function MyRequestsPage() {
                 <Target className="h-5 w-5" />
                 Create Your First Request
               </Link>
-              <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
-                <div className="flex items-center gap-2 justify-center">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  <span>Expert feedback in 30min</span>
-                </div>
-                <div className="flex items-center gap-2 justify-center">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  <span>Actionable improvements</span>
-                </div>
-                <div className="flex items-center gap-2 justify-center">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  <span>Track your progress</span>
-                </div>
-              </div>
             </div>
           </div>
         ) : (
           <>
+            {/* Next best action */}
+            {nextActionRequest && (
+              <div className="mb-6 rounded-2xl bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 border border-indigo-100 px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="max-w-xl">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-indigo-600 mb-1">
+                    Recommended next step
+                  </p>
+                  <p className="text-sm text-gray-900 font-medium line-clamp-2">
+                    {getHumanStatus(nextActionRequest)} on your {nextActionRequest.category}{' '}
+                    request
+                  </p>
+                  <p className="mt-1 text-xs text-gray-600 line-clamp-2">
+                    {nextActionRequest.context}
+                  </p>
+                </div>
+                <div className="flex flex-col items-start sm:items-end gap-2">
+                  <p className="text-xs text-gray-600">
+                    {nextActionRequest.received_verdict_count || 0}/
+                    {nextActionRequest.target_verdict_count} verdicts received
+                  </p>
+                  <Link
+                    href={`/requests/${nextActionRequest.id}`}
+                    className="inline-flex items-center px-4 py-2 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-700 transition"
+                  >
+                    {getPrimaryCtaLabel(nextActionRequest)}
+                  </Link>
+                </div>
+              </div>
+            )}
+
             {/* Filters and Search */}
             <div className="flex flex-col sm:flex-row gap-4 mb-6">
               <div className="flex-1 relative">
@@ -453,7 +459,11 @@ export default function MyRequestsPage() {
                         : 'bg-white text-gray-700 border-2 border-gray-200 hover:bg-gray-50'
                     }`}
                   >
-                    {filterOption}
+                    {filterOption === 'all'
+                      ? 'All'
+                      : filterOption === 'open'
+                      ? 'Active'
+                      : 'Complete'}
                   </button>
                 ))}
               </div>
@@ -462,8 +472,10 @@ export default function MyRequestsPage() {
             {/* Requests Grid */}
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {filteredRequests.map((request) => (
-                <div key={request.id} className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow border border-gray-100 overflow-hidden">
-                  {/* Header */}
+                <div
+                  key={request.id}
+                  className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow border border-gray-100 overflow-hidden"
+                >
                   <div className="p-6">
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex items-center gap-3">
@@ -501,16 +513,16 @@ export default function MyRequestsPage() {
                       </button>
                     </div>
 
-                    {/* Context Preview */}
                     <p className="text-gray-700 text-sm leading-relaxed mb-4 line-clamp-3">
                       {request.context}
                     </p>
 
-                    {/* Progress */}
                     <div className="mb-4">
                       <div className="flex justify-between text-xs text-gray-600 mb-2">
                         <span>Verdicts Progress</span>
-                        <span className="font-medium">{request.received_verdict_count}/{request.target_verdict_count}</span>
+                        <span className="font-medium">
+                          {request.received_verdict_count}/{request.target_verdict_count}
+                        </span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2">
                         <div
@@ -518,13 +530,15 @@ export default function MyRequestsPage() {
                             request.status === 'closed' ? 'bg-green-500' : 'bg-indigo-500'
                           }`}
                           style={{
-                            width: `${Math.min((request.received_verdict_count / request.target_verdict_count) * 100, 100)}%`
+                            width: `${Math.min(
+                              (request.received_verdict_count / request.target_verdict_count) * 100,
+                              100
+                            )}%`,
                           }}
                         />
                       </div>
                     </div>
 
-                    {/* Meta Info */}
                     <div className="flex items-center justify-between text-xs text-gray-500 mb-4">
                       <span className="flex items-center gap-1">
                         <Calendar className="h-3 w-3" />
@@ -539,7 +553,6 @@ export default function MyRequestsPage() {
                     </div>
                   </div>
 
-                  {/* Actions */}
                   <div className="px-6 py-4 bg-gray-50 border-t border-gray-100">
                     <div className="flex gap-2">
                       <Link
@@ -572,27 +585,6 @@ export default function MyRequestsPage() {
           </>
         )}
       </div>
-      
-      {/* Premium Styling */}
-      <style jsx>{`
-        .animate-shimmer {
-          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-          background-size: 200% 100%;
-          animation: shimmer 2s infinite;
-        }
-        
-        @keyframes shimmer {
-          0% { background-position: -200% 0; }
-          100% { background-position: 200% 0; }
-        }
-        
-        .line-clamp-3 {
-          display: -webkit-box;
-          -webkit-line-clamp: 3;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
-        }
-      `}</style>
     </div>
   );
 }

@@ -54,27 +54,27 @@ export function HeroSection() {
 
       {/* Visual clutter removed for clearer communication */}
 
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-20">
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-20">
         <div className="text-center">
-          {/* Simplified badge - less distraction */}
-          <div className="inline-flex mb-6">
-            <Badge className="bg-indigo-100 text-indigo-700 border border-indigo-200 px-4 py-2 text-sm font-medium">
-              Currently in beta
+          {/* Beta badge – left-aligned on desktop so it doesn’t float awkwardly in the middle */}
+          <div className="flex justify-center md:justify-start mt-2 mb-6">
+            <Badge className="bg-indigo-100 text-indigo-700 border border-indigo-200 px-4 py-2 text-xs md:text-sm font-medium rounded-full">
+              Beta • Early access
             </Badge>
           </div>
 
           {/* Main headline with premium typography */}
           <div className="mb-8">
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-r from-slate-900 via-indigo-900 to-slate-900 tracking-tight leading-tight mb-6">
-              Get honest feedback from strangers in minutes
+              Get 3 honest opinions on what you&apos;re unsure about
             </h1>
             
             {/* Clear, benefit-focused subheadline */}
             <p className="text-xl md:text-2xl text-gray-700 max-w-3xl mx-auto leading-relaxed mb-4 font-medium">
-              Share your question. Get 3 anonymous responses. Make better decisions.
+              Upload a photo, text, or decision. 3 real people tell you the truth so you can make a better call.
             </p>
             <p className="text-base text-gray-500 max-w-2xl mx-auto mb-2">
-              Your friends are too nice. Strangers will tell you the truth.
+              No signup wall or profile needed. Completely anonymous, usually under an hour.
             </p>
           </div>
 

@@ -149,7 +149,7 @@ export type VerdictTier = keyof typeof VERDICT_TIERS;
 
 // Tier pricing / payout model (finance-approved)
 // Default targets (per request):
-// - Basic:   $1.99, 3 reviews,  $0.25 per review to reviewers (quick votes/ratings)
+// - Basic:   £3.00, 3 reviews,  £0.25 per review to reviewers (concise reviews)
 // - Detailed:$4.99, 3 reviews,  $0.75 per review to reviewers (full written feedback)
 export const VERDICT_TIER_PRICING = {
   basic: {
@@ -157,7 +157,7 @@ export const VERDICT_TIER_PRICING = {
     credits: 1,
     verdicts: VERDICT_TIERS.basic.verdicts,
     judgePayout: 0.25,
-    price: 1.99,
+    price: 3.0,
   },
   detailed: {
     tier: 'detailed' as const,
