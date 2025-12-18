@@ -6,7 +6,7 @@ import { useLocale } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
 import { LogOut, Check } from 'lucide-react';
 import { CREDIT_PACKAGES, STANDARD_VERDICT_COUNT } from '@/lib/validations';
-import { getCreditPackagePricing } from '@/lib/pricing';
+// Note: Credit package pricing was removed - using simplified pricing model
 import { getPricingTexts } from '@/lib/localization';
 import type { Locale } from '@/i18n.config';
 import type { Profile } from '@/lib/database.types';
@@ -22,8 +22,7 @@ function AccountContent() {
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState<string | null>(null);
 
-  // Localized pricing for the current locale  
-  const creditPricing = getCreditPackagePricing(locale);
+  // Using simplified pricing model
   const pricing = getPricingTexts();
 
   useEffect(() => {
@@ -188,7 +187,7 @@ function AccountContent() {
                 )}
                 <h4 className="font-semibold text-lg">{pkg.name}</h4>
                 <p className="text-3xl font-bold mt-2">
-                  {creditPricing[id as keyof typeof creditPricing].price.formatted}
+                  {pricing.privateSubmissionPrice}
                 </p>
                 <p className="text-gray-500 text-sm">{pkg.credits} credits</p>
                 <p className="text-gray-400 text-xs mt-1">

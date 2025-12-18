@@ -39,11 +39,11 @@ export default function StartPage() {
   const pricing = getPricingTexts();
 
   const handleCommunityPath = () => {
-    router.push('/start-simple?path=community');
+    router.push('/start-simple?visibility=public');
   };
 
   const handleExpressPath = () => {
-    router.push('/start-simple?path=express');
+    router.push('/start-simple?visibility=private');
   };
 
   return (

@@ -197,7 +197,7 @@ export function SmartOnboarding({ onComplete }: { onComplete: () => void }) {
                   Pay £3, get feedback from 3 experts within 1 hour. Perfect for interviews, dates, or urgent decisions.
                 </p>
                 <TouchButton
-                  onClick={() => router.push('/start-simple?path=express')}
+                  onClick={() => router.push('/start-simple?visibility=private')}
                   className="w-full bg-purple-600 hover:bg-purple-700 text-white"
                 >
                   Get Feedback Now

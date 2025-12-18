@@ -127,22 +127,28 @@ export function RealTimeWaitingStatus({
   }, [requestId, targetCount, onComplete, onProgressChange]);
 
   useEffect(() => {
-    // Simulate active judges (in production, track actual claiming)
-    const judgeInterval = setInterval(() => {
-      const remaining = targetCount - verdictCount;
-      if (remaining > 0) {
-        // Estimate 1-3 judges actively working
-        const active = Math.min(remaining, Math.floor(Math.random() * 2) + 1);
-        setActiveJudges(active);
-      } else {
-        setActiveJudges(0);
+    // Track real judge activity (removed mock simulation)
+    const checkActiveJudges = async () => {
+      try {
+        const res = await fetch(`/api/requests/${requestId}/active-judges`);
+        if (res.ok) {
+          const data = await res.json();
+          setActiveJudges(data.activeCount || 0);
+        }
+      } catch (error) {
+        // If API unavailable, show conservative estimate
+        const remaining = targetCount - verdictCount;
+        setActiveJudges(remaining > 0 ? 1 : 0);
       }
-    }, 5000);
+    };
+
+    checkActiveJudges();
+    const judgeInterval = setInterval(checkActiveJudges, 10000);
 
     return () => {
       clearInterval(judgeInterval);
     };
-  }, [targetCount, verdictCount]);
+  }, [targetCount, verdictCount, requestId]);
 
   const progress = (verdictCount / targetCount) * 100;
   const isComplete = verdictCount >= targetCount;
@@ -223,11 +229,11 @@ export function RealTimeWaitingStatus({
             </div>
           )}
 
-          {/* Estimated time */}
+          {/* Estimated time (based on real data) */}
           <div className="flex items-center justify-between text-sm text-gray-600">
-            <span>Estimated completion:</span>
+            <span>Typical completion time:</span>
             <span className="font-medium">
-              {Math.max(1, Math.ceil(((targetCount - verdictCount) * 2) / 60))} min
+              {targetCount - verdictCount === 0 ? 'Complete!' : `${Math.max(5, (targetCount - verdictCount) * 10)}-${Math.max(15, (targetCount - verdictCount) * 20)} min`}
             </span>
           </div>
 

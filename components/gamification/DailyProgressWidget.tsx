@@ -30,9 +30,9 @@ export function DailyProgressWidget({ userId, compact = false, className = '' }:
     {
       id: 'judgments',
       name: 'Daily Judgments',
-      description: 'Judge 5 submissions',
+      description: 'Judge 3 submissions',
       current: streakData.judgmentsToday,
-      target: 5,
+      target: 3,
       icon: Target,
       color: 'text-blue-600',
       reward: '+1 Streak Day'

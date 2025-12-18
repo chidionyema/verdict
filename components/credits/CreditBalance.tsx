@@ -129,7 +129,7 @@ export function CreditBalance({ userId, showTransactions = false, compact = fals
       <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
         <h4 className="font-semibold text-blue-900 mb-2">💡 How to Earn Credits</h4>
         <ul className="text-sm text-blue-800 space-y-1">
-          <li>• Judge 5 submissions = 1 credit</li>
+          <li>• Judge 3 submissions = 1 credit</li>
           <li>• 7-day judging streak = bonus credit</li>
           <li>• High consensus rate = streak multipliers</li>
         </ul>

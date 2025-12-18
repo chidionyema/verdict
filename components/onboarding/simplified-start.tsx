@@ -92,6 +92,7 @@ export function SimplifiedStart() {
   const [mediaType, setMediaType] = useState<'photo' | 'text' | 'audio'>('photo');
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [textContent, setTextContent] = useState('');
+  const [textContentTouched, setTextContentTouched] = useState(false);
   const [category, setCategory] = useState('');
   const [subcategory, setSubcategory] = useState('');
   const [context, setContext] = useState('');
@@ -219,7 +220,7 @@ export function SimplifiedStart() {
   };
 
   const handleTextSubmit = () => {
-    if (textContent.length < 50) {
+    if (textContent.length < 120) {
       setError('Please write at least 50 characters');
       return;
     }
@@ -666,7 +667,7 @@ export function SimplifiedStart() {
                     />
                     <div className="absolute bottom-4 right-4 flex items-center gap-2">
                       <span className={`text-sm font-medium ${
-                        textContent.length < 50 ? 'text-red-500' : 'text-green-600'
+                        textContent.length < 120 ? 'text-red-500' : 'text-green-600'
                       }`}>
                         {textContent.length}/500
                       </span>
@@ -686,9 +687,9 @@ export function SimplifiedStart() {
                   <div className="flex justify-end">
                     <button
                       onClick={handleTextSubmit}
-                      disabled={textContent.length < 50}
+                      disabled={textContent.length < 120}
                       className={`inline-flex items-center gap-2 px-8 py-4 rounded-xl font-semibold transition-all ${
-                        textContent.length < 50
+                        textContent.length < 120
                           ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                           : 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:shadow-lg transform hover:scale-105'
                       }`}

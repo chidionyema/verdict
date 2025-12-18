@@ -12,6 +12,7 @@ import { I18nProvider } from "@/components/i18n-provider";
 import { PageErrorBoundary } from "@/components/ui/error-boundary";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { AccessibilityWrapper } from "@/components/accessibility/AccessibilityWrapper";
+import SafariViewportFix from "@/components/SafariViewportFix";
 import { isRTL, type Locale, locales } from "@/i18n.config";
 import { generateAlternateLinks } from "@/lib/i18n-metadata";
 import { NORTH_STAR_TAGLINE } from "@/lib/copy";
@@ -87,6 +88,8 @@ export default async function RootLayout({
   return (
     <html lang={locale} dir={dir}>
       <head>
+        {/* Critical viewport meta tag for mobile responsiveness */}
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes" />
         {/* Performance: preconnect to API/Stripe origins and fonts */}
         <link rel="preconnect" href="https://api.verdict.app" />
         <link rel="preconnect" href="https://js.stripe.com" />
@@ -110,6 +113,7 @@ export default async function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <I18nProvider locale={locale} messages={messages}>
+          <SafariViewportFix />
           <AccessibilityWrapper>
             <Navigation />
             <PageErrorBoundary>

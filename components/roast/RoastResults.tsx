@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Share2, Download, Copy, ExternalLink, Flame, Zap, TrendingUp } from 'lucide-react';
 import { ViralSharePopup } from '@/components/viral/ViralSharePopup';
 import { useViralSharing } from '@/hooks/useViralSharing';
@@ -17,6 +18,7 @@ interface RoastResultsProps {
 }
 
 export function RoastResults({ request, currentUserId }: RoastResultsProps) {
+  const router = useRouter();
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [copiedToClipboard, setCopiedToClipboard] = useState(false);
   
@@ -263,7 +265,7 @@ Try it yourself at askverdict.com 👀
         <h3 className="text-xl font-bold mb-2">Want More Brutal Honesty?</h3>
         <p className="text-indigo-100 mb-4">Submit something else and see what strangers really think.</p>
         <button
-          onClick={() => window.location.href = '/start?mode=roast'}
+          onClick={() => router.push('/start?mode=roast')}
           className="bg-white text-indigo-600 px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors"
         >
           Get Roasted Again 🔥

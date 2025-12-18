@@ -20,13 +20,6 @@ const COMMUNITY_FEATURES = [
   '👁️ Public (appears in feed)',
 ];
 
-const PRIVATE_FEATURES = [
-  '✅ No time required',
-  '✅ Completely private',
-  '✅ Faster responses (within 2 hours)',
-  '✅ Skip judging entirely',
-  '💰 Costs £3 per request',
-];
 
 export function ModeSelectionCards({ 
   onSelectMode, 
@@ -88,7 +81,7 @@ export function ModeSelectionCards({
         >
           <span className="flex items-center justify-center gap-2">
             <Lock className="h-5 w-5" />
-            Submit Privately (£3)
+            Submit Privately ({pricing.privateSubmissionPrice})
             <ArrowRight className="h-4 w-4" />
           </span>
         </ModeButton>

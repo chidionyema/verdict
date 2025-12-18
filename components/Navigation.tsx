@@ -184,7 +184,7 @@ export default function Navigation() {
                   {/* Reviewer Notifications */}
                   {userProfile?.is_reviewer && userStats.pendingVerdicts > 0 && (
                     <Link 
-                      href="/reviewer"
+                      href="/judge"
                       className="flex items-center bg-purple-50 text-purple-700 px-4 py-2 rounded-full text-sm hover:bg-purple-100 transition relative min-h-[36px]"
                     >
                       <Bell className="h-4 w-4 mr-2" />
@@ -198,7 +198,7 @@ export default function Navigation() {
                   
                   {/* Quick New Request */}
                   <Link
-                    href="/start-simple"
+                    href="/start"
                     className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition flex items-center text-sm min-h-[36px]"
                   >
                     <Plus className="h-4 w-4 mr-2" />
@@ -220,7 +220,7 @@ export default function Navigation() {
                   Submit
                 </Link>
                 <Link
-                  href="/reviewer"
+                  href="/judge"
                   className="text-gray-700 hover:text-indigo-600 transition flex items-center min-h-[36px] font-medium"
                 >
                   Judge Queue
@@ -261,17 +261,17 @@ export default function Navigation() {
                       <ChevronDown className="h-4 w-4 ml-1" />
                     </button>
                     <div className="absolute top-full left-0 mt-2 w-48 bg-white rounded-lg shadow-lg border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
-                      <Link href="/reviewer" className="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-50">
+                      <Link href="/judge" className="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-50">
                         Dashboard
                       </Link>
-                      <Link href="/reviewer/performance" className="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-50">
+                      <Link href="/judge/performance" className="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-50">
                         Performance
                       </Link>
                     </div>
                   </div>
                 ) : (
                   <Link
-                    href="/become-reviewer"
+                    href="/become-a-judge"
                     className="text-gray-700 hover:text-indigo-600 transition"
                   >
                     Become a Reviewer
@@ -299,6 +299,8 @@ export default function Navigation() {
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="text-gray-700 p-3 cursor-pointer min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-gray-100 transition"
               aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
+              aria-expanded={mobileMenuOpen}
+              aria-controls="mobile-navigation-menu"
             >
               {mobileMenuOpen ? (
                 <X className="h-6 w-6" />
@@ -311,7 +313,12 @@ export default function Navigation() {
 
         {/* Mobile Nav */}
         {mobileMenuOpen && (
-          <div className="md:hidden py-6 space-y-4">
+          <div 
+            id="mobile-navigation-menu"
+            className="md:hidden py-6 space-y-4"
+            role="navigation"
+            aria-label="Mobile navigation menu"
+          >
             {user ? (
               <>
                 {/* Mobile User Status Widget */}
@@ -339,7 +346,7 @@ export default function Navigation() {
                   </div>
                   
                   <Link
-                    href="/start-simple"
+                    href="/start"
                     className="w-full bg-indigo-600 text-white px-6 py-4 rounded-xl hover:bg-indigo-700 transition flex items-center justify-center font-medium min-h-[48px]"
                     onClick={() => setMobileMenuOpen(false)}
                   >
@@ -351,7 +358,7 @@ export default function Navigation() {
                 {userProfile?.is_reviewer && userStats.pendingVerdicts > 0 && (
                   <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 mb-6">
                     <Link
-                      href="/reviewer"
+                      href="/judge"
                       className="flex items-center justify-between text-purple-700 min-h-[48px]"
                       onClick={() => setMobileMenuOpen(false)}
                     >
@@ -374,7 +381,7 @@ export default function Navigation() {
                   My Requests
                 </Link>
                 <Link
-                  href="/reviewer"
+                  href="/judge"
                   className="block py-4 text-gray-700 hover:text-indigo-600 text-lg font-medium border-b border-gray-200 min-h-[48px] flex items-center"
                   onClick={() => setMobileMenuOpen(false)}
                 >
@@ -405,7 +412,7 @@ export default function Navigation() {
                   🔥 Roast Me
                 </Link>
                 <Link
-                  href="/become-reviewer"
+                  href="/become-a-judge"
                   className="block py-4 text-gray-700 hover:text-indigo-600 text-lg font-medium border-b border-gray-200 min-h-[48px] flex items-center"
                   onClick={() => setMobileMenuOpen(false)}
                 >

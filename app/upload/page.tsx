@@ -31,7 +31,7 @@ export default function UploadPage() {
   };
 
   const handleTextSubmit = () => {
-    if (textContent.length < 50) {
+    if (textContent.length < 120) {
       alert('Please write at least 50 characters');
       return;
     }
@@ -125,16 +125,16 @@ export default function UploadPage() {
               <div className="flex justify-between items-center mt-4">
                 <span
                   className={`text-sm ${
-                    textContent.length < 50 ? 'text-red-500' : 'text-gray-500'
+                    textContent.length < 120 ? 'text-red-500' : 'text-gray-500'
                   }`}
                 >
                   {textContent.length}/500 characters
                 </span>
                 <button
                   onClick={handleTextSubmit}
-                  disabled={textContent.length < 50}
+                  disabled={textContent.length < 120}
                   className={`px-6 py-3 rounded-lg font-medium transition cursor-pointer ${
-                    textContent.length < 50
+                    textContent.length < 120
                       ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                       : 'bg-indigo-600 text-white hover:bg-indigo-700'
                   }`}

@@ -27,18 +27,7 @@ const AUTH_ROUTES = ['/auth/login', '/auth/signup'];
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Handle redirects for old judge URLs to new reviewer URLs
-  if (pathname.startsWith('/judge')) {
-    const url = request.nextUrl.clone();
-    url.pathname = pathname.replace('/judge', '/reviewer');
-    return NextResponse.redirect(url);
-  }
-  
-  if (pathname === '/become-a-judge') {
-    const url = request.nextUrl.clone();
-    url.pathname = '/become-reviewer';
-    return NextResponse.redirect(url);
-  }
+  // Note: Reverted judge→reviewer migration due to incomplete implementation
 
   let response = NextResponse.next({ request });
 

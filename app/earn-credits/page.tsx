@@ -21,7 +21,7 @@ export default function EarnCreditsPage() {
             Earn Credits to Submit
           </h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Judge 5 submissions from the community to earn 1 credit for your own submission
+            Judge 3 submissions from the community to earn 1 credit for your own submission
           </p>
         </div>
 
@@ -36,7 +36,7 @@ export default function EarnCreditsPage() {
           <div className="mb-6">
             <div className="flex justify-between text-sm font-medium text-gray-700 mb-2">
               <span>Judgments Made</span>
-              <span>0 / 5</span>
+              <span>0 / 3</span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-3">
               <div className="bg-gradient-to-r from-indigo-500 to-purple-500 h-3 rounded-full transition-all duration-500" style={{width: '0%'}}></div>
@@ -122,7 +122,7 @@ export default function EarnCreditsPage() {
             </p>
             
             <button
-              onClick={() => router.push('/start?mode=private')}
+              onClick={() => router.push('/start-simple?visibility=private')}
               className="inline-flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition-colors"
             >
               Submit Privately

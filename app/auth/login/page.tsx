@@ -3,6 +3,7 @@
 import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { Loader2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import GoogleOAuthButton from '@/components/GoogleOAuthButton';
 
@@ -29,7 +30,16 @@ function LoginContent() {
     });
 
     if (error) {
-      setError(error.message);
+      // Convert technical errors to user-friendly messages
+      const userFriendlyError = error.message.includes('Invalid login credentials') 
+        ? 'Email or password is incorrect. Please check and try again.'
+        : error.message.includes('Email not confirmed')
+        ? 'Please check your email and click the confirmation link before signing in.'
+        : error.message.includes('Too many requests')
+        ? 'Too many login attempts. Please wait a few minutes and try again.'
+        : 'Unable to sign in. Please check your details and try again.';
+      
+      setError(userFriendlyError);
       setLoading(false);
       return;
     }
@@ -88,9 +98,16 @@ function LoginContent() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition disabled:bg-gray-300 cursor-pointer"
+                className="w-full py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition disabled:bg-indigo-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                {loading ? 'Signing in...' : 'Sign In'}
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Signing in...
+                  </>
+                ) : (
+                  'Sign In'
+                )}
               </button>
             </form>
           </div>

@@ -38,9 +38,9 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    if (motivation_text.length < 50) {
+    if (motivation_text.length < 120) {
       return NextResponse.json({ 
-        error: 'Motivation text must be at least 50 characters' 
+        error: 'Motivation text must be at least 120 characters (about 20 words)' 
       }, { status: 400 });
     }
 

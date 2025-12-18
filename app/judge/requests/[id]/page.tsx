@@ -49,8 +49,8 @@ export default function JudgeVerdictPage({
   };
 
   const handleSubmit = async () => {
-    if (feedback.length < 50) {
-      setError('Please provide at least 50 characters of feedback');
+    if (feedback.length < 120) {
+      setError('Please provide at least 120 characters of feedback (about 20 words)');
       return;
     }
 
@@ -310,7 +310,7 @@ export default function JudgeVerdictPage({
               />
               <p
                 className={`text-sm mt-1 ${
-                  feedback.length < 50 ? 'text-red-500' : 'text-gray-500'
+                  feedback.length < 120 ? 'text-red-500' : 'text-gray-500'
                 }`}
               >
                 {feedback.length}/500 characters
@@ -346,9 +346,9 @@ export default function JudgeVerdictPage({
             {/* Submit Button */}
             <button
               onClick={handleSubmit}
-              disabled={feedback.length < 50 || submitting}
+              disabled={feedback.length < 120 || submitting}
               className={`w-full py-3 rounded-lg font-semibold transition flex items-center justify-center cursor-pointer ${
-                feedback.length < 50 || submitting
+                feedback.length < 120 || submitting
                   ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                   : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-md'
               }`}

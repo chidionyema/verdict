@@ -90,7 +90,7 @@ export function CreditTooltip({ credits, isNewUser = false, triggerElement }: Cr
                   How to earn credits:
                 </div>
                 <div className="text-sm text-indigo-700">
-                  Judge 5 submissions → Get 1 credit → Submit for free!
+                  Judge 3 submissions → Get 1 credit → Submit for free!
                 </div>
               </div>
             </div>

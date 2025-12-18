@@ -59,6 +59,40 @@ export default function HomePage() {
       {/* Dynamic Personalized Hero Section */}
       <DynamicHero />
       
+      {/* CRITICAL: Economy Explanation - Move to prominent position */}
+      <div className="bg-gradient-to-br from-indigo-100 via-purple-50 to-pink-100 py-16">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <div className="inline-flex items-center gap-2 bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 rounded-full px-4 py-2 mb-6">
+            <span className="text-sm font-medium text-amber-800">How It Works</span>
+          </div>
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
+            Two Simple Ways to Get Feedback
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl mx-auto">
+            {/* Free Path */}
+            <div className="bg-white rounded-xl p-6 shadow-lg border-2 border-green-200">
+              <div className="text-2xl mb-3">🆓</div>
+              <h3 className="text-lg font-bold text-green-900 mb-2">Free Path</h3>
+              <p className="text-gray-700 mb-4">Judge 3 submissions → Earn 1 credit → Submit for free</p>
+              <div className="text-sm text-green-800 bg-green-50 rounded-lg p-3">
+                Help others decide, get free feedback in return
+              </div>
+            </div>
+            
+            {/* Paid Path */}
+            <div className="bg-white rounded-xl p-6 shadow-lg border-2 border-purple-200">
+              <div className="text-2xl mb-3">⚡</div>
+              <h3 className="text-lg font-bold text-purple-900 mb-2">Instant Path</h3>
+              <p className="text-gray-700 mb-4">Pay {pricing.privateSubmissionPrice} → Skip judging → Get private results</p>
+              <div className="text-sm text-purple-800 bg-purple-50 rounded-lg p-3">
+                Perfect when you're in a hurry
+              </div>
+            </div>
+          </div>
+          <p className="text-gray-600 mt-6">Both paths give you 3 honest feedback reports from real people.</p>
+        </div>
+      </div>
+      
       {/* Quick Demo - Show how it works visually */}
       <div className="bg-gradient-to-br from-white via-indigo-50/30 to-purple-50/30 backdrop-blur-sm">
         <InteractiveDemo />
@@ -69,9 +103,6 @@ export default function HomePage() {
       
       {/* Interactive Preview Demo - Show actual feedback quality */}
       <InteractiveFeedbackPreview />
-      
-      {/* Economy Explanation - Simplified */}
-      <EconomyExplanationSection />
       
       {/* Features Comparison */}
       <FeaturesComparison />

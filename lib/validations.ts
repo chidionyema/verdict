@@ -55,8 +55,8 @@ export function validateFeedback(feedback: string): { valid: boolean; error?: st
   if (!feedback || typeof feedback !== 'string') {
     return { valid: false, error: 'Feedback is required' };
   }
-  if (feedback.length < 50) {
-    return { valid: false, error: 'Feedback must be at least 50 characters' };
+  if (feedback.length < 120) {
+    return { valid: false, error: 'Feedback must be at least 120 characters (about 20 words)' };
   }
   if (feedback.length > 500) {
     return { valid: false, error: 'Feedback must be 500 characters or less' };

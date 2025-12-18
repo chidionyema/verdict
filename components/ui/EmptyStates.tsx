@@ -131,7 +131,7 @@ export function EmptyState({
             },
             {
               label: 'Pay £3 Instead',
-              action: () => router.push('/start-simple?path=express'),
+              action: () => router.push('/start-simple?visibility=private'),
               variant: 'secondary' as const,
               icon: Zap
             }

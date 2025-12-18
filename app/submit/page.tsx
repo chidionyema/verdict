@@ -44,12 +44,8 @@ export default function SubmitPage() {
     
     // Map mode types: 'community' = 'public', 'private' = 'private'
     if (mode === 'community') {
-      // Check if user has credits or needs to judge
-      if (userCredits > 0) {
-        router.push('/start-simple?visibility=public');
-      } else {
-        router.push('/feed?earn=true'); // Redirect to judge others first
-      }
+      // Always allow submission attempt - let the submission flow handle credits
+      router.push('/start-simple?visibility=public');
     } else if (mode === 'private') {
       router.push('/start-simple?visibility=private'); // Goes to paid flow
     }
@@ -138,7 +134,7 @@ export default function SubmitPage() {
           </p>
           
           <p className="text-sm text-gray-500">
-            Judge 5 submissions = Earn 1 credit • Private mode skips judging requirement
+            Judge 3 submissions = Earn 1 credit • Private mode skips judging requirement
           </p>
         </div>
       </div>
