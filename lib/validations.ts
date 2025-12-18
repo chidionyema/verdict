@@ -1,4 +1,5 @@
 // Input validation utilities for VERDICT MVP
+import { APP_CONFIG } from './app-config';
 
 export const CATEGORIES = ['appearance', 'profile', 'writing', 'decision'] as const;
 export const TONES = ['honest', 'constructive', 'encouraging'] as const;
@@ -142,16 +143,16 @@ export const CREDIT_PACKAGES = {
 // Simplified Community/Private model configuration
 export const SUBMISSION_MODEL = {
   community: {
-    credits: 1,
-    verdicts: 3,
-    judgmentsToEarn: 5, // Judge 5 to earn 1 credit
+    credits: APP_CONFIG.CREDITS.CREDITS_PER_SUBMISSION,
+    verdicts: APP_CONFIG.FEEDBACK.REPORTS_PER_SUBMISSION,
+    judgmentsToEarn: APP_CONFIG.CREDITS.JUDGMENTS_PER_CREDIT,
     cost: 0,
     visibility: 'public' as const,
   },
   private: {
     credits: 0, // No credits needed
-    verdicts: 3,
-    judgePayout: 0.75, // $0.75 per reviewer
+    verdicts: APP_CONFIG.FEEDBACK.REPORTS_PER_SUBMISSION,
+    judgePayout: APP_CONFIG.PRICING.JUDGE_PAYOUT_USD_CENTS / 100, // Convert cents to dollars
     visibility: 'private' as const,
     // Price comes from pricing-config.ts (configurable)
   },

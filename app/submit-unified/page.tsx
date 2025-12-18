@@ -17,6 +17,7 @@ import {
   Flame,
   TrendingUp
 } from 'lucide-react';
+import { SplitTestButton } from '@/components/features/SplitTestButton';
 
 interface SubmissionStep {
   step: 'details' | 'mode' | 'payment' | 'processing' | 'success';
@@ -26,7 +27,7 @@ interface SubmissionData {
   category: string;
   question: string;
   context: string;
-  mediaType: 'photo' | 'text';
+  mediaType: 'photo' | 'text' | 'split_test';
   mediaUrl?: string;
   visibility?: 'public' | 'private';
   mode?: 'community' | 'private';
@@ -242,11 +243,51 @@ export default function UnifiedSubmitPage() {
 // Step Components
 function DetailsStep({ submissionData, setSubmissionData, onNext }: any) {
   const categories = [
-    { id: 'appearance', name: 'Appearance', icon: '👔' },
-    { id: 'dating', name: 'Dating Profile', icon: '💕' },
-    { id: 'career', name: 'Career', icon: '💼' },
-    { id: 'writing', name: 'Writing', icon: '✍️' },
-    { id: 'decision', name: 'Life Decision', icon: '🤔' }
+    { 
+      id: 'appearance', 
+      name: 'Style & Appearance', 
+      icon: '👔',
+      description: 'Outfits, hair, photos, looks',
+      gradient: 'from-pink-500 to-rose-500',
+      bgColor: 'bg-pink-50',
+      iconColor: 'text-pink-600'
+    },
+    { 
+      id: 'dating', 
+      name: 'Dating & Relationships', 
+      icon: '💕',
+      description: 'Dating profiles, texts, advice',
+      gradient: 'from-red-500 to-pink-500', 
+      bgColor: 'bg-red-50',
+      iconColor: 'text-red-600'
+    },
+    { 
+      id: 'career', 
+      name: 'Career & Professional', 
+      icon: '💼',
+      description: 'Resume, LinkedIn, workplace',
+      gradient: 'from-blue-500 to-indigo-500',
+      bgColor: 'bg-blue-50', 
+      iconColor: 'text-blue-600'
+    },
+    { 
+      id: 'writing', 
+      name: 'Creative & Writing', 
+      icon: '✍️',
+      description: 'Content, copy, creative work',
+      gradient: 'from-purple-500 to-violet-500',
+      bgColor: 'bg-purple-50',
+      iconColor: 'text-purple-600'
+    },
+    { 
+      id: 'decision', 
+      name: 'Life Decisions', 
+      icon: '🤔',
+      description: 'Important choices, dilemmas',
+      gradient: 'from-emerald-500 to-teal-500',
+      bgColor: 'bg-emerald-50',
+      iconColor: 'text-emerald-600'
+    }
   ];
 
   return (
@@ -257,19 +298,59 @@ function DetailsStep({ submissionData, setSubmissionData, onNext }: any) {
       {/* Category Selection */}
       <div className="mb-6">
         <label className="block text-sm font-medium text-gray-700 mb-3">Category</label>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {categories.map((category) => (
             <button
               key={category.id}
               onClick={() => setSubmissionData({ ...submissionData, category: category.id })}
-              className={`p-4 rounded-xl border-2 transition-all ${
+              className={`group relative p-6 rounded-2xl border-2 transition-all duration-300 text-left overflow-hidden ${
                 submissionData.category === category.id
-                  ? 'border-indigo-600 bg-indigo-50'
-                  : 'border-gray-200 hover:border-gray-300'
+                  ? `border-transparent shadow-xl scale-105 ${category.bgColor}`
+                  : 'border-gray-200 hover:border-gray-300 hover:shadow-lg bg-white'
               }`}
             >
-              <div className="text-2xl mb-2">{category.icon}</div>
-              <div className="font-medium text-sm">{category.name}</div>
+              {/* Selected state gradient overlay */}
+              {submissionData.category === category.id && (
+                <div className={`absolute inset-0 bg-gradient-to-br ${category.gradient} opacity-5`} />
+              )}
+              
+              {/* Icon circle */}
+              <div className={`relative w-12 h-12 rounded-full flex items-center justify-center mb-4 transition-all ${
+                submissionData.category === category.id
+                  ? `bg-gradient-to-br ${category.gradient} shadow-lg`
+                  : 'bg-gray-100 group-hover:bg-gray-200'
+              }`}>
+                <span className={`text-xl ${
+                  submissionData.category === category.id ? 'text-white' : 'text-gray-600'
+                }`}>
+                  {category.icon}
+                </span>
+              </div>
+              
+              {/* Content */}
+              <div className="relative">
+                <h3 className={`font-bold text-lg mb-2 transition-colors ${
+                  submissionData.category === category.id 
+                    ? category.iconColor 
+                    : 'text-gray-900 group-hover:text-gray-700'
+                }`}>
+                  {category.name}
+                </h3>
+                <p className={`text-sm transition-colors ${
+                  submissionData.category === category.id
+                    ? 'text-gray-700'
+                    : 'text-gray-500 group-hover:text-gray-600'
+                }`}>
+                  {category.description}
+                </p>
+              </div>
+              
+              {/* Selection indicator */}
+              {submissionData.category === category.id && (
+                <div className={`absolute top-4 right-4 w-6 h-6 rounded-full bg-gradient-to-br ${category.gradient} flex items-center justify-center shadow-lg`}>
+                  <CheckCircle className="h-4 w-4 text-white" />
+                </div>
+              )}
             </button>
           ))}
         </div>
@@ -302,10 +383,10 @@ function DetailsStep({ submissionData, setSubmissionData, onNext }: any) {
       {/* Media Type */}
       <div className="mb-8">
         <label className="block text-sm font-medium text-gray-700 mb-3">Submission Type</label>
-        <div className="flex gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <button
             onClick={() => setSubmissionData({ ...submissionData, mediaType: 'text' })}
-            className={`flex-1 p-4 rounded-lg border-2 transition-all ${
+            className={`p-4 rounded-lg border-2 transition-all ${
               submissionData.mediaType === 'text'
                 ? 'border-indigo-600 bg-indigo-50'
                 : 'border-gray-200 hover:border-gray-300'
@@ -313,17 +394,38 @@ function DetailsStep({ submissionData, setSubmissionData, onNext }: any) {
           >
             <Type className="h-6 w-6 mx-auto mb-2 text-indigo-600" />
             <div className="font-medium">Text Only</div>
+            <div className="text-xs text-gray-500 mt-1">Written content</div>
           </button>
           <button
             onClick={() => setSubmissionData({ ...submissionData, mediaType: 'photo' })}
-            className={`flex-1 p-4 rounded-lg border-2 transition-all ${
+            className={`p-4 rounded-lg border-2 transition-all ${
               submissionData.mediaType === 'photo'
                 ? 'border-indigo-600 bg-indigo-50'
                 : 'border-gray-200 hover:border-gray-300'
             }`}
           >
             <Upload className="h-6 w-6 mx-auto mb-2 text-indigo-600" />
-            <div className="font-medium">With Photo</div>
+            <div className="font-medium">Single Photo</div>
+            <div className="text-xs text-gray-500 mt-1">One image to review</div>
+          </button>
+          <button
+            onClick={() => setSubmissionData({ ...submissionData, mediaType: 'split_test' })}
+            className={`p-4 rounded-lg border-2 transition-all relative overflow-hidden ${
+              submissionData.mediaType === 'split_test'
+                ? 'border-purple-600 bg-purple-50'
+                : 'border-gray-200 hover:border-gray-300'
+            }`}
+          >
+            {submissionData.mediaType !== 'split_test' && (
+              <div className="absolute top-2 right-2 bg-purple-500 text-white text-xs px-2 py-1 rounded-full">
+                NEW
+              </div>
+            )}
+            <Zap className={`h-6 w-6 mx-auto mb-2 ${
+              submissionData.mediaType === 'split_test' ? 'text-purple-600' : 'text-indigo-600'
+            }`} />
+            <div className="font-medium">Split Test</div>
+            <div className="text-xs text-gray-500 mt-1">Compare 2 photos</div>
           </button>
         </div>
       </div>

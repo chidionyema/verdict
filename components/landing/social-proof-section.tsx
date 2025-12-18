@@ -240,19 +240,19 @@ export function SocialProofSection() {
                   {/* Rating with verified badge */}
                   <div className="flex items-center gap-2 mb-4">
                     <div className="flex gap-0.5">
-                      {[...Array(testimonial.rating)].map((_, i) => (
-                        <Star key={i} className="w-4 h-4 text-yellow-400 fill-current" />
-                      ))}
+                  {[...Array(testimonial.rating)].map((_, i) => (
+                    <Star key={i} className="w-4 h-4 text-yellow-400 fill-current" />
+                  ))}
                     </div>
                     {testimonial.verified && (
                       <Verified className="w-4 h-4 text-blue-500" />
                     )}
-                  </div>
+                </div>
 
                   {/* Enhanced testimonial text */}
-                  <p className="text-gray-700 mb-6 leading-relaxed">
-                    "{testimonial.text}"
-                  </p>
+                <p className="text-gray-700 mb-6 leading-relaxed">
+                  "{testimonial.text}"
+                </p>
 
                   {/* Author section with custom avatar */}
                   <div className="flex items-start gap-4">
@@ -274,11 +274,11 @@ export function SocialProofSection() {
                         </span>
                       </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
 
           {/* Additional testimonials row */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
@@ -321,7 +321,7 @@ export function SocialProofSection() {
           
           <div className="lg:col-span-2">
             <Card className="bg-gradient-to-r from-indigo-50 to-purple-50 border-indigo-200">
-              <CardContent className="p-6">
+          <CardContent className="p-6">
                 <h3 className="text-xl font-bold text-gray-900 mb-4">
                   Why strangers give the best feedback
                 </h3>
@@ -334,8 +334,8 @@ export function SocialProofSection() {
                       <div className="font-medium text-gray-900">Brutally honest</div>
                       <div className="text-sm text-gray-600">No relationships to protect</div>
                     </div>
-                  </div>
-                  
+            </div>
+
                   <div className="flex items-start gap-3">
                     <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
                       <Users className="w-4 h-4 text-purple-600" />
@@ -355,21 +355,21 @@ export function SocialProofSection() {
                       <div className="text-sm text-gray-600">Verified reviewers with ratings</div>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-start gap-3">
                     <div className="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center flex-shrink-0">
                       <Zap className="w-4 h-4 text-yellow-600" />
-                    </div>
+                      </div>
                     <div>
                       <div className="font-medium text-gray-900">Fast & reliable</div>
                       <div className="text-sm text-gray-600">Guaranteed 3 responses</div>
                     </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+            </div>
+          </CardContent>
+        </Card>
           </div>
-        </div>
+          </div>
 
         {/* Enhanced privacy section */}
         <Card className="bg-gradient-to-r from-slate-900 to-gray-900 text-white border-0 shadow-2xl">

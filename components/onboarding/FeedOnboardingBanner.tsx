@@ -13,9 +13,9 @@ export function FeedOnboardingBanner({ userJudgmentCount = 0, userCredits = 0 }:
   const [showProgress, setShowProgress] = useState(false);
 
   // Check if user should see the banner
-  const shouldShow = userJudgmentCount < 5 && !dismissed;
-  const judgmentsLeft = Math.max(0, 5 - userJudgmentCount);
-  const progress = (userJudgmentCount / 5) * 100;
+  const shouldShow = userJudgmentCount < 3 && !dismissed;
+  const judgmentsLeft = Math.max(0, 3 - userJudgmentCount);
+  const progress = (userJudgmentCount / 3) * 100;
 
   useEffect(() => {
     // Check if banner was previously dismissed
@@ -56,14 +56,14 @@ export function FeedOnboardingBanner({ userJudgmentCount = 0, userCredits = 0 }:
               </div>
               <div>
                 <h3 className="text-xl font-bold text-gray-900">Welcome to the Community Feed! 👋</h3>
-                <p className="text-sm text-gray-600">Judge 5 submissions to earn your first free credit</p>
+                <p className="text-sm text-gray-600">Judge 3 submissions to earn your first free credit</p>
               </div>
             </div>
             
             <div className="bg-white rounded-xl p-4 mb-4 border border-indigo-200">
               <div className="flex items-center justify-between mb-2">
                 <span className="font-semibold text-gray-900">Your Progress</span>
-                <span className="text-sm text-indigo-600 font-bold">0/5 Judgments</span>
+                <span className="text-sm text-indigo-600 font-bold">0/3 Judgments</span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-3 mb-2">
                 <div className="bg-gradient-to-r from-indigo-500 to-purple-600 h-3 rounded-full w-0 transition-all duration-1000"></div>
@@ -77,7 +77,7 @@ export function FeedOnboardingBanner({ userJudgmentCount = 0, userCredits = 0 }:
                 <span>Help others, get helped back</span>
               </div>
               <div className="text-sm font-semibold text-indigo-600">
-                5 judgments = 1 free submission
+                3 judgments = 1 free submission
               </div>
             </div>
           </div>
@@ -99,7 +99,7 @@ export function FeedOnboardingBanner({ userJudgmentCount = 0, userCredits = 0 }:
             <div className="bg-white rounded-xl p-4 mb-4 border border-green-200">
               <div className="flex items-center justify-between mb-2">
                 <span className="font-semibold text-gray-900">Almost there!</span>
-                <span className="text-sm text-green-600 font-bold">{userJudgmentCount}/5 Judgments</span>
+                <span className="text-sm text-green-600 font-bold">{userJudgmentCount}/3 Judgments</span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-3 mb-2">
                 <div 

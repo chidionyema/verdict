@@ -14,7 +14,11 @@
       "Bash(findstr:*)",
       "Bash(git restore:*)",
       "Bash(mkdir:*)",
-      "Bash(npm update:*)"
+      "Bash(npm update:*)",
+      "Bash(npm run lint)",
+      "Bash(node:*)",
+      "Bash(pkill:*)",
+      "Bash(npx eslint:*)"
     ],
     "deny": [],
     "ask": []

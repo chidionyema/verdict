@@ -9,7 +9,9 @@ import { ToastContainer } from "@/components/ui/toast";
 import { CookieConsentBanner } from "@/components/cookie-consent";
 import { AnalyticsProvider } from "@/components/analytics-provider";
 import { I18nProvider } from "@/components/i18n-provider";
+import { PageErrorBoundary } from "@/components/ui/error-boundary";
 import { LocaleSwitcher } from "@/components/locale-switcher";
+import { AccessibilityWrapper } from "@/components/accessibility/AccessibilityWrapper";
 import { isRTL, type Locale, locales } from "@/i18n.config";
 import { generateAlternateLinks } from "@/lib/i18n-metadata";
 import { NORTH_STAR_TAGLINE } from "@/lib/copy";
@@ -108,8 +110,14 @@ export default async function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <I18nProvider locale={locale} messages={messages}>
-          <Navigation />
-          <main>{children}</main>
+          <AccessibilityWrapper>
+            <Navigation />
+            <PageErrorBoundary>
+              <main id="main-content" tabIndex={-1} className="focus:outline-none">
+                {children}
+              </main>
+            </PageErrorBoundary>
+          </AccessibilityWrapper>
 
           {/* Global footer with legal links */}
           <footer className="border-t border-gray-200 bg-white/80 backdrop-blur-sm mt-8">

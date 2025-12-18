@@ -376,6 +376,79 @@ export interface Database {
           source?: string;
         };
       };
+      judge_verifications: {
+        Row: {
+          id: string;
+          user_id: string;
+          linkedin_url: string;
+          status: 'pending' | 'approved' | 'rejected';
+          submitted_at: string;
+          reviewed_at: string | null;
+          reviewed_by: string | null;
+          verification_type: string;
+          notes: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          linkedin_url: string;
+          status?: 'pending' | 'approved' | 'rejected';
+          submitted_at?: string;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          verification_type?: string;
+          notes?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          linkedin_url?: string;
+          status?: 'pending' | 'approved' | 'rejected';
+          submitted_at?: string;
+          reviewed_at?: string | null;
+          reviewed_by?: string | null;
+          verification_type?: string;
+          notes?: string | null;
+          created_at?: string;
+        };
+      };
+      admin_notifications: {
+        Row: {
+          id: string;
+          type: string;
+          title: string;
+          message: string;
+          data: any;
+          priority: 'low' | 'medium' | 'high' | 'critical';
+          read: boolean;
+          created_at: string;
+          read_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          type: string;
+          title: string;
+          message: string;
+          data?: any;
+          priority?: 'low' | 'medium' | 'high' | 'critical';
+          read?: boolean;
+          created_at?: string;
+          read_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          type?: string;
+          title?: string;
+          message?: string;
+          data?: any;
+          priority?: 'low' | 'medium' | 'high' | 'critical';
+          read?: boolean;
+          created_at?: string;
+          read_at?: string | null;
+        };
+      };
     };
     Views: Record<string, never>;
     Functions: {

@@ -4,9 +4,10 @@ import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useLocale } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
-import { CreditCard, LogOut, Check } from 'lucide-react';
-import { CREDIT_PACKAGES, STANDARD_VERDICT_COUNT, SUBMISSION_MODEL } from '@/lib/validations';
+import { LogOut, Check } from 'lucide-react';
+import { CREDIT_PACKAGES, STANDARD_VERDICT_COUNT } from '@/lib/validations';
 import { getCreditPackagePricing } from '@/lib/pricing';
+import { getPricingTexts } from '@/lib/localization';
 import type { Locale } from '@/i18n.config';
 import type { Profile } from '@/lib/database.types';
 
@@ -23,6 +24,7 @@ function AccountContent() {
 
   // Localized pricing for the current locale  
   const creditPricing = getCreditPackagePricing(locale);
+  const pricing = getPricingTexts();
 
   useEffect(() => {
     fetchProfile();
@@ -164,7 +166,7 @@ function AccountContent() {
               <div>
                 <span className="text-indigo-600 font-semibold">Verdict:</span>{' '}
                 <span className="font-bold text-indigo-700">
-                  ~£3.49 for{' '}
+                  ~{pricing.privateSubmissionPrice} for{' '}
                   {STANDARD_VERDICT_COUNT} expert verdicts
                 </span>
               </div>

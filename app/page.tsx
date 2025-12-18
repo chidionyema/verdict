@@ -2,25 +2,24 @@
 
 import { useRouter } from "next/navigation";
 import Script from "next/script";
-import { EconomyHeroSection } from "@/components/landing/EconomyHeroSection";
+import { DynamicHero } from "@/components/personalization/DynamicHero";
 import { FeaturesComparison } from "@/components/landing/features-comparison";
 import { SocialProofSection } from "@/components/landing/social-proof-section";
 import { InteractiveDemo } from "@/components/landing/interactive-demo";
 import { FeatureDiscoveryBanner } from "@/components/discovery/FeatureDiscoveryBanner";
-import { ReviewerSelectionSection } from "@/components/landing/reviewer-selection";
 import { ReviewerShowcase } from "@/components/landing/reviewer-showcase";
-import { SampleFeedbackShowcase } from "@/components/landing/sample-feedback-showcase-simple";
-import { SampleVerdictCard } from "@/components/landing/sample-verdict-card";
-import { BeforeAfterExamples } from "@/components/landing/before-after-examples";
+import { InteractiveFeedbackPreview } from "@/components/landing/InteractiveFeedbackPreview";
 import { PricingTableSection } from "@/components/landing/pricing-table";
 import { EconomyExplanationSection } from "@/components/landing/economy-explanation";
-import { ExitIntentModal } from "@/components/ExitIntentModal";
+import { SmartExitIntent } from "@/components/conversion/SmartExitIntent";
+import { LiveActivityTicker } from "@/components/social-proof/LiveActivityTicker";
+import { getSchemaPrice, getPricingTexts } from "@/lib/localization";
 import { Clock, Shield, CheckCircle, Eye, Star, Users, Lock } from "lucide-react";
-import { usePrivatePrice } from "@/hooks/use-pricing";
 
 export default function HomePage() {
   const router = useRouter();
-  const privatePrice = usePrivatePrice();
+  const pricing = getPricingTexts();
+  const schemaPrice = getSchemaPrice();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
@@ -35,27 +34,30 @@ export default function HomePage() {
             "@type": "Product",
             name: "AskVerdict – Anonymous Feedback from Real People",
             description:
-              "Get 3 comprehensive feedback reports on your photo, text, or decision in under an hour. Anonymous, fast, and unfiltered feedback with ratings, strengths, and actionable advice.",
+              "Get 3 comprehensive feedback reports on your photo, text, or decision within 2 hours. Anonymous, fast, and unfiltered feedback with ratings, strengths, and actionable advice.",
             aggregateRating: {
               "@type": "AggregateRating",
               ratingValue: "4.9",
-              reviewCount: "12000",
+              reviewCount: "2500",
             },
             offers: {
               "@type": "Offer",
-              price: "3.49",
-              priceCurrency: "USD",
+              price: schemaPrice.price,
+              priceCurrency: schemaPrice.priceCurrency,
               availability: "https://schema.org/InStock",
             },
           }),
         }}
       />
 
+      {/* Live Activity Ticker */}
+      <LiveActivityTicker />
+
       {/* Feature Discovery Banner */}
       <FeatureDiscoveryBanner />
 
-      {/* Hero Section */}
-      <EconomyHeroSection />
+      {/* Dynamic Personalized Hero Section */}
+      <DynamicHero />
       
       {/* Quick Demo - Show how it works visually */}
       <div className="bg-gradient-to-br from-white via-indigo-50/30 to-purple-50/30 backdrop-blur-sm">
@@ -65,8 +67,8 @@ export default function HomePage() {
       {/* Social Proof - Early trust building */}
       <SocialProofSection />
       
-      {/* Sample Feedback - Show what they get */}
-      <SampleFeedbackShowcase />
+      {/* Interactive Preview Demo - Show actual feedback quality */}
+      <InteractiveFeedbackPreview />
       
       {/* Economy Explanation - Simplified */}
       <EconomyExplanationSection />
@@ -74,17 +76,11 @@ export default function HomePage() {
       {/* Features Comparison */}
       <FeaturesComparison />
 
-      {/* Sample Verdict Card - Show exactly what users get */}
-      <SampleVerdictCard />
       
-      {/* Reviewer selection / credibility */}
-      <ReviewerSelectionSection />
       
       {/* Reviewer showcase with quality indicators */}
       <ReviewerShowcase />
 
-      {/* Before/After Examples - Visual proof of improvements */}
-      <BeforeAfterExamples />
 
       {/* Pricing table */}
       <PricingTableSection />
@@ -133,38 +129,23 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* FAQ Section */}
+          {/* FAQ Section - Streamlined */}
           <div className="mt-20 max-w-4xl mx-auto">
-            <h2 className="text-3xl font-bold text-center mb-12 bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">Common Questions</h2>
-            <div className="space-y-6">
+            <h2 className="text-3xl font-bold text-center mb-12 bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">Quick Questions</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="bg-white/70 backdrop-blur-xl rounded-2xl p-6 shadow-xl border border-white/20 hover:shadow-2xl transition-all duration-500 group">
-                <h3 className="font-semibold text-lg mb-3 text-gray-900 group-hover:text-indigo-600 transition-colors duration-300">Do I have to review others first?</h3>
-                <p className="text-gray-600">Not at all! You have two options: <strong>1) Review 5 submissions to earn 1 free credit</strong> (public submission), or <strong>2) Pay {privatePrice} to submit privately</strong> without reviewing. Both paths get you 3 honest feedback reports. Choose what works for you.</p>
+                <h3 className="font-semibold text-lg mb-3 text-gray-900 group-hover:text-indigo-600 transition-colors duration-300">Free vs Paid?</h3>
+                <p className="text-gray-600"><strong>Free:</strong> {pricing.freePath} → Submit (public). <strong>Paid:</strong> {pricing.paidPath} → Submit privately.</p>
               </div>
               
               <div className="bg-white/70 backdrop-blur-xl rounded-2xl p-6 shadow-xl border border-white/20 hover:shadow-2xl transition-all duration-500 group">
-                <h3 className="font-semibold text-lg mb-3 text-gray-900 group-hover:text-indigo-600 transition-colors duration-300">What's the difference between free and paid?</h3>
-                <p className="text-gray-600"><strong>Free path:</strong> Review 5 submissions → Earn 1 credit → Submit (public in feed). Requires ~30 minutes. <strong>Paid path:</strong> Pay {privatePrice} → Submit privately → Get instant results. No reviewing required, completely confidential. Both get you the same quality feedback.</p>
+                <h3 className="font-semibold text-lg mb-3 text-gray-900 group-hover:text-indigo-600 transition-colors duration-300">How anonymous?</h3>
+                <p className="text-gray-600">Completely anonymous. No profiles or names shared. Private submissions never appear in public feed.</p>
               </div>
               
               <div className="bg-white/70 backdrop-blur-xl rounded-2xl p-6 shadow-xl border border-white/20 hover:shadow-2xl transition-all duration-500 group">
-                <h3 className="font-semibold text-lg mb-3 text-gray-900 group-hover:text-indigo-600 transition-colors duration-300">How do I earn credits?</h3>
-                <p className="text-gray-600">Every time you review 5 submissions in the community feed, you automatically earn 1 credit. Credits can be used to submit your own requests for free. You can earn unlimited credits by continuing to review others.</p>
-              </div>
-              
-              <div className="bg-white/70 backdrop-blur-xl rounded-2xl p-6 shadow-xl border border-white/20 hover:shadow-2xl transition-all duration-500 group">
-                <h3 className="font-semibold text-lg mb-3 text-gray-900 group-hover:text-indigo-600 transition-colors duration-300">How anonymous is it really?</h3>
-                <p className="text-gray-600">Completely anonymous. No profiles, names, or personal information is shared. Reviewers only see your submission and question. Private submissions stay completely confidential and never appear in the feed.</p>
-              </div>
-              
-              <div className="bg-white/70 backdrop-blur-xl rounded-2xl p-6 shadow-xl border border-white/20 hover:shadow-2xl transition-all duration-500 group">
-                <h3 className="font-semibold text-lg mb-3 text-gray-900 group-hover:text-indigo-600 transition-colors duration-300">What if I don't get 3 reports?</h3>
-                <p className="text-gray-600">We guarantee all 3 comprehensive feedback reports within 24 hours, or you get a full refund. Most requests get all 3 reports within hours. This applies to both free (credit) and paid ({privatePrice}) submissions.</p>
-              </div>
-              
-              <div className="bg-white/70 backdrop-blur-xl rounded-2xl p-6 shadow-xl border border-white/20 hover:shadow-2xl transition-all duration-500 group">
-                <h3 className="font-semibold text-lg mb-3 text-gray-900 group-hover:text-indigo-600 transition-colors duration-300">What types of content can I submit?</h3>
-                <p className="text-gray-600">Photos, text, emails, documents, life decisions - anything you need honest feedback on. No NSFW content allowed. Works for both public (free) and private ({privatePrice}) submissions.</p>
+                <h3 className="font-semibold text-lg mb-3 text-gray-900 group-hover:text-indigo-600 transition-colors duration-300">What if no responses?</h3>
+                <p className="text-gray-600">3 reports guaranteed within 24 hours or full refund. Most get results in under 2 hours.</p>
               </div>
             </div>
           </div>
@@ -184,15 +165,15 @@ export default function HomePage() {
                   <div className="flex items-start gap-4">
                     <div className="flex-shrink-0 w-10 h-10 bg-green-600 rounded-full flex items-center justify-center text-white font-bold">1</div>
                     <div>
-                      <h4 className="font-semibold text-gray-900 mb-1">Review 5 submissions</h4>
-                      <p className="text-gray-600 text-sm">Browse the feed and review others' submissions (~30 min)</p>
+                      <h4 className="font-semibold text-gray-900 mb-1">Review 3 submissions</h4>
+                      <p className="text-gray-600 text-sm">Browse the feed and review others' submissions (~15 min)</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-4">
                     <div className="flex-shrink-0 w-10 h-10 bg-green-600 rounded-full flex items-center justify-center text-white font-bold">2</div>
                     <div>
                       <h4 className="font-semibold text-gray-900 mb-1">Earn 1 credit</h4>
-                      <p className="text-gray-600 text-sm">Automatic credit after 5 reviews</p>
+                      <p className="text-gray-600 text-sm">Automatic credit after 3 reviews</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-4">
@@ -208,14 +189,14 @@ export default function HomePage() {
               {/* Paid Path */}
               <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-3xl shadow-xl p-8 border-2 border-purple-200">
                 <div className="flex items-center gap-3 mb-6">
-                  <div className="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center text-white font-bold text-lg">{privatePrice}</div>
+                  <div className="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center text-white font-bold text-lg">{pricing.privateSubmissionPrice}</div>
                   <h3 className="text-2xl font-bold text-gray-900">Private Path</h3>
                 </div>
                 <div className="space-y-6">
                   <div className="flex items-start gap-4">
                     <div className="flex-shrink-0 w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center text-white font-bold">1</div>
                     <div>
-                      <h4 className="font-semibold text-gray-900 mb-1">Pay {privatePrice}</h4>
+                      <h4 className="font-semibold text-gray-900 mb-1">Pay {pricing.privateSubmissionPrice}</h4>
                       <p className="text-gray-600 text-sm">One-time payment, no judging required</p>
                     </div>
                   </div>
@@ -230,7 +211,7 @@ export default function HomePage() {
                     <div className="flex-shrink-0 w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center text-white font-bold">3</div>
                     <div>
                       <h4 className="font-semibold text-gray-900 mb-1">Get instant results</h4>
-                      <p className="text-gray-600 text-sm">3 feedback reports in under 1 hour (private)</p>
+                      <p className="text-gray-600 text-sm">3 feedback reports within 2 hours (private)</p>
                     </div>
                   </div>
                 </div>
@@ -239,41 +220,6 @@ export default function HomePage() {
           </div>
 
 
-          {/* Use‑case quick links */}
-          <div className="mt-16 max-w-5xl mx-auto">
-            <h2 className="text-xl font-semibold text-center mb-6 text-gray-900">
-              Popular ways people use AskVerdict
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-              <button
-                onClick={() => router.push('/dating')}
-                className="text-left bg-white/80 backdrop-blur rounded-2xl p-4 shadow-sm border border-white/40 hover:shadow-md transition"
-              >
-                <p className="font-semibold text-gray-900 mb-1">Dating profile feedback</p>
-                <p className="text-gray-600">
-                  Test photos and bios before you put them on apps like Hinge or Tinder.
-                </p>
-              </button>
-              <button
-                onClick={() => router.push('/style')}
-                className="text-left bg-white/80 backdrop-blur rounded-2xl p-4 shadow-sm border border-white/40 hover:shadow-md transition"
-              >
-                <p className="font-semibold text-gray-900 mb-1">Style & outfit checks</p>
-                <p className="text-gray-600">
-                  Sense‑check interview outfits, first‑date looks, or event dress codes.
-                </p>
-              </button>
-              <button
-                onClick={() => router.push('/career')}
-                className="text-left bg-white/80 backdrop-blur rounded-2xl p-4 shadow-sm border border-white/40 hover:shadow-md transition"
-              >
-                <p className="font-semibold text-gray-900 mb-1">Career & resume feedback</p>
-                <p className="text-gray-600">
-                  Compare offers, test pricing pages, or get another view on big moves.
-                </p>
-              </button>
-            </div>
-          </div>
 
           {/* Testimonials */}
           <div className="mt-20 max-w-5xl mx-auto">
@@ -346,14 +292,14 @@ export default function HomePage() {
                 Ready to Get Started?
               </h2>
               <p className="text-xl mb-8 text-indigo-100 max-w-2xl mx-auto animate-fade-in-up">
-                Choose your path: Review others to earn free credits, or pay {privatePrice} for instant private results. Both get you 3 honest feedback reports.
+                Choose your path: Review others to earn free credits, or pay {pricing.privateSubmissionPrice} for instant private results. Both get you 3 honest feedback reports.
               </p>
               
               <div className="space-y-6">
                 {/* Dual Path CTAs */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-3xl mx-auto">
                   <button
-                    onClick={() => router.push('/feed')}
+                    onClick={() => router.push('/start')}
                     className="bg-white text-indigo-600 px-8 py-5 rounded-2xl text-lg font-bold hover:bg-gray-50 transition-all duration-300 shadow-xl hover:shadow-2xl transform hover:-translate-y-1 group"
                   >
                     <div className="flex flex-col items-center">
@@ -361,18 +307,18 @@ export default function HomePage() {
                         <Eye className="h-5 w-5" />
                         Start Reviewing (Free)
                       </span>
-                      <span className="text-sm opacity-80 mt-1">Review 5 → Earn 1 credit</span>
+                      <span className="text-sm opacity-80 mt-1">Review 3 → Earn 1 credit</span>
                     </div>
                   </button>
                   
                   <button
-                    onClick={() => router.push('/submit-unified')}
+                    onClick={() => router.push('/start')}
                     className="bg-indigo-800 text-white border-2 border-white/30 px-8 py-5 rounded-2xl text-lg font-bold hover:bg-indigo-900 transition-all duration-300 shadow-xl hover:shadow-2xl transform hover:-translate-y-1 group"
                   >
                     <div className="flex flex-col items-center">
                       <span className="flex items-center gap-2">
                         <Lock className="h-5 w-5" />
-                        Submit Privately ({privatePrice})
+                        Submit Privately ({pricing.privateSubmissionPrice})
                       </span>
                       <span className="text-sm opacity-90 mt-1">Skip judging → Instant</span>
                     </div>
@@ -403,16 +349,16 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Exit-intent modal for conversion capture */}
-      <ExitIntentModal />
+      {/* Smart Exit-intent modal with personalized offers */}
+      <SmartExitIntent />
 
       {/* Mobile sticky CTA */}
       <div className="fixed bottom-4 left-0 right-0 px-4 sm:hidden z-40">
         <button
-          onClick={() => router.push('/submit-unified')}
+          onClick={() => router.push('/start')}
           className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-4 rounded-xl shadow-xl font-semibold text-base flex items-center justify-center gap-2 min-h-[48px] backdrop-blur-sm border border-white/20 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-0.5"
         >
-          Get 3 free requests
+          Start judging (free)
           <span className="text-lg">→</span>
         </button>
       </div>

@@ -1,11 +1,11 @@
 'use client';
 
-import { Clock, ArrowRight } from 'lucide-react';
+import { Check, Clock, Sparkles, Shirt, Briefcase, Heart, MessageSquare, Star, ArrowRight } from 'lucide-react';
 import { TouchButton } from '@/components/ui/touch-button';
-import { usePrivatePrice } from '@/hooks/use-pricing';
+import { getPricingTexts } from '@/lib/localization';
 
 export function PricingTableSection() {
-  const privatePrice = usePrivatePrice();
+  const pricing = getPricingTexts();
 
   const PATHS = [
     {
@@ -13,11 +13,11 @@ export function PricingTableSection() {
       badge: 'Community Mode',
       path: 'free',
       cost: '£0',
-      costDetail: 'Your time (~30 min)',
+      costDetail: 'Your time (~15 min)',
       verdicts: '3 comprehensive reports',
       delivery: 'After earning credits',
       steps: [
-        'Review 5 submissions in feed',
+        'Review 3 submissions in feed',
         'Earn 1 credit automatically',
         'Submit your request (public)',
         'Get 3 feedback reports',
@@ -26,7 +26,7 @@ export function PricingTableSection() {
         '✅ No payment required',
         '✅ Community participation',
         '✅ Earn unlimited credits',
-        '⏱️ Requires ~30 minutes (judging)',
+        '⏱️ Requires ~15 minutes (judging)',
         '👁️ Public (appears in feed)',
       ],
       ctaText: 'Start Reviewing Free',
@@ -34,15 +34,15 @@ export function PricingTableSection() {
       highlight: false,
     },
     {
-      name: `Pay Privately (${privatePrice})`,
+      name: `Pay Privately (${pricing.privateSubmissionPrice})`,
       badge: 'Instant Access',
       path: 'paid',
-      cost: privatePrice,
+      cost: pricing.privateSubmissionPrice,
       costDetail: 'One-time payment',
       verdicts: '3 comprehensive reports',
-      delivery: 'under 1 hour average',
+      delivery: 'within 2 hours',
       steps: [
-        `Pay ${privatePrice} (no judging required)`,
+        `Pay ${pricing.privateSubmissionPrice} (no judging required)`,
         'Submit your request privately',
         'Get 3 feedback reports',
         'Completely confidential',
@@ -50,12 +50,12 @@ export function PricingTableSection() {
       features: [
         '✅ No time required',
         '✅ Completely private',
-        '✅ Faster responses (under 1 hour)',
+        '✅ Faster responses (<1 hour)',
         '✅ Skip judging entirely',
-        `💰 Costs ${privatePrice} per request`,
+        '💰 Costs £3 per request',
       ],
       ctaText: 'Submit Privately',
-      ctaAction: () => window.location.href = '/submit-unified',
+      ctaAction: () => window.location.href = '/submit',
       highlight: true,
     },
   ];
@@ -68,7 +68,7 @@ export function PricingTableSection() {
             Two Ways to Get Feedback
           </h2>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-4">
-            Choose the path that fits your needs: Judge others to earn free credits, or pay {privatePrice} for instant private results. Both get you 3 honest feedback reports.
+            Choose the path that fits your needs: Earn free credits by judging others, or pay £3 for instant private results. Both get you 3 honest feedback reports.
           </p>
         </div>
 
@@ -147,7 +147,8 @@ export function PricingTableSection() {
         </div>
 
         <p className="mt-6 text-xs text-gray-500 text-center max-w-3xl mx-auto">
-          Both paths provide the same quality feedback - 3 comprehensive reports from real people. Choose based on your time vs. privacy preference.
+          Pricing table is indicative of typical bundles. Inside the app you purchase credits that
+          can be used flexibly across any request type.
         </p>
       </div>
     </section>

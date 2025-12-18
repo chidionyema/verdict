@@ -27,6 +27,8 @@ import type { VerdictRequest, VerdictResponse } from '@/lib/database.types';
 import ReportContentButton from '@/components/ReportContentButton';
 import VerdictRatingModal from '@/components/VerdictRatingModal';
 import { ThankJudgesButton } from '@/components/request/ThankJudgesButton';
+import { ShareableVerdictCard } from '@/components/share/ShareableVerdictCard';
+import { useShareableVerdict } from '@/hooks/use-shareable-verdict';
 import { toast } from '@/components/ui/toast';
 import { createClient } from '@/lib/supabase/client';
 import { getTierConfigByVerdictCount } from '@/lib/validations';
@@ -68,6 +70,15 @@ export default function RequestDetailPage({
   const [filterTone, setFilterTone] = useState<'all' | 'encouraging' | 'honest' | 'constructive'>('all');
   const [showAnalytics, setShowAnalytics] = useState(false);
   const [verdictInteractions, setVerdictInteractions] = useState<Record<string, { helpful: boolean, bookmarked: boolean }>>({});
+
+  // Shareable verdict functionality
+  const { 
+    isShareModalOpen, 
+    shareableVerdict, 
+    openShareModal, 
+    closeShareModal, 
+    generateShareableData 
+  } = useShareableVerdict();
 
   useEffect(() => {
     fetchRequest();
@@ -417,11 +428,23 @@ export default function RequestDetailPage({
                   Refresh
                 </button>
               )}
-              {request.status === 'closed' && (
+              {request.status === 'closed' && verdicts.length > 0 && (
                 <>
-                  <button className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition">
+                  <button 
+                    onClick={() => {
+                      const shareData = generateShareableData(
+                        request.id,
+                        request.context || 'My feedback request',
+                        request.category,
+                        verdicts,
+                        false // request.visibility === 'private' - field doesn't exist
+                      );
+                      openShareModal(shareData);
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition"
+                  >
                     <Share2 className="h-4 w-4" />
-                    Share
+                    Share Results
                   </button>
                   <button className="flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition">
                     <Download className="h-4 w-4" />
@@ -1087,6 +1110,15 @@ export default function RequestDetailPage({
               setSelectedVerdictForRating(null);
             }}
             onSubmit={handleRatingSubmit}
+          />
+        )}
+
+        {/* Shareable Verdict Card Modal */}
+        {shareableVerdict && (
+          <ShareableVerdictCard
+            verdict={shareableVerdict}
+            isOpen={isShareModalOpen}
+            onClose={closeShareModal}
           />
         )}
       </div>

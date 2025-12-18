@@ -8,6 +8,7 @@ import type { VerdictRequest, Profile } from '@/lib/database.types';
 import Breadcrumb from '@/components/Breadcrumb';
 import { FeatureDiscoveryBanner } from '@/components/discovery/FeatureDiscoveryBanner';
 import { RetentionDiscountBanner } from '@/components/retention/RetentionDiscountBanner';
+import { ReferralWidget } from '@/components/referrals/ReferralDashboard';
 
 type FilterStatus = 'all' | 'open' | 'in_progress' | 'closed' | 'cancelled';
 type SortBy = 'newest' | 'oldest' | 'status' | 'progress';
@@ -208,6 +209,13 @@ export default function DashboardPage() {
         />
       )}
 
+      {/* Referral Program Widget */}
+      {profile && (
+        <div className="max-w-6xl mx-auto px-4 mb-6">
+          <ReferralWidget userId={profile.id} />
+        </div>
+      )}
+
       <div className="py-12">
         <div className="max-w-6xl mx-auto px-4">
           {/* Breadcrumb */}
@@ -250,7 +258,7 @@ export default function DashboardPage() {
             </button>
             
             <Link
-              href="/start-simple"
+              href="/start"
               className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-indigo-700 transition flex items-center justify-center min-h-[48px] whitespace-nowrap"
             >
               <Plus className="h-5 w-5 mr-2" />
@@ -378,7 +386,7 @@ export default function DashboardPage() {
               </div>
               
               <Link
-                href="/start-simple"
+                href="/start"
                 className="inline-flex items-center gap-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-10 py-5 rounded-2xl hover:shadow-2xl transition-all duration-300 font-bold text-lg hover:-translate-y-1 group mb-8"
               >
                 <Sparkles className="h-6 w-6 animate-spin" />
@@ -399,7 +407,7 @@ export default function DashboardPage() {
                   <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center mb-4 mx-auto">
                     <Clock className="h-6 w-6 text-white" />
                   </div>
-                  <h4 className="font-bold text-gray-900 mb-2">Results in 15 Minutes</h4>
+                  <h4 className="font-bold text-gray-900 mb-2">Results within 2 Hours</h4>
                   <p className="text-gray-600 text-sm">Lightning-fast expert feedback</p>
                 </div>
               </div>
@@ -428,7 +436,7 @@ export default function DashboardPage() {
                 Clear Filters
               </button>
               <Link
-                href="/start-simple"
+                href="/start"
                 className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-3 rounded-2xl hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 font-semibold"
               >
                 New Request

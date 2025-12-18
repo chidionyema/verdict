@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { ArrowRight, ArrowLeft, Zap, Users, CheckCircle, Gift, Sparkles, Play, X } from 'lucide-react';
+import { getPricingTexts } from '@/lib/localization';
 
 interface OnboardingStep {
   id: string;
@@ -22,6 +23,7 @@ interface EconomyOnboardingProps {
 export function EconomyOnboarding({ isOpen, onClose, onComplete, userEmail }: EconomyOnboardingProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [showAnimation, setShowAnimation] = useState(false);
+  const pricing = getPricingTexts();
 
   const steps: OnboardingStep[] = [
     {
@@ -47,9 +49,9 @@ export function EconomyOnboarding({ isOpen, onClose, onComplete, userEmail }: Ec
     },
     {
       id: 'judge-five',
-      title: 'Judge 5 = Earn 1 Credit',
-      description: 'Review 5 submissions from the community and automatically earn 1 credit. It\'s that simple!',
-      highlight: 'Takes about 30 minutes',
+      title: 'Judge 3 = Earn 1 Credit',
+      description: 'Review 3 submissions from the community and automatically earn 1 credit. It\'s that simple!',
+      highlight: 'Takes about 15 minutes',
       action: 'Try judging now',
       visual: (
         <div className="my-8">
@@ -109,15 +111,15 @@ export function EconomyOnboarding({ isOpen, onClose, onComplete, userEmail }: Ec
               <Users className="h-6 w-6" />
             </div>
             <h4 className="font-bold text-green-900">Free Path</h4>
-            <p className="text-sm text-green-700">Judge 5 → Earn credit</p>
-            <p className="text-xs text-green-600 mt-1">~30 minutes</p>
+            <p className="text-sm text-green-700">Judge 3 → Earn credit</p>
+            <p className="text-xs text-green-600 mt-1">~15 minutes</p>
           </div>
           <div className="bg-purple-50 border-2 border-purple-200 rounded-xl p-4 text-center">
             <div className="bg-purple-600 text-white rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-2">
               <Zap className="h-6 w-6" />
             </div>
             <h4 className="font-bold text-purple-900">Instant Path</h4>
-            <p className="text-sm text-purple-700">Pay £3.49 → Submit now</p>
+            <p className="text-sm text-purple-700">Pay {pricing.privateSubmissionPrice} → Submit now</p>
             <p className="text-xs text-purple-600 mt-1">No waiting</p>
           </div>
         </div>

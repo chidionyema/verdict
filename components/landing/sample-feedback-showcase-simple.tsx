@@ -125,7 +125,7 @@ export function SampleFeedbackShowcase() {
               <Eye className="h-5 w-5 text-green-600" />
               <div className="text-left">
                 <div className="font-bold">Community Path</div>
-                <div className="text-xs text-gray-500">Judge 5 → Earn credit → Free</div>
+                <div className="text-xs text-gray-500">Judge 3 → Earn credit → Free</div>
               </div>
             </button>
             <button
@@ -154,7 +154,7 @@ export function SampleFeedbackShowcase() {
                 <span className="font-semibold text-green-800">Community Path</span>
               </div>
               <p className="text-green-700">
-                Judge 5 community submissions → Earn 1 credit → Submit your request (appears in public feed) → Get 3 feedback reports
+                Judge 3 community submissions → Earn 1 credit → Submit your request (appears in public feed) → Get 3 feedback reports
               </p>
             </div>
           ) : (

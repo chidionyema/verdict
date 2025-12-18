@@ -162,7 +162,7 @@
       "basic": "Basic",
       "basicDescription": "3 verdicts per request",
       "standard": "Standard",
-      "standardDescription": "5 verdicts per request",
+      "standardDescription": "3 verdicts per request",
       "premium": "Premium",
       "premiumDescription": "10 verdicts per request"
     },
@@ -239,7 +239,7 @@
       "basic": "Basic",
       "basicDescription": "3 verdicts",
       "standard": "Standard",
-      "standardDescription": "5 verdicts",
+      "standardDescription": "3 verdicts",
       "premium": "Premium",
       "premiumDescription": "10 verdicts"
     },

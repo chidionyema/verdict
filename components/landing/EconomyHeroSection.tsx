@@ -96,7 +96,7 @@ export function EconomyHeroSection() {
                   </div>
                   <div className="text-left">
                     <h3 className="text-2xl font-bold text-gray-900">Community Path</h3>
-                    <p className="text-green-600 font-semibold">Judge 5 → Earn 1 Credit → Free!</p>
+                    <p className="text-green-600 font-semibold">Judge 3 → Earn 1 Credit → Free!</p>
                   </div>
                 </div>
 
@@ -116,7 +116,7 @@ export function EconomyHeroSection() {
                       <span className="text-green-600 font-bold text-sm">2</span>
                     </div>
                     <div>
-                      <p className="font-semibold text-gray-900">Judge 5 submissions</p>
+                      <p className="font-semibold text-gray-900">Judge 3 submissions</p>
                       <p className="text-sm text-gray-600">Give honest feedback (~30 minutes)</p>
                     </div>
                   </div>
@@ -222,7 +222,7 @@ export function EconomyHeroSection() {
                   <ArrowRight className="h-6 w-6 group-hover:translate-x-1 transition-transform" />
                 </span>
                 <div className="text-sm text-green-100 mt-1 font-normal">
-                  Judge 5 submissions → Earn 1 credit
+                  Judge 3 submissions → Earn 1 credit
                 </div>
               </TouchButton>
               

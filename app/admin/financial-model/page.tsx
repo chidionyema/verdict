@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { DollarSign, TrendingUp, TrendingDown, Calculator, AlertTriangle, CheckCircle } from 'lucide-react';
 import { CREDIT_PACKAGES } from '@/lib/validations';
 
@@ -38,41 +38,27 @@ const DEFAULT_MODEL: FinancialModel = {
 export default function FinancialModelPage() {
   const [model, setModel] = useState<FinancialModel>(DEFAULT_MODEL);
   const [monthlyVolume, setMonthlyVolume] = useState(100);
-  const [freeCredits, setFreeCredits] = useState(3);
+  const [freeCredits] = useState(3);
 
-  useEffect(() => {
-    calculateModel();
-  }, [model.creditPrice, model.verdictsPerRequest, model.judgePayout, model.stripeFeePercent, model.stripeFeeFixed]);
-
-  const calculateModel = () => {
-    const revenuePerRequest = model.creditPrice;
-    const costPerRequest = model.verdictsPerRequest * model.judgePayout;
-    const stripeFee = (revenuePerRequest * model.stripeFeePercent / 100) + model.stripeFeeFixed;
-    const netRevenue = revenuePerRequest - stripeFee;
-    const profitPerRequest = netRevenue - costPerRequest;
-    const marginPercent = netRevenue > 0 ? (profitPerRequest / netRevenue) * 100 : 0;
-    const breakEvenPrice = costPerRequest + stripeFee;
-
-    setModel(prev => ({
-      ...prev,
-      revenuePerRequest,
-      costPerRequest,
-      profitPerRequest,
-      marginPercent,
-      breakEvenPrice,
-    }));
-  };
+  // Calculate derived values directly
+  const revenuePerRequest = model.creditPrice;
+  const costPerRequest = model.verdictsPerRequest * model.judgePayout;
+  const stripeFee = (revenuePerRequest * model.stripeFeePercent / 100) + model.stripeFeeFixed;
+  const netRevenue = revenuePerRequest - stripeFee;
+  const profitPerRequest = netRevenue - costPerRequest;
+  const marginPercent = netRevenue > 0 ? (profitPerRequest / netRevenue) * 100 : 0;
+  const breakEvenPrice = costPerRequest + stripeFee;
 
   const monthlyProjection = {
-    revenue: monthlyVolume * model.revenuePerRequest,
-    costs: monthlyVolume * model.costPerRequest,
-    stripeFees: monthlyVolume * ((model.revenuePerRequest * model.stripeFeePercent / 100) + model.stripeFeeFixed),
-    profit: monthlyVolume * model.profitPerRequest,
+    revenue: monthlyVolume * revenuePerRequest,
+    costs: monthlyVolume * costPerRequest,
+    stripeFees: monthlyVolume * stripeFee,
+    profit: monthlyVolume * profitPerRequest,
     freeCreditCost: freeCredits * model.creditPrice * (monthlyVolume / 10), // Assume 10% signup rate
   };
 
-  const isViable = model.profitPerRequest >= 0;
-  const isHealthy = model.marginPercent >= 15;
+  const isViable = profitPerRequest >= 0;
+  const isHealthy = marginPercent >= 15;
 
   return (
     <div className="min-h-screen bg-gray-50 py-12">
@@ -90,11 +76,11 @@ export default function FinancialModelPage() {
               <div>
                 <h3 className="text-lg font-semibold text-red-900 mb-2">⚠️ Model Not Viable</h3>
                 <p className="text-red-700 mb-2">
-                  You're losing ${Math.abs(model.profitPerRequest).toFixed(2)} per request. 
-                  Break-even price: <strong>${model.breakEvenPrice.toFixed(2)}/credit</strong>
+                  You're losing ${Math.abs(profitPerRequest).toFixed(2)} per request. 
+                  Break-even price: <strong>${breakEvenPrice.toFixed(2)}/credit</strong>
                 </p>
                 <p className="text-red-600 text-sm">
-                  Current price: ${model.creditPrice.toFixed(2)} | Required: ${model.breakEvenPrice.toFixed(2)}
+                  Current price: ${model.creditPrice.toFixed(2)} | Required: ${breakEvenPrice.toFixed(2)}
                 </p>
               </div>
             </div>
@@ -108,7 +94,7 @@ export default function FinancialModelPage() {
               <div>
                 <h3 className="text-lg font-semibold text-yellow-900 mb-2">⚠️ Low Margin</h3>
                 <p className="text-yellow-700">
-                  Margin is {model.marginPercent.toFixed(1)}%. Consider increasing prices for healthier margins (target: 15%+).
+                  Margin is {marginPercent.toFixed(1)}%. Consider increasing prices for healthier margins (target: 15%+).
                 </p>
               </div>
             </div>
@@ -122,7 +108,7 @@ export default function FinancialModelPage() {
               <div>
                 <h3 className="text-lg font-semibold text-green-900 mb-2">✅ Model Viable</h3>
                 <p className="text-green-700">
-                  Healthy margin of {model.marginPercent.toFixed(1)}% with ${model.profitPerRequest.toFixed(2)} profit per request.
+                  Healthy margin of {marginPercent.toFixed(1)}% with ${profitPerRequest.toFixed(2)} profit per request.
                 </p>
               </div>
             </div>
@@ -237,7 +223,7 @@ export default function FinancialModelPage() {
                     <span className="text-sm text-gray-600">Revenue</span>
                     <DollarSign className="h-4 w-4 text-gray-400" />
                   </div>
-                  <p className="text-2xl font-bold">${model.revenuePerRequest.toFixed(2)}</p>
+                  <p className="text-2xl font-bold">${revenuePerRequest.toFixed(2)}</p>
                 </div>
 
                 <div className="p-4 rounded-lg bg-red-50 border border-red-200">
@@ -245,7 +231,7 @@ export default function FinancialModelPage() {
                     <span className="text-sm text-gray-600">Cost (Judges)</span>
                     <TrendingDown className="h-4 w-4 text-red-400" />
                   </div>
-                  <p className="text-2xl font-bold">${model.costPerRequest.toFixed(2)}</p>
+                  <p className="text-2xl font-bold">${costPerRequest.toFixed(2)}</p>
                   <p className="text-xs text-gray-500 mt-1">
                     {model.verdictsPerRequest} × ${model.judgePayout.toFixed(2)}
                   </p>

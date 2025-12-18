@@ -15,8 +15,11 @@ import {
   EyeOff,
   Info,
   CheckCircle,
-  ArrowRight
+  ArrowRight,
+  Shield
 } from 'lucide-react';
+import { LinkedInVerification } from '@/components/verification/LinkedInVerification';
+import { createClient } from '@/lib/supabase/client';
 
 interface DemographicData {
   age_range: string;

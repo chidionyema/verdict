@@ -70,7 +70,7 @@ export function CreditEarningProgress({ userId, judgmentsToday = 0, onCreditEarn
               </div>
               <h3 className="text-3xl font-bold text-gray-900 mb-2">🎉 Credit Earned!</h3>
               <p className="text-lg text-gray-600 mb-6">
-                You've earned <strong className="text-amber-600">1 credit</strong> by completing 5 judgments!
+                You've earned <strong className="text-amber-600">1 credit</strong> by completing 3 judgments!
               </p>
               <div className="bg-gradient-to-r from-amber-50 to-yellow-50 rounded-xl p-4 mb-6">
                 <div className="text-4xl font-bold text-amber-700 mb-1">

@@ -3,7 +3,7 @@
 import { ModeCard } from './ModeCard';
 import { ModeButton } from './ModeButton';
 import { ArrowRight, Eye, Lock } from 'lucide-react';
-import { usePrivatePrice } from '@/hooks/use-pricing';
+import { getPricingTexts } from '@/lib/localization';
 import type { Mode } from '@/lib/mode-colors';
 
 interface ModeSelectionCardsProps {
@@ -16,26 +16,31 @@ const COMMUNITY_FEATURES = [
   '✅ No payment required',
   '✅ Community participation',
   '✅ Earn unlimited credits',
-  '⏱️ Requires ~30 minutes (judging)',
+  '⏱️ Requires ~15 minutes (judging)',
   '👁️ Public (appears in feed)',
 ];
 
-// Private features will be generated dynamically with price
+const PRIVATE_FEATURES = [
+  '✅ No time required',
+  '✅ Completely private',
+  '✅ Faster responses (within 2 hours)',
+  '✅ Skip judging entirely',
+  '💰 Costs £3 per request',
+];
 
 export function ModeSelectionCards({ 
   onSelectMode, 
   selectedMode,
   className = '' 
 }: ModeSelectionCardsProps) {
-  const privatePrice = usePrivatePrice();
+  const pricing = getPricingTexts();
   
-  // Generate private features with dynamic price
   const privateFeatures = [
     '✅ No time required',
     '✅ Completely private',
-    '✅ Faster responses (under 1 hour)',
+    '✅ Faster responses (within 2 hours)',
     '✅ Skip judging entirely',
-    `💰 Costs ${privatePrice} per request`,
+    `💰 Costs ${pricing.privateSubmissionPrice} per request`,
   ];
   return (
     <div className={`grid grid-cols-1 lg:grid-cols-2 gap-6 ${className}`}>
@@ -68,7 +73,7 @@ export function ModeSelectionCards({
       <ModeCard
         mode="private"
         title="Private Submission"
-        description={`Pay ${privatePrice} to skip judging and submit privately. Get instant, confidential results. Perfect if you're in a hurry or need privacy.`}
+        description={`Pay ${pricing.privateSubmissionPrice} to skip judging and submit privately. Get instant, confidential results. Perfect if you're in a hurry or need privacy.`}
         features={privateFeatures}
         onClick={() => onSelectMode('private')}
         selected={selectedMode === 'private'}
@@ -83,7 +88,7 @@ export function ModeSelectionCards({
         >
           <span className="flex items-center justify-center gap-2">
             <Lock className="h-5 w-5" />
-            Submit Privately ({privatePrice})
+            Submit Privately (£3)
             <ArrowRight className="h-4 w-4" />
           </span>
         </ModeButton>

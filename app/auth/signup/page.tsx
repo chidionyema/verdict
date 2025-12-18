@@ -5,11 +5,13 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import GoogleOAuthButton from '@/components/GoogleOAuthButton';
+import { ReferralSignupFlow } from '@/components/referrals/ReferralSignupFlow';
 
 function SignupContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get('redirect') || '/welcome';
+  const referralCode = searchParams.get('ref') || '';
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -64,9 +66,12 @@ function SignupContent() {
       <div className="max-w-md w-full">
         <div className="bg-white rounded-lg shadow-lg p-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Create your account</h2>
-          <p className="text-gray-600 mb-8">
-            Get 3 free requests (each with 3 verdicts) when you sign up
+          <p className="text-gray-600 mb-6">
+            Get 3 free credits when you sign up (each gets you 3 feedback reports)
           </p>
+
+          {/* Referral Flow */}
+          <ReferralSignupFlow onReferralApplied={(code) => console.log('Referral applied:', code)} />
 
           {error && (
             <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4 text-sm">

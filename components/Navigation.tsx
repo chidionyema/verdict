@@ -198,7 +198,7 @@ export default function Navigation() {
                   
                   {/* Quick New Request */}
                   <Link
-                    href="/submit-unified"
+                    href="/start-simple"
                     className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition flex items-center text-sm min-h-[36px]"
                   >
                     <Plus className="h-4 w-4 mr-2" />
@@ -214,7 +214,7 @@ export default function Navigation() {
                   Discover
                 </Link>
                 <Link
-                  href="/submit-unified"
+                  href="/submit"
                   className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition flex items-center text-sm min-h-[36px] font-medium"
                 >
                   Submit
@@ -249,7 +249,7 @@ export default function Navigation() {
                   Discover
                 </Link>
                 <Link
-                  href="/submit-unified"
+                  href="/submit"
                   className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition flex items-center text-sm min-h-[36px] font-medium"
                 >
                   Submit
@@ -339,7 +339,7 @@ export default function Navigation() {
                   </div>
                   
                   <Link
-                    href="/submit-unified"
+                    href="/start-simple"
                     className="w-full bg-indigo-600 text-white px-6 py-4 rounded-xl hover:bg-indigo-700 transition flex items-center justify-center font-medium min-h-[48px]"
                     onClick={() => setMobileMenuOpen(false)}
                   >

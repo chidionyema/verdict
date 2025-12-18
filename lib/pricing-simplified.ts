@@ -8,6 +8,7 @@
 
 import { type Locale, localeCurrencies } from '@/i18n.config';
 import { type CurrencyCode, formatCurrency, formatCurrencyFromCents } from './i18n-format';
+import { APP_CONFIG } from './app-config';
 
 // Exchange rates relative to USD (for legacy compatibility)
 const EXCHANGE_RATES: Record<CurrencyCode, number> = {
@@ -27,20 +28,20 @@ export const SUBMISSION_CONFIG = {
   // Community path (free with credits)
   community: {
     cost: 0,
-    judgmentsRequired: 5,  // Judge 5 to earn 1 credit
-    creditsRequired: 1,    // 1 credit per submission
-    feedbackReports: 3,    // Always 3 reports
+    judgmentsRequired: APP_CONFIG.CREDITS.JUDGMENTS_PER_CREDIT,
+    creditsRequired: APP_CONFIG.CREDITS.CREDITS_PER_SUBMISSION,
+    feedbackReports: APP_CONFIG.FEEDBACK.REPORTS_PER_SUBMISSION,
     visibility: 'public' as const,
-    timeRequired: '~30 minutes',
+    timeRequired: APP_CONFIG.CREDITS.ESTIMATED_TOTAL_TIME,
   },
   
   // Private path (paid)
   private: {
     // Cost comes from pricing-config.ts (configurable)
-    feedbackReports: 3,    // Always 3 reports 
+    feedbackReports: APP_CONFIG.FEEDBACK.REPORTS_PER_SUBMISSION,
     visibility: 'private' as const,
     timeRequired: 'None (instant)',
-    deliveryTime: 'under 1 hour',
+    deliveryTime: `Within ${APP_CONFIG.DELIVERY.PRIVATE_MAX_HOURS} hours`,
   }
 };
 
@@ -49,7 +50,7 @@ export const SUBMISSION_CONFIG = {
  * (Community submissions use the credit system)
  */
 export const JUDGE_PAYOUTS = {
-  privateSubmission: 75, // $0.75 per judge for private submissions
+  privateSubmission: APP_CONFIG.PRICING.JUDGE_PAYOUT_USD_CENTS, // $0.75 per judge for private submissions
 };
 
 /**
