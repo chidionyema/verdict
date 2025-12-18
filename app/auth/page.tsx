@@ -4,10 +4,10 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store';
-import { VERDICT_TIERS } from '@/lib/validations';
+import { STANDARD_VERDICT_COUNT } from '@/lib/validations';
 import { v4 as uuidv4 } from 'uuid';
 
-const FREE_TRIAL_VERDICTS = VERDICT_TIERS.basic.verdicts;
+const FREE_TRIAL_VERDICTS = STANDARD_VERDICT_COUNT;
 
 export default function AuthPage() {
   const router = useRouter();

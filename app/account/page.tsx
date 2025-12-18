@@ -5,8 +5,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useLocale } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
 import { CreditCard, LogOut, Check } from 'lucide-react';
-import { CREDIT_PACKAGES, VERDICT_TIERS, VERDICT_TIER_PRICING } from '@/lib/validations';
-import { getCreditPackagePricing, getVerdictTierPricing } from '@/lib/pricing';
+import { CREDIT_PACKAGES, STANDARD_VERDICT_COUNT, SUBMISSION_MODEL } from '@/lib/validations';
+import { getCreditPackagePricing } from '@/lib/pricing';
 import type { Locale } from '@/i18n.config';
 import type { Profile } from '@/lib/database.types';
 
@@ -21,8 +21,7 @@ function AccountContent() {
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState<string | null>(null);
 
-  // Localized pricing for the current locale
-  const verdictPricing = getVerdictTierPricing(locale);
+  // Localized pricing for the current locale  
   const creditPricing = getCreditPackagePricing(locale);
 
   useEffect(() => {
@@ -144,7 +143,7 @@ function AccountContent() {
           <h3 className="font-medium text-gray-900 mb-2">Buy More Credits</h3>
           <p className="text-sm text-gray-600 mb-4">
             <span className="font-semibold">1 credit = 1 Basic request</span> (
-            {VERDICT_TIERS.basic.verdicts} expert verdicts). Higher tiers use more credits per
+            {STANDARD_VERDICT_COUNT} expert verdicts). Higher tiers use more credits per
             request but always show you the total before you pay.
           </p>
 
@@ -165,8 +164,8 @@ function AccountContent() {
               <div>
                 <span className="text-indigo-600 font-semibold">Verdict:</span>{' '}
                 <span className="font-bold text-indigo-700">
-                  ~{verdictPricing.basic.price.formatted} for{' '}
-                  {verdictPricing.basic.verdicts} expert verdicts (Basic request)
+                  ~£3.49 for{' '}
+                  {STANDARD_VERDICT_COUNT} expert verdicts
                 </span>
               </div>
             </div>
@@ -228,16 +227,16 @@ function AccountContent() {
                 <tr className="border-t border-gray-200">
                   <td className="px-4 py-2">Basic</td>
                   <td className="px-4 py-2">
-                    {VERDICT_TIERS.basic.verdicts} quick ratings
+                    {STANDARD_VERDICT_COUNT} quick ratings
                   </td>
-                  <td className="px-4 py-2">{VERDICT_TIER_PRICING.basic.credits} credit</td>
+                  <td className="px-4 py-2">1 credit</td>
                 </tr>
                 <tr className="border-t border-gray-200">
                   <td className="px-4 py-2">Detailed</td>
                   <td className="px-4 py-2">
-                    {VERDICT_TIERS.detailed.verdicts} written reviews
+                    {STANDARD_VERDICT_COUNT} written reviews
                   </td>
-                  <td className="px-4 py-2">{VERDICT_TIER_PRICING.detailed.credits} credit</td>
+                  <td className="px-4 py-2">1 credit</td>
                 </tr>
               </tbody>
             </table>

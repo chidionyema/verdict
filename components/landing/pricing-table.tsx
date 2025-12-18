@@ -1,21 +1,11 @@
 'use client';
 
-import { Check, Clock, Sparkles, Shirt, Briefcase, Heart, MessageSquare, Star, ArrowRight } from 'lucide-react';
-import { useLocale } from 'next-intl';
+import { Clock, ArrowRight } from 'lucide-react';
 import { TouchButton } from '@/components/ui/touch-button';
-import { VERDICT_TIERS } from '@/lib/validations';
-import { getVerdictTierPricing } from '@/lib/pricing';
-import type { Locale } from '@/i18n.config';
-
-const BASIC_VERDICTS = VERDICT_TIERS.basic.verdicts;
+import { usePrivatePrice } from '@/hooks/use-pricing';
 
 export function PricingTableSection() {
-  const locale = useLocale() as Locale;
-  const verdictPricing = getVerdictTierPricing(locale);
-
-  const basicPriceFormatted = verdictPricing.basic.price.formatted;
-
-  const detailedPricing = verdictPricing.detailed ? verdictPricing.detailed.price.formatted : '$4.99';
+  const privatePrice = usePrivatePrice();
 
   const PATHS = [
     {
@@ -44,15 +34,15 @@ export function PricingTableSection() {
       highlight: false,
     },
     {
-      name: 'Pay Privately (£3)',
+      name: `Pay Privately (${privatePrice})`,
       badge: 'Instant Access',
       path: 'paid',
-      cost: '£3',
+      cost: privatePrice,
       costDetail: 'One-time payment',
       verdicts: '3 comprehensive reports',
-      delivery: '<1 hour average',
+      delivery: 'under 1 hour average',
       steps: [
-        'Pay £3 (no judging required)',
+        `Pay ${privatePrice} (no judging required)`,
         'Submit your request privately',
         'Get 3 feedback reports',
         'Completely confidential',
@@ -60,12 +50,12 @@ export function PricingTableSection() {
       features: [
         '✅ No time required',
         '✅ Completely private',
-        '✅ Faster responses (<1 hour)',
+        '✅ Faster responses (under 1 hour)',
         '✅ Skip judging entirely',
-        '💰 Costs £3 per request',
+        `💰 Costs ${privatePrice} per request`,
       ],
       ctaText: 'Submit Privately',
-      ctaAction: () => window.location.href = '/submit',
+      ctaAction: () => window.location.href = '/submit-unified',
       highlight: true,
     },
   ];
@@ -78,7 +68,7 @@ export function PricingTableSection() {
             Two Ways to Get Feedback
           </h2>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-4">
-            Choose the path that fits your needs: Earn free credits by judging others, or pay £3 for instant private results. Both get you 3 honest feedback reports.
+            Choose the path that fits your needs: Judge others to earn free credits, or pay {privatePrice} for instant private results. Both get you 3 honest feedback reports.
           </p>
         </div>
 
@@ -157,8 +147,7 @@ export function PricingTableSection() {
         </div>
 
         <p className="mt-6 text-xs text-gray-500 text-center max-w-3xl mx-auto">
-          Pricing table is indicative of typical bundles. Inside the app you purchase credits that
-          can be used flexibly across any request type.
+          Both paths provide the same quality feedback - 3 comprehensive reports from real people. Choose based on your time vs. privacy preference.
         </p>
       </div>
     </section>

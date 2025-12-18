@@ -4,9 +4,11 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, Zap, Eye, Gavel, TrendingUp, Users, Lock, Sparkles } from 'lucide-react';
 import { TouchButton } from '@/components/ui/touch-button';
+import { usePrivatePrice } from '@/hooks/use-pricing';
 
 export function EconomyExplanationSection() {
   const router = useRouter();
+  const privatePrice = usePrivatePrice();
 
   return (
     <div className="bg-gradient-to-br from-white via-indigo-50/30 to-purple-50/30 py-20">
@@ -21,7 +23,7 @@ export function EconomyExplanationSection() {
             Two Ways to Get Feedback
           </h2>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Choose the path that fits your needs: Review others to earn free credits, or pay £3 for instant private results. Both get you 3 honest feedback reports.
+            Choose the path that fits your needs: Review others to earn free credits, or pay {privatePrice} for instant private results. Both get you 3 honest feedback reports.
           </p>
         </div>
 
@@ -69,7 +71,7 @@ export function EconomyExplanationSection() {
             </div>
             <h3 className="text-2xl font-bold text-gray-900 mb-3">Submit</h3>
               <p className="text-gray-600 mb-6">
-              Get honest feedback on your own submissions. Use earned credits or pay £3 to skip reviewing.
+              Get honest feedback on your own submissions. Use earned credits or pay {privatePrice} to skip reviewing.
             </p>
             <div className="space-y-3 mb-6">
               <div className="flex items-center gap-3 text-sm text-gray-700">
@@ -78,7 +80,7 @@ export function EconomyExplanationSection() {
               </div>
               <div className="flex items-center gap-3 text-sm text-gray-700">
                 <div className="w-2 h-2 bg-purple-500 rounded-full" />
-                <span><strong>£3</strong> for private & instant</span>
+                <span><strong>{privatePrice}</strong> for private & instant</span>
               </div>
               <div className="flex items-center gap-3 text-sm text-gray-700">
                 <div className="w-2 h-2 bg-purple-500 rounded-full" />
@@ -86,7 +88,7 @@ export function EconomyExplanationSection() {
               </div>
             </div>
             <TouchButton
-              onClick={() => router.push('/submit')}
+              onClick={() => router.push('/submit-unified')}
               className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white"
             >
               Submit Now
@@ -182,10 +184,10 @@ export function EconomyExplanationSection() {
               <div className="flex items-center gap-3 mb-4">
                 <Lock className="h-6 w-6 text-purple-600" />
                 <h4 className="text-2xl font-bold text-gray-900">Private Path</h4>
-                <span className="ml-auto bg-purple-600 text-white text-xs font-bold px-3 py-1 rounded-full">£3</span>
+                <span className="ml-auto bg-purple-600 text-white text-xs font-bold px-3 py-1 rounded-full">{privatePrice}</span>
               </div>
               <p className="text-gray-700 mb-6">
-                Pay £3 to skip judging and submit privately. Get instant, confidential results. Perfect if you're in a hurry or need privacy.
+                Pay {privatePrice} to skip judging and submit privately. Get instant, confidential results. Perfect if you're in a hurry or need privacy.
               </p>
               
               {/* Steps */}
@@ -195,7 +197,7 @@ export function EconomyExplanationSection() {
                     1
                   </div>
                   <div>
-                    <h5 className="font-semibold text-gray-900">Pay £3</h5>
+                    <h5 className="font-semibold text-gray-900">Pay {privatePrice}</h5>
                     <p className="text-sm text-gray-600">One-time payment, no subscription</p>
                   </div>
                 </div>
@@ -240,10 +242,10 @@ export function EconomyExplanationSection() {
               </div>
 
               <TouchButton
-                onClick={() => router.push('/submit')}
+                onClick={() => router.push('/submit-unified')}
                 className="w-full bg-purple-600 hover:bg-purple-700 text-white"
               >
-                Submit Privately for £3
+                Submit Privately for {privatePrice}
                 <ArrowRight className="h-4 w-4 ml-2" />
               </TouchButton>
             </div>
@@ -283,7 +285,7 @@ export function EconomyExplanationSection() {
             </div>
             <h4 className="font-semibold text-gray-900 mb-2">Flexible Pricing</h4>
             <p className="text-sm text-gray-600">
-              Earn free credits or pay £3 for privacy and speed. Your choice, your control.
+              Earn free credits or pay {privatePrice} for privacy and speed. Your choice, your control.
             </p>
           </div>
         </div>

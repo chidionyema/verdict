@@ -5,8 +5,8 @@ import {
   validateContext,
   validateCategory,
   validateMediaType,
-  VERDICT_TIERS,
-  VERDICT_TIER_PRICING,
+  SUBMISSION_MODEL,
+  STANDARD_VERDICT_COUNT,
 } from '@/lib/validations';
 import { createVerdictRequest } from '@/lib/verdicts';
 import { requestRateLimiter, generalApiRateLimiter, checkRateLimit } from '@/lib/rate-limiter';
@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
       media_url,
       text_content,
       context,
-      tier,
+      mode, // 'community' or 'private'
       requested_tone,
       roast_mode,
       visibility,
@@ -118,13 +118,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid category' }, { status: 400 });
     }
 
-    // Determine tier (defaults to basic)
-    const normalizedTier =
-      tier && VERDICT_TIER_PRICING[tier as keyof typeof VERDICT_TIER_PRICING]
-        ? (tier as keyof typeof VERDICT_TIER_PRICING)
-        : 'basic';
-
-    const tierConfig = VERDICT_TIER_PRICING[normalizedTier];
+    // Determine submission mode (defaults to private for backward compatibility)
+    const submissionMode: 'community' | 'private' = (mode === 'community' || mode === 'private') ? mode : 'private';
+    const modeConfig = SUBMISSION_MODEL[submissionMode];
 
     // Validate media_type
     if (!validateMediaType(media_type)) {
@@ -195,10 +191,10 @@ export async function POST(request: NextRequest) {
           context,
           requestedTone: normalizedTone,
           roastMode: roast_mode || false,
-          visibility: visibility || 'private',
-          // Use finance-approved tier config
-          creditsToCharge: tierConfig.credits,
-          targetVerdictCount: tierConfig.verdicts,
+          visibility: visibility || modeConfig.visibility,
+          // Use new submission model config
+          creditsToCharge: modeConfig.credits,
+          targetVerdictCount: modeConfig.verdicts,
         }
       );
 

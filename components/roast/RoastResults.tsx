@@ -1,7 +1,9 @@
 'use client';
 
-import { useState } from 'react';
-import { Share2, Download, Copy, ExternalLink, Flame } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Share2, Download, Copy, ExternalLink, Flame, Zap, TrendingUp } from 'lucide-react';
+import { ViralSharePopup } from '@/components/viral/ViralSharePopup';
+import { useViralSharing } from '@/hooks/useViralSharing';
 import type { Database } from '@/types/supabase';
 
 type FeedbackResponse = Database['public']['Tables']['feedback_responses']['Row'];
@@ -17,9 +19,43 @@ interface RoastResultsProps {
 export function RoastResults({ request, currentUserId }: RoastResultsProps) {
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [copiedToClipboard, setCopiedToClipboard] = useState(false);
+  
+  const {
+    shouldShowViralPopup,
+    setShouldShowViralPopup,
+    currentRoastData,
+    generateShareContent,
+    triggerViralShare,
+    markAsShared
+  } = useViralSharing();
 
   const isOwner = currentUserId === request.user_id;
   const roasts = request.feedback_responses || [];
+  const avgRating = roasts.length > 0 ? roasts.reduce((sum, r) => sum + (r.rating || 0), 0) / roasts.length : 0;
+
+  // Auto-trigger viral sharing for completed roasts
+  useEffect(() => {
+    if (isOwner && roasts.length >= 3) {
+      const roastData = {
+        id: request.id,
+        question: request.question || 'My submission',
+        category: request.category || 'general',
+        avgRating,
+        totalRoasts: roasts.length,
+        roasts: roasts.map(r => ({
+          feedback: r.feedback || '',
+          rating: r.rating || 0
+        }))
+      };
+
+      // Trigger viral share popup after component mounts
+      const timer = setTimeout(() => {
+        triggerViralShare(roastData);
+      }, 2000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [isOwner, roasts.length, request.id, avgRating, triggerViralShare]);
 
   const generateShareableContent = () => {
     const avgRating = roasts.reduce((sum, r) => sum + (r.rating || 0), 0) / roasts.length;
@@ -157,13 +193,18 @@ Try it yourself at askverdict.com 👀
         ))}
       </div>
 
-      {/* Sharing Section */}
-      <div className="bg-amber-50 border border-amber-200 rounded-xl p-6">
+      {/* Enhanced Viral Sharing Section */}
+      <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-6">
         <div className="flex items-center gap-3 mb-4">
-          <Share2 className="h-6 w-6 text-amber-600" />
-          <h3 className="font-bold text-amber-900">Share Your Roast!</h3>
-          <span className="text-sm text-amber-700 bg-amber-100 px-2 py-1 rounded">
-            Roast content goes viral! 📈
+          <div className="bg-amber-500 text-white rounded-full p-2">
+            <TrendingUp className="h-6 w-6" />
+          </div>
+          <div className="flex-1">
+            <h3 className="font-bold text-amber-900">Your Roast is Going Viral! 🔥</h3>
+            <p className="text-sm text-amber-700">Share this brutal honesty and watch the engagement explode</p>
+          </div>
+          <span className="text-sm text-amber-700 bg-amber-100 px-3 py-1 rounded-full font-semibold animate-pulse">
+            📈 VIRAL READY
           </span>
         </div>
         
@@ -228,6 +269,21 @@ Try it yourself at askverdict.com 👀
           Get Roasted Again 🔥
         </button>
       </div>
+
+      {/* Viral Share Popup */}
+      {currentRoastData && (
+        <ViralSharePopup
+          isOpen={shouldShowViralPopup}
+          onClose={() => setShouldShowViralPopup(false)}
+          shareContent={generateShareContent(currentRoastData)}
+          roastData={{
+            question: currentRoastData.question,
+            avgRating: currentRoastData.avgRating,
+            totalRoasts: currentRoastData.totalRoasts,
+            category: currentRoastData.category
+          }}
+        />
+      )}
     </div>
   );
 }

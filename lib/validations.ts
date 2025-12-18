@@ -139,50 +139,63 @@ export const CREDIT_PACKAGES = {
   pro: { credits: 50, price_cents: 17450, name: 'Pro' },           // $174.50 ($3.49/credit)
 } as const;
 
-// Verdict tier definitions (how many verdicts per request)
-export const VERDICT_TIERS = {
-  basic: { verdicts: 3, name: 'Basic', description: '3 quick votes/ratings - Simple decisions' },
-  detailed: { verdicts: 3, name: 'Detailed', description: '3 written reviews - Complex decisions' },
-} as const;
-
-export type VerdictTier = keyof typeof VERDICT_TIERS;
-
-// Tier pricing / payout model (finance-approved)
-// Default targets (per request):
-// - Basic:   $1.99, 3 reviews,  $0.25 per review to reviewers (quick votes/ratings)
-// - Detailed:$4.99, 3 reviews,  $0.75 per review to reviewers (full written feedback)
-export const VERDICT_TIER_PRICING = {
-  basic: {
-    tier: 'basic' as const,
+// Simplified Community/Private model configuration
+export const SUBMISSION_MODEL = {
+  community: {
     credits: 1,
-    verdicts: VERDICT_TIERS.basic.verdicts,
-    judgePayout: 0.25,
-    price: 1.99,
+    verdicts: 3,
+    judgmentsToEarn: 5, // Judge 5 to earn 1 credit
+    cost: 0,
+    visibility: 'public' as const,
   },
-  detailed: {
-    tier: 'detailed' as const,
-    credits: 1,
-    verdicts: VERDICT_TIERS.basic.verdicts,
-    judgePayout: 0.75,
-    price: 4.99,
+  private: {
+    credits: 0, // No credits needed
+    verdicts: 3,
+    judgePayout: 0.75, // $0.75 per reviewer
+    visibility: 'private' as const,
+    // Price comes from pricing-config.ts (configurable)
   },
 } as const;
 
-export type VerdictTierPricing = typeof VERDICT_TIER_PRICING;
+export type SubmissionMode = keyof typeof SUBMISSION_MODEL;
 
-export function getTierConfig(tier: VerdictTier) {
-  return VERDICT_TIER_PRICING[tier];
+export function getSubmissionConfig(mode: SubmissionMode) {
+  return SUBMISSION_MODEL[mode];
 }
 
-export function getTierConfigByVerdictCount(count: number) {
-  const entry = Object.values(VERDICT_TIER_PRICING).find(
-    (cfg) => cfg.verdicts === count
-  );
-  return entry ?? VERDICT_TIER_PRICING.basic;
-}
+// Standard configuration - all submissions get 3 feedback reports
+export const STANDARD_VERDICT_COUNT = 3;
 
 export type PackageId = keyof typeof CREDIT_PACKAGES;
 
 export function isValidPackageId(id: string): id is PackageId {
   return id in CREDIT_PACKAGES;
+}
+
+// Legacy backward compatibility exports (to be removed after migration)
+export const VERDICT_TIERS = {
+  basic: { verdicts: 3, price_cents: 199 },
+  detailed: { verdicts: 3, price_cents: 499 }
+} as const;
+
+export const VERDICT_TIER_PRICING = {
+  basic: { verdicts: 3, price_cents: 199, name: 'Basic', credits: 1, tier: 'basic', price: 1.99, judgePayout: 0.5 },
+  detailed: { verdicts: 3, price_cents: 499, name: 'Detailed', credits: 1, tier: 'detailed', price: 4.99, judgePayout: 0.75 }
+} as const;
+
+export function getTierConfigByVerdictCount(count: number) {
+  // Legacy compatibility - always return standard config
+  return {
+    verdicts: STANDARD_VERDICT_COUNT,
+    price_cents: 349, // Default to mid-tier pricing
+    name: 'Standard',
+    credits: 1,
+    tier: 'detailed',
+    price: 3.49,
+    judgePayout: 0.75
+  };
+}
+
+export function getVerdictTierPricing() {
+  return VERDICT_TIER_PRICING;
 }

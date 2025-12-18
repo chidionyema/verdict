@@ -2,13 +2,10 @@
 
 import Link from 'next/link';
 import { CheckCircle, DollarSign, Star, Target, Clock, ShieldCheck } from 'lucide-react';
-import { VERDICT_TIERS, VERDICT_TIER_PRICING } from '@/lib/validations';
+import { STANDARD_VERDICT_COUNT, SUBMISSION_MODEL } from '@/lib/validations';
 
 // Force dynamic rendering to avoid Supabase client issues during build
 export const dynamic = 'force-dynamic';
-
-const BASIC = VERDICT_TIER_PRICING.basic;
-const DETAILED = VERDICT_TIER_PRICING.detailed;
 
 export default function BecomeJudgePage() {
   return (
@@ -53,15 +50,15 @@ export default function BecomeJudgePage() {
             </h2>
             <ul className="space-y-2 text-sm text-gray-700">
               <li className="flex justify-between">
-                <span>Basic requests ({VERDICT_TIERS.basic.verdicts} quick ratings)</span>
+                <span>Community requests ({STANDARD_VERDICT_COUNT} feedback reports)</span>
                 <span className="font-semibold">
-                  ${BASIC.judgePayout.toFixed(2)} per rating
+                  Free (earn credits)
                 </span>
               </li>
               <li className="flex justify-between">
-                <span>Detailed requests ({VERDICT_TIERS.detailed.verdicts} written reviews)</span>
+                <span>Private requests ({STANDARD_VERDICT_COUNT} detailed reviews)</span>
                 <span className="font-semibold">
-                  ${DETAILED.judgePayout.toFixed(2)} per review
+                  ${SUBMISSION_MODEL.private.judgePayout.toFixed(2)} per review
                 </span>
               </li>
             </ul>

@@ -2,9 +2,11 @@
 
 import { useRouter } from 'next/navigation';
 import { ArrowRight, Zap, Users, Target, Trophy } from 'lucide-react';
+import { usePrivatePrice } from '@/hooks/use-pricing';
 
 export default function EarnCreditsPage() {
   const router = useRouter();
+  const privatePrice = usePrivatePrice();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 py-12">
@@ -116,7 +118,7 @@ export default function EarnCreditsPage() {
               Don't Want to Judge? Go Private
             </h3>
             <p className="text-purple-700 mb-4">
-              Skip the judging requirement and submit privately for £3
+              Skip the judging requirement and submit privately for {privatePrice}
             </p>
             
             <button

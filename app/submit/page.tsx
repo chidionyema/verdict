@@ -6,10 +6,12 @@ import { createClient } from '@/lib/supabase/client';
 import { CreditCard } from 'lucide-react';
 import Link from 'next/link';
 import { ModeSelectionCards } from '@/components/mode/ModeSelectionCards';
+import { usePrivatePrice } from '@/hooks/use-pricing';
 import type { Mode } from '@/lib/mode-colors';
 
 export default function SubmitPage() {
   const router = useRouter();
+  const privatePrice = usePrivatePrice();
   const [selectedMode, setSelectedMode] = useState<Mode | null>(null);
   const [userCredits, setUserCredits] = useState<number>(0);
   const [loading, setLoading] = useState(true);
@@ -107,7 +109,7 @@ export default function SubmitPage() {
                 <span className="text-indigo-600 font-bold text-lg">1</span>
               </div>
               <h4 className="font-semibold mb-2">Choose Mode</h4>
-              <p className="text-sm text-gray-600">Public (free with credits) or Private (£3)</p>
+              <p className="text-sm text-gray-600">Public (free with credits) or Private ({privatePrice})</p>
             </div>
             
             <div className="text-center">
