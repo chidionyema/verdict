@@ -33,9 +33,18 @@ import { toast } from '@/components/ui/toast';
 import { createClient } from '@/lib/supabase/client';
 import { getTierConfigByVerdictCount } from '@/lib/validations';
 import { isExperimentEnabled } from '@/lib/experiments';
+import { ReviewerDisplay } from '@/components/experts/ExpertBadge';
+import { HelpfulnessRating } from '@/components/reputation/HelpfulnessRating';
+import ConsensusAnalysis from '@/components/consensus/ConsensusAnalysis';
 
 interface VerdictWithNumber extends VerdictResponse {
   judge_number: number;
+  reviewer_info?: {
+    user_id: string;
+    reputation_score: number;
+    is_expert: boolean;
+    expert_title?: string;
+  };
 }
 
 interface UserContext {
@@ -741,6 +750,16 @@ export default function RequestDetailPage({
             </div>
           </div>
 
+          {/* Consensus Analysis for Pro Tier */}
+          {request.request_tier === 'pro' && request.status === 'closed' && (
+            <div className="lg:col-span-2 mb-6">
+              <ConsensusAnalysis
+                requestId={request.id}
+                requestTier={request.request_tier || 'community'}
+              />
+            </div>
+          )}
+
           {/* Verdicts List */}
           <div className="lg:col-span-2" id="verdicts-section">
             {verdicts.length > 0 && (
@@ -870,10 +889,18 @@ export default function RequestDetailPage({
                         <User className="h-6 w-6 text-gray-600" />
                       </div>
                       <div>
-                        <p className="font-semibold">
-                          Anonymous Judge #{verdict.judge_number}
-                        </p>
-                        <p className="text-sm text-gray-500">
+                        {verdict.reviewer_info ? (
+                          <ReviewerDisplay 
+                            reviewer={verdict.reviewer_info} 
+                            showReputation={true}
+                            size="md"
+                          />
+                        ) : (
+                          <p className="font-semibold">
+                            Anonymous Judge #{verdict.judge_number}
+                          </p>
+                        )}
+                        <p className="text-sm text-gray-500 mt-1">
                           {new Date(verdict.created_at).toLocaleString()}
                         </p>
                       </div>
@@ -912,6 +939,16 @@ export default function RequestDetailPage({
                       <p className="text-gray-700 leading-relaxed">{verdict.feedback}</p>
                     </div>
                   </div>
+                  
+                  {/* Helpfulness Rating */}
+                  {userContext.isSeeker && verdict.judge_id && (
+                    <HelpfulnessRating
+                      responseId={verdict.id}
+                      reviewerId={verdict.judge_id}
+                      currentUserId={userContext.userId || ''}
+                      compact={false}
+                    />
+                  )}
 
                   {/* Enhanced Actions Row */}
                   <div className="flex items-center justify-between pt-4 border-t border-gray-100 mt-4">

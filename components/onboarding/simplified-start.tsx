@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { VoiceRecorder } from '@/components/VoiceRecorder';
 import { ModeIndicator } from '@/components/mode/ModeIndicator';
+import { PricingTiers, type RequestTier } from '@/components/pricing/PricingTiers';
 import type { User } from '@supabase/supabase-js';
 import type { Mode } from '@/lib/mode-colors';
 
@@ -104,6 +105,9 @@ export function SimplifiedStart() {
   const [dragActive, setDragActive] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [submissionMode, setSubmissionMode] = useState<Mode | null>(null);
+  const [selectedTier, setSelectedTier] = useState<RequestTier>('community');
+  const [userCredits, setUserCredits] = useState(0);
+  const [userTier, setUserTier] = useState<'community' | 'standard' | 'pro'>('community');
 
   useEffect(() => {
     // Only initialize Supabase client in browser
@@ -112,6 +116,24 @@ export function SimplifiedStart() {
     const supabase = createClient();
     supabase.auth.getUser().then(({ data: { user } }) => {
       setUser(user);
+      if (user) {
+        // Fetch user credits and tier for affordability
+        Promise.all([
+          supabase
+            .from('user_credits')
+            .select('balance')
+            .eq('user_id', user.id)
+            .single(),
+          supabase
+            .from('profiles')
+            .select('pricing_tier')
+            .eq('id', user.id)
+            .single()
+        ]).then(([creditsRes, profileRes]) => {
+          setUserCredits((creditsRes.data as any)?.balance || 0);
+          setUserTier((profileRes.data as any)?.pricing_tier || 'community');
+        });
+      }
     });
     
     // Check URL params for visibility mode
@@ -295,6 +317,7 @@ export function SimplifiedStart() {
           context,
           judge_preferences: judgePreferences,
           requested_tone: requestedTone,
+          request_tier: selectedTier,
         }),
       });
 
@@ -316,6 +339,34 @@ export function SimplifiedStart() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong');
       setSubmitting(false);
+    }
+  };
+
+  const handleTierUpgrade = async (tierId: 'standard' | 'pro') => {
+    try {
+      const res = await fetch('/api/billing/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tier_id: tierId }),
+      });
+
+      const data = await res.json();
+
+      if (data.demo) {
+        // Demo mode - tier upgraded directly
+        alert(`Upgraded to ${data.tier} tier (demo mode)`);
+        setUserTier(data.tier);
+        return;
+      }
+
+      if (data.checkout_url) {
+        window.location.href = data.checkout_url;
+      } else {
+        alert(data.error || 'Failed to create checkout session');
+      }
+    } catch (error) {
+      console.error('Tier upgrade error:', error);
+      alert('Failed to upgrade tier. Please try again.');
     }
   };
 
@@ -942,6 +993,29 @@ export function SimplifiedStart() {
                   </div>
                 )}
               </div>
+
+              {/* Pricing Tier Selection */}
+              {context.length >= 20 && (
+                <div className="space-y-6 pt-6 border-t border-gray-200">
+                  <div>
+                    <label className="block text-lg font-semibold text-gray-900 mb-3">
+                      Choose your review tier
+                    </label>
+                    <p className="text-sm text-gray-600 mb-6">
+                      Select the level of expertise and speed you need
+                    </p>
+                  </div>
+                  <PricingTiers
+                    selectedTier={selectedTier}
+                    onSelectTier={setSelectedTier}
+                    userCredits={userCredits}
+                    showRecommended={true}
+                    compact={true}
+                    currentUserTier={userTier}
+                    onUpgrade={handleTierUpgrade}
+                  />
+                </div>
+              )}
 
               {/* Tone Selection */}
               {context.length >= 20 && (

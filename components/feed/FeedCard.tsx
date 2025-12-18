@@ -156,14 +156,14 @@ export function FeedCard({ item, onJudge, onSkip, judging }: FeedCardProps) {
           <div className="flex gap-2">
             <button
               onClick={() => setShowDetailedFeedback(true)}
-              className="flex-1 bg-indigo-100 text-indigo-700 py-2 px-3 rounded-lg text-sm font-medium hover:bg-indigo-200 transition-colors flex items-center justify-center gap-1"
+              className="flex-1 bg-indigo-100 text-indigo-700 py-3 px-4 rounded-lg text-sm font-medium hover:bg-indigo-200 transition-colors flex items-center justify-center gap-1 min-h-[44px]"
             >
               <MessageSquare className="h-4 w-4" />
               Write Feedback
             </button>
             <button
               onClick={onSkip}
-              className="flex-1 bg-gray-100 text-gray-600 py-2 px-3 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors flex items-center justify-center gap-1"
+              className="flex-1 bg-gray-100 text-gray-600 py-3 px-4 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors flex items-center justify-center gap-1 min-h-[44px]"
             >
               <SkipForward className="h-4 w-4" />
               Skip
@@ -218,7 +218,7 @@ export function FeedCard({ item, onJudge, onSkip, judging }: FeedCardProps) {
           
           <button
             onClick={() => setShowDetailedFeedback(false)}
-            className="w-full bg-gray-100 text-gray-600 py-2 px-3 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+            className="w-full bg-gray-100 text-gray-600 py-3 px-4 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors min-h-[44px]"
           >
             Back to Quick Judge
           </button>

@@ -93,7 +93,7 @@ export function LiveActivityTicker() {
   if (!isVisible) return null;
 
   return (
-    <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white py-2 px-4 relative overflow-hidden">
+    <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white py-3 px-4 relative overflow-hidden">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         {/* Live Stats */}
         <div className="hidden lg:flex items-center gap-6 text-sm">
@@ -115,12 +115,12 @@ export function LiveActivityTicker() {
         </div>
 
         {/* Activity Ticker */}
-        <div className="flex-1 lg:flex-initial lg:min-w-[400px] relative h-6 overflow-hidden">
+        <div className="flex-1 lg:flex-initial lg:min-w-[400px] relative min-h-[32px] overflow-hidden">
           <div className="absolute inset-0 flex items-center">
             {activities.map((activity, index) => (
               <div
                 key={activity.id}
-                className={`absolute w-full flex items-center gap-2 transition-all duration-500 ${
+                className={`absolute w-full flex items-center gap-2 transition-all duration-500 min-h-[32px] ${
                   index === currentIndex 
                     ? 'opacity-100 translate-y-0' 
                     : index === (currentIndex - 1 + activities.length) % activities.length
@@ -128,16 +128,20 @@ export function LiveActivityTicker() {
                     : 'opacity-0 translate-y-full'
                 }`}
               >
-                {getActivityIcon(activity.type)}
-                <span className="text-sm">
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {getActivityIcon(activity.type)}
+                </div>
+                <span className="text-sm leading-tight flex-1 pr-2">
                   {getActivityText(activity)}
                 </span>
-                {activity.isLive && (
-                  <span className="ml-2 px-2 py-0.5 bg-green-500 text-white text-xs rounded-full animate-pulse">
-                    LIVE
-                  </span>
-                )}
-                <span className="text-xs opacity-60 ml-auto">{activity.timeAgo}</span>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {activity.isLive && (
+                    <span className="px-2 py-0.5 bg-green-500 text-white text-xs rounded-full animate-pulse">
+                      LIVE
+                    </span>
+                  )}
+                  <span className="text-xs opacity-60 whitespace-nowrap">{activity.timeAgo}</span>
+                </div>
               </div>
             ))}
           </div>

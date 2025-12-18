@@ -6,6 +6,7 @@ import { CreditBalance } from '@/components/credits/CreditBalance';
 import { JudgeReputation } from '@/components/reputation/JudgeReputation';
 import { CreditEarningProgress } from '@/components/credits/CreditEarningProgress';
 import { FeedCard } from '@/components/feed/FeedCard';
+import { EmptyState } from '@/components/ui/EmptyStates';
 import { createClient } from '@/lib/supabase/client';
 import { creditManager, CREDIT_ECONOMY_CONFIG } from '@/lib/credits';
 import type { Database } from '@/lib/database.types';
@@ -189,10 +190,96 @@ export default function FeedPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-          <p className="text-gray-500">Loading feed...</p>
+      <div className="min-h-screen bg-gray-50">
+        {/* Header skeleton */}
+        <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+          <div className="max-w-lg mx-auto px-4 py-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="h-6 bg-gray-200 rounded w-20 mb-1 animate-pulse"></div>
+                <div className="h-4 bg-gray-100 rounded w-32 animate-pulse"></div>
+              </div>
+              <div className="h-6 bg-gray-200 rounded w-20 animate-pulse"></div>
+            </div>
+          </div>
+        </div>
+
+        {/* Credit progress skeleton */}
+        <div className="bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 border-b border-indigo-200">
+          <div className="max-w-lg mx-auto px-4 py-4">
+            <div className="h-16 bg-white bg-opacity-50 rounded-xl animate-pulse"></div>
+          </div>
+        </div>
+
+        {/* Stats bar skeleton */}
+        <div className="bg-white border-b border-gray-200">
+          <div className="max-w-lg mx-auto px-4 py-2">
+            <div className="flex items-center justify-between">
+              <div className="h-4 bg-gray-200 rounded w-24 animate-pulse"></div>
+            </div>
+          </div>
+        </div>
+
+        {/* Feed card skeleton */}
+        <div className="max-w-lg mx-auto p-4">
+          <div className="mb-4">
+            <div className="flex items-center justify-between text-sm mb-2">
+              <div className="h-4 bg-gray-200 rounded w-16 animate-pulse"></div>
+              <div className="h-4 bg-gray-200 rounded w-20 animate-pulse"></div>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2 animate-pulse"></div>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden animate-pulse">
+            {/* Header skeleton */}
+            <div className="p-4 border-b border-gray-100">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-20 bg-gray-200 rounded-full"></div>
+                  <div className="h-6 w-16 bg-gray-100 rounded-full"></div>
+                </div>
+                <div className="h-4 w-12 bg-gray-200 rounded"></div>
+              </div>
+            </div>
+
+            {/* Content skeleton */}
+            <div className="p-4 space-y-4">
+              <div>
+                <div className="h-5 bg-gray-200 rounded w-3/4 mb-2"></div>
+                <div className="space-y-2">
+                  <div className="h-4 bg-gray-100 rounded w-full"></div>
+                  <div className="h-4 bg-gray-100 rounded w-4/5"></div>
+                </div>
+              </div>
+
+              {/* Media placeholder skeleton */}
+              <div className="bg-gray-100 rounded-lg aspect-square flex items-center justify-center">
+                <div className="w-16 h-16 bg-gray-200 rounded"></div>
+              </div>
+
+              {/* Progress skeleton */}
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-gray-200 rounded"></div>
+                <div className="h-4 bg-gray-200 rounded w-16"></div>
+                <div className="flex-1 bg-gray-200 rounded-full h-2"></div>
+              </div>
+            </div>
+
+            {/* Actions skeleton */}
+            <div className="p-4 bg-gray-50 space-y-3">
+              <div className="flex gap-3">
+                <div className="flex-1 h-12 bg-gray-200 rounded-xl"></div>
+                <div className="flex-1 h-12 bg-gray-200 rounded-xl"></div>
+              </div>
+              <div className="flex gap-2">
+                <div className="flex-1 h-12 bg-gray-100 rounded-lg"></div>
+                <div className="flex-1 h-12 bg-gray-100 rounded-lg"></div>
+              </div>
+              <div className="text-center">
+                <div className="h-6 w-32 bg-yellow-100 rounded-full mx-auto"></div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -253,18 +340,12 @@ export default function FeedPage() {
       {/* Main Feed */}
       <div className="max-w-lg mx-auto">
         {!hasMoreItems ? (
-          <div className="px-4 py-12 text-center">
-            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Eye className="h-8 w-8 text-gray-400" />
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">All caught up!</h3>
-            <p className="text-gray-500 mb-6">You've seen all available submissions. Check back later for more.</p>
-            <button
-              onClick={() => window.location.href = '/dashboard'}
-              className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
-            >
-              Go to Dashboard
-            </button>
+          <div className="px-4 py-12">
+            <EmptyState 
+              variant="no-requests"
+              title="All caught up!"
+              description="You've seen all available submissions. Check back later for more, or submit your own for feedback!"
+            />
           </div>
         ) : (
           <div className="p-4">

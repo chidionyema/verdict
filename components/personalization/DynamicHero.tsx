@@ -69,21 +69,28 @@ const TIME_BASED_CONTENT: Record<string, TimeBasedContent> = {
   }
 };
 
+// Helper function to get time of day
+const getTimeOfDay = (): keyof typeof TIME_BASED_CONTENT => {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 9) return 'earlyMorning';
+  else if (hour >= 9 && hour < 12) return 'morning';
+  else if (hour >= 12 && hour < 17) return 'afternoon';
+  else if (hour >= 17 && hour < 21) return 'evening';
+  else return 'night';
+};
+
 export function DynamicHero() {
   const router = useRouter();
-  const [timeOfDay, setTimeOfDay] = useState<keyof typeof TIME_BASED_CONTENT>('morning');
+  const [timeOfDay, setTimeOfDay] = useState<keyof typeof TIME_BASED_CONTENT>('afternoon'); // Always start with neutral
   const [isMobile, setIsMobile] = useState(false);
   const [isReturningUser, setIsReturningUser] = useState(false);
   const [userIntent, setUserIntent] = useState<'dating' | 'career' | 'style' | null>(null);
+  const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
-    // Detect time of day
-    const hour = new Date().getHours();
-    if (hour >= 5 && hour < 9) setTimeOfDay('earlyMorning');
-    else if (hour >= 9 && hour < 12) setTimeOfDay('morning');
-    else if (hour >= 12 && hour < 17) setTimeOfDay('afternoon');
-    else if (hour >= 17 && hour < 21) setTimeOfDay('evening');
-    else setTimeOfDay('night');
+    // Mark as hydrated and set correct time
+    setIsHydrated(true);
+    setTimeOfDay(getTimeOfDay());
 
     // Detect device
     setIsMobile(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent));
@@ -101,6 +108,7 @@ export function DynamicHero() {
   }, []);
 
   const content = TIME_BASED_CONTENT[timeOfDay];
+  
   const deviceStyles = isMobile ? {
     container: "px-4 py-16",
     headline: "text-4xl",
@@ -125,8 +133,13 @@ export function DynamicHero() {
     return "Get honest feedback now →";
   };
 
+  // Don't render until hydrated to prevent flash
+  if (!isHydrated) {
+    return <div className={`${deviceStyles.container} opacity-0 pointer-events-none`} style={{ height: '600px' }} />;
+  }
+
   return (
-    <div className={`relative overflow-hidden bg-gradient-to-br ${content.gradient} ${deviceStyles.container}`}>
+    <div className={`relative overflow-hidden bg-gradient-to-br ${content.gradient} ${deviceStyles.container} animate-in fade-in duration-300`}>
       {/* Animated background elements */}
       <div className="absolute inset-0">
         <div className="absolute top-20 left-10 w-64 h-64 bg-white/10 rounded-full filter blur-3xl animate-float-slow" />

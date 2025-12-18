@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/client';
+import { reputationManager } from '@/lib/reputation';
 import type { Database } from '@/types/supabase';
 
 type CreditTransaction = Database['public']['Tables']['credit_transactions']['Row'];
@@ -64,6 +65,14 @@ export class CreditManager {
     helpfulnessRating?: number
   ): Promise<boolean> {
     try {
+      // Check if reviewer can earn credits (reputation check)
+      const canEarnCredits = await reputationManager.canEarnCredits(judgeId);
+      
+      if (!canEarnCredits) {
+        console.log(`Reviewer ${judgeId} cannot earn credits due to low reputation`);
+        return false;
+      }
+
       // Award partial credit for judgment
       const { error: creditError } = await (this.supabase.rpc as any)('award_credits', {
         target_user_id: judgeId,

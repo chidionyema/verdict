@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { Menu, X, User, CreditCard, Clock, Plus, Bell, ChevronDown, Zap } from 'lucide-react';
+import { Menu, X, User, CreditCard, Clock, Plus, Bell, ChevronDown, Zap, Shield } from 'lucide-react';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import NotificationCenter from './NotificationCenter';
 import SearchBar from './SearchBar';
@@ -172,7 +172,7 @@ export default function Navigation() {
                   {/* Active Requests */}
                   {userStats.activeRequests > 0 && (
                     <Link 
-                      href="/my-requests"
+                      href="/decisions"
                       className="flex items-center bg-blue-50 text-blue-700 px-4 py-2 rounded-full text-sm hover:bg-blue-100 transition min-h-[36px]"
                     >
                       <Clock className="h-4 w-4 mr-2" />
@@ -227,10 +227,10 @@ export default function Navigation() {
                 </Link>
                 <div className="w-px h-6 bg-gray-300 mx-2"></div>
                 <Link
-                  href="/my-requests"
+                  href="/decisions"
                   className="text-gray-600 hover:text-gray-800 transition flex items-center min-h-[36px] text-sm"
                 >
-                  My Submissions
+                  My Decisions
                 </Link>
                 <Link
                   href="/account"
@@ -271,15 +271,15 @@ export default function Navigation() {
                   </div>
                 ) : (
                   <Link
-                    href="/become-a-judge"
-                    className="text-gray-700 hover:text-indigo-600 transition"
+                    href="/verification"
+                    className="text-gray-700 hover:text-indigo-600 transition flex items-center gap-1"
                   >
-                    Become a Reviewer
+                    Become Verified Expert
                   </Link>
                 )}
                 <Link
                   href="/auth/login"
-                  className="text-gray-700 hover:text-indigo-600 transition"
+                  className="text-gray-700 hover:text-indigo-600 transition flex items-center"
                 >
                   Sign In
                 </Link>
@@ -374,11 +374,11 @@ export default function Navigation() {
                 )}
                 
                 <Link
-                  href="/my-requests"
+                  href="/decisions"
                   className="block py-4 text-gray-700 hover:text-indigo-600 text-lg font-medium border-b border-gray-200 min-h-[48px] flex items-center"
                   onClick={() => setMobileMenuOpen(false)}
                 >
-                  My Requests
+                  My Decisions
                 </Link>
                 <Link
                   href="/judge"
@@ -412,11 +412,11 @@ export default function Navigation() {
                   🔥 Roast Me
                 </Link>
                 <Link
-                  href="/become-a-judge"
+                  href="/verification"
                   className="block py-4 text-gray-700 hover:text-indigo-600 text-lg font-medium border-b border-gray-200 min-h-[48px] flex items-center"
                   onClick={() => setMobileMenuOpen(false)}
                 >
-                  Become a Reviewer
+                  Become Verified Expert
                 </Link>
                 <Link
                   href="/auth/login"

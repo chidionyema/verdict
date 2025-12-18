@@ -61,8 +61,10 @@ export function CreditBalance({ userId, showTransactions = false, compact = fals
 
   if (loading) {
     return (
-      <div className="animate-pulse">
-        <div className="h-4 bg-gray-200 rounded w-20"></div>
+      <div className="flex items-center gap-2 animate-pulse" aria-label="Loading credit balance">
+        <div className="h-4 w-4 bg-gray-200 rounded-full"></div>
+        <div className="h-4 bg-gray-200 rounded w-16"></div>
+        <div className="h-3 bg-gray-100 rounded w-12"></div>
       </div>
     );
   }

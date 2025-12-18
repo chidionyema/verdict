@@ -61,55 +61,81 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
   const supabase = createServiceClient();
 
   const userId = session.metadata?.user_id;
+  const isLegacyPackage = session.metadata?.is_legacy_package === 'true';
   const credits = parseInt(session.metadata?.credits || '0');
+  const tier = session.metadata?.tier;
 
-  if (!userId || !credits) {
-    log.error('Missing metadata in checkout session', null, { sessionId: session.id });
+  if (!userId) {
+    log.error('Missing user_id in checkout session metadata', null, { sessionId: session.id });
     return;
   }
 
-  // Update payment status
-  const { error: paymentError } = await supabase
-    .from('payments')
+  if (isLegacyPackage && !credits) {
+    log.error('Missing credits in legacy package checkout session', null, { sessionId: session.id });
+    return;
+  }
+
+  if (!isLegacyPackage && !tier) {
+    log.error('Missing tier in pricing tier checkout session', null, { sessionId: session.id });
+    return;
+  }
+
+  // Update transaction status
+  const { error: transactionError } = await supabase
+    .from('transactions')
     .update({
-      status: 'succeeded',
+      status: 'completed',
       stripe_payment_intent_id: session.payment_intent as string,
     })
-    .eq('stripe_payment_intent_id', session.payment_intent as string);
+    .eq('stripe_session_id', session.id);
 
-  if (paymentError) {
-    log.error('Failed to update payment status', paymentError, { sessionId: session.id });
+  if (transactionError) {
+    log.error('Failed to update transaction status', transactionError, { sessionId: session.id });
   }
 
-  // Add credits to user
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('credits')
-    .eq('id', userId)
-    .single() as { data: { credits: number } | null };
+  if (isLegacyPackage) {
+    // Handle legacy credit package purchase
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('credits')
+      .eq('id', userId)
+      .single() as { data: { credits: number } | null };
 
-  if (profile) {
-    const { error: creditError } = await (supabase
+    if (profile) {
+      const { error: creditError } = await (supabase
+        .from('profiles') as ReturnType<typeof supabase.from>)
+        .update({ credits: profile.credits + credits } as Record<string, unknown>)
+        .eq('id', userId);
+
+      if (creditError) {
+        log.error('Failed to add credits', creditError, { userId, credits });
+      } else {
+        log.info('Credits added successfully', { userId, credits, sessionId: session.id });
+      }
+    }
+  } else {
+    // Handle pricing tier upgrade
+    const { error: tierError } = await (supabase
       .from('profiles') as ReturnType<typeof supabase.from>)
-      .update({ credits: profile.credits + credits } as Record<string, unknown>)
+      .update({ pricing_tier: tier } as Record<string, unknown>)
       .eq('id', userId);
 
-    if (creditError) {
-      log.error('Failed to add credits', creditError, { userId, credits });
+    if (tierError) {
+      log.error('Failed to upgrade tier', tierError, { userId, tier });
+    } else {
+      log.info('Tier upgraded successfully', { userId, tier, sessionId: session.id });
     }
   }
-
-  log.info('Credits added successfully', { userId, credits, sessionId: session.id });
 }
 
 async function handleCheckoutExpired(session: Stripe.Checkout.Session) {
   const supabase = createServiceClient();
 
-  // Mark payment as failed
+  // Mark transaction as failed
   await supabase
-    .from('payments')
+    .from('transactions')
     .update({ status: 'failed' })
-    .eq('stripe_payment_intent_id', session.payment_intent as string);
+    .eq('stripe_session_id', session.id);
 
   log.info('Checkout session expired', { sessionId: session.id });
 }

@@ -37,6 +37,11 @@ export interface CreateRequestInput {
    * Defaults to 1 to match current pricing.
    */
   creditsToCharge?: number;
+  /**
+   * The pricing tier for this request: 'community', 'standard', 'pro', or 'enterprise'
+   * Defaults to 'community'
+   */
+  requestTier?: string;
 }
 
 export interface CreateRequestResult {
@@ -69,6 +74,7 @@ export async function createVerdictRequest(
     visibility,
     targetVerdictCount,
     creditsToCharge,
+    requestTier,
   } = input;
 
   const targetCount = targetVerdictCount ?? 3;
@@ -129,7 +135,7 @@ export async function createVerdictRequest(
 
   // Create the request
   const { data: newRequest, error: createRequestError } = await (supabase as any)
-    .from('feedback_requests')
+    .from('verdict_requests')
     .insert({
       user_id: userId,
       category,
@@ -145,6 +151,7 @@ export async function createVerdictRequest(
       status: 'in_progress',
       target_verdict_count: targetCount,
       received_verdict_count: 0,
+      request_tier: requestTier || 'community',
     })
     .select()
     .single();

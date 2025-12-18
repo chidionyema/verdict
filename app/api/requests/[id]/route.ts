@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { log } from '@/lib/logger';
+import { reputationManager } from '@/lib/reputation';
 
 // GET /api/requests/[id] - Get request with verdicts
 export async function GET(
@@ -147,11 +148,31 @@ export async function GET(
     }
 
     // For seekers, don't expose judge IDs (anonymize)
-    const anonymizedVerdicts = verdicts?.map((v: any, index: number) => ({
-      ...(v as any),
-      judge_id: undefined,
-      judge_number: index + 1,
-    })) || [];
+    // But include reviewer reputation info
+    const anonymizedVerdicts = await Promise.all(
+      (verdicts || []).map(async (v: any, index: number) => {
+        // Get reviewer reputation and expert status
+        let reviewerInfo = null;
+        if (v.judge_id) {
+          const reputation = await reputationManager.getReviewerReputation(v.judge_id);
+          if (reputation) {
+            reviewerInfo = {
+              user_id: v.judge_id,
+              reputation_score: reputation.reputation_score,
+              is_expert: reputation.is_expert,
+              expert_title: reputation.expert_title
+            };
+          }
+        }
+        
+        return {
+          ...(v as any),
+          judge_id: undefined, // Still hide the actual ID
+          judge_number: index + 1,
+          reviewer_info: reviewerInfo
+        };
+      })
+    );
 
     return NextResponse.json({
       request: verdictRequest,

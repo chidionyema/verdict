@@ -15,9 +15,11 @@ import {
   Zap,
   CheckCircle,
   Flame,
-  TrendingUp
+  TrendingUp,
+  Scale
 } from 'lucide-react';
 import { SplitTestButton } from '@/components/features/SplitTestButton';
+import { ComparisonButton } from '@/components/comparison/ComparisonButton';
 
 interface SubmissionStep {
   step: 'details' | 'mode' | 'payment' | 'processing' | 'success';
@@ -27,7 +29,7 @@ interface SubmissionData {
   category: string;
   question: string;
   context: string;
-  mediaType: 'photo' | 'text' | 'split_test';
+  mediaType: 'photo' | 'text' | 'split_test' | 'comparison';
   mediaUrl?: string;
   visibility?: 'public' | 'private';
   mode?: 'community' | 'private';
@@ -103,6 +105,13 @@ export default function UnifiedSubmitPage() {
     if (!submissionData.category || !submissionData.question || !submissionData.context) {
       return; // Add proper validation
     }
+    
+    // For comparison media type, launch the modal directly
+    if (submissionData.mediaType === 'comparison') {
+      // The comparison modal will handle its own flow
+      return;
+    }
+    
     setStep('mode');
   };
 
@@ -383,7 +392,7 @@ function DetailsStep({ submissionData, setSubmissionData, onNext }: any) {
       {/* Media Type */}
       <div className="mb-8">
         <label className="block text-sm font-medium text-gray-700 mb-3">Submission Type</label>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <button
             onClick={() => setSubmissionData({ ...submissionData, mediaType: 'text' })}
             className={`p-4 rounded-lg border-2 transition-all ${
@@ -427,17 +436,44 @@ function DetailsStep({ submissionData, setSubmissionData, onNext }: any) {
             <div className="font-medium">Split Test</div>
             <div className="text-xs text-gray-500 mt-1">Compare 2 photos</div>
           </button>
+          <button
+            onClick={() => setSubmissionData({ ...submissionData, mediaType: 'comparison' })}
+            className={`p-4 rounded-lg border-2 transition-all relative overflow-hidden ${
+              submissionData.mediaType === 'comparison'
+                ? 'border-indigo-600 bg-indigo-50'
+                : 'border-gray-200 hover:border-gray-300'
+            }`}
+          >
+            {submissionData.mediaType !== 'comparison' && (
+              <div className="absolute top-2 right-2 bg-indigo-500 text-white text-xs px-2 py-1 rounded-full">
+                PRO
+              </div>
+            )}
+            <Scale className={`h-6 w-6 mx-auto mb-2 ${
+              submissionData.mediaType === 'comparison' ? 'text-indigo-600' : 'text-gray-600'
+            }`} />
+            <div className="font-medium">Decision Comparison</div>
+            <div className="text-xs text-gray-500 mt-1">A/B decision analysis</div>
+          </button>
         </div>
       </div>
 
-      <button
-        onClick={onNext}
-        disabled={!submissionData.category || !submissionData.question || !submissionData.context}
-        className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-4 rounded-xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg transition-all flex items-center justify-center gap-2"
-      >
-        Continue
-        <ArrowRight className="h-5 w-5" />
-      </button>
+      {submissionData.mediaType === 'comparison' ? (
+        <ComparisonButton 
+          category={submissionData.category}
+          variant="default"
+          className="w-full py-4 text-lg"
+        />
+      ) : (
+        <button
+          onClick={onNext}
+          disabled={!submissionData.category || !submissionData.question || !submissionData.context}
+          className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-4 rounded-xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg transition-all flex items-center justify-center gap-2"
+        >
+          Continue
+          <ArrowRight className="h-5 w-5" />
+        </button>
+      )}
     </div>
   );
 }

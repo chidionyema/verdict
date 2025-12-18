@@ -8,6 +8,7 @@ import { LogOut, Check } from 'lucide-react';
 import { CREDIT_PACKAGES, STANDARD_VERDICT_COUNT } from '@/lib/validations';
 // Note: Credit package pricing was removed - using simplified pricing model
 import { getPricingTexts } from '@/lib/localization';
+import TierUpgradeCard from '@/components/billing/TierUpgradeCard';
 import type { Locale } from '@/i18n.config';
 import type { Profile } from '@/lib/database.types';
 
@@ -75,6 +76,34 @@ function AccountContent() {
     }
   };
 
+  const handleTierUpgrade = async (tierId: 'standard' | 'pro') => {
+    try {
+      const res = await fetch('/api/billing/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tier_id: tierId }),
+      });
+
+      const data = await res.json();
+
+      if (data.demo) {
+        // Demo mode - tier upgraded directly
+        alert(`Upgraded to ${data.tier} tier (demo mode)`);
+        fetchProfile();
+        return;
+      }
+
+      if (data.checkout_url) {
+        window.location.href = data.checkout_url;
+      } else {
+        alert(data.error || 'Failed to create checkout session');
+      }
+    } catch (error) {
+      console.error('Tier upgrade error:', error);
+      throw error;
+    }
+  };
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     router.push('/');
@@ -97,7 +126,7 @@ function AccountContent() {
         {success && (
           <div className="bg-green-50 text-green-700 p-4 rounded-lg mb-8 flex items-center">
             <Check className="h-5 w-5 mr-2" />
-            Payment successful! Your credits have been added.
+            Payment successful! Your account has been updated.
           </div>
         )}
 
@@ -112,6 +141,12 @@ function AccountContent() {
             <div>
               <label className="block text-sm text-gray-500">Display Name</label>
               <p className="font-medium">{profile?.display_name || '-'}</p>
+            </div>
+            <div>
+              <label className="block text-sm text-gray-500">Current Tier</label>
+              <p className="font-medium capitalize">
+                {(profile as any)?.pricing_tier || 'Community'}
+              </p>
             </div>
             <div>
               <label className="block text-sm text-gray-500">Member Since</label>
@@ -246,6 +281,15 @@ function AccountContent() {
             You can change tiers for each request on the final step before you submit.
           </p>
         </div>
+
+        {/* Tier Upgrade Section */}
+        <TierUpgradeCard 
+          currentTier={(profile as any)?.pricing_tier || 'community'}
+          onUpgrade={handleTierUpgrade}
+          disabled={loading}
+        />
+
+        <div className="mt-8" />
 
         {/* Logout */}
         <button

@@ -25,6 +25,7 @@ import {
   Volume2,
 } from 'lucide-react';
 import { getTierConfigByVerdictCount } from '@/lib/validations';
+import { EmptyState } from '@/components/ui/EmptyStates';
 
 // Force dynamic rendering to avoid Supabase client issues during build
 export const dynamic = 'force-dynamic';
@@ -298,10 +299,88 @@ export default function MyRequestsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-          <p className="text-gray-500">Loading your requests...</p>
+      <div className="min-h-screen bg-gray-50">
+        {/* Header skeleton */}
+        <div className="bg-white border-b">
+          <div className="max-w-7xl mx-auto px-4 py-6">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <div className="h-8 bg-gray-200 rounded w-48 mb-2 animate-pulse"></div>
+                <div className="h-5 bg-gray-100 rounded w-80 animate-pulse"></div>
+              </div>
+              <div className="h-12 w-36 bg-gray-200 rounded-xl animate-pulse"></div>
+            </div>
+          </div>
+        </div>
+
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          {/* Filter skeleton */}
+          <div className="flex flex-col sm:flex-row gap-4 mb-6">
+            <div className="flex-1 relative">
+              <div className="h-12 bg-gray-200 rounded-xl animate-pulse"></div>
+            </div>
+            <div className="flex gap-2">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-12 w-20 bg-gray-200 rounded-xl animate-pulse"></div>
+              ))}
+            </div>
+          </div>
+
+          {/* Request cards skeleton */}
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden animate-pulse">
+                {/* Header */}
+                <div className="p-6">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center gap-3 flex-1">
+                      <div className="w-8 h-8 bg-gray-200 rounded"></div>
+                      <div className="min-w-0 flex-1">
+                        <div className="h-5 bg-gray-200 rounded w-20 mb-2"></div>
+                        <div className="flex gap-2">
+                          <div className="h-4 bg-gray-100 rounded w-16"></div>
+                          <div className="h-4 bg-gray-100 rounded w-12"></div>
+                          <div className="h-4 bg-gray-100 rounded w-24"></div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="w-5 h-5 bg-gray-200 rounded"></div>
+                  </div>
+
+                  {/* Context */}
+                  <div className="space-y-2 mb-4">
+                    <div className="h-4 bg-gray-200 rounded w-full"></div>
+                    <div className="h-4 bg-gray-200 rounded w-4/5"></div>
+                    <div className="h-4 bg-gray-200 rounded w-3/5"></div>
+                  </div>
+
+                  {/* Progress */}
+                  <div className="mb-4">
+                    <div className="flex justify-between mb-2">
+                      <div className="h-3 bg-gray-200 rounded w-20"></div>
+                      <div className="h-3 bg-gray-200 rounded w-8"></div>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2"></div>
+                  </div>
+
+                  {/* Meta */}
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="h-3 bg-gray-200 rounded w-20"></div>
+                    <div className="h-3 bg-gray-200 rounded w-12"></div>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="px-6 py-4 bg-gray-50 border-t border-gray-100">
+                  <div className="flex gap-2">
+                    <div className="flex-1 h-10 bg-gray-200 rounded-lg"></div>
+                    <div className="w-10 h-10 bg-gray-200 rounded-lg"></div>
+                    <div className="w-10 h-10 bg-gray-200 rounded-lg"></div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -393,41 +472,11 @@ export default function MyRequestsPage() {
         )}
 
         {requests.length === 0 ? (
-          <div className="bg-white rounded-xl shadow-sm p-12 text-center">
-            <div className="max-w-md mx-auto">
-              <div className="w-24 h-24 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Target className="h-12 w-12 text-indigo-600" />
-              </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-3">
-                Start your feedback journey
-              </h3>
-              <p className="text-gray-600 mb-8 leading-relaxed">
-                Get expert insights on your appearance, writing, or important decisions. 
-                Join thousands who've improved with professional feedback.
-              </p>
-              <Link
-                href="/start-simple"
-                className="inline-flex items-center gap-2 bg-indigo-600 text-white px-8 py-4 rounded-xl hover:bg-indigo-700 transition font-medium shadow-lg"
-              >
-                <Target className="h-5 w-5" />
-                Create Your First Request
-              </Link>
-              <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
-                <div className="flex items-center gap-2 justify-center">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  <span>Expert feedback in 30min</span>
-                </div>
-                <div className="flex items-center gap-2 justify-center">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  <span>Actionable improvements</span>
-                </div>
-                <div className="flex items-center gap-2 justify-center">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  <span>Track your progress</span>
-                </div>
-              </div>
-            </div>
-          </div>
+          <EmptyState 
+            variant="first-time"
+            title="Start your feedback journey"
+            description="Get expert insights on your appearance, writing, or important decisions. Join thousands who've improved with professional feedback."
+          />
         ) : (
           <>
             {/* Filters and Search */}
@@ -563,11 +612,10 @@ export default function MyRequestsPage() {
             </div>
 
             {filteredRequests.length === 0 && (
-              <div className="text-center py-12">
-                <Search className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No requests found</h3>
-                <p className="text-gray-600">Try adjusting your search or filter criteria</p>
-              </div>
+              <EmptyState 
+                variant="no-results"
+                context={{ searchTerm: searchTerm }}
+              />
             )}
           </>
         )}

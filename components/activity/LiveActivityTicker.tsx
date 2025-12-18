@@ -42,16 +42,16 @@ export function LiveActivityTicker() {
   const currentActivity = SAMPLE_ACTIVITIES[currentIndex];
 
   return (
-    <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-2 px-4 shadow-lg">
-      <div className="max-w-7xl mx-auto flex items-center justify-center gap-3">
-        <Activity className="h-4 w-4 animate-pulse" />
-        <div className={`text-sm transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
+    <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 px-4 shadow-lg">
+      <div className="max-w-7xl mx-auto flex items-center justify-center gap-3 min-h-[24px]">
+        <Activity className="h-4 w-4 animate-pulse flex-shrink-0" />
+        <div className={`text-sm leading-tight text-center transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`}>
           <span className="font-medium">Someone in {currentActivity.location}</span>
           <span className="opacity-90"> just {currentActivity.type} their </span>
           <span className="font-semibold">{currentActivity.category}</span>
           <span className="opacity-75 ml-2">• {currentActivity.timeAgo}</span>
         </div>
-        <MapPin className="h-3 w-3 opacity-75" />
+        <MapPin className="h-3 w-3 opacity-75 flex-shrink-0" />
       </div>
     </div>
   );

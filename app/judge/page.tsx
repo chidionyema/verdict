@@ -48,6 +48,10 @@ interface QueueRequest {
   context: string;
   target_verdict_count: number;
   received_verdict_count: number;
+  request_tier?: 'community' | 'standard' | 'pro';
+  expert_only?: boolean;
+  priority?: number;
+  routing_strategy?: 'expert_only' | 'mixed' | 'community';
 }
 
 interface Achievement {
@@ -81,6 +85,9 @@ export default function JudgeDashboardPage() {
   const [queue, setQueue] = useState<QueueRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [toggling, setToggling] = useState(false);
+  const [isExpert, setIsExpert] = useState(false);
+  const [expertInfo, setExpertInfo] = useState<{ industry?: string; title?: string } | null>(null);
+  const [queueType, setQueueType] = useState<'expert' | 'community'>('community');
   const [queueFilter, setQueueFilter] = useState<'all' | 'appearance' | 'profile' | 'writing' | 'decision'>('all');
   const [queueSort, setQueueSort] = useState<'newest' | 'oldest' | 'earnings'>('newest');
   const [searchQuery, setSearchQuery] = useState('');
@@ -167,8 +174,11 @@ export default function JudgeDashboardPage() {
               signal: AbortSignal.timeout(10000) // 10 second timeout
             });
             if (res.ok) {
-              const { requests } = await res.json();
+              const { requests, isExpert: isExpertResponse, expertInfo: expertInfoResponse, queueType: queueTypeResponse } = await res.json();
               setQueue(requests || []);
+              setIsExpert(isExpertResponse || false);
+              setExpertInfo(expertInfoResponse || null);
+              setQueueType(queueTypeResponse || 'community');
             } else {
               console.error('Queue fetch failed:', res.status, res.statusText);
             }
@@ -218,6 +228,12 @@ export default function JudgeDashboardPage() {
             
             if (data.type === 'requests') {
               setQueue(data.requests || []);
+              // Update expert info if available in stream
+              if (data.isExpert !== undefined) {
+                setIsExpert(data.isExpert);
+                setExpertInfo(data.expertInfo || null);
+                setQueueType(data.queueType || 'community');
+              }
             } else if (data.type === 'connected') {
               console.log('SSE connected:', data.message);
             } else if (data.type === 'heartbeat') {
@@ -872,13 +888,35 @@ export default function JudgeDashboardPage() {
             <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl border border-white/50 p-6">
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-6">
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                    <MessageSquare className="h-7 w-7 text-indigo-600" />
-                    Available Requests
-                  </h2>
+                  <div className="flex items-center gap-3 mb-2">
+                    <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                      <MessageSquare className="h-7 w-7 text-indigo-600" />
+                      Available Requests
+                    </h2>
+                    {isExpert && (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-sm font-bold rounded-full shadow-lg">
+                        <Crown className="h-4 w-4" />
+                        Expert Queue
+                      </span>
+                    )}
+                    {queueType === 'expert' && (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xs font-semibold rounded-full shadow-lg">
+                        <Target className="h-3.5 w-3.5" />
+                        Priority Matching
+                      </span>
+                    )}
+                  </div>
                   <p className="text-gray-600 mt-1">
-                    Choose requests that match your expertise. Quality responses earn better ratings.
+                    {isExpert 
+                      ? `Expert-matched requests for ${expertInfo?.industry || 'your field'}. Higher rewards for Pro tier requests.`
+                      : "Choose requests that match your expertise. Quality responses earn better ratings."
+                    }
                   </p>
+                  {isExpert && expertInfo && (
+                    <p className="text-sm text-purple-700 bg-purple-50 px-3 py-1 rounded-lg mt-2 inline-block">
+                      Verified as: {expertInfo.title}
+                    </p>
+                  )}
                 </div>
                 
                 <div className="flex items-center gap-4">
@@ -973,15 +1011,35 @@ export default function JudgeDashboardPage() {
                   <div className="bg-white rounded-[22px] p-6">
                     <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                       <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-3">
+                        <div className="flex items-center gap-3 mb-3 flex-wrap">
                           <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-yellow-500 to-amber-500 text-white text-xs font-bold rounded-full shadow-lg">
                             <Sparkles className="h-3.5 w-3.5" />
                             BEST MATCH FOR YOU
                           </span>
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xs font-bold rounded-full shadow-lg">
-                            <Coins className="h-3.5 w-3.5" />
-                            HIGH EARNING
-                          </span>
+                          {filteredQueue[0].request_tier === 'pro' && (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-xs font-bold rounded-full shadow-lg">
+                              <Crown className="h-3.5 w-3.5" />
+                              PRO TIER
+                            </span>
+                          )}
+                          {filteredQueue[0].request_tier === 'standard' && (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-xs font-bold rounded-full shadow-lg">
+                              <Star className="h-3.5 w-3.5" />
+                              STANDARD
+                            </span>
+                          )}
+                          {(filteredQueue[0].request_tier === 'pro' || filteredQueue[0].request_tier === 'standard') && (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xs font-bold rounded-full shadow-lg">
+                              <Coins className="h-3.5 w-3.5" />
+                              HIGH EARNING
+                            </span>
+                          )}
+                          {filteredQueue[0].expert_only && (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-pink-500 to-rose-500 text-white text-xs font-bold rounded-full shadow-lg">
+                              <Medal className="h-3.5 w-3.5" />
+                              EXPERT ONLY
+                            </span>
+                          )}
                         </div>
                         
                         <div className="flex items-center gap-3 mb-2">
@@ -1000,7 +1058,13 @@ export default function JudgeDashboardPage() {
                         <div className="flex items-center gap-6 text-sm">
                           <div className="flex items-center gap-2">
                             <DollarSign className="h-4 w-4 text-green-600" />
-                            <span className="font-semibold text-green-700">Earn $0.60</span>
+                            <span className="font-semibold text-green-700">
+                              Earn ${filteredQueue[0].request_tier === 'pro' ? '2.00' : 
+                                   filteredQueue[0].request_tier === 'standard' ? '1.00' : '0.60'}
+                              {filteredQueue[0].request_tier === 'pro' && (
+                                <span className="text-purple-600 ml-1">+bonus</span>
+                              )}
+                            </span>
                           </div>
                           <div className="flex items-center gap-2">
                             <Clock className="h-4 w-4 text-blue-600" />

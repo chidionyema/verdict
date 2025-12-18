@@ -76,6 +76,8 @@ export interface Database {
           id: string;
           credits: number;
           is_reviewer: boolean;
+          is_admin?: boolean;
+          is_judge?: boolean;
           created_at: string;
           display_name?: string | null;
           email?: string | null;
@@ -84,6 +86,8 @@ export interface Database {
           id: string;
           credits?: number;
           is_reviewer?: boolean;
+          is_admin?: boolean;
+          is_judge?: boolean;
           created_at?: string;
           display_name?: string | null;
           email?: string | null;
@@ -92,6 +96,8 @@ export interface Database {
           id?: string;
           credits?: number;
           is_reviewer?: boolean;
+          is_admin?: boolean;
+          is_judge?: boolean;
           created_at?: string;
           display_name?: string | null;
           email?: string | null;
@@ -104,6 +110,12 @@ export interface Database {
           balance: number;
           earned_total: number;
           spent_total: number;
+          reputation_score?: number;
+          total_reviews?: number;
+          reviewer_status?: 'active' | 'inactive' | 'suspended';
+          last_active?: string;
+          consensus_rate?: number;
+          last_calibration?: string;
         };
         Insert: {
           id?: string;
@@ -111,6 +123,12 @@ export interface Database {
           balance?: number;
           earned_total?: number;
           spent_total?: number;
+          reputation_score?: number;
+          total_reviews?: number;
+          reviewer_status?: 'active' | 'inactive' | 'suspended';
+          last_active?: string;
+          consensus_rate?: number;
+          last_calibration?: string;
         };
         Update: {
           id?: string;
@@ -118,6 +136,12 @@ export interface Database {
           balance?: number;
           earned_total?: number;
           spent_total?: number;
+          reputation_score?: number;
+          total_reviews?: number;
+          reviewer_status?: 'active' | 'inactive' | 'suspended';
+          last_active?: string;
+          consensus_rate?: number;
+          last_calibration?: string;
         };
       };
       judge_reputation: {
@@ -188,6 +212,245 @@ export interface Database {
           created_at?: string;
           type?: string;
           source?: string;
+        };
+      };
+      verdict_requests: {
+        Row: {
+          id: string;
+          user_id: string;
+          request_tier: 'community' | 'standard' | 'pro';
+          received_verdict_count: number;
+          status?: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          request_tier?: 'community' | 'standard' | 'pro';
+          received_verdict_count?: number;
+          status?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          request_tier?: 'community' | 'standard' | 'pro';
+          received_verdict_count?: number;
+          status?: string;
+          created_at?: string;
+        };
+      };
+      verdict_responses: {
+        Row: {
+          id: string;
+          request_id: string;
+          reviewer_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          request_id: string;
+          reviewer_id: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          request_id?: string;
+          reviewer_id?: string;
+          created_at?: string;
+        };
+      };
+      expert_verifications: {
+        Row: {
+          id: string;
+          user_id: string;
+          job_title: string;
+          company: string;
+          industry: string;
+          verification_status: 'pending' | 'verified' | 'rejected';
+          verified_at?: string;
+          verified_by?: string;
+          rejection_reason?: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          job_title: string;
+          company: string;
+          industry: string;
+          verification_status?: 'pending' | 'verified' | 'rejected';
+          verified_at?: string;
+          verified_by?: string;
+          rejection_reason?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          job_title?: string;
+          company?: string;
+          industry?: string;
+          verification_status?: 'pending' | 'verified' | 'rejected';
+          verified_at?: string;
+          verified_by?: string;
+          rejection_reason?: string;
+          created_at?: string;
+        };
+      };
+      reviewer_ratings: {
+        Row: {
+          id: string;
+          reviewer_id: string;
+          request_id: string;
+          response_id: string;
+          helpfulness_rating: number;
+          quality_score: number;
+          rated_by: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          reviewer_id: string;
+          request_id: string;
+          response_id: string;
+          helpfulness_rating: number;
+          quality_score: number;
+          rated_by: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          reviewer_id?: string;
+          request_id?: string;
+          response_id?: string;
+          helpfulness_rating?: number;
+          quality_score?: number;
+          rated_by?: string;
+          created_at?: string;
+        };
+      };
+      reputation_history: {
+        Row: {
+          id: string;
+          user_id: string;
+          event_type: string;
+          old_score: number;
+          new_score: number;
+          reason: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          event_type: string;
+          old_score: number;
+          new_score: number;
+          reason: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          event_type?: string;
+          old_score?: number;
+          new_score?: number;
+          reason?: string;
+          created_at?: string;
+        };
+      };
+      pricing_tiers: {
+        Row: {
+          id: string;
+          name: string;
+          credits_required: number;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          credits_required: number;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          credits_required?: number;
+        };
+      };
+      comparison_requests: {
+        Row: {
+          id: string;
+          user_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          created_at?: string;
+        };
+      };
+      user_actions: {
+        Row: {
+          id: string;
+          user_id: string;
+          action_type: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          action_type: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          action_type?: string;
+          created_at?: string;
+        };
+      };
+      folders: {
+        Row: {
+          id: string;
+          user_id: string;
+          name: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          name: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          name?: string;
+          created_at?: string;
+        };
+      };
+      user_tier_info: {
+        Row: {
+          id: string;
+          user_id: string;
+          tier: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          tier: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          tier?: string;
+          created_at?: string;
         };
       };
     };

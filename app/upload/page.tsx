@@ -9,6 +9,7 @@ export default function UploadPage() {
   const router = useRouter();
   const setUploadedMedia = useStore((state) => state.setUploadedMedia);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [mediaType, setMediaType] = useState<'image' | 'text'>('image');
   const [textContent, setTextContent] = useState('');
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -18,16 +19,27 @@ export default function UploadPage() {
     if (!file) return;
 
     setUploading(true);
+    setUploadProgress(0);
 
     // Create preview URL
     const url = URL.createObjectURL(file);
     setPreviewUrl(url);
 
-    // Simulate upload delay
-    setTimeout(() => {
-      setUploadedMedia({ url, type: 'image' });
-      router.push('/context');
-    }, 1500);
+    // Simulate upload progress with realistic increments
+    const progressSteps = [15, 30, 45, 60, 75, 90, 100];
+    for (let i = 0; i < progressSteps.length; i++) {
+      setTimeout(() => {
+        setUploadProgress(progressSteps[i]);
+        
+        // Complete upload when progress reaches 100%
+        if (progressSteps[i] === 100) {
+          setTimeout(() => {
+            setUploadedMedia({ url, type: 'image' });
+            router.push('/context');
+          }, 200);
+        }
+      }, i * 200);
+    }
   };
 
   const handleTextSubmit = () => {
@@ -83,7 +95,18 @@ export default function UploadPage() {
                     className="max-h-64 mx-auto rounded-lg"
                   />
                   {uploading && (
-                    <p className="mt-4 text-indigo-600">Uploading...</p>
+                    <div className="mt-4">
+                      <div className="flex items-center justify-between text-sm text-indigo-600 mb-2">
+                        <span>Uploading...</span>
+                        <span>{uploadProgress}%</span>
+                      </div>
+                      <div className="w-full bg-indigo-100 rounded-full h-2">
+                        <div 
+                          className="bg-indigo-600 h-2 rounded-full transition-all duration-300"
+                          style={{ width: `${uploadProgress}%` }}
+                        />
+                      </div>
+                    </div>
                   )}
                 </div>
               ) : (
