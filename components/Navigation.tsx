@@ -11,7 +11,7 @@ import SearchBar from './SearchBar';
 
 interface UserProfile {
   credits: number;
-  is_reviewer: boolean;
+  is_judge: boolean;
 }
 
 interface UserStats {
@@ -38,7 +38,7 @@ export default function Navigation() {
       // Fetch profile
       const { data: profile } = await supabase
         .from('profiles')
-        .select('credits, is_reviewer')
+        .select('credits, is_judge')
         .eq('id', userId)
         .single();
       
@@ -182,7 +182,7 @@ export default function Navigation() {
                   )}
                   
                   {/* Reviewer Notifications */}
-                  {userProfile?.is_reviewer && userStats.pendingVerdicts > 0 && (
+                  {userProfile?.is_judge && userStats.pendingVerdicts > 0 && (
                     <Link 
                       href="/judge"
                       className="flex items-center bg-purple-50 text-purple-700 px-4 py-2 rounded-full text-sm hover:bg-purple-100 transition relative min-h-[36px]"
@@ -213,12 +213,26 @@ export default function Navigation() {
                 >
                   Discover
                 </Link>
-                <Link
-                  href="/submit"
-                  className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition flex items-center text-sm min-h-[36px] font-medium"
-                >
-                  Submit
-                </Link>
+                <div className="relative group">
+                  <Link
+                    href="/submit"
+                    className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition flex items-center text-sm min-h-[36px] font-medium"
+                  >
+                    Submit
+                  </Link>
+                  {/* Submit Dropdown */}
+                  <div className="absolute top-full left-0 mt-2 w-56 bg-white rounded-lg shadow-lg border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+                    <Link href="/submit" className="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 border-b">
+                      📝 Standard Review
+                    </Link>
+                    <Link href="/submit?mode=comparison" className="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 border-b">
+                      ⚖️ Decision Comparison
+                    </Link>
+                    <Link href="/submit?mode=split_test" className="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-50">
+                      🔄 Photo Split Test
+                    </Link>
+                  </div>
+                </div>
                 <Link
                   href="/judge"
                   className="text-gray-700 hover:text-indigo-600 transition flex items-center min-h-[36px] font-medium"
@@ -254,7 +268,7 @@ export default function Navigation() {
                 >
                   Submit
                 </Link>
-                {userProfile?.is_reviewer ? (
+                {userProfile?.is_judge ? (
                   <div className="relative group">
                     <button className="text-gray-700 hover:text-indigo-600 transition flex items-center">
                       Reviewer Dashboard
@@ -355,7 +369,7 @@ export default function Navigation() {
                   </Link>
                 </div>
 
-                {userProfile?.is_reviewer && userStats.pendingVerdicts > 0 && (
+                {userProfile?.is_judge && userStats.pendingVerdicts > 0 && (
                   <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 mb-6">
                     <Link
                       href="/judge"

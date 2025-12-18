@@ -52,6 +52,17 @@ interface QueueRequest {
   expert_only?: boolean;
   priority?: number;
   routing_strategy?: 'expert_only' | 'mixed' | 'community';
+  request_type?: 'verdict' | 'comparison' | 'split_test';
+  comparison_data?: {
+    option_a_title: string;
+    option_b_title: string;
+    option_a_image_url: string;
+    option_b_image_url: string;
+  };
+  split_test_data?: {
+    photo_a_url: string;
+    photo_b_url: string;
+  };
 }
 
 interface Achievement {
@@ -1136,12 +1147,24 @@ export default function JudgeDashboardPage() {
               ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   {filteredQueue.slice(filteredQueue.length > 0 ? 1 : 0).map((request) => {
-                    const categoryConfig = {
-                      appearance: { icon: <Eye className="h-5 w-5" />, color: 'from-pink-500 to-rose-500' },
-                      profile: { icon: <Heart className="h-5 w-5" />, color: 'from-red-500 to-pink-500' },
-                      writing: { icon: <MessageSquare className="h-5 w-5" />, color: 'from-blue-500 to-cyan-500' },
-                      decision: { icon: <Target className="h-5 w-5" />, color: 'from-green-500 to-emerald-500' },
-                    }[request.category] || { icon: <Sparkles className="h-5 w-5" />, color: 'from-gray-500 to-slate-500' };
+                    const getRequestTypeConfig = (request: QueueRequest) => {
+                      if (request.request_type === 'comparison') {
+                        return { icon: <span>⚖️</span>, color: 'from-purple-500 to-indigo-500', type: 'Comparison' };
+                      }
+                      if (request.request_type === 'split_test') {
+                        return { icon: <span>🔄</span>, color: 'from-orange-500 to-amber-500', type: 'Split Test' };
+                      }
+                      return null;
+                    };
+                    
+                    const requestTypeConfig = getRequestTypeConfig(request);
+                    
+                    const categoryConfig = requestTypeConfig || {
+                      appearance: { icon: <Eye className="h-5 w-5" />, color: 'from-pink-500 to-rose-500', type: 'Standard' },
+                      profile: { icon: <Heart className="h-5 w-5" />, color: 'from-red-500 to-pink-500', type: 'Standard' },
+                      writing: { icon: <MessageSquare className="h-5 w-5" />, color: 'from-blue-500 to-cyan-500', type: 'Standard' },
+                      decision: { icon: <Target className="h-5 w-5" />, color: 'from-green-500 to-emerald-500', type: 'Standard' },
+                    }[request.category] || { icon: <Sparkles className="h-5 w-5" />, color: 'from-gray-500 to-slate-500', type: 'Standard' };
                     
                     return (
                       <div
@@ -1160,6 +1183,15 @@ export default function JudgeDashboardPage() {
                                 <h4 className="font-bold text-gray-900 capitalize">
                                   {request.category}
                                 </h4>
+                                <span className={`px-2 py-0.5 rounded-lg text-xs font-medium ${
+                                  request.request_type === 'comparison' 
+                                    ? 'bg-purple-100 text-purple-700' 
+                                    : request.request_type === 'split_test' 
+                                      ? 'bg-orange-100 text-orange-700'
+                                      : 'bg-gray-100 text-gray-600'
+                                }`}>
+                                  {categoryConfig.type}
+                                </span>
                                 <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-lg text-xs font-medium">
                                   {request.media_type}
                                 </span>

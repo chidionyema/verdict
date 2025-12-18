@@ -282,7 +282,15 @@ export default function MyRequestsPage() {
     } verdicts · ${tierConfig.credits} credit${tierConfig.credits > 1 ? 's' : ''}`;
   };
 
-  const getCategoryIcon = (category: string) => {
+  const getCategoryIcon = (category: string, requestType?: string) => {
+    // Special handling for comparison and split test types
+    if (requestType === 'comparison') {
+      return '⚖️';
+    }
+    if (requestType === 'split_test') {
+      return '🔄';
+    }
+    
     switch (category) {
       case 'appearance':
         return '👔';
@@ -292,8 +300,38 @@ export default function MyRequestsPage() {
         return '✍️';
       case 'decision':
         return '🤔';
+      case 'comparison':
+        return '⚖️';
+      case 'split_test':
+        return '🔄';
       default:
         return '📝';
+    }
+  };
+
+  const getRequestTypeLabel = (requestType: string) => {
+    switch (requestType) {
+      case 'verdict':
+        return 'Standard';
+      case 'comparison':
+        return 'Comparison';
+      case 'split_test':
+        return 'Split Test';
+      default:
+        return 'Standard';
+    }
+  };
+
+  const getRequestTypeColor = (requestType: string) => {
+    switch (requestType) {
+      case 'verdict':
+        return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'comparison':
+        return 'bg-purple-100 text-purple-800 border-purple-200';
+      case 'split_test':
+        return 'bg-orange-100 text-orange-800 border-orange-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
@@ -516,12 +554,19 @@ export default function MyRequestsPage() {
                   <div className="p-6">
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex items-center gap-3">
-                        <span className="text-2xl">{getCategoryIcon(request.category)}</span>
+                        <span className="text-2xl">{getCategoryIcon(request.category, request.request_type)}</span>
                         <div className="min-w-0">
                           <h3 className="font-semibold text-gray-900 capitalize truncate">
                             {request.category}
                           </h3>
                           <div className="flex flex-wrap items-center gap-2 mt-1 text-xs">
+                            <span
+                              className={`px-2 py-1 rounded-full font-medium border ${getRequestTypeColor(
+                                request.request_type || 'verdict'
+                              )}`}
+                            >
+                              {getRequestTypeLabel(request.request_type || 'verdict')}
+                            </span>
                             <span
                               className={`px-2 py-1 rounded-full font-medium border ${getStatusColor(
                                 request.status
@@ -534,6 +579,10 @@ export default function MyRequestsPage() {
                                 <Image className="h-3 w-3" />
                               ) : request.media_type === 'audio' ? (
                                 <Volume2 className="h-3 w-3" />
+                              ) : request.media_type === 'comparison' ? (
+                                <Image className="h-3 w-3" />
+                              ) : request.media_type === 'split_test' ? (
+                                <Image className="h-3 w-3" />
                               ) : (
                                 <FileText className="h-3 w-3" />
                               )}
@@ -592,7 +641,7 @@ export default function MyRequestsPage() {
                   <div className="px-6 py-4 bg-gray-50 border-t border-gray-100">
                     <div className="flex gap-2">
                       <Link
-                        href={`/requests/${request.id}`}
+                        href={request.view_url || `/requests/${request.id}`}
                         className="flex-1 bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition font-medium text-center text-sm"
                       >
                         {getPrimaryCtaLabel(request)}

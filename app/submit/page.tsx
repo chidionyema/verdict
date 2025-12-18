@@ -1,20 +1,24 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { CreditCard } from 'lucide-react';
+import { CreditCard, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { ModeSelectionCards } from '@/components/mode/ModeSelectionCards';
 import type { Mode } from '@/lib/mode-colors';
 
 export default function SubmitPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [selectedMode, setSelectedMode] = useState<Mode | null>(null);
   const [userCredits, setUserCredits] = useState<number>(0);
   const [loading, setLoading] = useState(true);
+  
+  // Check for special modes in URL
+  const mode = searchParams.get('mode');
 
-  // Check user credits on load
+  // Check user credits on load and handle special modes
   useEffect(() => {
     async function checkCredits() {
       if (typeof window === 'undefined') return;
@@ -33,11 +37,23 @@ export default function SubmitPage() {
           setUserCredits((profile as any).credits || 0);
         }
       }
+      
+      // Handle special submission modes
+      if (mode === 'comparison') {
+        // For now, redirect to start-simple with comparison mode
+        router.push('/start-simple?type=comparison');
+        return;
+      } else if (mode === 'split_test') {
+        // For now, redirect to start-simple with split test mode
+        router.push('/start-simple?type=split_test');
+        return;
+      }
+      
       setLoading(false);
     }
     
     checkCredits();
-  }, []);
+  }, [mode, router]);
 
   const handleModeSelect = (mode: Mode) => {
     setSelectedMode(mode);

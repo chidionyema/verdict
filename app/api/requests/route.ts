@@ -14,7 +14,7 @@ import { sendRequestLifecycleEmail } from '@/lib/notifications';
 import { moderateRequest } from '@/lib/moderation-free';
 import { ExpertRoutingService } from '@/lib/expert-routing';
 
-// GET /api/requests - List current user's requests
+// GET /api/requests - List current user's requests (unified: verdict, comparison, split test)
 export async function GET(request: NextRequest) {
   const startTime = performance.now();
   try {
@@ -42,74 +42,59 @@ export async function GET(request: NextRequest) {
     }
 
     const searchParams = request.nextUrl.searchParams;
-    const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 50);
+    const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100);
     const offset = parseInt(searchParams.get('offset') || '0');
 
-    // Build query with optional filters
-    let query = supabase
-      .from('verdict_requests')
-      .select(`
-        id, 
-        category, 
-        subcategory, 
-        media_type, 
-        media_url, 
-        text_content, 
-        context, 
-        status, 
-        target_verdict_count, 
-        received_verdict_count, 
-        created_at,
-        request_tier,
-        folder_id,
-        verdict_count:verdicts(count),
-        avg_rating:verdicts(rating)
-      `)
-      .eq('user_id', user.id)
-      .is('deleted_at', null);
+    try {
+      // Fetch all types of requests in parallel
+      const [verdictRequests, comparisonRequests, splitTestRequests] = await Promise.all([
+        // Standard verdict requests
+        fetchVerdictRequests(supabase, user.id, searchParams),
+        // Comparison requests  
+        fetchComparisonRequestsForUser(supabase, user.id),
+        // Split test requests
+        fetchSplitTestRequestsForUser(supabase, user.id)
+      ]);
 
-    // Handle unorganized requests filter
-    const unorganized = searchParams.get('unorganized');
-    if (unorganized === 'true') {
-      query = query.is('folder_id', null);
-    }
+      // Combine and normalize all requests with type indicators
+      const allRequests = [
+        ...verdictRequests.map((req: any) => ({ 
+          ...req, 
+          request_type: 'verdict',
+          view_url: `/requests/${req.id}`
+        })),
+        ...comparisonRequests.map((req: any) => ({ 
+          ...req, 
+          request_type: 'comparison',
+          view_url: `/comparisons/${req.id}`
+        })),
+        ...splitTestRequests.map((req: any) => ({ 
+          ...req, 
+          request_type: 'split_test',
+          view_url: `/split-tests/${req.id}`
+        }))
+      ];
 
-    const { data: requests, error } = await query
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1);
+      // Sort by creation date and apply pagination
+      const sortedRequests = allRequests
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        .slice(offset, offset + limit);
 
-    if (error) {
-      log.error('Failed to fetch requests', error);
+      const response = NextResponse.json({ 
+        requests: sortedRequests,
+        total: allRequests.length,
+        hasMore: offset + limit < allRequests.length
+      });
+      response.headers.set('X-Response-Time', `${Math.round(performance.now() - startTime)}ms`);
+      return response;
+
+    } catch (fetchError) {
+      log.error('Failed to fetch unified requests', fetchError);
       return NextResponse.json({
         error: 'Database error',
-        details: error.message
+        details: fetchError instanceof Error ? fetchError.message : 'Unknown error'
       }, { status: 500 });
     }
-
-    // Process the data to calculate averages
-    const processedRequests = (requests || []).map(request => {
-      const verdictCount = Array.isArray((request as any).verdict_count) 
-        ? (request as any).verdict_count.length 
-        : 0;
-      
-      const ratings = Array.isArray((request as any).avg_rating)
-        ? (request as any).avg_rating.map((v: any) => v.rating).filter((r: any) => r !== null)
-        : [];
-      
-      const avgRating = ratings.length > 0 
-        ? ratings.reduce((sum: number, rating: number) => sum + rating, 0) / ratings.length
-        : null;
-
-      return {
-        ...(request as any),
-        verdict_count: verdictCount,
-        avg_rating: avgRating
-      };
-    });
-
-    const response = NextResponse.json({ requests: processedRequests });
-    response.headers.set('X-Response-Time', `${Math.round(performance.now() - startTime)}ms`);
-    return response;
 
   } catch (error) {
     log.error('Requests GET endpoint error', error);
@@ -118,6 +103,157 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+// Fetch standard verdict requests for user
+async function fetchVerdictRequests(supabase: any, userId: string, searchParams: URLSearchParams) {
+  let query = supabase
+    .from('verdict_requests')
+    .select(`
+      id, 
+      category, 
+      subcategory, 
+      media_type, 
+      media_url, 
+      text_content, 
+      context, 
+      status, 
+      target_verdict_count, 
+      received_verdict_count, 
+      created_at,
+      request_tier,
+      folder_id,
+      verdict_count:verdicts(count),
+      avg_rating:verdicts(rating)
+    `)
+    .eq('user_id', userId)
+    .is('deleted_at', null);
+
+  // Handle unorganized requests filter
+  const unorganized = searchParams.get('unorganized');
+  if (unorganized === 'true') {
+    query = query.is('folder_id', null);
+  }
+
+  const { data: requests, error } = await query;
+
+  if (error) throw error;
+
+  // Process the data to calculate averages
+  return (requests || []).map((request: any) => {
+    const verdictCount = Array.isArray(request.verdict_count) 
+      ? request.verdict_count.length 
+      : 0;
+    
+    const ratings = Array.isArray(request.avg_rating)
+      ? request.avg_rating.map((v: any) => v.rating).filter((r: any) => r !== null)
+      : [];
+    
+    const avgRating = ratings.length > 0 
+      ? ratings.reduce((sum: number, rating: number) => sum + rating, 0) / ratings.length
+      : null;
+
+    return {
+      ...request,
+      verdict_count: verdictCount,
+      avg_rating: avgRating
+    };
+  });
+}
+
+// Fetch comparison requests for user
+async function fetchComparisonRequestsForUser(supabase: any, userId: string) {
+  const { data: requests, error } = await supabase
+    .from('comparison_requests')
+    .select(`
+      id,
+      created_at,
+      decision_context,
+      option_a_title,
+      option_b_title,
+      option_a_image_url,
+      option_b_image_url,
+      status,
+      request_tier,
+      target_verdict_count,
+      received_verdict_count,
+      winning_option
+    `)
+    .eq('user_id', userId);
+
+  if (error) throw error;
+
+  // Normalize comparison request format to match verdict requests
+  return (requests || []).map((req: any) => ({
+    id: req.id,
+    created_at: req.created_at,
+    category: 'comparison',
+    subcategory: 'decision',
+    media_type: 'comparison',
+    media_url: req.option_a_image_url,
+    text_content: req.decision_context,
+    context: `Compare: ${req.option_a_title} vs ${req.option_b_title}`,
+    target_verdict_count: req.target_verdict_count,
+    received_verdict_count: req.received_verdict_count,
+    status: req.status,
+    request_tier: req.request_tier,
+    folder_id: null,
+    verdict_count: req.received_verdict_count,
+    avg_rating: null, // TODO: Calculate from comparison_responses
+    comparison_data: {
+      option_a_title: req.option_a_title,
+      option_b_title: req.option_b_title,
+      option_a_image_url: req.option_a_image_url,
+      option_b_image_url: req.option_b_image_url,
+      winning_option: req.winning_option
+    }
+  }));
+}
+
+// Fetch split test requests for user
+async function fetchSplitTestRequestsForUser(supabase: any, userId: string) {
+  const { data: requests, error } = await supabase
+    .from('split_test_requests')
+    .select(`
+      id,
+      created_at,
+      context,
+      photo_a_url,
+      photo_b_url,
+      status,
+      target_verdict_count,
+      received_verdict_count,
+      winning_photo,
+      consensus_strength
+    `)
+    .eq('user_id', userId);
+
+  if (error) throw error;
+
+  // Normalize split test request format to match verdict requests
+  return (requests || []).map((req: any) => ({
+    id: req.id,
+    created_at: req.created_at,
+    category: 'split_test',
+    subcategory: 'photo_comparison',
+    media_type: 'split_test',
+    media_url: req.photo_a_url,
+    text_content: req.context,
+    context: `Photo A vs Photo B: ${req.context}`,
+    target_verdict_count: req.target_verdict_count,
+    received_verdict_count: req.received_verdict_count,
+    status: req.status,
+    request_tier: 'basic',
+    folder_id: null,
+    verdict_count: req.received_verdict_count,
+    avg_rating: null, // TODO: Calculate from split_test_verdicts
+    split_test_data: {
+      photo_a_url: req.photo_a_url,
+      photo_b_url: req.photo_b_url,
+      winning_photo: req.winning_photo,
+      consensus_strength: req.consensus_strength
+    }
+  }));
 }
 
 // POST /api/requests - Create a new verdict request
