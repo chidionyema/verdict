@@ -661,13 +661,15 @@ export function SimplifiedStart() {
                     <textarea
                       value={textContent}
                       onChange={(e) => setTextContent(e.target.value)}
-                      placeholder="Paste your text here... (minimum 50 characters)"
+                      onBlur={() => setTextContentTouched(true)}
+                      placeholder="Paste your text here... (minimum 120 characters for quality feedback)"
                       className="w-full p-6 border-2 border-gray-300 rounded-2xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 transition-all text-lg resize-none"
                       rows={8}
                     />
                     <div className="absolute bottom-4 right-4 flex items-center gap-2">
                       <span className={`text-sm font-medium ${
-                        textContent.length < 120 ? 'text-red-500' : 'text-green-600'
+                        textContentTouched && textContent.length < 120 ? 'text-red-500' : 
+                        textContent.length >= 120 ? 'text-green-600' : 'text-gray-500'
                       }`}>
                         {textContent.length}/500
                       </span>
