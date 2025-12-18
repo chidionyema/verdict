@@ -1,6 +1,6 @@
 'use client';
 
-import { HeroSection } from '@/components/landing/hero-section';
+import { EconomyHeroSection } from '@/components/landing/EconomyHeroSection';
 import { SocialProofSection } from '@/components/landing/social-proof-section';
 import { PricingTableSection } from '@/components/landing/pricing-table';
 import { useRouter } from 'next/navigation';
@@ -29,7 +29,7 @@ export default function DatingFeedbackPage() {
         }}
       />
 
-      <HeroSection />
+      <EconomyHeroSection />
 
       {/* Use‑case specific funnel */}
       <section className="py-16 bg-gray-50 border-t border-gray-100">

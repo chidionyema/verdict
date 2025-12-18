@@ -1,6 +1,6 @@
 'use client';
 
-import { HeroSection } from '@/components/landing/hero-section';
+import { EconomyHeroSection } from '@/components/landing/EconomyHeroSection';
 import { SocialProofSection } from '@/components/landing/social-proof-section';
 import { PricingTableSection } from '@/components/landing/pricing-table';
 import { useRouter } from 'next/navigation';
@@ -27,7 +27,7 @@ export default function OutfitCheckPage() {
         }}
       />
 
-      <HeroSection />
+      <EconomyHeroSection />
 
       <section className="py-16 bg-gray-50 border-t border-gray-100">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">

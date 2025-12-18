@@ -1,6 +1,6 @@
 'use client';
 
-import { HeroSection } from '@/components/landing/hero-section';
+import { EconomyHeroSection } from '@/components/landing/EconomyHeroSection';
 import { ProductDemo } from '@/components/landing/product-demo';
 import { HowItWorks } from '@/components/landing/how-it-works';
 import { SocialProofSection } from '@/components/landing/social-proof-section';
@@ -21,7 +21,7 @@ export default function WorldClassLandingPage() {
     <div className="min-h-screen bg-white">
       
       {/* Hero Section */}
-      <HeroSection />
+      <EconomyHeroSection />
 
       {/* Interactive Product Demo */}
       <ProductDemo />
