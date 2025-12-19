@@ -4,11 +4,11 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, Zap, Eye, Gavel, TrendingUp, Users, Lock, Sparkles } from 'lucide-react';
 import { TouchButton } from '@/components/ui/touch-button';
-import { getPricingTexts } from '@/lib/localization';
+import { useLocalizedPricing } from '@/hooks/use-pricing';
 
 export function EconomyExplanationSection() {
   const router = useRouter();
-  const pricing = getPricingTexts();
+  const pricing = useLocalizedPricing();
 
   return (
     <div className="bg-gradient-to-br from-white via-indigo-50/30 to-purple-50/30 py-20">
@@ -23,7 +23,7 @@ export function EconomyExplanationSection() {
             Two Ways to Get Feedback
           </h2>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Choose the path that fits your needs: Review others to earn free credits, or pay {pricing.privateSubmissionPrice} for instant private results. Both get you 3 honest feedback reports.
+            Choose the path that fits your needs: Review others to earn free credits, or pay {pricing.privatePrice} for instant private results. Both get you 3 honest feedback reports.
           </p>
         </div>
 
@@ -71,7 +71,7 @@ export function EconomyExplanationSection() {
             </div>
             <h3 className="text-2xl font-bold text-gray-900 mb-3">Submit</h3>
               <p className="text-gray-600 mb-6">
-              Get honest feedback on your own submissions. Use earned credits or pay {pricing.privateSubmissionPrice} to skip reviewing.
+              Get honest feedback on your own submissions. Use earned credits or pay {pricing.privatePrice} to skip reviewing.
             </p>
             <div className="space-y-3 mb-6">
               <div className="flex items-center gap-3 text-sm text-gray-700">
@@ -80,7 +80,7 @@ export function EconomyExplanationSection() {
               </div>
               <div className="flex items-center gap-3 text-sm text-gray-700">
                 <div className="w-2 h-2 bg-purple-500 rounded-full" />
-                <span><strong>{pricing.privateSubmissionPrice}</strong> for private & instant</span>
+                <span><strong>{pricing.privatePrice}</strong> for private & instant</span>
               </div>
               <div className="flex items-center gap-3 text-sm text-gray-700">
                 <div className="w-2 h-2 bg-purple-500 rounded-full" />
@@ -184,10 +184,10 @@ export function EconomyExplanationSection() {
               <div className="flex items-center gap-3 mb-4">
                 <Lock className="h-6 w-6 text-purple-600" />
                 <h4 className="text-2xl font-bold text-gray-900">Private Path</h4>
-                <span className="ml-auto bg-purple-600 text-white text-xs font-bold px-3 py-1 rounded-full">{pricing.privateSubmissionPrice}</span>
+                <span className="ml-auto bg-purple-600 text-white text-xs font-bold px-3 py-1 rounded-full">{pricing.privatePrice}</span>
               </div>
               <p className="text-gray-700 mb-6">
-                Pay {pricing.privateSubmissionPrice} to skip judging and submit privately. Get instant, confidential results. Perfect if you're in a hurry or need privacy.
+                Pay {pricing.privatePrice} to skip judging and submit privately. Get instant, confidential results. Perfect if you're in a hurry or need privacy.
               </p>
               
               {/* Steps */}
@@ -197,7 +197,7 @@ export function EconomyExplanationSection() {
                     1
                   </div>
                   <div>
-                    <h5 className="font-semibold text-gray-900">Pay {pricing.privateSubmissionPrice}</h5>
+                    <h5 className="font-semibold text-gray-900">Pay {pricing.privatePrice}</h5>
                     <p className="text-sm text-gray-600">One-time payment, no subscription</p>
                   </div>
                 </div>
@@ -237,7 +237,7 @@ export function EconomyExplanationSection() {
                 </div>
                 <div className="flex items-center gap-2 text-sm text-gray-700">
                   <div className="w-1.5 h-1.5 bg-gray-400 rounded-full" />
-                  <span>💰 Costs {pricing.privateSubmissionPrice} per request</span>
+                  <span>💰 Costs {pricing.privatePrice} per request</span>
                 </div>
               </div>
 
@@ -245,7 +245,7 @@ export function EconomyExplanationSection() {
                 onClick={() => router.push('/submit')}
                 className="w-full bg-purple-600 hover:bg-purple-700 text-white"
               >
-                Submit Privately for {pricing.privateSubmissionPrice}
+                Submit Privately for {pricing.privatePrice}
                 <ArrowRight className="h-4 w-4 ml-2" />
               </TouchButton>
             </div>
@@ -285,7 +285,7 @@ export function EconomyExplanationSection() {
             </div>
             <h4 className="font-semibold text-gray-900 mb-2">Flexible Pricing</h4>
             <p className="text-sm text-gray-600">
-              Earn free credits or pay {pricing.privateSubmissionPrice} for privacy and speed. Your choice, your control.
+              Earn free credits or pay {pricing.privatePrice} for privacy and speed. Your choice, your control.
             </p>
           </div>
         </div>

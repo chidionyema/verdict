@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store';
 import { Clock, DollarSign, Send, ArrowLeft } from 'lucide-react';
 import { ResponseTemplates } from '@/components/judge/ResponseTemplates';
-import { VoiceRecorder } from '@/components/VoiceRecorder';
 
 export default function VerdictSubmissionPage({
   params,
@@ -26,8 +25,6 @@ export default function VerdictSubmissionPage({
   const [timeRemaining, setTimeRemaining] = useState(90);
   const [submitting, setSubmitting] = useState(false);
   const [showExample, setShowExample] = useState(true);
-  const [voiceFile, setVoiceFile] = useState<File | null>(null);
-  const [voiceUrl, setVoiceUrl] = useState<string | null>(null);
 
   const request = availableRequests.find((r) => r.id === id);
 
@@ -63,28 +60,6 @@ export default function VerdictSubmissionPage({
       // Combine summary and reasons for storage
       const combinedFeedback = `${verdictSummary.trim()}\n\nReasons:\n${reasons.trim()}`;
 
-      // Optional voice upload
-      let uploadedVoiceUrl: string | null = null;
-      if (voiceFile) {
-        const formData = new FormData();
-        formData.append('file', voiceFile);
-
-        const uploadRes = await fetch('/api/upload', {
-          method: 'POST',
-          body: formData,
-        });
-
-        if (!uploadRes.ok) {
-          const data = await uploadRes.json();
-          alert(data.error || 'Failed to upload voice note');
-          setSubmitting(false);
-          return;
-        }
-
-        const uploadData = await uploadRes.json();
-        uploadedVoiceUrl = uploadData.url;
-      }
-
       // Submit verdict to API
       const response = await fetch('/api/judge/respond', {
         method: 'POST',
@@ -96,7 +71,6 @@ export default function VerdictSubmissionPage({
           rating: rating,
           feedback: combinedFeedback,
           tone: tone,
-          voice_url: uploadedVoiceUrl,
         }),
       });
 
@@ -312,32 +286,6 @@ export default function VerdictSubmissionPage({
                   {reasons.length}/500 characters {reasons.length < 40 ? '(min 40)' : reasons.length > 150 ? '✓ Great detail' : '✓ Good start'}
                 </p>
               </div>
-            </div>
-
-            {/* Optional voice note */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Optional voice note response
-              </label>
-              <VoiceRecorder
-                onRecorded={(file) => {
-                  setVoiceFile(file);
-                  if (voiceUrl) {
-                    URL.revokeObjectURL(voiceUrl);
-                  }
-                  const url = URL.createObjectURL(file);
-                  setVoiceUrl(url);
-                }}
-                maxDurationSeconds={180}
-              />
-              {voiceUrl && (
-                <div className="mt-3 p-3 bg-purple-50 rounded-lg border border-purple-200">
-                  <p className="text-xs font-semibold text-purple-800 mb-1">
-                    Your voice note preview
-                  </p>
-                  <audio controls src={voiceUrl} className="w-full" />
-                </div>
-              )}
             </div>
 
             {/* Earnings Preview */}

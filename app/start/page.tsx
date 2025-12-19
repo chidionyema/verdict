@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { TouchButton } from '@/components/ui/touch-button';
 import { Badge } from '@/components/ui/badge';
-import { getPricingTexts } from '@/lib/localization';
+import { useLocalizedPricing } from '@/hooks/use-pricing';
 import { 
   ArrowRight, 
   Clock, 
@@ -36,7 +36,7 @@ const successStories = [
 
 export default function StartPage() {
   const router = useRouter();
-  const pricing = getPricingTexts();
+  const pricing = useLocalizedPricing();
 
   const handleCommunityPath = () => {
     router.push('/start-simple?visibility=public');
@@ -99,7 +99,7 @@ export default function StartPage() {
                 </div>
                 <div>
                   <p className="font-medium text-gray-900">Earn 1 credit automatically</p>
-                  <p className="text-sm text-gray-600">{pricing.privateSubmissionPrice} value unlocked</p>
+                  <p className="text-sm text-gray-600">{pricing.privatePrice} value unlocked</p>
                 </div>
               </div>
               
@@ -149,7 +149,7 @@ export default function StartPage() {
                 <Zap className="h-8 w-8 text-purple-600" />
               </div>
               <h2 className="text-2xl font-bold text-gray-900 mb-2">"I Need This Fast"</h2>
-              <p className="text-gray-600">Pay {pricing.privateSubmissionPrice}, skip the line, get instant feedback</p>
+              <p className="text-gray-600">Pay {pricing.privatePrice}, skip the line, get instant feedback</p>
             </div>
 
             <div className="space-y-4 mb-6">
@@ -168,7 +168,7 @@ export default function StartPage() {
                   <span className="text-purple-600 font-bold text-sm">2</span>
                 </div>
                 <div>
-                  <p className="font-medium text-gray-900">Pay {pricing.privateSubmissionPrice} for priority review</p>
+                  <p className="font-medium text-gray-900">Pay {pricing.privatePrice} for priority review</p>
                   <p className="text-sm text-gray-600">Secure payment via Stripe</p>
                 </div>
               </div>

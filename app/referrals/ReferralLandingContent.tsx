@@ -5,13 +5,13 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Gift, Users, TrendingUp, Sparkles, ArrowRight, Check, Star } from 'lucide-react';
 import { isValidReferralCode } from '@/lib/referral-system';
-import { getPricingTexts } from '@/lib/localization';
+import { useLocalizedPricing } from '@/hooks/use-pricing';
 
 export function ReferralLandingContent() {
   const searchParams = useSearchParams();
   const [referralCode, setReferralCode] = useState<string>('');
   const [isValidRef, setIsValidRef] = useState<boolean>(false);
-  const pricing = getPricingTexts();
+  const pricing = useLocalizedPricing();
 
   useEffect(() => {
     const refParam = searchParams.get('ref');
@@ -164,7 +164,7 @@ export function ReferralLandingContent() {
                 </div>
                 <div>
                   <h3 className="font-semibold text-lg mb-2">Two Ways to Use</h3>
-                  <p className="text-gray-600">Judge others to earn free credits, or pay {pricing.privateSubmissionPrice} to skip the queue.</p>
+                  <p className="text-gray-600">Judge others to earn free credits, or pay {pricing.privatePrice} to skip the queue.</p>
                 </div>
               </div>
             </div>

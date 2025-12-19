@@ -4,7 +4,6 @@ import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Clock, DollarSign, Send, ArrowLeft, Maximize2 } from 'lucide-react';
-import { VoiceRecorder } from '@/components/VoiceRecorder';
 import type { VerdictRequest } from '@/lib/database.types';
 
 export default function JudgeVerdictPage({
@@ -22,8 +21,6 @@ export default function JudgeVerdictPage({
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const [voiceFile, setVoiceFile] = useState<File | null>(null);
-  const [voiceUrl, setVoiceUrl] = useState<string | null>(null);
   const [showImageModal, setShowImageModal] = useState(false);
 
   useEffect(() => {
@@ -58,26 +55,6 @@ export default function JudgeVerdictPage({
     setError('');
 
     try {
-      // Optional voice upload
-      let uploadedVoiceUrl: string | null = null;
-      if (voiceFile) {
-        const formData = new FormData();
-        formData.append('file', voiceFile);
-
-        const uploadRes = await fetch('/api/upload', {
-          method: 'POST',
-          body: formData,
-        });
-
-        if (!uploadRes.ok) {
-          const data = await uploadRes.json();
-          throw new Error(data.error || 'Failed to upload voice note');
-        }
-
-        const uploadData = await uploadRes.json();
-        uploadedVoiceUrl = uploadData.url;
-      }
-
       const res = await fetch('/api/judge/respond', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -86,7 +63,6 @@ export default function JudgeVerdictPage({
           rating,
           feedback,
           tone,
-          voice_url: uploadedVoiceUrl,
         }),
       });
 
@@ -188,13 +164,6 @@ export default function JudgeVerdictPage({
                   <span>Click to zoom</span>
                 </div>
               </button>
-            ) : request.media_type === 'audio' && request.media_url ? (
-              <div className="p-4 bg-purple-50 rounded-lg border border-purple-100">
-                <p className="text-xs font-semibold text-purple-800 mb-2">
-                  Voice note from seeker
-                </p>
-                <audio controls src={request.media_url} className="w-full" />
-              </div>
             ) : (
               <div className="p-4 bg-gray-50 rounded-lg min-h-[200px] border border-dashed border-gray-200">
                 <p className="text-gray-700 whitespace-pre-wrap">
@@ -241,11 +210,11 @@ export default function JudgeVerdictPage({
               Your Verdict
             </h2>
             <p className="text-xs text-gray-500 mb-4">
-              {request.requested_tone === 'encouraging' 
+              {request.requested_tone === 'encouraging'
                 ? 'The seeker wants encouraging, supportive feedback. Be gentle and focus on positives while still being helpful.'
                 : request.requested_tone === 'brutally_honest'
                 ? 'The seeker wants brutally honest feedback with no sugar-coating. Be direct and straightforward in your assessment.'
-                : 'Give one clear recommendation, explain why in a few sentences, and keep your tone kind and direct. You can also add an optional voice note if that feels more natural.'}
+                : 'Give one clear recommendation, explain why in a few sentences, and keep your tone kind and direct.'}
             </p>
 
             {/* Rating */}
@@ -315,32 +284,6 @@ export default function JudgeVerdictPage({
               >
                 {feedback.length}/500 characters
               </p>
-            </div>
-
-            {/* Optional voice note */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Step 4 · Optional voice note response
-              </label>
-              <VoiceRecorder
-                onRecorded={(file) => {
-                  setVoiceFile(file);
-                  if (voiceUrl) {
-                    URL.revokeObjectURL(voiceUrl);
-                  }
-                  const url = URL.createObjectURL(file);
-                  setVoiceUrl(url);
-                }}
-                maxDurationSeconds={180}
-              />
-              {voiceUrl && (
-                <div className="mt-3 p-3 bg-purple-50 rounded-lg border border-purple-200">
-                  <p className="text-xs font-semibold text-purple-800 mb-1">
-                    Your voice note preview
-                  </p>
-                  <audio controls src={voiceUrl} className="w-full" />
-                </div>
-              )}
             </div>
 
             {/* Submit Button */}

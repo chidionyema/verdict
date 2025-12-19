@@ -44,20 +44,36 @@ export function detectUserCurrency(): CurrencyCode {
   }
 
   try {
-    // Try to detect from browser locale
-    const locale = navigator.language;
-    
-    // UK locales
-    if (locale.startsWith('en-GB') || locale.includes('GB')) {
+    // Check all preferred languages (more comprehensive)
+    const languages = navigator.languages || [navigator.language];
+
+    // Check for UK locale in any preferred language
+    for (const lang of languages) {
+      if (lang.includes('GB') || lang === 'en-GB') {
+        return 'GBP';
+      }
+    }
+
+    // Check timezone as fallback for UK users
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (timezone === 'Europe/London' || timezone.startsWith('Europe/London')) {
       return 'GBP';
     }
-    
-    // EU locales (common ones)
-    const euLocales = ['de', 'fr', 'es', 'it', 'nl', 'pt', 'pl', 'se', 'dk'];
-    if (euLocales.some(lang => locale.startsWith(lang))) {
+
+    // Check for EU locales
+    const euLocales = ['de', 'fr', 'es', 'it', 'nl', 'pt', 'pl', 'se', 'dk', 'at', 'be', 'fi', 'gr', 'ie'];
+    for (const lang of languages) {
+      if (euLocales.some(eu => lang.startsWith(eu))) {
+        return 'EUR';
+      }
+    }
+
+    // EU timezones as fallback
+    const euTimezones = ['Europe/Paris', 'Europe/Berlin', 'Europe/Rome', 'Europe/Madrid', 'Europe/Amsterdam', 'Europe/Brussels', 'Europe/Dublin'];
+    if (euTimezones.some(tz => timezone.startsWith(tz) || timezone === tz)) {
       return 'EUR';
     }
-    
+
     // Default to USD for US and other regions
     return 'USD';
   } catch {

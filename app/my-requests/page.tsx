@@ -22,7 +22,6 @@ import {
   Award,
   Target,
   Zap,
-  Volume2,
 } from 'lucide-react';
 import { getTierConfigByVerdictCount } from '@/lib/validations';
 import { EmptyState } from '@/components/ui/EmptyStates';
@@ -575,13 +574,9 @@ export default function MyRequestsPage() {
                               {getHumanStatus(request)}
                             </span>
                             <span className="text-gray-500 flex items-center gap-1">
-                              {request.media_type === 'photo' ? (
-                                <Image className="h-3 w-3" />
-                              ) : request.media_type === 'audio' ? (
-                                <Volume2 className="h-3 w-3" />
-                              ) : request.media_type === 'comparison' ? (
-                                <Image className="h-3 w-3" />
-                              ) : request.media_type === 'split_test' ? (
+                              {request.media_type === 'photo' ||
+                              request.media_type === 'comparison' ||
+                              request.media_type === 'split_test' ? (
                                 <Image className="h-3 w-3" />
                               ) : (
                                 <FileText className="h-3 w-3" />

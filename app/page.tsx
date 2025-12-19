@@ -13,12 +13,13 @@ import { PricingTableSection } from "@/components/landing/pricing-table";
 import { EconomyExplanationSection } from "@/components/landing/economy-explanation";
 import { SmartExitIntent } from "@/components/conversion/SmartExitIntent";
 import { LiveActivityTicker } from "@/components/social-proof/LiveActivityTicker";
-import { getSchemaPrice, getPricingTexts } from "@/lib/localization";
+import { getSchemaPrice } from "@/lib/localization";
+import { useLocalizedPricing } from "@/hooks/use-pricing";
 import { Clock, Shield, CheckCircle, Eye, Star, Users, Lock } from "lucide-react";
 
 export default function HomePage() {
   const router = useRouter();
-  const pricing = getPricingTexts();
+  const pricing = useLocalizedPricing();
   const schemaPrice = getSchemaPrice();
 
   return (
@@ -83,7 +84,7 @@ export default function HomePage() {
             <div className="bg-white rounded-xl p-6 shadow-lg border-2 border-purple-200">
               <div className="text-2xl mb-3">⚡</div>
               <h3 className="text-lg font-bold text-purple-900 mb-2">Instant Path</h3>
-              <p className="text-gray-700 mb-4">Pay {pricing.privateSubmissionPrice} → Skip judging → Get private results</p>
+              <p className="text-gray-700 mb-4">Pay {pricing.privatePrice} → Skip judging → Get private results</p>
               <div className="text-sm text-purple-800 bg-purple-50 rounded-lg p-3">
                 Perfect when you're in a hurry
               </div>
@@ -220,14 +221,14 @@ export default function HomePage() {
               {/* Paid Path */}
               <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-3xl shadow-xl p-8 border-2 border-purple-200">
                 <div className="flex items-center gap-3 mb-6">
-                  <div className="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center text-white font-bold text-lg">{pricing.privateSubmissionPrice}</div>
+                  <div className="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center text-white font-bold text-lg">{pricing.privatePrice}</div>
                   <h3 className="text-2xl font-bold text-gray-900">Private Path</h3>
                 </div>
                 <div className="space-y-6">
                   <div className="flex items-start gap-4">
                     <div className="flex-shrink-0 w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center text-white font-bold">1</div>
                     <div>
-                      <h4 className="font-semibold text-gray-900 mb-1">Pay {pricing.privateSubmissionPrice}</h4>
+                      <h4 className="font-semibold text-gray-900 mb-1">Pay {pricing.privatePrice}</h4>
                       <p className="text-gray-600 text-sm">One-time payment, no judging required</p>
                     </div>
                   </div>
@@ -323,7 +324,7 @@ export default function HomePage() {
                 Ready to Get Started?
               </h2>
               <p className="text-xl mb-8 text-indigo-100 max-w-2xl mx-auto animate-fade-in-up">
-                Choose your path: Review others to earn free credits, or pay {pricing.privateSubmissionPrice} for instant private results. Both get you 3 honest feedback reports.
+                Choose your path: Review others to earn free credits, or pay {pricing.privatePrice} for instant private results. Both get you 3 honest feedback reports.
               </p>
               
               <div className="space-y-6">
@@ -349,7 +350,7 @@ export default function HomePage() {
                     <div className="flex flex-col items-center">
                       <span className="flex items-center gap-2">
                         <Lock className="h-5 w-5" />
-                        Submit Privately ({pricing.privateSubmissionPrice})
+                        Submit Privately ({pricing.privatePrice})
                       </span>
                       <span className="text-sm opacity-90 mt-1">Skip judging → Instant</span>
                     </div>

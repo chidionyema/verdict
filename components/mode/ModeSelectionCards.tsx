@@ -3,7 +3,7 @@
 import { ModeCard } from './ModeCard';
 import { ModeButton } from './ModeButton';
 import { ArrowRight, Eye, Lock } from 'lucide-react';
-import { getPricingTexts } from '@/lib/localization';
+import { useLocalizedPricing } from '@/hooks/use-pricing';
 import type { Mode } from '@/lib/mode-colors';
 
 interface ModeSelectionCardsProps {
@@ -26,14 +26,14 @@ export function ModeSelectionCards({
   selectedMode,
   className = '' 
 }: ModeSelectionCardsProps) {
-  const pricing = getPricingTexts();
-  
+  const pricing = useLocalizedPricing();
+
   const privateFeatures = [
     '✅ No time required',
     '✅ Completely private',
     '✅ Faster responses (within 2 hours)',
     '✅ Skip judging entirely',
-    `💰 Costs ${pricing.privateSubmissionPrice} per request`,
+    `💰 Costs ${pricing.privatePrice} per request`,
   ];
   return (
     <div className={`grid grid-cols-1 lg:grid-cols-2 gap-6 ${className}`}>
@@ -66,7 +66,7 @@ export function ModeSelectionCards({
       <ModeCard
         mode="private"
         title="Private Submission"
-        description={`Pay ${pricing.privateSubmissionPrice} to skip judging and submit privately. Get instant, confidential results. Perfect if you're in a hurry or need privacy.`}
+        description={`Pay ${pricing.privatePrice} to skip judging and submit privately. Get instant, confidential results. Perfect if you're in a hurry or need privacy.`}
         features={privateFeatures}
         onClick={() => onSelectMode('private')}
         selected={selectedMode === 'private'}
@@ -81,7 +81,7 @@ export function ModeSelectionCards({
         >
           <span className="flex items-center justify-center gap-2">
             <Lock className="h-5 w-5" />
-            Submit Privately ({pricing.privateSubmissionPrice})
+            Submit Privately ({pricing.privatePrice})
             <ArrowRight className="h-4 w-4" />
           </span>
         </ModeButton>

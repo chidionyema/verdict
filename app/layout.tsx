@@ -100,13 +100,13 @@ export default async function RootLayout({
             key={l}
             rel="alternate"
             hrefLang={l}
-            href={`${process.env.NEXT_PUBLIC_APP_URL || ''}${l === 'en' ? '' : `/${l}`}`}
+            href={`${process.env.NEXT_PUBLIC_APP_URL || 'https://askverdict.com'}${l === 'en' ? '' : `/${l}`}`}
           />
         ))}
         <link
           rel="alternate"
           hrefLang="x-default"
-          href={process.env.NEXT_PUBLIC_APP_URL || ''}
+          href={process.env.NEXT_PUBLIC_APP_URL || 'https://askverdict.com'}
         />
       </head>
       <body

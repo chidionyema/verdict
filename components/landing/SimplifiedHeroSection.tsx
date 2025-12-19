@@ -54,7 +54,7 @@ export function SimplifiedHeroSection() {
               </div>
               <div className="text-gray-500 font-medium">OR</div>
               <div className="flex items-center gap-2 bg-purple-50 px-4 py-2 rounded-xl border border-purple-200">
-                <span className="font-semibold text-purple-800">Pay £3</span>
+                <span className="font-semibold text-purple-800">Pay {privatePrice}</span>
                 <span className="text-purple-600">→</span>
                 <span className="font-semibold text-purple-800">Skip the line</span>
                 <span className="text-purple-600">→</span>
@@ -83,7 +83,7 @@ export function SimplifiedHeroSection() {
           <div className="mt-16 flex items-center justify-center gap-8 text-sm text-gray-600">
             <div className="flex items-center gap-2">
               <Users className="h-4 w-4 text-indigo-600" />
-              <span>15,000+ verdicts</span>
+              <span>3 reviews each</span>
             </div>
             <div className="flex items-center gap-2">
               <Zap className="h-4 w-4 text-indigo-600" />

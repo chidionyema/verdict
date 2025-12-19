@@ -1,92 +1,39 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Activity, TrendingUp, Users, Zap, Globe, CheckCircle } from 'lucide-react';
+import { Zap, CheckCircle, TrendingUp, Send, Star, MessageSquare, Gift } from 'lucide-react';
 
-interface ActivityItem {
-  id: string;
-  type: 'submission' | 'review' | 'credit_earned' | 'result_delivered';
-  location: string;
-  category: string;
-  timeAgo: string;
-  isLive: boolean;
-}
-
-const MOCK_ACTIVITIES: ActivityItem[] = [
-  { id: '1', type: 'submission', location: 'London', category: 'dating profile', timeAgo: 'just now', isLive: true },
-  { id: '2', type: 'review', location: 'New York', category: 'interview outfit', timeAgo: '2 min ago', isLive: false },
-  { id: '3', type: 'credit_earned', location: 'Berlin', category: '3 judgments completed', timeAgo: '3 min ago', isLive: false },
-  { id: '4', type: 'result_delivered', location: 'Paris', category: 'career advice', timeAgo: '5 min ago', isLive: false },
-  { id: '5', type: 'submission', location: 'Tokyo', category: 'style check', timeAgo: '7 min ago', isLive: false },
+// Educational examples showing how the platform works - not fake live data
+const PLATFORM_EXAMPLES = [
+  { id: '1', icon: 'submit', text: 'Users submit dating profiles, outfits, or tough decisions' },
+  { id: '2', icon: 'match', text: '3 anonymous reviewers are matched to give feedback' },
+  { id: '3', icon: 'review', text: 'Reviewers provide honest ratings and detailed advice' },
+  { id: '4', icon: 'deliver', text: 'Feedback is delivered — usually within 2 hours' },
+  { id: '5', icon: 'earn', text: 'Review 3 submissions → earn 1 free credit' },
+  { id: '6', icon: 'improve', text: 'Users improve their photos, emails, and decisions' },
 ];
 
-const LIVE_STATS = {
-  activeReviewers: 234,
-  avgResponseTime: '28 min',
-  completedToday: 1847,
-  satisfactionRate: 98,
-};
-
 export function LiveActivityTicker() {
-  const [activities, setActivities] = useState<ActivityItem[]>(MOCK_ACTIVITIES);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [stats, setStats] = useState(LIVE_STATS);
   const [isVisible, setIsVisible] = useState(true);
 
-  // Rotate activities
+  // Rotate through examples
   useEffect(() => {
     const interval = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % activities.length);
-    }, 3000);
-    return () => clearInterval(interval);
-  }, [activities]);
-
-  // Simulate real-time updates
-  useEffect(() => {
-    const interval = setInterval(() => {
-      // Update stats with slight variations
-      setStats(prev => ({
-        activeReviewers: prev.activeReviewers + Math.floor(Math.random() * 11) - 5,
-        avgResponseTime: `${Math.floor(25 + Math.random() * 10)} min`,
-        completedToday: prev.completedToday + Math.floor(Math.random() * 3) + 1,
-        satisfactionRate: 98
-      }));
-
-      // Occasionally add new activity
-      if (Math.random() > 0.7) {
-        const newActivity: ActivityItem = {
-          id: Date.now().toString(),
-          type: ['submission', 'review', 'credit_earned', 'result_delivered'][Math.floor(Math.random() * 4)] as any,
-          location: ['London', 'New York', 'Paris', 'Tokyo', 'Sydney'][Math.floor(Math.random() * 5)],
-          category: ['dating profile', 'interview outfit', 'style check'][Math.floor(Math.random() * 3)],
-          timeAgo: 'just now',
-          isLive: true
-        };
-        setActivities(prev => [newActivity, ...prev.slice(0, 9)]);
-      }
-    }, 5000);
+      setCurrentIndex((prev) => (prev + 1) % PLATFORM_EXAMPLES.length);
+    }, 4000);
     return () => clearInterval(interval);
   }, []);
 
-  const getActivityIcon = (type: string) => {
-    switch (type) {
-      case 'submission': return <Zap className="h-4 w-4 text-blue-500" />;
-      case 'review': return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case 'credit_earned': return <TrendingUp className="h-4 w-4 text-purple-500" />;
-      case 'result_delivered': return <Activity className="h-4 w-4 text-orange-500" />;
-    }
-  };
-
-  const getActivityText = (activity: ActivityItem) => {
-    switch (activity.type) {
-      case 'submission':
-        return `Someone in ${activity.location} submitted a ${activity.category}`;
-      case 'review':
-        return `Reviewer in ${activity.location} completed ${activity.category} feedback`;
-      case 'credit_earned':
-        return `User in ${activity.location} earned a credit (${activity.category})`;
-      case 'result_delivered':
-        return `${activity.category} results delivered to ${activity.location}`;
+  const getIcon = (iconType: string) => {
+    switch (iconType) {
+      case 'submit': return <Send className="h-4 w-4 text-blue-300" />;
+      case 'match': return <Zap className="h-4 w-4 text-yellow-300" />;
+      case 'review': return <MessageSquare className="h-4 w-4 text-green-300" />;
+      case 'deliver': return <CheckCircle className="h-4 w-4 text-emerald-300" />;
+      case 'earn': return <Gift className="h-4 w-4 text-purple-300" />;
+      case 'improve': return <Star className="h-4 w-4 text-pink-300" />;
+      default: return <CheckCircle className="h-4 w-4 text-white" />;
     }
   };
 
@@ -95,68 +42,66 @@ export function LiveActivityTicker() {
   return (
     <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 text-white py-3 px-4 relative overflow-hidden">
       <div className="max-w-7xl mx-auto flex items-center justify-between">
-        {/* Live Stats */}
-        <div className="hidden lg:flex items-center gap-6 text-sm">
-          <div className="flex items-center gap-2">
-            <Users className="h-4 w-4 text-green-400" />
-            <span className="font-medium">{stats.activeReviewers}</span>
-            <span className="opacity-80">reviewers online</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Activity className="h-4 w-4 text-yellow-400" />
-            <span className="font-medium">{stats.avgResponseTime}</span>
-            <span className="opacity-80">avg response</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <CheckCircle className="h-4 w-4 text-green-400" />
-            <span className="font-medium">{stats.completedToday.toLocaleString()}</span>
-            <span className="opacity-80">completed today</span>
+        {/* Section label */}
+        <div className="hidden lg:flex items-center gap-3 text-sm">
+          <div className="flex items-center gap-2 px-3 py-1 bg-white/10 rounded-full">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+            </span>
+            <span className="font-medium">How it works</span>
           </div>
         </div>
 
-        {/* Activity Ticker */}
-        <div className="flex-1 lg:flex-initial lg:min-w-[400px] relative min-h-[32px] overflow-hidden">
-          <div className="absolute inset-0 flex items-center">
-            {activities.map((activity, index) => (
+        {/* Animated Examples Ticker */}
+        <div className="flex-1 lg:flex-initial lg:min-w-[450px] relative min-h-[32px] overflow-hidden">
+          <div className="absolute inset-0 flex items-center justify-center lg:justify-start">
+            {PLATFORM_EXAMPLES.map((example, index) => (
               <div
-                key={activity.id}
-                className={`absolute w-full flex items-center gap-2 transition-all duration-500 min-h-[32px] ${
-                  index === currentIndex 
-                    ? 'opacity-100 translate-y-0' 
-                    : index === (currentIndex - 1 + activities.length) % activities.length
+                key={example.id}
+                className={`absolute w-full flex items-center gap-3 transition-all duration-500 min-h-[32px] ${
+                  index === currentIndex
+                    ? 'opacity-100 translate-y-0'
+                    : index === (currentIndex - 1 + PLATFORM_EXAMPLES.length) % PLATFORM_EXAMPLES.length
                     ? 'opacity-0 -translate-y-full'
                     : 'opacity-0 translate-y-full'
                 }`}
               >
                 <div className="flex items-center gap-2 flex-shrink-0">
-                  {getActivityIcon(activity.type)}
+                  {getIcon(example.icon)}
                 </div>
-                <span className="text-sm leading-tight flex-1 pr-2">
-                  {getActivityText(activity)}
+                <span className="text-sm leading-tight flex-1">
+                  {example.text}
                 </span>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  {activity.isLive && (
-                    <span className="px-2 py-0.5 bg-green-500 text-white text-xs rounded-full animate-pulse">
-                      LIVE
-                    </span>
-                  )}
-                  <span className="text-xs opacity-60 whitespace-nowrap">{activity.timeAgo}</span>
-                </div>
               </div>
             ))}
           </div>
         </div>
 
-        {/* Mobile Stats */}
-        <div className="lg:hidden flex items-center gap-2 text-sm">
-          <Activity className="h-4 w-4 text-green-400 animate-pulse" />
-          <span className="font-medium">{stats.activeReviewers} active</span>
+        {/* Progress dots */}
+        <div className="hidden md:flex items-center gap-1.5 ml-4">
+          {PLATFORM_EXAMPLES.map((_, index) => (
+            <div
+              key={index}
+              className={`h-1.5 rounded-full transition-all duration-300 ${
+                index === currentIndex
+                  ? 'w-4 bg-white'
+                  : 'w-1.5 bg-white/40'
+              }`}
+            />
+          ))}
+        </div>
+
+        {/* Mobile label */}
+        <div className="lg:hidden flex items-center gap-2 text-xs">
+          <span className="opacity-80">How it works</span>
         </div>
 
         {/* Close button */}
         <button
           onClick={() => setIsVisible(false)}
           className="ml-4 opacity-60 hover:opacity-100 transition-opacity"
+          aria-label="Close"
         >
           ×
         </button>

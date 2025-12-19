@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Star, Eye, Play, CheckCircle, Clock, Users } from 'lucide-react';
 import { APP_CONFIG, COMPUTED_CONFIG } from '@/lib/app-config';
+import { useLocalizedPricing } from '@/hooks/use-pricing';
 
 interface FeedbackSample {
   id: string;
@@ -10,10 +11,10 @@ interface FeedbackSample {
   question: string;
   rating: number;
   feedback: string;
-  timeAgo: string;
   improvements: string[];
 }
 
+// Example feedback to show the quality - clearly labeled as samples
 const SAMPLE_FEEDBACK: FeedbackSample[] = [
   {
     id: '1',
@@ -21,16 +22,14 @@ const SAMPLE_FEEDBACK: FeedbackSample[] = [
     question: 'Does this dating app photo make a good first impression?',
     rating: 8.3,
     feedback: "Strong photo! Your genuine smile is immediately engaging, and the natural lighting works perfectly. The background shows you're active without being distracting. Only suggestion: try a slightly closer crop to make you the clear focal point. This would definitely get matches!",
-    timeAgo: '2 min ago',
     improvements: ['Crop slightly closer', 'Natural lighting works great', 'Shows personality well']
   },
   {
-    id: '2', 
+    id: '2',
     category: 'Interview Outfit',
     question: 'Is this outfit appropriate for a tech startup interview?',
     rating: 9.1,
     feedback: "Perfect balance for a startup! The blazer shows professionalism while the jeans keep it approachable - exactly what tech companies want. The shoes tie it together nicely. You'll fit right in with the culture while showing you take the role seriously. Confident choice!",
-    timeAgo: '5 min ago',
     improvements: ['Great culture fit', 'Professional yet approachable', 'Shows good judgment']
   },
   {
@@ -39,7 +38,6 @@ const SAMPLE_FEEDBACK: FeedbackSample[] = [
     question: 'How does this email sound for reaching out to potential clients?',
     rating: 7.6,
     feedback: "Good foundation with a clear value proposition. Your opening hooks attention and the benefits are concrete. To improve: shorten the first paragraph (people skim emails) and add a specific next step instead of 'let me know your thoughts.' Maybe suggest a 15-min call? Overall, professional and compelling.",
-    timeAgo: '8 min ago',
     improvements: ['Shorten opening paragraph', 'Add specific call-to-action', 'Value proposition is clear']
   }
 ];
@@ -47,6 +45,7 @@ const SAMPLE_FEEDBACK: FeedbackSample[] = [
 export function InteractiveFeedbackPreview() {
   const [selectedSample, setSelectedSample] = useState<FeedbackSample>(SAMPLE_FEEDBACK[0]);
   const [isPlaying, setIsPlaying] = useState(false);
+  const pricing = useLocalizedPricing();
 
   const handlePreview = (sample: FeedbackSample) => {
     setSelectedSample(sample);
@@ -63,15 +62,15 @@ export function InteractiveFeedbackPreview() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="text-center mb-12">
-          <div className="inline-flex items-center gap-2 bg-green-100 text-green-800 px-4 py-2 rounded-full text-sm font-semibold mb-6">
+          <div className="inline-flex items-center gap-2 bg-indigo-100 text-indigo-800 px-4 py-2 rounded-full text-sm font-semibold mb-6">
             <Play className="h-4 w-4" />
-            Live Preview Demo
+            Interactive Demo
           </div>
           <h2 className="text-4xl font-bold text-gray-900 mb-4">
             See Exactly What You'll Get
           </h2>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Real feedback samples from our community. Click any example to see the quality of insights you'll receive.
+            Example feedback to show you the quality and depth of insights. Click any example to explore.
           </p>
         </div>
 
@@ -101,9 +100,8 @@ export function InteractiveFeedbackPreview() {
                 <p className="font-medium text-gray-900 text-sm line-clamp-2">
                   {sample.question}
                 </p>
-                <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
-                  <Clock className="h-3 w-3" />
-                  {sample.timeAgo}
+                <p className="text-xs text-indigo-600 mt-2 font-medium">
+                  Click to see example feedback →
                 </p>
               </button>
             ))}
@@ -120,10 +118,15 @@ export function InteractiveFeedbackPreview() {
                   {selectedSample.category}
                 </span>
                 {isPlaying && (
-                  <div className="flex items-center gap-2 text-green-600">
-                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                    <span className="text-xs font-medium">Live feedback</span>
+                  <div className="flex items-center gap-2 text-indigo-600">
+                    <div className="w-2 h-2 bg-indigo-500 rounded-full animate-pulse"></div>
+                    <span className="text-xs font-medium">Loading example...</span>
                   </div>
+                )}
+                {!isPlaying && (
+                  <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
+                    Example
+                  </span>
                 )}
               </div>
               <h3 className="font-semibold text-gray-900 text-lg mb-2">
@@ -136,11 +139,7 @@ export function InteractiveFeedbackPreview() {
                 </div>
                 <div className="flex items-center gap-1">
                   <Users className="h-4 w-4 text-indigo-600" />
-                  <span>{APP_CONFIG.FEEDBACK.REPORTS_PER_SUBMISSION} reviews</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Clock className="h-4 w-4 text-green-600" />
-                  <span>{selectedSample.timeAgo}</span>
+                  <span>{APP_CONFIG.FEEDBACK.REPORTS_PER_SUBMISSION} reviews per submission</span>
                 </div>
               </div>
             </div>
@@ -214,7 +213,7 @@ export function InteractiveFeedbackPreview() {
                 onClick={() => window.location.href = '/start'}
                 className="flex-1 bg-indigo-800 border-2 border-white/30 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-900 transition-all duration-300"
               >
-                Submit Privately (£3)
+                Submit Privately ({pricing.privatePrice})
               </button>
             </div>
           </div>

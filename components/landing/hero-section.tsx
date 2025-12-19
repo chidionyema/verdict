@@ -4,10 +4,11 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { TouchButton } from '@/components/ui/touch-button';
 import { Badge } from '@/components/ui/badge';
-import { 
-  ArrowRight, 
+import {
+  ArrowRight,
   Shield
 } from 'lucide-react';
+import { useLocalizedPricing } from '@/hooks/use-pricing';
 
 // Removed floating feedback cards and rotating use cases for clearer communication
 
@@ -15,6 +16,7 @@ export function HeroSection() {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const heroRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const pricing = useLocalizedPricing();
 
   // Parallax effect on mouse move
   useEffect(() => {
@@ -103,13 +105,13 @@ export function HeroSection() {
             
             {/* Secondary option - smaller, below */}
             <p className="text-sm text-gray-500 text-center">
-              Or <button onClick={() => router.push('/submit')} className="text-indigo-600 hover:text-indigo-700 font-medium underline">pay £3 for instant private feedback</button>
+              Or <button onClick={() => router.push('/submit')} className="text-indigo-600 hover:text-indigo-700 font-medium underline">pay {pricing.privatePrice} for instant private feedback</button>
             </p>
 
             {/* Single trust line - concise, benefit-focused */}
             <div className="mt-8 flex items-center justify-center gap-2 text-sm text-gray-600">
               <Shield className="h-5 w-5 text-green-600" />
-              <span>2,847+ decisions made easier • 4.9/5 rating • 100% anonymous</span>
+              <span>3 feedback reports guaranteed • Quality reviewers • 100% anonymous</span>
             </div>
           </div>
         </div>

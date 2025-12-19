@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Star, Zap, Crown, ArrowRight } from 'lucide-react';
+import { useLocalizedPricing } from '@/hooks/use-pricing';
 
 interface TierUpgradeCardProps {
   currentTier: 'community' | 'standard' | 'pro';
@@ -9,56 +10,62 @@ interface TierUpgradeCardProps {
   disabled?: boolean;
 }
 
-const TIER_CONFIG = {
-  community: {
-    name: 'Community',
-    price: 'Free',
-    icon: Star,
-    features: [
-      '1 free credit per day',
-      'Community feedback',
-      'Basic verdict reports',
-      '48h response time'
-    ],
-    color: 'gray',
-    current: true
-  },
-  standard: {
-    name: 'Standard',
-    price: '£3',
-    priceDetail: 'one-time',
-    icon: Zap,
-    features: [
-      'Instant access',
-      'Expert routing priority',
-      'Enhanced feedback quality',
-      '24h response time',
-      'Email notifications'
-    ],
-    color: 'blue',
-    upgradeText: 'Upgrade to Standard'
-  },
-  pro: {
-    name: 'Professional',
-    price: '£12',
-    priceDetail: 'one-time',
-    icon: Crown,
-    features: [
-      'Expert-only feedback',
-      'LLM synthesis & insights',
-      'A/B comparison tool',
-      'Decision scoring matrix',
-      '12h priority response',
-      'Direct expert contact'
-    ],
-    color: 'purple',
-    upgradeText: 'Upgrade to Pro',
-    popular: true
-  }
-} as const;
+function getTierConfig(pricing: ReturnType<typeof useLocalizedPricing>) {
+  const proPrice = pricing.currencyCode === 'GBP' ? '£12' : pricing.currencyCode === 'EUR' ? '€14' : '$15';
+
+  return {
+    community: {
+      name: 'Community',
+      price: 'Free',
+      icon: Star,
+      features: [
+        '1 free credit per day',
+        'Community feedback',
+        'Basic verdict reports',
+        '48h response time'
+      ],
+      color: 'gray',
+      current: true
+    },
+    standard: {
+      name: 'Standard',
+      price: pricing.privatePrice,
+      priceDetail: 'one-time',
+      icon: Zap,
+      features: [
+        'Instant access',
+        'Expert routing priority',
+        'Enhanced feedback quality',
+        '24h response time',
+        'Email notifications'
+      ],
+      color: 'blue',
+      upgradeText: 'Upgrade to Standard'
+    },
+    pro: {
+      name: 'Professional',
+      price: proPrice,
+      priceDetail: 'one-time',
+      icon: Crown,
+      features: [
+        'Expert-only feedback',
+        'LLM synthesis & insights',
+        'A/B comparison tool',
+        'Decision scoring matrix',
+        '12h priority response',
+        'Direct expert contact'
+      ],
+      color: 'purple',
+      upgradeText: 'Upgrade to Pro',
+      popular: true
+    }
+  };
+}
 
 export default function TierUpgradeCard({ currentTier, onUpgrade, disabled }: TierUpgradeCardProps) {
   const [upgrading, setUpgrading] = useState<string | null>(null);
+  const pricing = useLocalizedPricing();
+  const TIER_CONFIG = getTierConfig(pricing);
 
   const handleUpgrade = async (tierId: 'standard' | 'pro') => {
     if (disabled || upgrading) return;

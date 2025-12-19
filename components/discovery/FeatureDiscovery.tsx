@@ -30,7 +30,6 @@ import {
   Shuffle,
   BarChart3,
   Camera,
-  Mic,
   Image,
   Type,
   CheckCircle,
@@ -106,24 +105,6 @@ const ALL_FEATURES: Feature[] = [
     difficulty: 'intermediate',
     ctaText: 'Start Split Test',
     ctaLink: '/create?type=split_test',
-  },
-  {
-    id: 'voice_feedback',
-    name: 'Voice Feedback',
-    description: 'Get audio responses with tone, emotion, and detailed verbal feedback',
-    icon: Mic,
-    gradient: 'from-green-500 to-teal-500',
-    category: 'advanced',
-    benefits: ['Emotional context', 'Tone analysis', 'Detailed explanations', 'Authentic reactions'],
-    examples: ['Pitch practice', 'Interview prep', 'Public speaking', 'Content delivery'],
-    unlocked: false,
-    requirement: 'Complete 5 requests',
-    badge: 'New',
-    popularity: 40,
-    estimatedTime: '5-8 min',
-    difficulty: 'beginner',
-    ctaText: 'Enable Voice Feedback',
-    ctaLink: '/create?voice=true',
   },
   {
     id: 'expert_review',
@@ -289,12 +270,6 @@ export default function FeatureDiscovery({
       if (feature.id === 'expert_review' && totalRequests >= 5) {
         score += 30;
         reason = 'Unlock professional insights with your experience level';
-        urgency = 'medium';
-      }
-
-      if (feature.id === 'voice_feedback' && categories.includes('writing')) {
-        score += 25;
-        reason = 'Writers love hearing their content read aloud';
         urgency = 'medium';
       }
 

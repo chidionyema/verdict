@@ -2,10 +2,10 @@
 
 import { Check, Clock, Sparkles, Shirt, Briefcase, Heart, MessageSquare, Star, ArrowRight } from 'lucide-react';
 import { TouchButton } from '@/components/ui/touch-button';
-import { getPricingTexts } from '@/lib/localization';
+import { useLocalizedPricing } from '@/hooks/use-pricing';
 
 export function PricingTableSection() {
-  const pricing = getPricingTexts();
+  const pricing = useLocalizedPricing();
 
   const PATHS = [
     {
@@ -34,15 +34,15 @@ export function PricingTableSection() {
       highlight: false,
     },
     {
-      name: `Pay Privately (${pricing.privateSubmissionPrice})`,
+      name: `Pay Privately (${pricing.privatePrice})`,
       badge: 'Instant Access',
       path: 'paid',
-      cost: pricing.privateSubmissionPrice,
+      cost: pricing.privatePrice,
       costDetail: 'One-time payment',
       verdicts: '3 comprehensive reports',
       delivery: 'within 2 hours',
       steps: [
-        `Pay ${pricing.privateSubmissionPrice} (no judging required)`,
+        `Pay ${pricing.privatePrice} (no judging required)`,
         'Submit your request privately',
         'Get 3 feedback reports',
         'Completely confidential',
@@ -52,7 +52,7 @@ export function PricingTableSection() {
         '✅ Completely private',
         '✅ Faster responses (<1 hour)',
         '✅ Skip judging entirely',
-        '💰 Costs £3 per request',
+        `💰 Costs ${pricing.privatePrice} per request`,
       ],
       ctaText: 'Submit Privately',
       ctaAction: () => window.location.href = '/submit',
@@ -68,7 +68,7 @@ export function PricingTableSection() {
             Two Ways to Get Feedback
           </h2>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-4">
-            Choose the path that fits your needs: Earn free credits by judging others, or pay £3 for instant private results. Both get you 3 honest feedback reports.
+            Choose the path that fits your needs: Earn free credits by judging others, or pay {pricing.privatePrice} for instant private results. Both get you 3 honest feedback reports.
           </p>
         </div>
 

@@ -7,6 +7,7 @@ import { CreditCard, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { ModeSelectionCards } from '@/components/mode/ModeSelectionCards';
 import type { Mode } from '@/lib/mode-colors';
+import { useLocalizedPricing } from '@/hooks/use-pricing';
 
 function SubmitPageContent() {
   const router = useRouter();
@@ -14,6 +15,7 @@ function SubmitPageContent() {
   const [selectedMode, setSelectedMode] = useState<Mode | null>(null);
   const [userCredits, setUserCredits] = useState<number>(0);
   const [loading, setLoading] = useState(true);
+  const pricing = useLocalizedPricing();
   
   // Check for special modes in URL
   const mode = searchParams.get('mode');
@@ -119,7 +121,7 @@ function SubmitPageContent() {
                 <span className="text-indigo-600 font-bold text-lg">1</span>
               </div>
               <h4 className="font-semibold mb-2">Choose Mode</h4>
-              <p className="text-sm text-gray-600">Public (free with credits) or Private (£3)</p>
+              <p className="text-sm text-gray-600">Public (free with credits) or Private ({pricing.privatePrice})</p>
             </div>
             
             <div className="text-center">

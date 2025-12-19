@@ -3,12 +3,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { 
-  Upload, 
-  Image as ImageIcon, 
-  FileText, 
-  Briefcase, 
-  Heart, 
+import {
+  Upload,
+  Image as ImageIcon,
+  FileText,
+  Briefcase,
+  Heart,
   HelpCircle,
   ArrowRight,
   Check,
@@ -24,9 +24,7 @@ import {
   ChevronDown,
   X,
   Play,
-  Mic,
 } from 'lucide-react';
-import { VoiceRecorder } from '@/components/VoiceRecorder';
 import { ModeIndicator } from '@/components/mode/ModeIndicator';
 import { PricingTiers, type RequestTier } from '@/components/pricing/PricingTiers';
 import type { User } from '@supabase/supabase-js';
@@ -90,7 +88,7 @@ export function SimplifiedStart() {
 
   const [user, setUser] = useState<User | null>(null);
   const [step, setStep] = useState(1);
-  const [mediaType, setMediaType] = useState<'photo' | 'text' | 'audio'>('photo');
+  const [mediaType, setMediaType] = useState<'photo' | 'text'>('photo');
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [textContent, setTextContent] = useState('');
   const [textContentTouched, setTextContentTouched] = useState(false);
@@ -154,7 +152,7 @@ export function SimplifiedStart() {
       if (!raw) return;
       const draft = JSON.parse(raw);
 
-      if (draft.mediaType && (draft.mediaType === 'photo' || draft.mediaType === 'text' || draft.mediaType === 'audio')) {
+      if (draft.mediaType && (draft.mediaType === 'photo' || draft.mediaType === 'text')) {
         setMediaType(draft.mediaType);
       }
       if (typeof draft.textContent === 'string') {
@@ -209,29 +207,22 @@ export function SimplifiedStart() {
 
   const handleFile = (file: File) => {
     const imageTypes = ['image/jpeg', 'image/png', 'image/heic', 'image/webp'];
-    const audioTypes = ['audio/webm', 'audio/mpeg', 'audio/mp4', 'audio/ogg'];
     const isImage = imageTypes.includes(file.type);
-    const isAudio = audioTypes.includes(file.type);
 
-    if (!isImage && !isAudio) {
-      setError('Only JPEG, PNG, HEIC, WebP images or supported audio (webm, mp3, mp4, ogg) are allowed');
+    if (!isImage) {
+      setError('Only JPEG, PNG, HEIC, WebP images are allowed');
       return;
     }
 
-    if (isImage && file.size > 5 * 1024 * 1024) {
+    if (file.size > 5 * 1024 * 1024) {
       setError('Image must be 5MB or smaller');
-      return;
-    }
-
-    if (isAudio && file.size > 10 * 1024 * 1024) {
-      setError('Audio must be 10MB or smaller');
       return;
     }
 
     setError('');
     setPreviewUrl(URL.createObjectURL(file));
     (window as any).pendingFile = file;
-    
+
     // Auto-advance with smooth transition
     setTimeout(() => setStep(2), 500);
   };
@@ -278,10 +269,10 @@ export function SimplifiedStart() {
     try {
       let mediaUrl = null;
 
-      if (mediaType === 'photo' || mediaType === 'audio') {
+      if (mediaType === 'photo') {
         const file = (window as any).pendingFile;
         if (!file) {
-          setError(mediaType === 'photo' ? 'Please upload an image' : 'Please record a voice note');
+          setError('Please upload an image');
           setSubmitting(false);
           return;
         }
@@ -496,8 +487,6 @@ export function SimplifiedStart() {
                 <p className="text-sm text-gray-700">
                   {mediaType === 'photo'
                     ? 'Photo attached – judges will see this on your request.'
-                    : mediaType === 'audio'
-                    ? 'Voice note attached – judges will be able to listen.'
                     : 'Text attached – judges will read this as your main content.'}
                 </p>
               </div>
@@ -508,9 +497,6 @@ export function SimplifiedStart() {
                     alt="Your upload"
                     className="w-16 h-16 rounded-lg object-cover border border-gray-200 flex-shrink-0"
                   />
-                )}
-                {mediaType === 'audio' && previewUrl && (
-                  <audio controls src={previewUrl} className="w-40 flex-shrink-0" />
                 )}
                 {mediaType === 'text' && textContent && (
                   <div className="hidden sm:block max-w-xs text-xs text-gray-600 line-clamp-3 bg-gray-50 border border-gray-200 rounded-lg p-2">
@@ -538,11 +524,10 @@ export function SimplifiedStart() {
                 What would you like feedback on?
               </h3>
               <p className="text-sm text-gray-600 text-center mb-6">
-                Most people start with a <span className="font-medium">photo or text</span>. 
-                Voice notes are great if you explain things better out loud.
+                Upload a <span className="font-medium">photo</span> or paste your <span className="font-medium">text</span> to get started.
               </p>
-              
-              <div className="grid grid-cols-3 gap-4 mb-8">
+
+              <div className="grid grid-cols-2 gap-4 mb-8">
                 <button
                   onClick={() => setMediaType('photo')}
                   className={`group relative p-6 rounded-xl border-2 transition-all duration-300 ${
@@ -601,38 +586,6 @@ export function SimplifiedStart() {
                     </div>
                   </div>
                   {mediaType === 'text' && (
-                    <div className="absolute -top-2 -right-2 w-6 h-6 bg-indigo-600 rounded-full flex items-center justify-center">
-                      <Check className="w-4 h-4 text-white" />
-                    </div>
-                  )}
-                </button>
-
-                <button
-                  onClick={() => setMediaType('audio')}
-                  className={`group relative p-6 rounded-xl border-2 transition-all duration-300 ${
-                    mediaType === 'audio'
-                      ? 'border-indigo-500 bg-gradient-to-br from-indigo-50 to-purple-50 shadow-lg'
-                      : 'border-gray-200 hover:border-gray-300 hover:shadow-md'
-                  }`}
-                >
-                  <div className="flex flex-col items-center space-y-3">
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${
-                      mediaType === 'audio' 
-                        ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white' 
-                        : 'bg-gray-100 text-gray-600 group-hover:bg-gray-200'
-                    }`}>
-                      <Mic className="w-6 h-6" />
-                    </div>
-                    <div className="text-center">
-                      <h4 className={`font-semibold ${mediaType === 'audio' ? 'text-indigo-900' : 'text-gray-900'}`}>
-                        Voice note
-                      </h4>
-                      <p className={`text-sm ${mediaType === 'audio' ? 'text-indigo-600' : 'text-gray-600'}`}>
-                        Record up to 2 minutes
-                      </p>
-                    </div>
-                  </div>
-                  {mediaType === 'audio' && (
                     <div className="absolute -top-2 -right-2 w-6 h-6 bg-indigo-600 rounded-full flex items-center justify-center">
                       <Check className="w-4 h-4 text-white" />
                     </div>
@@ -706,7 +659,7 @@ export function SimplifiedStart() {
                     className="hidden"
                   />
                 </div>
-              ) : mediaType === 'text' ? (
+              ) : (
                 <div className="space-y-6">
                   <div className="relative">
                     <textarea
@@ -719,14 +672,14 @@ export function SimplifiedStart() {
                     />
                     <div className="absolute bottom-4 right-4 flex items-center gap-2">
                       <span className={`text-sm font-medium ${
-                        textContentTouched && textContent.length < 120 ? 'text-red-500' : 
+                        textContentTouched && textContent.length < 120 ? 'text-red-500' :
                         textContent.length >= 120 ? 'text-green-600' : 'text-gray-500'
                       }`}>
                         {textContent.length}/500
                       </span>
                     </div>
                   </div>
-                  
+
                   {textContent.length >= 50 && (
                     <div className="p-4 bg-green-50 border border-green-200 rounded-xl animate-in slide-in-from-top duration-300">
                       <div className="flex items-center gap-2 text-green-800 mb-2">
@@ -736,7 +689,7 @@ export function SimplifiedStart() {
                       <p className="text-sm text-green-700">Your text is ready for expert review</p>
                     </div>
                   )}
-                  
+
                   <div className="flex justify-end">
                     <button
                       onClick={handleTextSubmit}
@@ -751,23 +704,6 @@ export function SimplifiedStart() {
                       <ArrowRight className="w-5 h-5" />
                     </button>
                   </div>
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  <VoiceRecorder
-                    onRecorded={(file) => {
-                      handleFile(file);
-                    }}
-                    maxDurationSeconds={120}
-                  />
-                  {previewUrl && (
-                    <div className="p-4 bg-green-50 border border-green-200 rounded-xl">
-                      <p className="text-sm text-green-800 font-semibold mb-2">
-                        Voice note ready
-                      </p>
-                      <audio controls src={previewUrl} className="w-full" />
-                    </div>
-                  )}
                 </div>
               )}
             </div>

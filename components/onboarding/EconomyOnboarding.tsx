@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { ArrowRight, ArrowLeft, Zap, Users, CheckCircle, Gift, Sparkles, Play, X } from 'lucide-react';
-import { getPricingTexts } from '@/lib/localization';
+import { useLocalizedPricing } from '@/hooks/use-pricing';
 
 interface OnboardingStep {
   id: string;
@@ -23,7 +23,7 @@ interface EconomyOnboardingProps {
 export function EconomyOnboarding({ isOpen, onClose, onComplete, userEmail }: EconomyOnboardingProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [showAnimation, setShowAnimation] = useState(false);
-  const pricing = getPricingTexts();
+  const pricing = useLocalizedPricing();
 
   const steps: OnboardingStep[] = [
     {
@@ -119,7 +119,7 @@ export function EconomyOnboarding({ isOpen, onClose, onComplete, userEmail }: Ec
               <Zap className="h-6 w-6" />
             </div>
             <h4 className="font-bold text-purple-900">Instant Path</h4>
-            <p className="text-sm text-purple-700">Pay {pricing.privateSubmissionPrice} → Submit now</p>
+            <p className="text-sm text-purple-700">Pay {pricing.privatePrice} → Submit now</p>
             <p className="text-xs text-purple-600 mt-1">No waiting</p>
           </div>
         </div>

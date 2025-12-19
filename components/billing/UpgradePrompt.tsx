@@ -2,6 +2,7 @@
 
 import { ArrowRight, Crown, Zap, X } from 'lucide-react';
 import { useState } from 'react';
+import { useLocalizedPricing } from '@/hooks/use-pricing';
 
 interface UpgradePromptProps {
   trigger: 'no_credits' | 'tier_limit' | 'feature_locked';
@@ -28,45 +29,48 @@ const PROMPTS = {
   }
 };
 
-const TIER_INFO = {
-  standard: {
-    name: 'Standard',
-    price: '£3',
-    icon: Zap,
-    benefits: [
-      'Expert routing priority',
-      'Enhanced feedback quality',
-      '24h response time'
-    ],
-    color: 'blue'
-  },
-  pro: {
-    name: 'Professional', 
-    price: '£12',
-    icon: Crown,
-    benefits: [
-      'Expert-only feedback',
-      'LLM synthesis & insights',
-      'A/B comparison tool',
-      'Decision scoring matrix'
-    ],
-    color: 'purple'
-  }
-};
+function getTierInfo(pricing: ReturnType<typeof useLocalizedPricing>) {
+  return {
+    standard: {
+      name: 'Standard',
+      price: pricing.privatePrice,
+      icon: Zap,
+      benefits: [
+        'Expert routing priority',
+        'Enhanced feedback quality',
+        '24h response time'
+      ],
+      color: 'blue'
+    },
+    pro: {
+      name: 'Professional',
+      price: pricing.currencyCode === 'GBP' ? '£12' : pricing.currencyCode === 'EUR' ? '€14' : '$15',
+      icon: Crown,
+      benefits: [
+        'Expert-only feedback',
+        'LLM synthesis & insights',
+        'A/B comparison tool',
+        'Decision scoring matrix'
+      ],
+      color: 'purple'
+    }
+  };
+}
 
-export default function UpgradePrompt({ 
-  trigger, 
-  currentTier, 
-  targetTier, 
+export default function UpgradePrompt({
+  trigger,
+  currentTier,
+  targetTier,
   feature,
   onClose,
   onUpgrade,
   className = ''
 }: UpgradePromptProps) {
   const [isUpgrading, setIsUpgrading] = useState(false);
-  
+  const pricing = useLocalizedPricing();
+
   const prompt = PROMPTS[trigger];
-  const tierInfo = TIER_INFO[targetTier];
+  const tierInfo = getTierInfo(pricing)[targetTier];
   
   const handleUpgrade = async () => {
     setIsUpgrading(true);

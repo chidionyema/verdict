@@ -25,7 +25,8 @@
       "Bash(npm run:*)",
       "Bash(find:*)",
       "Bash(ls:*)",
-      "Bash(touch:*)"
+      "Bash(touch:*)",
+      "WebFetch(domain:www.askverdict.com)"
     ],
     "deny": [],
     "ask": []

@@ -19,6 +19,7 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { TouchButton } from '@/components/ui/touch-button';
+import { useLocalizedPricing } from '@/hooks/use-pricing';
 
 interface EmptyStateProps {
   variant: 'no-requests' | 'no-results' | 'no-feedback' | 'no-credits' | 'first-time' | 'error' | 'loading';
@@ -48,6 +49,7 @@ export function EmptyState({
 }: EmptyStateProps) {
   const router = useRouter();
   const [isAnimated, setIsAnimated] = useState(true);
+  const pricing = useLocalizedPricing();
 
   const getEmptyStateConfig = () => {
     switch (variant) {
@@ -130,7 +132,7 @@ export function EmptyState({
               icon: Heart
             },
             {
-              label: 'Pay £3 Instead',
+              label: `Pay ${pricing.privatePrice} Instead`,
               action: () => router.push('/start-simple?visibility=private'),
               variant: 'secondary' as const,
               icon: Zap
@@ -262,7 +264,7 @@ export function EmptyState({
       {variant === 'first-time' && (
         <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl mx-auto">
           {[
-            { icon: '📸', title: 'Upload anything', desc: 'Photos, text, or voice notes' },
+            { icon: '📸', title: 'Upload anything', desc: 'Photos or text' },
             { icon: '⚡', title: 'Get 3 opinions', desc: 'Real humans, not AI' },
             { icon: '🎯', title: 'Make better decisions', desc: 'Honest, structured feedback' }
           ].map((item, i) => (

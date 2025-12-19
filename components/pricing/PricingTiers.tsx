@@ -5,6 +5,7 @@ import { Check, Star, Zap, Shield, Clock, MessageSquare, ChevronRight } from 'lu
 import { createClient } from '@/lib/supabase/client';
 import { TouchButton } from '@/components/ui/touch-button';
 import UpgradePrompt from '@/components/billing/UpgradePrompt';
+import { useLocalizedPricing } from '@/hooks/use-pricing';
 
 export type RequestTier = 'community' | 'standard' | 'pro' | 'enterprise';
 
@@ -338,10 +339,13 @@ export function TierSelector({
   onSelectTier: (tier: RequestTier) => void;
   disabled?: boolean;
 }) {
+  const pricing = useLocalizedPricing();
+  const proPrice = pricing.currencyCode === 'GBP' ? '£12' : pricing.currencyCode === 'EUR' ? '€14' : '$15';
+
   const tierOptions: Array<{value: RequestTier, label: string, price: string}> = [
     { value: 'community', label: 'Community', price: '1 credit' },
-    { value: 'standard', label: 'Standard', price: '£3' },
-    { value: 'pro', label: 'Professional', price: '£12' }
+    { value: 'standard', label: 'Standard', price: pricing.privatePrice },
+    { value: 'pro', label: 'Professional', price: proPrice }
   ];
 
   return (

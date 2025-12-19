@@ -657,8 +657,6 @@ export default function RequestDetailPage({
                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                   request.media_type === 'photo'
                     ? 'bg-blue-100 text-blue-700'
-                    : request.media_type === 'audio'
-                    ? 'bg-purple-100 text-purple-700'
                     : 'bg-green-100 text-green-700'
                 }`}>
                   {request.media_type}
@@ -681,11 +679,6 @@ export default function RequestDetailPage({
                       <ArrowLeft className="h-4 w-4 rotate-45" />
                     </button>
                   </div>
-                </div>
-              ) : request.media_type === 'audio' && request.media_url ? (
-                <div className="mb-4 p-4 bg-purple-50 rounded-xl border border-purple-200">
-                  <p className="text-xs font-semibold text-purple-800 mb-2">Voice note from seeker</p>
-                  <audio controls src={request.media_url} className="w-full" />
                 </div>
               ) : (
                 <div className="p-4 bg-gray-50 rounded-xl mb-4 border border-gray-200">
@@ -927,14 +920,6 @@ export default function RequestDetailPage({
                   </div>
 
                   <div className="space-y-3">
-                    {verdict.voice_url && (
-                      <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
-                        <p className="text-xs font-semibold text-purple-800 mb-1">
-                          Voice note from judge
-                        </p>
-                        <audio controls src={verdict.voice_url} className="w-full" />
-                      </div>
-                    )}
                     <div className="prose prose-sm max-w-none">
                       <p className="text-gray-700 leading-relaxed">{verdict.feedback}</p>
                     </div>

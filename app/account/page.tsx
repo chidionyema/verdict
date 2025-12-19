@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client';
 import { LogOut, Check } from 'lucide-react';
 import { CREDIT_PACKAGES, STANDARD_VERDICT_COUNT } from '@/lib/validations';
 // Note: Credit package pricing was removed - using simplified pricing model
-import { getPricingTexts } from '@/lib/localization';
+import { useLocalizedPricing } from '@/hooks/use-pricing';
 import TierUpgradeCard from '@/components/billing/TierUpgradeCard';
 import type { Locale } from '@/i18n.config';
 import type { Profile } from '@/lib/database.types';
@@ -24,7 +24,7 @@ function AccountContent() {
   const [purchasing, setPurchasing] = useState<string | null>(null);
 
   // Using simplified pricing model
-  const pricing = getPricingTexts();
+  const pricing = useLocalizedPricing();
 
   useEffect(() => {
     fetchProfile();
@@ -200,7 +200,7 @@ function AccountContent() {
               <div>
                 <span className="text-indigo-600 font-semibold">Verdict:</span>{' '}
                 <span className="font-bold text-indigo-700">
-                  ~{pricing.privateSubmissionPrice} for{' '}
+                  ~{pricing.privatePrice} for{' '}
                   {STANDARD_VERDICT_COUNT} expert verdicts
                 </span>
               </div>
@@ -222,7 +222,7 @@ function AccountContent() {
                 )}
                 <h4 className="font-semibold text-lg">{pkg.name}</h4>
                 <p className="text-3xl font-bold mt-2">
-                  {pricing.privateSubmissionPrice}
+                  {pricing.privatePrice}
                 </p>
                 <p className="text-gray-500 text-sm">{pkg.credits} credits</p>
                 <p className="text-gray-400 text-xs mt-1">

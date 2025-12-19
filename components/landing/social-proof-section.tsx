@@ -18,145 +18,138 @@ import {
   Award
 } from 'lucide-react';
 
-// Enhanced testimonials with custom avatars and detailed feedback
+// Anonymous testimonials - privacy is core to our product
 const FEATURED_TESTIMONIALS = [
   {
     id: 1,
-    name: "Sarah Chen",
-    role: "Marketing Manager",
+    name: "Verified User",
+    visibleId: "#1204",
     category: "Career Decision",
-    avatar: { initials: "SC", bgColor: "bg-gradient-to-br from-pink-400 to-purple-500" },
+    avatar: { display: "✓", bgColor: "bg-gradient-to-br from-pink-400 to-purple-500" },
     rating: 5,
     text: "I was torn between two job offers. Three strangers gave me perspectives I hadn't considered - including salary negotiation tips that helped me secure 15% more.",
-    timeAgo: "2 weeks ago",
     helpful: 47,
     verified: true
   },
   {
     id: 2,
-    name: "Marcus Rodriguez",
-    role: "Software Engineer", 
+    name: "Verified User",
+    visibleId: "#0892",
     category: "Dating Profile",
-    avatar: { initials: "MR", bgColor: "bg-gradient-to-br from-blue-400 to-indigo-500" },
+    avatar: { display: "✓", bgColor: "bg-gradient-to-br from-blue-400 to-indigo-500" },
     rating: 5,
     text: "My dating profile wasn't getting matches. The feedback was brutally honest but incredibly helpful. Updated photos based on suggestions - now getting 10x more likes.",
-    timeAgo: "1 week ago", 
     helpful: 23,
     verified: true
   },
   {
     id: 3,
-    name: "Jennifer Kim",
-    role: "Entrepreneur",
+    name: "Verified User",
+    visibleId: "#0341",
     category: "Business Decision",
-    avatar: { initials: "JK", bgColor: "bg-gradient-to-br from-emerald-400 to-teal-500" },
+    avatar: { display: "✓", bgColor: "bg-gradient-to-br from-emerald-400 to-teal-500" },
     rating: 5,
     text: "Before launching my startup, I shared my pitch deck. One reviewer caught a major flaw in my pricing model that could have cost me thousands. Worth every penny.",
-    timeAgo: "3 days ago",
     helpful: 31,
     verified: true
   },
   {
     id: 4,
-    name: "David Thompson",
-    role: "Recent Graduate",
+    name: "Verified User",
+    visibleId: "#1567",
     category: "Interview Prep",
-    avatar: { initials: "DT", bgColor: "bg-gradient-to-br from-orange-400 to-red-500" },
+    avatar: { display: "✓", bgColor: "bg-gradient-to-br from-orange-400 to-red-500" },
     rating: 5,
     text: "Practiced my interview answers and got feedback from 3 professionals. They helped me sound more confident and less rehearsed. Landed the job!",
-    timeAgo: "5 days ago",
     helpful: 18,
     verified: true
   },
   {
     id: 5,
-    name: "Lisa Park",
-    role: "Designer",
+    name: "Verified User",
+    visibleId: "#0723",
     category: "Style Choice",
-    avatar: { initials: "LP", bgColor: "bg-gradient-to-br from-yellow-400 to-orange-500" },
+    avatar: { display: "✓", bgColor: "bg-gradient-to-br from-yellow-400 to-orange-500" },
     rating: 5,
     text: "Needed honest feedback on my wedding dress options. Family was too polite, but these anonymous reviewers gave me the truth. Chose the perfect dress!",
-    timeAgo: "1 day ago",
     helpful: 12,
     verified: true
   },
   {
     id: 6,
-    name: "Alex Johnson",
-    role: "Sales Director",
+    name: "Verified User",
+    visibleId: "#0458",
     category: "Email Review",
-    avatar: { initials: "AJ", bgColor: "bg-gradient-to-br from-purple-400 to-pink-500" },
+    avatar: { display: "✓", bgColor: "bg-gradient-to-br from-purple-400 to-pink-500" },
     rating: 5,
     text: "Had a delicate email to send to a difficult client. The feedback helped me strike the right tone - professional but firm. Client responded positively.",
-    timeAgo: "4 hours ago",
     helpful: 8,
     verified: true
   }
 ];
 
+// Platform promises - what we guarantee, not fake metrics
 const TRUST_METRICS = [
   {
     icon: MessageSquare,
-    label: 'Reviews delivered',
-    value: '2,847',
-    trend: '+127 this week',
+    label: 'Feedback reports',
+    value: '3',
+    trend: 'Per submission, guaranteed',
     color: 'text-blue-600',
     bgColor: 'bg-blue-50',
     pulse: true
   },
   {
     icon: Star,
-    label: 'Reviewer rating',
-    value: '4.9/5',
-    trend: 'Consistent quality',
+    label: 'Quality standard',
+    value: 'High',
+    trend: 'Detailed, actionable insights',
     color: 'text-yellow-600',
     bgColor: 'bg-yellow-50',
     pulse: false
   },
   {
     icon: Clock,
-    label: 'Avg response',
-    value: '47min',
-    trend: 'Getting faster',
+    label: 'Response time',
+    value: '<2hrs',
+    trend: 'Usually much faster',
     color: 'text-green-600',
     bgColor: 'bg-green-50',
     pulse: false
   },
   {
     icon: Shield,
-    label: 'Privacy score',
+    label: 'Privacy',
     value: '100%',
-    trend: 'Zero data sold',
+    trend: 'Anonymous & secure',
     color: 'text-purple-600',
     bgColor: 'bg-purple-50',
     pulse: false
   },
 ];
 
-// Platform statistics component
+// What people use AskVerdict for
 function PlatformStats() {
-  const stats = [
-    { value: "127", label: "reviews delivered this week", icon: "📊" },
-    { value: "34", label: "career decisions helped", icon: "💼" },
-    { value: "18", label: "dating profiles optimized", icon: "💕" },
-    { value: "23", label: "business emails reviewed", icon: "📧" },
+  const useCases = [
+    { icon: "💼", label: "Career decisions", example: "Job offers, salary negotiations" },
+    { icon: "💕", label: "Dating profiles", example: "Photos, bios, conversation openers" },
+    { icon: "👔", label: "Style choices", example: "Outfits, haircuts, interview looks" },
+    { icon: "📧", label: "Writing review", example: "Emails, messages, applications" },
   ];
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-4">
       <div className="flex items-center gap-2 mb-4">
         <TrendingUp className="w-4 h-4 text-indigo-600" />
-        <span className="text-sm font-medium text-gray-700">Platform Activity</span>
+        <span className="text-sm font-medium text-gray-700">What People Submit</span>
       </div>
       <div className="space-y-3">
-        {stats.map((stat, index) => (
+        {useCases.map((useCase, index) => (
           <div key={index} className="flex items-center gap-3">
-            <span className="text-lg">{stat.icon}</span>
+            <span className="text-lg">{useCase.icon}</span>
             <div className="flex-1">
-              <div className="flex items-baseline gap-2">
-                <span className="text-lg font-bold text-indigo-600">{stat.value}</span>
-                <span className="text-xs text-gray-600">{stat.label}</span>
-              </div>
+              <div className="font-medium text-gray-900 text-sm">{useCase.label}</div>
+              <div className="text-xs text-gray-500">{useCase.example}</div>
             </div>
           </div>
         ))}
@@ -173,17 +166,17 @@ export function SocialProofSection() {
       
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
-        {/* Header with live stats */}
+        {/* Header */}
         <div className="text-center mb-16">
           <Badge className="mb-6 bg-gradient-to-r from-green-600 to-emerald-600 text-white border-0 px-4 py-2">
             <TrendingUp className="w-3 h-3 mr-1" />
-            Growing fast • Join 2,847+ users
+            Anonymous feedback from real people
           </Badge>
           <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-            Real people, real results
+            Honest opinions, real results
           </h2>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            See what happens when you get honest feedback from strangers
+            See what happens when you get unfiltered feedback from strangers
           </p>
         </div>
 
@@ -216,10 +209,10 @@ export function SocialProofSection() {
         <div className="mb-16">
           <div className="text-center mb-12">
             <h3 className="text-3xl font-bold text-gray-900 mb-4">
-              Success stories from real users
+              What our users say
             </h3>
             <p className="text-lg text-gray-600">
-              See how honest feedback changed their decisions
+              <span className="italic">Names hidden to protect privacy</span> — as it should be
             </p>
           </div>
 
@@ -254,23 +247,23 @@ export function SocialProofSection() {
                   "{testimonial.text}"
                 </p>
 
-                  {/* Author section with custom avatar */}
+                  {/* Author section with anonymous avatar */}
                   <div className="flex items-start gap-4">
-                    <div 
-                      className={`w-12 h-12 rounded-full ${testimonial.avatar.bgColor} flex items-center justify-center text-white font-bold shadow-lg`}
+                    <div
+                      className={`w-12 h-12 rounded-full ${testimonial.avatar.bgColor} flex items-center justify-center text-white text-lg shadow-lg`}
                     >
-                      {testimonial.avatar.initials}
+                      {testimonial.avatar.display}
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="font-semibold text-gray-900">{testimonial.name}</span>
+                        <span className="text-gray-500 text-sm">{testimonial.visibleId}</span>
                       </div>
-                      <div className="text-sm text-gray-600 mb-2">{testimonial.role}</div>
+                      <div className="text-sm text-gray-600 mb-2">{testimonial.category}</div>
                       <div className="flex items-center gap-3 text-xs text-gray-500">
-                        <span>{testimonial.timeAgo}</span>
                         <span className="flex items-center gap-1">
-                          <Heart className="w-3 h-3" />
-                          {testimonial.helpful} helpful
+                          <Heart className="w-3 h-3 text-pink-400" />
+                          {testimonial.helpful} found helpful
                         </span>
                       </div>
                     </div>
@@ -286,14 +279,14 @@ export function SocialProofSection() {
               <Card key={testimonial.id} className="border border-gray-200 hover:shadow-lg transition-shadow">
                 <CardContent className="p-4">
                   <div className="flex items-start gap-3">
-                    <div 
-                      className={`w-10 h-10 rounded-full ${testimonial.avatar.bgColor} flex items-center justify-center text-white font-bold text-sm shadow-md flex-shrink-0`}
+                    <div
+                      className={`w-10 h-10 rounded-full ${testimonial.avatar.bgColor} flex items-center justify-center text-white text-sm shadow-md flex-shrink-0`}
                     >
-                      {testimonial.avatar.initials}
+                      {testimonial.avatar.display}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1 mb-1">
-                        <span className="font-medium text-gray-900 truncate">{testimonial.name}</span>
+                        <span className="font-medium text-gray-900 truncate">{testimonial.name} {testimonial.visibleId}</span>
                         <div className="flex gap-0.5 ml-auto">
                           {[...Array(testimonial.rating)].map((_, i) => (
                             <Star key={i} className="w-3 h-3 text-yellow-400 fill-current" />
@@ -303,7 +296,9 @@ export function SocialProofSection() {
                       <p className="text-sm text-gray-600 line-clamp-3">{testimonial.text}</p>
                       <div className="flex items-center gap-2 mt-2">
                         <Badge variant="outline" className="text-xs">{testimonial.category}</Badge>
-                        <span className="text-xs text-gray-500">{testimonial.timeAgo}</span>
+                        <span className="text-xs text-gray-500 flex items-center gap-1">
+                          <Heart className="w-3 h-3" /> {testimonial.helpful}
+                        </span>
                       </div>
                     </div>
                   </div>

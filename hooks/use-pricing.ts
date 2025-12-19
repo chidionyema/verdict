@@ -1,48 +1,70 @@
 /**
- * React hook for dynamic pricing
+ * React hook for dynamic pricing with proper SSR/hydration handling
  */
 
 import { useState, useEffect } from 'react';
-import { useLocale } from 'next-intl';
-import { getPrivateSubmissionPriceForLocale, type PriceConfig } from '@/lib/pricing-config';
+import { getPricingTexts, detectUserCurrency, CURRENCY_CONFIG } from '@/lib/localization';
 
 interface UsePricingReturn {
-  privatePrice: PriceConfig | null;
+  privatePrice: string;
+  freePath: string;
+  paidPath: string;
+  currencyCode: string;
   loading: boolean;
-  error: Error | null;
-}
-
-export function usePricing(): UsePricingReturn {
-  const locale = useLocale();
-  const [privatePrice, setPrivatePrice] = useState<PriceConfig | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-
-  useEffect(() => {
-    try {
-      // In a real app, this might fetch from an API
-      // For now, we use the config directly
-      const price = getPrivateSubmissionPriceForLocale(locale);
-      setPrivatePrice(price);
-      setLoading(false);
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to load pricing'));
-      setLoading(false);
-    }
-  }, [locale]);
-
-  return { privatePrice, loading, error };
 }
 
 /**
- * Get formatted private submission price
+ * Hook that returns localized pricing texts with proper SSR handling
+ * On server: returns USD as fallback
+ * On client: detects locale and returns correct currency
+ */
+export function useLocalizedPricing(): UsePricingReturn {
+  const [pricing, setPricing] = useState<ReturnType<typeof getPricingTexts> | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Only run on client after hydration
+    const texts = getPricingTexts();
+    setPricing(texts);
+    setLoading(false);
+  }, []);
+
+  // SSR fallback - show loading indicator
+  if (loading || !pricing) {
+    return {
+      privatePrice: '...',
+      freePath: 'Judge 3 → Earn 1 credit',
+      paidPath: 'Pay ... → Skip judging',
+      currencyCode: 'USD',
+      loading: true,
+    };
+  }
+
+  return {
+    privatePrice: pricing.privateSubmissionPrice,
+    freePath: pricing.freePath,
+    paidPath: pricing.paidPath,
+    currencyCode: pricing.currencyCode,
+    loading: false,
+  };
+}
+
+/**
+ * Get formatted private submission price with proper hydration
  */
 export function usePrivatePrice(): string {
-  const { privatePrice, loading } = usePricing();
-  
-  if (loading || !privatePrice) {
-    return '...'; // Show placeholder while loading
-  }
-  
-  return privatePrice.formatted;
+  const { privatePrice } = useLocalizedPricing();
+  return privatePrice;
+}
+
+/**
+ * Legacy hook for compatibility
+ */
+export function usePricing() {
+  const pricing = useLocalizedPricing();
+  return {
+    privatePrice: pricing.loading ? null : { formatted: pricing.privatePrice },
+    loading: pricing.loading,
+    error: null,
+  };
 }
