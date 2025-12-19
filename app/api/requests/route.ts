@@ -89,10 +89,13 @@ export async function GET(request: NextRequest) {
       return response;
 
     } catch (fetchError) {
-      log.error('Failed to fetch unified requests', fetchError);
+      const errorMessage = fetchError instanceof Error ? fetchError.message : 'Unknown error';
+      const errorStack = fetchError instanceof Error ? fetchError.stack : undefined;
+      log.error('Failed to fetch unified requests', { error: errorMessage, stack: errorStack });
+      console.error('Fetch error details:', fetchError);
       return NextResponse.json({
-        error: 'Database error',
-        details: fetchError instanceof Error ? fetchError.message : 'Unknown error'
+        error: `Database error: ${errorMessage}`,
+        details: errorMessage
       }, { status: 500 });
     }
 
@@ -107,7 +110,7 @@ export async function GET(request: NextRequest) {
 
 // Fetch standard verdict requests for user
 async function fetchVerdictRequests(supabase: any, userId: string, searchParams: URLSearchParams) {
-  let query = supabase
+  const { data: requests, error } = await supabase
     .from('verdict_requests')
     .select(`
       id,
@@ -121,48 +124,24 @@ async function fetchVerdictRequests(supabase: any, userId: string, searchParams:
       target_verdict_count,
       received_verdict_count,
       created_at,
-      request_tier,
-      folder_id,
-      verdicts (
-        id,
-        rating
-      )
+      request_tier
     `)
     .eq('user_id', userId)
-    .is('deleted_at', null);
+    .is('deleted_at', null)
+    .order('created_at', { ascending: false });
 
-  // Handle unorganized requests filter
-  const unorganized = searchParams.get('unorganized');
-  if (unorganized === 'true') {
-    query = query.is('folder_id', null);
+  if (error) {
+    console.error('Verdict requests query error:', JSON.stringify(error, null, 2));
+    throw new Error(`Database query failed: ${error.message || error.code || 'Unknown error'}`);
   }
 
-  const { data: requests, error } = await query;
-
-  if (error) throw error;
-
-  // Process the data to calculate verdict counts and averages
-  return (requests || []).map((request: any) => {
-    const verdicts = Array.isArray(request.verdicts) ? request.verdicts : [];
-    const verdictCount = verdicts.length;
-
-    const ratings = verdicts
-      .map((v: any) => v.rating)
-      .filter((r: any) => r !== null && r !== undefined);
-
-    const avgRating = ratings.length > 0
-      ? ratings.reduce((sum: number, rating: number) => sum + rating, 0) / ratings.length
-      : null;
-
-    // Remove the verdicts array from the response to keep it clean
-    const { verdicts: _verdicts, ...rest } = request;
-
-    return {
-      ...rest,
-      verdict_count: verdictCount,
-      avg_rating: avgRating
-    };
-  });
+  // Return requests with received_verdict_count as the count
+  return (requests || []).map((request: any) => ({
+    ...request,
+    verdict_count: request.received_verdict_count || 0,
+    avg_rating: null,
+    folder_id: null // Add for compatibility with UI
+  }));
 }
 
 // Fetch comparison requests for user

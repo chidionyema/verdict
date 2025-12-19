@@ -121,14 +121,14 @@ function WorkspacePageContent() {
         const data = await res.json();
         const fetchedRequests = data.requests || [];
         setRequests(fetchedRequests);
-        
+
         // Store initial counts for notifications
         const counts: Record<string, number> = {};
         fetchedRequests.forEach((req: any) => {
           counts[req.id] = req.received_verdict_count || 0;
         });
         previousCountsRef.current = counts;
-        
+
         // Check if user should see onboarding
         if (user && fetchedRequests.length === 0) {
           const hasCompletedOnboarding = localStorage.getItem(`onboarding_completed_${user.id}`);
@@ -137,8 +137,10 @@ function WorkspacePageContent() {
           }
         }
       } else {
-        const errorData = await res.json();
-        setError(`API Error: ${errorData.error || 'Unknown error'}`);
+        const errorData = await res.json().catch(() => ({ error: 'Failed to parse error response' }));
+        const errorDetails = errorData.details ? `: ${errorData.details}` : '';
+        setError(`${errorData.error || 'Request failed'}${errorDetails}`);
+        console.error('API request failed:', { status: res.status, errorData });
       }
       
     } catch (err) {
@@ -826,8 +828,26 @@ function WorkspacePageContent() {
         )}
 
         {error && (
-          <div className="bg-red-50 text-red-600 p-4 rounded-lg mb-6">
-            <strong>Error:</strong> {error}
+          <div className="bg-red-50 border border-red-200 rounded-xl p-6 mb-6">
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0 w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                <XCircle className="h-5 w-5 text-red-600" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-red-800 mb-1">Something went wrong</h3>
+                <p className="text-red-700 text-sm mb-3">{error}</p>
+                <button
+                  onClick={() => {
+                    setError('');
+                    setLoading(true);
+                    fetchData();
+                  }}
+                  className="text-sm font-medium text-red-700 hover:text-red-900 underline"
+                >
+                  Try again
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>
