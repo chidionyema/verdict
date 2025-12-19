@@ -38,6 +38,7 @@ import {
   Users
 } from 'lucide-react';
 import type { Profile } from '@/lib/database.types';
+import JudgeProgression from '@/components/judge/JudgeProgression';
 
 interface QueueRequest {
   id: string;
@@ -861,6 +862,19 @@ export default function JudgeDashboardPage() {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Judge Progression System */}
+        <div className="mb-8">
+          <JudgeProgression
+            userId={profile?.id || ''}
+            currentStats={{
+              totalVerdicts: stats.verdicts_given,
+              avgRating: stats.average_quality_score || 4.0,
+              helpfulnessScore: stats.completion_rate,
+              specializations: [stats.best_category], // Convert single best category to array
+            }}
+          />
         </div>
 
         {/* Queue Section */}

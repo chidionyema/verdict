@@ -453,6 +453,35 @@ export interface Database {
           created_at?: string;
         };
       };
+      user_onboarding: {
+        Row: {
+          id: string;
+          user_id: string;
+          completed_at: string;
+          selected_category: string | null;
+          selected_request_type: string | null;
+          interested_in_judging: boolean | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          completed_at: string;
+          selected_category?: string | null;
+          selected_request_type?: string | null;
+          interested_in_judging?: boolean | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          completed_at?: string;
+          selected_category?: string | null;
+          selected_request_type?: string | null;
+          interested_in_judging?: boolean | null;
+          created_at?: string;
+        };
+      };
     };
     Functions: {
       award_credits: {

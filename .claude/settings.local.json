@@ -24,7 +24,8 @@
       "Bash(npm run typecheck:*)",
       "Bash(npm run:*)",
       "Bash(find:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(touch:*)"
     ],
     "deny": [],
     "ask": []

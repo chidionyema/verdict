@@ -1,44 +1,98 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { Menu, X, User, CreditCard, Clock, Plus, Bell, ChevronDown, Zap, Shield } from 'lucide-react';
+import { 
+  Menu, 
+  X, 
+  User, 
+  CreditCard, 
+  Clock, 
+  Plus, 
+  Bell, 
+  ChevronDown, 
+  Zap, 
+  Shield, 
+  Home,
+  BarChart3,
+  Users,
+  Scale,
+  RotateCcw,
+  Award,
+  Crown,
+  Sparkles,
+  Target,
+  Grid,
+  MessageSquare,
+  Eye,
+  Settings,
+  LogOut,
+  HelpCircle,
+  Camera,
+  FileText,
+  Mic,
+  Star,
+  TrendingUp,
+  Activity,
+} from 'lucide-react';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
-import NotificationCenter from './NotificationCenter';
-import SearchBar from './SearchBar';
+import { MagneticButton, FloatingBadge, RippleButton } from '@/components/ui/MicroInteractions';
 
 interface UserProfile {
   credits: number;
   is_judge: boolean;
+  display_name?: string;
+  avatar_url?: string;
 }
 
 interface UserStats {
   activeRequests: number;
   pendingVerdicts: number;
+  totalVerdicts: number;
+  judgeEarnings: number;
 }
 
+// Smart navigation that adapts based on user state and current page
 export default function Navigation() {
   const router = useRouter();
+  const pathname = usePathname();
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [userStats, setUserStats] = useState<UserStats>({ activeRequests: 0, pendingVerdicts: 0 });
+  const [userStats, setUserStats] = useState<UserStats>({ 
+    activeRequests: 0, 
+    pendingVerdicts: 0,
+    totalVerdicts: 0,
+    judgeEarnings: 0,
+  });
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showSubmitDropdown, setShowSubmitDropdown] = useState(false);
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  
+  // Refs for click outside detection
+  const submitDropdownRef = useRef<HTMLDivElement>(null);
+  const profileDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Smart context detection
+  const isHomePage = pathname === '/';
+  const isWorkspacePage = pathname === '/workspace';
+  const isCreatePage = pathname === '/create';
+  const isJudgePage = pathname?.startsWith('/judge');
+  const isFeedPage = pathname === '/feed';
 
   // Fetch user profile and stats
   const fetchUserData = async (userId: string) => {
     try {
-      // Only create client in browser
       if (typeof window === 'undefined') return;
       
       const supabase = createClient();
       
-      // Fetch profile
+      // Fetch enhanced profile
       const { data: profile } = await supabase
         .from('profiles')
-        .select('credits, is_judge')
+        .select('credits, is_judge, display_name, avatar_url')
         .eq('id', userId)
         .single();
       
@@ -46,22 +100,34 @@ export default function Navigation() {
         setUserProfile(profile);
       }
 
-      // Fetch active requests count
-      const { count: activeRequestsCount } = await supabase
-        .from('verdict_requests')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId)
-        .in('status', ['pending', 'in_progress']);
-
-      // Fetch pending feedback count (for reviewers)
-      const { count: pendingVerdictsCount } = await supabase
-        .from('verdict_requests')
-        .select('*', { count: 'exact', head: true })
-        .eq('status', 'pending');
+      // Fetch enhanced stats
+      const [
+        { count: activeRequestsCount },
+        { count: totalVerdictsCount },
+        { count: pendingVerdictsCount }
+      ] = await Promise.all([
+        supabase
+          .from('verdict_requests')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', userId)
+          .in('status', ['open', 'in_progress']),
+        
+        supabase
+          .from('feedback_responses')
+          .select('*', { count: 'exact', head: true })
+          .eq('judge_id', userId),
+        
+        supabase
+          .from('verdict_requests')
+          .select('*', { count: 'exact', head: true })
+          .eq('status', 'open')
+      ]);
 
       setUserStats({
         activeRequests: activeRequestsCount || 0,
         pendingVerdicts: pendingVerdictsCount || 0,
+        totalVerdicts: totalVerdictsCount || 0,
+        judgeEarnings: 0, // Calculate based on verdicts * rate
       });
     } catch (error) {
       console.error('Error fetching user data:', error);
@@ -69,7 +135,6 @@ export default function Navigation() {
   };
 
   useEffect(() => {
-    // Only run in browser
     if (typeof window === 'undefined') {
       setLoading(false);
       return;
@@ -78,380 +143,492 @@ export default function Navigation() {
     try {
       const supabase = createClient();
       
-    // Get initial user
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user);
-      if (user) {
-        fetchUserData(user.id);
-      }
-      setLoading(false);
-    });
+      // Get initial user
+      supabase.auth.getUser().then(({ data: { user } }) => {
+        setUser(user);
+        if (user) {
+          fetchUserData(user.id);
+        }
+        setLoading(false);
+      });
 
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      const currentUser = session?.user ?? null;
-      setUser(currentUser);
-      
-      if (currentUser) {
-        fetchUserData(currentUser.id);
-      } else {
-        setUserProfile(null);
-        setUserStats({ activeRequests: 0, pendingVerdicts: 0 });
-      }
-    });
+      // Listen for auth changes
+      const {
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange((_event, session) => {
+        const currentUser = session?.user ?? null;
+        setUser(currentUser);
+        
+        if (currentUser) {
+          fetchUserData(currentUser.id);
+        } else {
+          setUserProfile(null);
+          setUserStats({ activeRequests: 0, pendingVerdicts: 0, totalVerdicts: 0, judgeEarnings: 0 });
+        }
+      });
 
-    return () => subscription.unsubscribe();
+      return () => subscription.unsubscribe();
     } catch (error) {
-      console.error('Error initializing Supabase client:', error);
+      console.error('Error in Navigation useEffect:', error);
       setLoading(false);
     }
   }, []);
 
+  // Close dropdowns on click outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (submitDropdownRef.current && !submitDropdownRef.current.contains(event.target as Node)) {
+        setShowSubmitDropdown(false);
+      }
+      if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target as Node)) {
+        setShowProfileDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleSignOut = async () => {
+    try {
+      const supabase = createClient();
+      await supabase.auth.signOut();
+      router.push('/');
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
+
+  // Smart logo destination
+  const getLogoDestination = () => {
+    if (!user) return '/';
+    return '/workspace';
+  };
+
+  // Smart "New Request" button context
+  const getNewRequestLabel = () => {
+    if (isWorkspacePage) return 'New Request';
+    if (userStats.activeRequests === 0) return 'Start First Request';
+    return 'Create Request';
+  };
+
+  // Define navigation item interface
+  interface NavItem {
+    href: string;
+    label: string;
+    icon: any;
+    active?: boolean;
+    badge?: number;
+  }
+
+  // Contextual navigation items
+  const getMainNavItems = (): NavItem[] => {
+    if (!user) {
+      return [
+        { href: '/feed', label: 'Community', icon: Users },
+        { href: '/help', label: 'How It Works', icon: HelpCircle },
+      ];
+    }
+
+    const items: NavItem[] = [
+      { 
+        href: '/workspace', 
+        label: 'Workspace', 
+        icon: Grid,
+        active: isWorkspacePage,
+        badge: userStats.activeRequests > 0 ? userStats.activeRequests : undefined,
+      },
+    ];
+
+    // Add judge navigation if user is a judge
+    if (userProfile?.is_judge) {
+      items.push({
+        href: '/judge',
+        label: 'Judge Queue',
+        icon: Shield,
+        active: isJudgePage,
+        badge: userStats.pendingVerdicts > 0 ? userStats.pendingVerdicts : undefined,
+      });
+    }
+
+    items.push({
+      href: '/feed', 
+      label: 'Community', 
+      icon: Users,
+      active: isFeedPage,
+    });
+
+    return items;
+  };
+
+  if (loading) {
+    return (
+      <nav className="bg-white/80 backdrop-blur-xl border-b border-gray-200/50 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="flex justify-between h-16">
+            <div className="flex items-center">
+              <div className="h-8 w-32 bg-gray-200 rounded animate-pulse"></div>
+            </div>
+            <div className="flex items-center space-x-4">
+              <div className="h-8 w-20 bg-gray-200 rounded animate-pulse"></div>
+              <div className="h-8 w-8 bg-gray-200 rounded-full animate-pulse"></div>
+            </div>
+          </div>
+        </div>
+      </nav>
+    );
+  }
+
   return (
-    <nav className="bg-white border-b border-gray-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16 items-center">
+    <nav className="bg-white/80 backdrop-blur-xl border-b border-gray-200/50 sticky top-0 z-50 shadow-sm">
+      <div className="max-w-7xl mx-auto px-4">
+        <div className="flex justify-between h-16">
           {/* Logo */}
           <div className="flex items-center">
-            <Link
-              href={user ? '/my-requests' : '/'}
-              className="group relative inline-block logo-focus-ring"
+            <Link 
+              href={getLogoDestination()}
+              className="flex items-center space-x-2 hover:opacity-80 transition-opacity"
             >
-              <div className="relative">
-                {/* Premium shadow layers for depth */}
-                <span className="absolute inset-0 text-2xl font-black tracking-tight opacity-10 blur-sm transform translate-x-1 translate-y-1">
-                  <span className="text-indigo-600">Ask</span>
-                  <span className="text-slate-800">Verdict</span>
-                </span>
-                
-                {/* Main logo text with premium styling */}
-                <span className="relative z-10 text-2xl font-black tracking-tight logo-animate">
-                  <span className="inline-block text-indigo-600 transition-all duration-300 group-hover:text-indigo-700 group-hover:transform group-hover:-translate-x-0.5">
-                    Ask
-                  </span>
-                  <span className="inline-block text-slate-800 transition-all duration-300 group-hover:text-slate-900 group-hover:transform group-hover:translate-x-0.5">
-              Verdict
-                  </span>
-                </span>
-                
-                {/* Premium underline with gradient */}
-                <span className="absolute -bottom-1 left-0 w-full h-0.5 bg-gradient-to-r from-indigo-600 via-purple-500 to-slate-800 transform scale-x-0 transition-transform duration-500 origin-left group-hover:scale-x-100" />
-                
-                {/* Subtle glow effect on hover */}
-                <span className="absolute inset-0 rounded-lg bg-gradient-to-r from-indigo-600/0 to-purple-600/0 group-hover:from-indigo-600/10 group-hover:to-purple-600/10 blur-xl transition-all duration-500" />
+              <div className="w-8 h-8 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-lg flex items-center justify-center">
+                <Sparkles className="h-5 w-5 text-white" />
               </div>
+              <span className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                Verdict
+              </span>
             </Link>
           </div>
 
-          {/* Desktop Search */}
-          <div className="hidden md:block flex-1 max-w-lg mx-8">
-            <SearchBar />
-          </div>
-
-          {/* Desktop Nav */}
+          {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-6">
-            {loading ? (
-              <div className="w-20 h-8 bg-gray-100 rounded animate-pulse" />
-            ) : user ? (
+            {/* Main Navigation */}
+            {getMainNavItems().map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex items-center space-x-2 px-3 py-2 rounded-lg font-medium transition-all relative ${
+                  item.active 
+                    ? 'bg-indigo-100 text-indigo-700'
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                <item.icon className="h-4 w-4" />
+                <span>{item.label}</span>
+                <FloatingBadge
+                  visible={!!item.badge}
+                  color="red"
+                  bounce={true}
+                >
+                  {item.badge}
+                </FloatingBadge>
+              </Link>
+            ))}
+
+            {user && (
               <>
-                {/* User Status Widget */}
-                <div className="flex items-center space-x-4">
-                  {/* Credits Display - More prominent */}
-                  <Link href="/account" className="flex items-center bg-gradient-to-r from-yellow-50 to-amber-50 text-amber-700 px-5 py-2 rounded-full text-sm min-h-[36px] hover:from-yellow-100 hover:to-amber-100 transition-all border border-amber-200 shadow-sm">
-                    <Zap className="h-4 w-4 mr-2 text-amber-600" />
-                    <span className="font-bold text-lg">
-                      {userProfile?.credits || 0}
-                    </span>
-                    <span className="text-xs text-amber-600 ml-1 font-medium">
-                      {userProfile?.credits === 1 ? 'credit' : 'credits'}
-                    </span>
-                  </Link>
-                  
-                  {/* Active Requests */}
-                  {userStats.activeRequests > 0 && (
-                    <Link 
-                      href="/decisions"
-                      className="flex items-center bg-blue-50 text-blue-700 px-4 py-2 rounded-full text-sm hover:bg-blue-100 transition min-h-[36px]"
-                    >
-                      <Clock className="h-4 w-4 mr-2" />
-                      <span className="font-medium">{userStats.activeRequests}</span>
-                      <span className="text-xs text-blue-600 ml-1">active</span>
-                    </Link>
-                  )}
-                  
-                  {/* Reviewer Notifications */}
-                  {userProfile?.is_judge && userStats.pendingVerdicts > 0 && (
-                    <Link 
-                      href="/judge"
-                      className="flex items-center bg-purple-50 text-purple-700 px-4 py-2 rounded-full text-sm hover:bg-purple-100 transition relative min-h-[36px]"
-                    >
-                      <Bell className="h-4 w-4 mr-2" />
-                      <span className="font-medium">{userStats.pendingVerdicts}</span>
-                      <span className="text-xs text-purple-600 ml-1">to review</span>
-                    </Link>
-                  )}
-                  
-                  {/* Notifications */}
-                  <NotificationCenter />
-                  
-                  {/* Quick New Request */}
-                  <Link
-                    href="/start"
-                    className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition flex items-center text-sm min-h-[36px]"
+                {/* Smart Submit Button with Dropdown */}
+                <div className="relative" ref={submitDropdownRef}>
+                  <MagneticButton
+                    onClick={() => setShowSubmitDropdown(!showSubmitDropdown)}
+                    className="flex items-center space-x-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2 rounded-lg hover:shadow-lg transition-all font-medium group relative overflow-hidden"
                   >
-                    <Plus className="h-4 w-4 mr-2" />
-                    New Request
-                  </Link>
+                    <Plus className="h-4 w-4 group-hover:rotate-90 transition-transform" />
+                    <span>{getNewRequestLabel()}</span>
+                    <ChevronDown className="h-4 w-4" />
+                  </MagneticButton>
+
+                  {showSubmitDropdown && (
+                    <div className="absolute top-full mt-2 right-0 w-64 bg-white rounded-xl shadow-xl border border-gray-200 py-2 z-50">
+                      <div className="px-4 py-2 border-b border-gray-100">
+                        <p className="text-sm font-medium text-gray-900">Quick Create</p>
+                        <p className="text-xs text-gray-500">Choose your feedback type</p>
+                      </div>
+                      
+                      <Link
+                        href="/create?type=verdict"
+                        onClick={() => setShowSubmitDropdown(false)}
+                        className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 transition-colors"
+                      >
+                        <MessageSquare className="h-5 w-5 text-blue-600" />
+                        <div>
+                          <p className="font-medium text-gray-900">Standard Feedback</p>
+                          <p className="text-xs text-gray-500">Get expert opinions</p>
+                        </div>
+                      </Link>
+                      
+                      <Link
+                        href="/create?type=comparison"
+                        onClick={() => setShowSubmitDropdown(false)}
+                        className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 transition-colors"
+                      >
+                        <Scale className="h-5 w-5 text-purple-600" />
+                        <div>
+                          <p className="font-medium text-gray-900">A/B Comparison</p>
+                          <p className="text-xs text-gray-500">Compare two options</p>
+                        </div>
+                        <span className="ml-auto text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full">
+                          Advanced
+                        </span>
+                      </Link>
+                      
+                      <Link
+                        href="/create?type=split_test"
+                        onClick={() => setShowSubmitDropdown(false)}
+                        className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 transition-colors"
+                      >
+                        <RotateCcw className="h-5 w-5 text-orange-600" />
+                        <div>
+                          <p className="font-medium text-gray-900">Split Test</p>
+                          <p className="text-xs text-gray-500">Test with demographics</p>
+                        </div>
+                        <span className="ml-auto text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full">
+                          Pro
+                        </span>
+                      </Link>
+
+                      <div className="border-t border-gray-100 mt-2 pt-2">
+                        <Link
+                          href="/create"
+                          onClick={() => setShowSubmitDropdown(false)}
+                          className="flex items-center space-x-3 px-4 py-2 text-indigo-600 hover:bg-indigo-50 transition-colors"
+                        >
+                          <Sparkles className="h-4 w-4" />
+                          <span className="font-medium">Full Creation Flow</span>
+                        </Link>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-                {/* Navigation Links */}
-                <Link
-                  href="/feed"
-                  className="text-gray-700 hover:text-indigo-600 transition flex items-center min-h-[36px] font-medium"
-                >
-                  Discover
-                </Link>
-                <div className="relative group">
-                  <Link
-                    href="/submit"
-                    className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition flex items-center text-sm min-h-[36px] font-medium"
-                  >
-                    Submit
-                  </Link>
-                  {/* Submit Dropdown */}
-                  <div className="absolute top-full left-0 mt-2 w-56 bg-white rounded-lg shadow-lg border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
-                    <Link href="/submit" className="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 border-b">
-                      📝 Standard Review
-                    </Link>
-                    <Link href="/submit?mode=comparison" className="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 border-b">
-                      ⚖️ Decision Comparison
-                    </Link>
-                    <Link href="/submit?mode=split_test" className="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-50">
-                      🔄 Photo Split Test
-                    </Link>
-                  </div>
+                {/* Credits Display */}
+                <div className="flex items-center space-x-2 bg-gray-100 px-3 py-1 rounded-full">
+                  <CreditCard className="h-4 w-4 text-gray-600" />
+                  <span className="text-sm font-medium text-gray-700">
+                    {userProfile?.credits || 0}
+                  </span>
                 </div>
-                <Link
-                  href="/judge"
-                  className="text-gray-700 hover:text-indigo-600 transition flex items-center min-h-[36px] font-medium"
-                >
-                  Judge Queue
-                </Link>
-                <div className="w-px h-6 bg-gray-300 mx-2"></div>
-                <Link
-                  href="/decisions"
-                  className="text-gray-600 hover:text-gray-800 transition flex items-center min-h-[36px] text-sm"
-                >
-                  My Decisions
-                </Link>
-                <Link
-                  href="/account"
-                  className="text-gray-700 hover:text-indigo-600 transition flex items-center min-h-[36px]"
-                >
-                  <User className="h-5 w-5 mr-1" />
-                  Account
-                </Link>
-              </>
-            ) : (
-              <>
-                <Link
-                  href="/feed"
-                  className="text-gray-700 hover:text-indigo-600 transition flex items-center min-h-[36px] font-medium"
-                >
-                  Discover
-                </Link>
-                <Link
-                  href="/submit"
-                  className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition flex items-center text-sm min-h-[36px] font-medium"
-                >
-                  Submit
-                </Link>
-                {userProfile?.is_judge ? (
-                  <div className="relative group">
-                    <button className="text-gray-700 hover:text-indigo-600 transition flex items-center">
-                      Reviewer Dashboard
-                      <ChevronDown className="h-4 w-4 ml-1" />
-                    </button>
-                    <div className="absolute top-full left-0 mt-2 w-48 bg-white rounded-lg shadow-lg border opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
-                      <Link href="/judge" className="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-50">
-                        Dashboard
-                      </Link>
-                      <Link href="/judge/performance" className="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-50">
-                        Performance
-                      </Link>
-                    </div>
-                  </div>
-                ) : (
-                  <Link
-                    href="/verification"
-                    className="text-gray-700 hover:text-indigo-600 transition flex items-center gap-1"
+
+                {/* Notifications */}
+                <button className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors">
+                  <Bell className="h-5 w-5" />
+                  {userStats.activeRequests > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                      {userStats.activeRequests}
+                    </span>
+                  )}
+                </button>
+
+                {/* Profile Dropdown */}
+                <div className="relative" ref={profileDropdownRef}>
+                  <button
+                    onClick={() => setShowProfileDropdown(!showProfileDropdown)}
+                    className="flex items-center space-x-2 hover:bg-gray-100 rounded-lg p-2 transition-colors"
                   >
-                    Become Verified Expert
-                  </Link>
-                )}
+                    {userProfile?.avatar_url ? (
+                      <img
+                        src={userProfile.avatar_url}
+                        alt="Profile"
+                        className="w-7 h-7 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-7 h-7 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center">
+                        <User className="h-4 w-4 text-white" />
+                      </div>
+                    )}
+                    <ChevronDown className="h-4 w-4 text-gray-600" />
+                  </button>
+
+                  {showProfileDropdown && (
+                    <div className="absolute top-full mt-2 right-0 w-72 bg-white rounded-xl shadow-xl border border-gray-200 py-2 z-50">
+                      <div className="px-4 py-3 border-b border-gray-100">
+                        <p className="font-medium text-gray-900">
+                          {userProfile?.display_name || user.email?.split('@')[0] || 'User'}
+                        </p>
+                        <p className="text-sm text-gray-500">{user.email}</p>
+                        
+                        {/* Quick Stats */}
+                        <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
+                          <div className="text-center p-2 bg-blue-50 rounded">
+                            <div className="font-bold text-blue-700">{userStats.activeRequests}</div>
+                            <div className="text-blue-600">Active</div>
+                          </div>
+                          <div className="text-center p-2 bg-green-50 rounded">
+                            <div className="font-bold text-green-700">{userStats.totalVerdicts}</div>
+                            <div className="text-green-600">Verdicts</div>
+                          </div>
+                          <div className="text-center p-2 bg-purple-50 rounded">
+                            <div className="font-bold text-purple-700">{userProfile?.credits || 0}</div>
+                            <div className="text-purple-600">Credits</div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <Link
+                        href="/workspace"
+                        onClick={() => setShowProfileDropdown(false)}
+                        className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 transition-colors"
+                      >
+                        <Grid className="h-4 w-4 text-gray-600" />
+                        <span>My Workspace</span>
+                      </Link>
+
+                      {userProfile?.is_judge && (
+                        <Link
+                          href="/judge"
+                          onClick={() => setShowProfileDropdown(false)}
+                          className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 transition-colors"
+                        >
+                          <Shield className="h-4 w-4 text-indigo-600" />
+                          <span>Judge Dashboard</span>
+                          {userStats.pendingVerdicts > 0 && (
+                            <span className="ml-auto bg-indigo-100 text-indigo-700 text-xs px-2 py-1 rounded-full">
+                              {userStats.pendingVerdicts} pending
+                            </span>
+                          )}
+                        </Link>
+                      )}
+
+                      <Link
+                        href="/account"
+                        onClick={() => setShowProfileDropdown(false)}
+                        className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 transition-colors"
+                      >
+                        <Settings className="h-4 w-4 text-gray-600" />
+                        <span>Account Settings</span>
+                      </Link>
+
+                      <Link
+                        href="/help"
+                        onClick={() => setShowProfileDropdown(false)}
+                        className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 transition-colors"
+                      >
+                        <HelpCircle className="h-4 w-4 text-gray-600" />
+                        <span>Help & Support</span>
+                      </Link>
+
+                      <div className="border-t border-gray-100 mt-2 pt-2">
+                        <button
+                          onClick={() => {
+                            handleSignOut();
+                            setShowProfileDropdown(false);
+                          }}
+                          className="flex items-center space-x-3 px-4 py-3 w-full text-left hover:bg-red-50 transition-colors text-red-600"
+                        >
+                          <LogOut className="h-4 w-4" />
+                          <span>Sign Out</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+
+            {/* Unauthenticated Navigation */}
+            {!user && (
+              <div className="flex items-center space-x-4">
                 <Link
                   href="/auth/login"
-                  className="text-gray-700 hover:text-indigo-600 transition flex items-center"
+                  className="text-gray-700 hover:text-gray-900 font-medium transition-colors"
                 >
                   Sign In
                 </Link>
                 <Link
                   href="/auth/signup"
-                  className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition"
+                  className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2 rounded-lg hover:shadow-lg transition-all font-medium"
                 >
-                  Get Started
+                  Get Started Free
                 </Link>
-              </>
+              </div>
             )}
           </div>
 
           {/* Mobile menu button */}
-          <div className="md:hidden">
+          <div className="md:hidden flex items-center">
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="text-gray-700 p-3 cursor-pointer min-w-[44px] min-h-[44px] flex items-center justify-center rounded-lg hover:bg-gray-100 transition"
-              aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
-              aria-expanded={mobileMenuOpen}
-              aria-controls="mobile-navigation-menu"
+              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
             >
-              {mobileMenuOpen ? (
-                <X className="h-6 w-6" />
-              ) : (
-                <Menu className="h-6 w-6" />
-              )}
+              {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </button>
           </div>
         </div>
 
-        {/* Mobile Nav */}
+        {/* Mobile Navigation */}
         {mobileMenuOpen && (
-          <div 
-            id="mobile-navigation-menu"
-            className="md:hidden py-6 space-y-4"
-            role="navigation"
-            aria-label="Mobile navigation menu"
-          >
-            {user ? (
-              <>
-                {/* Mobile User Status Widget */}
-                <div className="bg-gray-50 rounded-xl p-4 mb-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center bg-green-50 text-green-700 px-4 py-2 rounded-full">
-                      <CreditCard className="h-5 w-5 mr-2" />
-                      <span className="font-medium">
-                        {userProfile?.credits || 0}{' '}
-                        {userProfile?.credits === 1 ? 'request left' : 'requests left'}
-                      </span>
-                    </div>
-                    
-                    <div className="flex items-center space-x-3">
-                      {userStats.activeRequests > 0 && (
-                        <div className="flex items-center bg-blue-50 text-blue-700 px-4 py-2 rounded-full">
-                          <Clock className="h-5 w-5 mr-2" />
-                          <span className="font-medium">{userStats.activeRequests} active</span>
-                        </div>
-                      )}
-                      
-                      {/* Mobile Notifications */}
-                      <NotificationCenter />
+          <div className="md:hidden border-t border-gray-200 bg-white/95 backdrop-blur-xl">
+            <div className="py-4 space-y-2">
+              {getMainNavItems().map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`flex items-center space-x-3 px-4 py-3 transition-colors ${
+                    item.active 
+                      ? 'bg-indigo-100 text-indigo-700'
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  <item.icon className="h-5 w-5" />
+                  <span>{item.label}</span>
+                  {item.badge && (
+                    <span className="ml-auto bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                      {item.badge}
+                    </span>
+                  )}
+                </Link>
+              ))}
+
+              {user ? (
+                <>
+                  <Link
+                    href="/create"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center space-x-3 px-4 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white mx-4 rounded-lg"
+                  >
+                    <Plus className="h-5 w-5" />
+                    <span>{getNewRequestLabel()}</span>
+                  </Link>
+
+                  <div className="px-4 py-2">
+                    <div className="flex items-center justify-between text-sm text-gray-600">
+                      <span>Credits: {userProfile?.credits || 0}</span>
+                      <span>Active: {userStats.activeRequests}</span>
                     </div>
                   </div>
-                  
-                  <Link
-                    href="/start"
-                    className="w-full bg-indigo-600 text-white px-6 py-4 rounded-xl hover:bg-indigo-700 transition flex items-center justify-center font-medium min-h-[48px]"
-                    onClick={() => setMobileMenuOpen(false)}
+
+                  <button
+                    onClick={() => {
+                      handleSignOut();
+                      setMobileMenuOpen(false);
+                    }}
+                    className="flex items-center space-x-3 px-4 py-3 text-red-600 hover:bg-red-50 w-full text-left transition-colors"
                   >
-                    <Plus className="h-5 w-5 mr-2" />
-                    New Request
+                    <LogOut className="h-5 w-5" />
+                    <span>Sign Out</span>
+                  </button>
+                </>
+              ) : (
+                <div className="px-4 space-y-2">
+                  <Link
+                    href="/auth/login"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="block w-full text-center py-3 border border-indigo-600 text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors"
+                  >
+                    Sign In
+                  </Link>
+                  <Link
+                    href="/auth/signup"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="block w-full text-center py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition-all"
+                  >
+                    Get Started Free
                   </Link>
                 </div>
-
-                {userProfile?.is_judge && userStats.pendingVerdicts > 0 && (
-                  <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 mb-6">
-                    <Link
-                      href="/judge"
-                      className="flex items-center justify-between text-purple-700 min-h-[48px]"
-                      onClick={() => setMobileMenuOpen(false)}
-                    >
-                      <div className="flex items-center">
-                        <Bell className="h-5 w-5 mr-3" />
-                        <span className="font-medium text-base">Review Queue</span>
-                      </div>
-                      <span className="bg-purple-100 text-purple-800 px-3 py-2 rounded-full text-sm font-bold">
-                        {userStats.pendingVerdicts}
-                      </span>
-                    </Link>
-                  </div>
-                )}
-                
-                <Link
-                  href="/decisions"
-                  className="block py-4 text-gray-700 hover:text-indigo-600 text-lg font-medium border-b border-gray-200 min-h-[48px] flex items-center"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  My Decisions
-                </Link>
-                <Link
-                  href="/judge"
-                  className="block py-4 text-gray-700 hover:text-indigo-600 text-lg font-medium border-b border-gray-200 min-h-[48px] flex items-center"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Review
-                </Link>
-                <Link
-                  href="/account"
-                  className="block py-4 text-gray-700 hover:text-indigo-600 text-lg font-medium min-h-[48px] flex items-center"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Account
-                </Link>
-              </>
-            ) : (
-              <>
-                <Link
-                  href="/feed"
-                  className="block py-4 text-gray-700 hover:text-indigo-600 text-lg font-medium border-b border-gray-200 min-h-[48px] flex items-center"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Discover
-                </Link>
-                <Link
-                  href="/start?mode=roast"
-                  className="block py-4 text-red-600 hover:text-red-700 text-lg font-semibold border-b border-gray-200 min-h-[48px] flex items-center"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  🔥 Roast Me
-                </Link>
-                <Link
-                  href="/verification"
-                  className="block py-4 text-gray-700 hover:text-indigo-600 text-lg font-medium border-b border-gray-200 min-h-[48px] flex items-center"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Become Verified Expert
-                </Link>
-                <Link
-                  href="/auth/login"
-                  className="block py-4 text-gray-700 hover:text-indigo-600 text-lg font-medium border-b border-gray-200 min-h-[48px] flex items-center"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Sign In
-                </Link>
-                <Link
-                  href="/auth/signup"
-                  className="block py-4 text-indigo-600 font-semibold text-lg min-h-[48px] flex items-center"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Get Started
-                </Link>
-              </>
-            )}
+              )}
+            </div>
           </div>
         )}
       </div>
     </nav>
   );
 }
-

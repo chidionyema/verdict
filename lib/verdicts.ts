@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database, VerdictRequest, VerdictResponse } from './database.types';
+import { createClient } from '@/lib/supabase/client';
 
 type DbClient = SupabaseClient<Database>;
 
@@ -272,4 +273,138 @@ export async function addJudgeVerdict(
   return { verdict, updatedRequest };
 }
 
+// Interface for the new submitRequest function used by the create page
+export interface SubmitRequestInput {
+  requestType: 'verdict' | 'comparison' | 'split_test';
+  category: string;
+  context: string;
+  textContent?: string;
+  mediaType: 'photo' | 'text' | 'audio';
+  targetVerdictCount: number;
+  creditsToUse: number;
+  files?: File[];
+  specificQuestions?: string[];
+  demographicFilters?: any;
+}
 
+export interface SubmitRequestResult {
+  success: boolean;
+  requestId?: string;
+  error?: string;
+}
+
+/**
+ * Client-side function to submit a new request using the create form
+ */
+export async function submitRequest(input: SubmitRequestInput): Promise<SubmitRequestResult> {
+  try {
+    const supabase = createClient();
+    
+    // Get current user
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return { success: false, error: 'Authentication required' };
+    }
+
+    let mediaUrl: string | null = null;
+
+    // Handle file upload if files are provided
+    if (input.files && input.files.length > 0) {
+      const file = input.files[0]; // Use first file for now
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+      const filePath = input.requestType === 'comparison' || input.requestType === 'split_test' 
+        ? `comparison-requests/${fileName}`
+        : `verdict-requests/${fileName}`;
+
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('user-content')
+        .upload(filePath, file);
+
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        return { success: false, error: 'Failed to upload file' };
+      }
+
+      // Get public URL
+      const { data: publicUrl } = supabase.storage
+        .from('user-content')
+        .getPublicUrl(filePath);
+
+      mediaUrl = publicUrl.publicUrl;
+    }
+
+    // Determine the appropriate table based on request type
+    let tableName: string;
+    let requestData: any;
+
+    switch (input.requestType) {
+      case 'comparison':
+        tableName = 'comparison_requests';
+        requestData = {
+          user_id: user.id,
+          title: `Comparison: ${input.category}`,
+          description: input.context,
+          option_a_url: mediaUrl,
+          option_b_url: input.files?.[1] ? 'placeholder' : null, // Handle second file separately
+          category: input.category,
+          target_responses: input.targetVerdictCount,
+          credits_used: input.creditsToUse,
+          status: 'open',
+        };
+        break;
+
+      case 'split_test':
+        tableName = 'split_test_requests';
+        requestData = {
+          user_id: user.id,
+          title: `Split Test: ${input.category}`,
+          description: input.context,
+          image_a_url: mediaUrl,
+          image_b_url: input.files?.[1] ? 'placeholder' : null, // Handle second file separately
+          target_demographics: input.demographicFilters || {},
+          target_responses: input.targetVerdictCount,
+          credits_used: input.creditsToUse,
+          status: 'open',
+        };
+        break;
+
+      default: // verdict
+        // Use existing createVerdictRequest function
+        const result = await createVerdictRequest(supabase, {
+          userId: user.id,
+          email: user.email || null,
+          category: input.category as any,
+          media_type: input.mediaType as any,
+          media_url: mediaUrl,
+          text_content: input.textContent || null,
+          context: input.context,
+          targetVerdictCount: input.targetVerdictCount,
+          creditsToCharge: input.creditsToUse,
+        });
+
+        return { success: true, requestId: result.request.id };
+    }
+
+    // For comparison and split test requests, insert directly
+    const { data: newRequest, error: insertError } = await (supabase as any)
+      .from(tableName)
+      .insert(requestData)
+      .select('id')
+      .single();
+
+    if (insertError || !newRequest) {
+      console.error('Insert error:', insertError);
+      return { success: false, error: 'Failed to create request' };
+    }
+
+    return { success: true, requestId: newRequest.id };
+    
+  } catch (error) {
+    console.error('Submit request error:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    };
+  }
+}
