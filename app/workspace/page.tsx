@@ -23,7 +23,6 @@ import {
   Award,
   Target,
   Zap,
-  Volume2,
   Plus,
   Grid,
   List,

@@ -110,21 +110,23 @@ async function fetchVerdictRequests(supabase: any, userId: string, searchParams:
   let query = supabase
     .from('verdict_requests')
     .select(`
-      id, 
-      category, 
-      subcategory, 
-      media_type, 
-      media_url, 
-      text_content, 
-      context, 
-      status, 
-      target_verdict_count, 
-      received_verdict_count, 
+      id,
+      category,
+      subcategory,
+      media_type,
+      media_url,
+      text_content,
+      context,
+      status,
+      target_verdict_count,
+      received_verdict_count,
       created_at,
       request_tier,
       folder_id,
-      verdict_count:verdicts(count),
-      avg_rating:verdicts(rating)
+      verdicts (
+        id,
+        rating
+      )
     `)
     .eq('user_id', userId)
     .is('deleted_at', null);
@@ -139,22 +141,24 @@ async function fetchVerdictRequests(supabase: any, userId: string, searchParams:
 
   if (error) throw error;
 
-  // Process the data to calculate averages
+  // Process the data to calculate verdict counts and averages
   return (requests || []).map((request: any) => {
-    const verdictCount = Array.isArray(request.verdict_count) 
-      ? request.verdict_count.length 
-      : 0;
-    
-    const ratings = Array.isArray(request.avg_rating)
-      ? request.avg_rating.map((v: any) => v.rating).filter((r: any) => r !== null)
-      : [];
-    
-    const avgRating = ratings.length > 0 
+    const verdicts = Array.isArray(request.verdicts) ? request.verdicts : [];
+    const verdictCount = verdicts.length;
+
+    const ratings = verdicts
+      .map((v: any) => v.rating)
+      .filter((r: any) => r !== null && r !== undefined);
+
+    const avgRating = ratings.length > 0
       ? ratings.reduce((sum: number, rating: number) => sum + rating, 0) / ratings.length
       : null;
 
+    // Remove the verdicts array from the response to keep it clean
+    const { verdicts: _verdicts, ...rest } = request;
+
     return {
-      ...request,
+      ...rest,
       verdict_count: verdictCount,
       avg_rating: avgRating
     };
