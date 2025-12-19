@@ -12,10 +12,12 @@ import { I18nProvider } from "@/components/i18n-provider";
 import { PageErrorBoundary } from "@/components/ui/error-boundary";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { AccessibilityWrapper } from "@/components/accessibility/AccessibilityWrapper";
+import { SmartEntryPoint } from "@/components/routing/SmartEntryPoint";
 import SafariViewportFix from "@/components/SafariViewportFix";
 import { isRTL, type Locale, locales } from "@/i18n.config";
 import { generateAlternateLinks } from "@/lib/i18n-metadata";
 import { NORTH_STAR_TAGLINE } from "@/lib/copy";
+import MonitoringProvider from "./monitoring-provider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -113,14 +115,17 @@ export default async function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <I18nProvider locale={locale} messages={messages}>
-          <SafariViewportFix />
-          <AccessibilityWrapper>
-            <Navigation />
-            <PageErrorBoundary>
-              <main id="main-content" tabIndex={-1} className="focus:outline-none">
-                {children}
-              </main>
-            </PageErrorBoundary>
+          <MonitoringProvider>
+            <SafariViewportFix />
+            <AccessibilityWrapper>
+              <SmartEntryPoint enableLogging={process.env.NODE_ENV === 'development'}>
+              <Navigation />
+              <PageErrorBoundary>
+                <main id="main-content" tabIndex={-1} className="focus:outline-none">
+                  {children}
+                </main>
+              </PageErrorBoundary>
+            </SmartEntryPoint>
           </AccessibilityWrapper>
 
           {/* Global footer with legal links */}
@@ -157,6 +162,7 @@ export default async function RootLayout({
           <ToastContainer />
           <CookieConsentBanner />
           <AnalyticsProvider />
+          </MonitoringProvider>
         </I18nProvider>
       </body>
     </html>

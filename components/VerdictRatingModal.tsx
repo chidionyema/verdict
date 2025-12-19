@@ -50,11 +50,12 @@ export default function VerdictRatingModal({
             key={star}
             type="button"
             onClick={() => onChange(star)}
-            className={`p-1 rounded ${
+            className={`min-h-[44px] min-w-[44px] p-2 rounded flex items-center justify-center ${
               star <= value 
                 ? 'text-yellow-400' 
                 : 'text-gray-300 hover:text-yellow-300'
             } transition-colors`}
+            aria-label={`Rate ${star} star${star !== 1 ? 's' : ''}`}
           >
             <Star className="h-6 w-6 fill-current" />
           </button>
@@ -123,7 +124,8 @@ export default function VerdictRatingModal({
           <h3 className="text-lg font-semibold">Rate This Verdict</h3>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600"
+            className="text-gray-400 hover:text-gray-600 min-h-[44px] min-w-[44px] p-2 flex items-center justify-center"
+            aria-label="Close modal"
           >
             <X className="h-5 w-5" />
           </button>

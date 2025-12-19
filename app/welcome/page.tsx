@@ -5,6 +5,8 @@ import { useState, useEffect } from 'react';
 export const dynamic = 'force-dynamic';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { OnboardingFlow } from '@/components/onboarding/OnboardingFlow';
+import { getUserOnboarding } from '@/lib/onboarding';
 import { ChevronRight, User, CreditCard, Camera, CheckCircle, ArrowRight, AlertCircle } from 'lucide-react';
 
 interface Profile {
@@ -26,6 +28,7 @@ interface OnboardingStep {
 export default function WelcomePage() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
+  const [useNewOnboarding, setUseNewOnboarding] = useState(true);
   const [profile, setProfile] = useState<Profile>({
     display_name: '',
     country: '',
@@ -60,8 +63,9 @@ export default function WelcomePage() {
       
       if (profileData) {
         setProfile(profileData as Profile);
-        // If already completed onboarding, redirect to dashboard
+        // If already completed onboarding, redirect to appropriate destination
         if ((profileData as any).onboarding_completed) {
+          const destination = await getUserOnboarding(user.id);
           router.push('/dashboard');
           return;
         }
@@ -131,11 +135,26 @@ export default function WelcomePage() {
     },
   ];
 
+  const handleOnboardingComplete = () => {
+    router.push('/dashboard');
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-indigo-600"></div>
       </div>
+    );
+  }
+
+  // Use new onboarding flow
+  if (useNewOnboarding && user) {
+    return (
+      <OnboardingFlow 
+        user={user} 
+        onComplete={handleOnboardingComplete}
+        allowSkip={false}
+      />
     );
   }
 

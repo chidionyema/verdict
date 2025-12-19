@@ -2,6 +2,8 @@
 
 import { useRouter } from 'next/navigation';
 import { TouchButton } from '@/components/ui/touch-button';
+import { updatePreferences } from '@/lib/routing';
+import { createClient } from '@/lib/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { useLocalizedPricing } from '@/hooks/use-pricing';
 import { 
@@ -37,13 +39,34 @@ const successStories = [
 export default function StartPage() {
   const router = useRouter();
   const pricing = useLocalizedPricing();
+  const supabase = createClient();
 
-  const handleCommunityPath = () => {
-    router.push('/start-simple?visibility=public');
+  const handleCommunityPath = async () => {
+    // Update user preference
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await updatePreferences(user.id, { preferred_path: 'community' });
+      }
+    } catch (error) {
+      console.error('Error updating preferences:', error);
+    }
+    
+    router.push('/submit-unified?mode=community');
   };
 
-  const handleExpressPath = () => {
-    router.push('/start-simple?visibility=private');
+  const handleExpressPath = async () => {
+    // Update user preference
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await updatePreferences(user.id, { preferred_path: 'private' });
+      }
+    } catch (error) {
+      console.error('Error updating preferences:', error);
+    }
+    
+    router.push('/submit-unified?mode=private');
   };
 
   return (

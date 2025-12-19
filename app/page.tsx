@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { SmartLink } from "@/components/routing/SmartEntryPoint";
 import Script from "next/script";
 import { DynamicHero } from "@/components/personalization/DynamicHero";
 import { FeaturesComparison } from "@/components/landing/features-comparison";
@@ -330,8 +331,8 @@ export default function HomePage() {
               <div className="space-y-6">
                 {/* Dual Path CTAs */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-3xl mx-auto">
-                  <button
-                    onClick={() => router.push('/start')}
+                  <SmartLink
+                    href="/start"
                     className="bg-white text-indigo-600 px-8 py-5 rounded-2xl text-lg font-bold hover:bg-gray-50 transition-all duration-300 shadow-xl hover:shadow-2xl transform hover:-translate-y-1 group"
                   >
                     <div className="flex flex-col items-center">
@@ -341,10 +342,10 @@ export default function HomePage() {
                       </span>
                       <span className="text-sm opacity-80 mt-1">Review 3 → Earn 1 credit</span>
                     </div>
-                  </button>
+                  </SmartLink>
                   
-                  <button
-                    onClick={() => router.push('/start')}
+                  <SmartLink
+                    href="/submit"
                     className="bg-indigo-800 text-white border-2 border-white/30 px-8 py-5 rounded-2xl text-lg font-bold hover:bg-indigo-900 transition-all duration-300 shadow-xl hover:shadow-2xl transform hover:-translate-y-1 group"
                   >
                     <div className="flex flex-col items-center">
@@ -354,7 +355,7 @@ export default function HomePage() {
                       </span>
                       <span className="text-sm opacity-90 mt-1">Skip judging → Instant</span>
                     </div>
-                  </button>
+                  </SmartLink>
                 </div>
                 
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-8 text-indigo-100 animate-fade-in-up">
@@ -386,13 +387,13 @@ export default function HomePage() {
 
       {/* Mobile sticky CTA */}
       <div className="fixed bottom-4 left-0 right-0 px-4 sm:hidden z-40">
-        <button
-          onClick={() => router.push('/start')}
+        <SmartLink
+          href="/start"
           className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-4 rounded-xl shadow-xl font-semibold text-base flex items-center justify-center gap-2 min-h-[48px] backdrop-blur-sm border border-white/20 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-0.5"
         >
           Start judging (free)
           <span className="text-lg">→</span>
-        </button>
+        </SmartLink>
       </div>
 
       {/* CSS Animations */}

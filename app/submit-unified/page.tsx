@@ -70,14 +70,32 @@ export default function UnifiedSubmitPage() {
           });
           
           if (response.ok) {
-            setStep('success');
+            const data = await response.json();
+            if (data.success) {
+              setStep('success');
+            } else {
+              // Payment succeeded but submission failed - need manual intervention
+              toast.error('Payment received but submission failed. Please contact support with session ID: ' + sessionId);
+              setStep('details'); // Return to form to retry
+            }
           } else {
-            console.error('Failed to process submission after payment');
-            setStep('success'); // Still show success since payment went through
+            const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+            console.error('Failed to process submission after payment:', errorData);
+            
+            // Payment succeeded but submission processing failed - critical issue
+            toast.error('Payment received but submission failed. Please contact support immediately with session ID: ' + sessionId);
+            
+            // Don't show success - show error state or return to form
+            setStep('details'); // Allow retry or contact support
           }
         } catch (error) {
           console.error('Error processing submission:', error);
-          setStep('success'); // Still show success since payment went through
+          
+          // Payment succeeded but we can't verify submission - critical issue
+          toast.error('Payment received but unable to verify submission. Please contact support with session ID: ' + sessionId);
+          
+          // Don't show success - show error state
+          setStep('details'); // Return to form, don't proceed to success
         }
         return;
       }

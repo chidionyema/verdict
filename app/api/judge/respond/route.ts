@@ -5,9 +5,10 @@ import { addJudgeVerdict } from '@/lib/verdicts';
 import { verdictRateLimiter, checkRateLimit } from '@/lib/rate-limiter';
 import { sendRequestLifecycleEmail } from '@/lib/notifications';
 import { log } from '@/lib/logger';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
 
 // POST /api/judge/respond - Submit a verdict
-export async function POST(request: NextRequest) {
+const POST_Handler = async (request: NextRequest) => {
   try {
     const supabase = await createClient();
 
@@ -205,3 +206,5 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+export const POST = withRateLimit(POST_Handler, rateLimitPresets.judge);

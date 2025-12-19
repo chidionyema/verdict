@@ -388,7 +388,11 @@ export function EnhancedComparisonModal({
               <Scale className="h-6 w-6" />
               {template.title}
             </h2>
-            <button onClick={resetModal} className="text-white/80 hover:text-white transition-colors">
+            <button 
+              onClick={resetModal} 
+              className="text-white/80 hover:text-white transition-colors"
+              aria-label="Close comparison modal"
+            >
               <X className="h-6 w-6" />
             </button>
           </div>

@@ -340,7 +340,7 @@ export default function Navigation() {
                     <div className="absolute top-full mt-2 right-0 w-64 bg-white rounded-xl shadow-xl border border-gray-200 py-2 z-50">
                       <div className="px-4 py-2 border-b border-gray-100">
                         <p className="text-sm font-medium text-gray-900">Quick Create</p>
-                        <p className="text-xs text-gray-500">Choose your feedback type</p>
+                        <p className="text-xs text-gray-700">Choose your feedback type</p>
                       </div>
                       
                       <Link
@@ -351,7 +351,7 @@ export default function Navigation() {
                         <MessageSquare className="h-5 w-5 text-blue-600" />
                         <div>
                           <p className="font-medium text-gray-900">Standard Feedback</p>
-                          <p className="text-xs text-gray-500">Get expert opinions</p>
+                          <p className="text-xs text-gray-700">Get expert opinions</p>
                         </div>
                       </Link>
                       
@@ -363,7 +363,7 @@ export default function Navigation() {
                         <Scale className="h-5 w-5 text-purple-600" />
                         <div>
                           <p className="font-medium text-gray-900">A/B Comparison</p>
-                          <p className="text-xs text-gray-500">Compare two options</p>
+                          <p className="text-xs text-gray-700">Compare two options</p>
                         </div>
                         <span className="ml-auto text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full">
                           Advanced
@@ -378,7 +378,7 @@ export default function Navigation() {
                         <RotateCcw className="h-5 w-5 text-orange-600" />
                         <div>
                           <p className="font-medium text-gray-900">Split Test</p>
-                          <p className="text-xs text-gray-500">Test with demographics</p>
+                          <p className="text-xs text-gray-700">Test with demographics</p>
                         </div>
                         <span className="ml-auto text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full">
                           Pro
@@ -408,10 +408,10 @@ export default function Navigation() {
                 </div>
 
                 {/* Notifications */}
-                <button className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors">
+                <button className="relative min-h-[44px] min-w-[44px] p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2" aria-label="View notifications">
                   <Bell className="h-5 w-5" />
                   {userStats.activeRequests > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                    <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center font-medium">
                       {userStats.activeRequests}
                     </span>
                   )}
@@ -421,7 +421,8 @@ export default function Navigation() {
                 <div className="relative" ref={profileDropdownRef}>
                   <button
                     onClick={() => setShowProfileDropdown(!showProfileDropdown)}
-                    className="flex items-center space-x-2 hover:bg-gray-100 rounded-lg p-2 transition-colors"
+                    className="flex items-center space-x-2 hover:bg-gray-100 rounded-lg p-2 transition-colors min-h-[44px] focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                    aria-label="Open profile menu"
                   >
                     {userProfile?.avatar_url ? (
                       <img
@@ -443,7 +444,7 @@ export default function Navigation() {
                         <p className="font-medium text-gray-900">
                           {userProfile?.display_name || user.email?.split('@')[0] || 'User'}
                         </p>
-                        <p className="text-sm text-gray-500">{user.email}</p>
+                        <p className="text-sm text-gray-700">{user.email}</p>
                         
                         {/* Quick Stats */}
                         <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
@@ -546,7 +547,8 @@ export default function Navigation() {
           <div className="md:hidden flex items-center">
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+              className="min-h-[44px] min-w-[44px] p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+              aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
             >
               {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </button>
@@ -571,7 +573,7 @@ export default function Navigation() {
                   <item.icon className="h-5 w-5" />
                   <span>{item.label}</span>
                   {item.badge && (
-                    <span className="ml-auto bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                    <span className="ml-auto bg-red-600 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-medium">
                       {item.badge}
                     </span>
                   )}

@@ -205,14 +205,14 @@ export function InsufficientCreditsModal({
                       )}
                       <div className="text-right">
                         <p className="font-bold text-gray-900">${pkg.price.toFixed(2)}</p>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-gray-700">
                           ${(pkg.price / totalCredits).toFixed(2)}/credit
                         </p>
                       </div>
                       {loading === pkg.id ? (
                         <div className="w-5 h-5 border-2 border-indigo-600/30 border-t-indigo-600 rounded-full animate-spin" />
                       ) : (
-                        <ArrowRight className="h-5 w-5 text-gray-400" />
+                        <ArrowRight className="h-5 w-5 text-gray-600" />
                       )}
                     </div>
                   </div>
@@ -232,7 +232,7 @@ export function InsufficientCreditsModal({
             </Link>
             <button
               onClick={onClose}
-              className="text-gray-500 hover:text-gray-700"
+              className="text-gray-700 hover:text-gray-900"
             >
               Cancel
             </button>
@@ -240,7 +240,7 @@ export function InsufficientCreditsModal({
 
           {/* Trust badges */}
           <div className="mt-6 pt-6 border-t border-gray-100">
-            <div className="flex items-center justify-center gap-6 text-xs text-gray-500">
+            <div className="flex items-center justify-center gap-6 text-xs text-gray-700">
               <div className="flex items-center gap-1">
                 <CreditCard className="h-4 w-4" />
                 <span>Secure payment</span>

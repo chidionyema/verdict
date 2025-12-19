@@ -1,4 +1,4 @@
-interface ModerationResult {
+export interface ModerationResult {
   approved: boolean;
   reason?: string;
   confidence: number;

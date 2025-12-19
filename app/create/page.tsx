@@ -793,7 +793,12 @@ export default function CreateRequestPage() {
                   </div>
                   <p className="text-orange-600 text-sm mt-1">
                     You need {formData.creditsToUse} credits but only have {profile?.credits || 0}.
-                    <button className="text-orange-700 underline ml-1">Buy more credits</button>
+                    <button 
+                      className="text-orange-700 underline ml-1"
+                      aria-label="Purchase additional credits to complete request"
+                    >
+                      Buy more credits
+                    </button>
                   </p>
                 </div>
               )}

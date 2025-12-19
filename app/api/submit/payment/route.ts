@@ -6,8 +6,16 @@ import { log } from '@/lib/logger';
 
 // POST /api/submit/payment - Create Stripe checkout for direct submission payment
 export async function POST(request: NextRequest) {
+  const operationId = Math.random().toString(36).substring(2, 15);
+  const startTime = Date.now();
+  
   try {
     const supabase = await createClient();
+
+    log.info('Creating submission payment checkout', {
+      operationId,
+      timestamp: new Date().toISOString()
+    });
 
     const {
       data: { user },
@@ -15,13 +23,31 @@ export async function POST(request: NextRequest) {
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
+      log.error('Authentication failed for submission payment', authError, {
+        operationId,
+        severity: 'medium'
+      });
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await request.json();
     const { submissionData } = body;
 
+    log.info('Processing submission payment request', {
+      userId: user.id,
+      operationId,
+      hasSubmissionData: !!submissionData,
+      questionLength: submissionData?.question?.length || 0,
+      category: submissionData?.category
+    });
+
     if (!submissionData || !submissionData.question) {
+      log.error('Invalid submission data provided', null, {
+        operationId,
+        userId: user.id,
+        submissionData: submissionData,
+        severity: 'medium'
+      });
       return NextResponse.json({ error: 'Invalid submission data' }, { status: 400 });
     }
 
@@ -67,9 +93,22 @@ export async function POST(request: NextRequest) {
         submission_type: 'private',
         submission_question: submissionData.question.slice(0, 100),
         submission_category: submissionData.category || 'general',
+        operation_id: operationId,
+        created_at: new Date().toISOString()
       },
       success_url: `${origin}/submit-unified?success=true&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${origin}/submit-unified?step=payment&canceled=true`,
+    });
+
+    const processingTime = Date.now() - startTime;
+    log.info('Stripe checkout session created successfully', {
+      operationId,
+      userId: user.id,
+      sessionId: session.id,
+      amount: priceInCents,
+      currency: 'gbp',
+      processingTimeMs: processingTime,
+      category: submissionData.category
     });
 
     return NextResponse.json({ 
@@ -78,14 +117,23 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    log.error('Submission payment creation failed', error);
-
+    const processingTime = Date.now() - startTime;
     const isError = error instanceof Error;
     const message = isError ? error.message : 'Unknown error';
+
+    log.error('Submission payment creation failed', error, {
+      operationId,
+      processingTimeMs: processingTime,
+      errorMessage: message,
+      timestamp: new Date().toISOString(),
+      severity: 'high',
+      actionRequired: 'Investigate payment creation failure'
+    });
 
     return NextResponse.json(
       {
         error: 'Internal server error',
+        support_id: operationId, // Provide support ID for user reference
         details: process.env.NODE_ENV === 'production' ? undefined : message,
       },
       { status: 500 }

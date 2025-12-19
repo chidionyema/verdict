@@ -247,6 +247,7 @@ function ErrorModal({
           <button
             onClick={onDismiss}
             className="text-gray-400 hover:text-gray-600 p-1"
+            aria-label="Dismiss error message"
           >
             <X className="w-5 h-5" />
           </button>
@@ -319,6 +320,7 @@ function UndoRedoControls() {
           }
         `}
         title="Undo (Cmd/Ctrl + Z)"
+        aria-label="Undo last action"
       >
         <Undo2 className="w-5 h-5" />
       </button>
@@ -335,6 +337,7 @@ function UndoRedoControls() {
           }
         `}
         title="Redo (Cmd/Ctrl + Shift + Z)"
+        aria-label="Redo last undone action"
       >
         <Redo2 className="w-5 h-5" />
       </button>
@@ -404,7 +407,11 @@ export function SuccessToast({ message, onDismiss }: { message: string; onDismis
     <div className="fixed bottom-6 left-6 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg flex items-center gap-3 animate-slide-up z-50">
       <CheckCircle className="w-5 h-5" />
       <span className="font-medium">{message}</span>
-      <button onClick={onDismiss} className="ml-2 hover:bg-green-700 p-1 rounded">
+      <button 
+        onClick={onDismiss} 
+        className="ml-2 hover:bg-green-700 p-1 rounded"
+        aria-label="Dismiss success message"
+      >
         <X className="w-4 h-4" />
       </button>
     </div>

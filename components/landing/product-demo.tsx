@@ -144,7 +144,12 @@ const DEMO_STEPS = [
                   <span className="text-sm font-bold text-gray-900">{verdict.score}/10</span>
                 </div>
                 <p className="text-sm text-gray-700 line-clamp-2">{verdict.text}</p>
-                <button className="text-xs text-indigo-600 font-medium mt-2">Read full verdict →</button>
+                <button 
+                  className="text-xs text-indigo-600 font-medium mt-2"
+                  aria-label="Read full verdict text"
+                >
+                  Read full verdict →
+                </button>
               </div>
             ))}
           </div>

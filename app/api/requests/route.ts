@@ -12,10 +12,12 @@ import { createVerdictRequest } from '@/lib/verdicts';
 import { requestRateLimiter, generalApiRateLimiter, checkRateLimit } from '@/lib/rate-limiter';
 import { sendRequestLifecycleEmail } from '@/lib/notifications';
 import { moderateRequest } from '@/lib/moderation-free';
+import { moderateContentWithAI } from '@/lib/moderation/ai-moderation';
 import { ExpertRoutingService } from '@/lib/expert-routing';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
 
 // GET /api/requests - List current user's requests (unified: verdict, comparison, split test)
-export async function GET(request: NextRequest) {
+const GET_Handler = async (request: NextRequest) => {
   const startTime = performance.now();
   try {
     const supabase = await createClient();
@@ -312,8 +314,10 @@ async function fetchSplitTestRequestsForUser(supabase: any, userId: string) {
   }
 }
 
+export const GET = withRateLimit(GET_Handler, rateLimitPresets.standard);
+
 // POST /api/requests - Create a new verdict request
-export async function POST(request: NextRequest) {
+const POST_Handler = async (request: NextRequest) => {
   try {
     const supabase = await createClient();
 
@@ -415,16 +419,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Content moderation check
-    const moderationResult = moderateRequest(
-      context,
-      media_type,
-      media_type === 'photo' ? media_url?.split('/').pop() : undefined,
-      undefined // file size not available here, but checked on upload
-    );
+    // AI-powered content moderation with fallback
+    let moderationResult;
+    try {
+      moderationResult = await moderateContentWithAI(
+        context,
+        media_type === 'photo' ? media_url : undefined,
+        media_type === 'photo' ? media_url?.split('/').pop() : undefined
+      );
+    } catch (aiError) {
+      log.warn('AI moderation failed, falling back to rule-based', { error: aiError });
+      moderationResult = moderateRequest(
+        context,
+        media_type,
+        media_type === 'photo' ? media_url?.split('/').pop() : undefined,
+        undefined
+      );
+    }
 
     if (!moderationResult.approved) {
-      log.info('Content moderation rejected request', { reason: moderationResult.reason });
+      log.info('Content moderation rejected request', { 
+        reason: moderationResult.reason,
+        confidence: moderationResult.confidence,
+      });
       return NextResponse.json(
         {
           error: 'Content does not meet community guidelines',
@@ -518,3 +535,5 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+export const POST = withRateLimit(POST_Handler, rateLimitPresets.strict);

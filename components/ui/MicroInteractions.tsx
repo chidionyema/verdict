@@ -70,7 +70,7 @@ export function MagneticButton({
     <motion.button
       ref={ref}
       style={{ x: springX, y: springY }}
-      className={`relative transform transition-transform hover:scale-105 active:scale-95 ${className}`}
+      className={`relative transform transition-transform hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${className}`}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
       onClick={onClick}

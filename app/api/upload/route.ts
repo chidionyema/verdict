@@ -3,9 +3,10 @@ import { createClient } from '@/lib/supabase/server';
 import { uploadRateLimiter, checkRateLimit } from '@/lib/rate-limiter';
 import { v4 as uuidv4 } from 'uuid';
 import { log } from '@/lib/logger';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
 
 // POST /api/upload - Upload image to Supabase Storage
-export async function POST(request: NextRequest) {
+const POST_Handler = async (request: NextRequest) => {
   try {
     const supabase = await createClient();
 
@@ -123,3 +124,5 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+export const POST = withRateLimit(POST_Handler, rateLimitPresets.upload);

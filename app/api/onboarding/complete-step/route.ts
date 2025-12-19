@@ -1,0 +1,143 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@/lib/supabase/server';
+import { completeOnboardingStep, type OnboardingState } from '@/lib/onboarding';
+import { log } from '@/lib/logger';
+
+// POST /api/onboarding/complete-step - Complete an onboarding step
+export async function POST(request: NextRequest) {
+  try {
+    const supabase = await createClient();
+    
+    // Verify user is authenticated
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { stepId } = body;
+
+    // Validate step ID
+    const validSteps: (keyof OnboardingState)[] = [
+      'profile_completed',
+      'tutorial_completed', 
+      'guidelines_accepted',
+      'first_submission_completed',
+      'first_judgment_completed',
+      'email_verified',
+      'safety_training_completed'
+    ];
+
+    if (!stepId || !validSteps.includes(stepId)) {
+      return NextResponse.json({ 
+        error: 'Invalid step ID',
+        validSteps
+      }, { status: 400 });
+    }
+
+    log.info('Completing onboarding step', {
+      userId: user.id,
+      stepId,
+      userEmail: user.email
+    });
+
+    // Complete the step
+    const success = await completeOnboardingStep(user.id, stepId);
+    
+    if (!success) {
+      log.error('Failed to complete onboarding step', null, {
+        userId: user.id,
+        stepId,
+        severity: 'medium'
+      });
+      return NextResponse.json({ 
+        error: 'Failed to complete step' 
+      }, { status: 500 });
+    }
+
+    // Get updated onboarding state
+    const { data: updatedProfile } = await supabase
+      .from('profiles')
+      .select(`
+        profile_completed,
+        tutorial_completed,
+        guidelines_accepted,
+        first_submission_completed,
+        first_judgment_completed,
+        email_verified,
+        safety_training_completed,
+        onboarding_completed
+      `)
+      .eq('id', user.id)
+      .single();
+
+    log.info('Onboarding step completed successfully', {
+      userId: user.id,
+      stepId,
+      onboardingCompleted: (updatedProfile as any)?.onboarding_completed || false
+    });
+
+    return NextResponse.json({
+      success: true,
+      stepCompleted: stepId,
+      onboardingState: updatedProfile,
+      onboardingCompleted: (updatedProfile as any)?.onboarding_completed || false
+    });
+
+  } catch (error) {
+    log.error('Onboarding step completion failed', error, {
+      severity: 'high'
+    });
+    
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+// GET /api/onboarding/complete-step - Get user's onboarding state
+export async function GET(request: NextRequest) {
+  try {
+    const supabase = await createClient();
+    
+    // Verify user is authenticated
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Get onboarding state
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select(`
+        profile_completed,
+        tutorial_completed,
+        guidelines_accepted,
+        first_submission_completed,
+        first_judgment_completed,
+        email_verified,
+        safety_training_completed,
+        onboarding_completed,
+        guidelines_accepted_at,
+        safety_training_completed_at,
+        onboarding_completed_at
+      `)
+      .eq('id', user.id)
+      .single();
+
+    return NextResponse.json({
+      success: true,
+      onboardingState: profile || {},
+      userId: user.id
+    });
+
+  } catch (error) {
+    log.error('Failed to get onboarding state', error);
+    
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}

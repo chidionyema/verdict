@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { sendPasswordResetEmail } from '@/lib/email';
 import { log } from '@/lib/logger';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
 
 // POST /api/auth/reset-password - Send password reset email
-export async function POST(request: NextRequest) {
+const POST_Handler = async (request: NextRequest) => {
   try {
     const supabase: any = await createClient();
     const body = await request.json();
@@ -64,8 +65,10 @@ export async function POST(request: NextRequest) {
   }
 }
 
+export const POST = withRateLimit(POST_Handler, rateLimitPresets.strict);
+
 // PATCH /api/auth/reset-password - Reset password with token
-export async function PATCH(request: NextRequest) {
+const PATCH_Handler = async (request: NextRequest) => {
   try {
     const supabase: any = await createClient();
     const body = await request.json();
@@ -156,3 +159,5 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+export const PATCH = withRateLimit(PATCH_Handler, rateLimitPresets.strict);

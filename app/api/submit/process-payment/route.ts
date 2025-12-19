@@ -6,12 +6,26 @@ import { log } from '@/lib/logger';
 
 // POST /api/submit/process-payment - Process submission after successful payment
 export async function POST(request: NextRequest) {
+  const startTime = Date.now();
+  const operationId = Math.random().toString(36).substring(2, 15);
+  
   try {
     const supabase = await createClient();
     const body = await request.json();
     const { session_id } = body;
 
+    log.info('Processing payment submission', {
+      sessionId: session_id,
+      operationId,
+      timestamp: new Date().toISOString()
+    });
+
     if (!session_id) {
+      log.error('Missing session ID in payment processing request', null, {
+        operationId,
+        body: body,
+        severity: 'medium'
+      });
       return NextResponse.json({ error: 'Session ID required' }, { status: 400 });
     }
 
@@ -27,24 +41,60 @@ export async function POST(request: NextRequest) {
     // Verify the session with Stripe
     const session = await stripe.checkout.sessions.retrieve(session_id);
     
+    log.info('Stripe session retrieved', {
+      sessionId: session_id,
+      paymentStatus: session.payment_status,
+      amountTotal: session.amount_total,
+      currency: session.currency,
+      metadata: session.metadata,
+      operationId
+    });
+    
     if (session.payment_status !== 'paid') {
+      log.error('Payment not completed for session', null, {
+        sessionId: session_id,
+        paymentStatus: session.payment_status,
+        operationId,
+        severity: 'high'
+      });
       return NextResponse.json({ error: 'Payment not completed' }, { status: 400 });
     }
 
     const userId = session.metadata?.user_id;
     if (!userId) {
+      log.error('User ID not found in session metadata', null, {
+        sessionId: session_id,
+        metadata: session.metadata,
+        operationId,
+        severity: 'critical'
+      });
       return NextResponse.json({ error: 'User ID not found in session' }, { status: 400 });
     }
 
     // Get user details
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user || user.id !== userId) {
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user || user.id !== userId) {
+      log.error('Authorization failed for payment processing', authError, {
+        sessionId: session_id,
+        requestedUserId: userId,
+        actualUserId: user?.id,
+        operationId,
+        severity: 'high'
+      });
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Extract submission data from session metadata
     const submissionQuestion = session.metadata?.submission_question || 'Private submission';
     const submissionCategory = (session.metadata?.submission_category as 'appearance' | 'profile' | 'writing' | 'decision') || 'decision';
+
+    log.info('Creating verdict request for paid submission', {
+      sessionId: session_id,
+      userId: user.id,
+      category: submissionCategory,
+      questionLength: submissionQuestion.length,
+      operationId
+    });
 
     // Create the verdict request
     const { request: createdRequest } = await createVerdictRequest(
@@ -66,6 +116,15 @@ export async function POST(request: NextRequest) {
       }
     );
 
+    const processingTime = Date.now() - startTime;
+    log.info('Payment processing completed successfully', {
+      sessionId: session_id,
+      userId: user.id,
+      requestId: createdRequest.id,
+      processingTimeMs: processingTime,
+      operationId
+    });
+
     return NextResponse.json({ 
       success: true,
       request_id: createdRequest.id,
@@ -73,10 +132,20 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    log.error('Payment processing failed', error);
+    const processingTime = Date.now() - startTime;
+    log.error('Payment processing failed', error, {
+      operationId,
+      processingTimeMs: processingTime,
+      timestamp: new Date().toISOString(),
+      severity: 'critical',
+      actionRequired: 'Investigate payment processing failure'
+    });
     
     return NextResponse.json(
-      { error: 'Failed to process submission' },
+      { 
+        error: 'Failed to process submission',
+        support_id: operationId // Provide support ID for user to reference
+      },
       { status: 500 }
     );
   }

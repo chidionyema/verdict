@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { log } from '@/lib/logger';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
 
 // GET /api/search - Search verdict requests with filters
-export async function GET(request: NextRequest) {
+const GET_Handler = async (request: NextRequest) => {
   try {
     const supabase: any = await createClient();
     const url = new URL(request.url);
@@ -93,3 +94,5 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+export const GET = withRateLimit(GET_Handler, rateLimitPresets.search);

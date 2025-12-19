@@ -105,7 +105,13 @@ export function HeroSection() {
             
             {/* Secondary option - smaller, below */}
             <p className="text-sm text-gray-500 text-center">
-              Or <button onClick={() => router.push('/submit')} className="text-indigo-600 hover:text-indigo-700 font-medium underline">pay {pricing.privatePrice} for instant private feedback</button>
+              Or <button 
+                onClick={() => router.push('/submit')} 
+                className="text-indigo-600 hover:text-indigo-700 font-medium underline"
+                aria-label="Get instant private feedback for a fee"
+              >
+                pay {pricing.privatePrice} for instant private feedback
+              </button>
             </p>
 
             {/* Single trust line - concise, benefit-focused */}
