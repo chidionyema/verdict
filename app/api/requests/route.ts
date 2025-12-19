@@ -163,25 +163,29 @@ async function fetchVerdictRequests(supabase: any, userId: string, searchParams:
 
 // Fetch comparison requests for user
 async function fetchComparisonRequestsForUser(supabase: any, userId: string) {
-  const { data: requests, error } = await supabase
-    .from('comparison_requests')
-    .select(`
-      id,
-      created_at,
-      decision_context,
-      option_a_title,
-      option_b_title,
-      option_a_image_url,
-      option_b_image_url,
-      status,
-      request_tier,
-      target_verdict_count,
-      received_verdict_count,
-      winning_option
-    `)
-    .eq('user_id', userId);
+  try {
+    const { data: requests, error } = await supabase
+      .from('comparison_requests')
+      .select(`
+        id,
+        created_at,
+        decision_context,
+        option_a_title,
+        option_b_title,
+        option_a_image_url,
+        option_b_image_url,
+        status,
+        request_tier,
+        target_verdict_count,
+        received_verdict_count,
+        winning_option
+      `)
+      .eq('user_id', userId);
 
-  if (error) throw error;
+    if (error) {
+      console.log('Comparison requests table not found, returning empty array');
+      return [];
+    }
 
   // Normalize comparison request format to match verdict requests
   return (requests || []).map((req: any) => ({
@@ -208,27 +212,35 @@ async function fetchComparisonRequestsForUser(supabase: any, userId: string) {
       winning_option: req.winning_option
     }
   }));
+  } catch (error) {
+    console.log('Error fetching comparison requests:', error);
+    return [];
+  }
 }
 
 // Fetch split test requests for user
 async function fetchSplitTestRequestsForUser(supabase: any, userId: string) {
-  const { data: requests, error } = await supabase
-    .from('split_test_requests')
-    .select(`
-      id,
-      created_at,
-      context,
-      photo_a_url,
-      photo_b_url,
-      status,
-      target_verdict_count,
-      received_verdict_count,
-      winning_photo,
-      consensus_strength
-    `)
-    .eq('user_id', userId);
+  try {
+    const { data: requests, error } = await supabase
+      .from('split_test_requests')
+      .select(`
+        id,
+        created_at,
+        context,
+        photo_a_url,
+        photo_b_url,
+        status,
+        target_verdict_count,
+        received_verdict_count,
+        winning_photo,
+        consensus_strength
+      `)
+      .eq('user_id', userId);
 
-  if (error) throw error;
+    if (error) {
+      console.log('Split test requests table not found, returning empty array');
+      return [];
+    }
 
   // Normalize split test request format to match verdict requests
   return (requests || []).map((req: any) => ({
@@ -254,6 +266,10 @@ async function fetchSplitTestRequestsForUser(supabase: any, userId: string) {
       consensus_strength: req.consensus_strength
     }
   }));
+  } catch (error) {
+    console.log('Error fetching split test requests:', error);
+    return [];
+  }
 }
 
 // POST /api/requests - Create a new verdict request

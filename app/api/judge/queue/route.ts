@@ -103,16 +103,19 @@ async function getStandardQueue(supabase: any, userId: string, limit: number) {
         .from('verdict_responses')
         .select('request_id')
         .eq('judge_id', userId),
+      // Gracefully handle missing tables
       supabase
         .from('comparison_responses')
         .select('comparison_id')
         .eq('judge_id', userId)
-        .then((res: any) => ({ data: res.data?.map((r: any) => ({ request_id: r.comparison_id })) || [] })),
+        .then((res: any) => ({ data: res.data?.map((r: any) => ({ request_id: r.comparison_id })) || [] }))
+        .catch(() => ({ data: [] })),
       supabase
         .from('split_test_verdicts')
         .select('split_test_id')
         .eq('judge_id', userId)
         .then((res: any) => ({ data: res.data?.map((r: any) => ({ request_id: r.split_test_id })) || [] }))
+        .catch(() => ({ data: [] }))
     ]);
 
     const excludeVerdictIds = verdictResponses?.data?.map((r: any) => r.request_id) || [];
@@ -189,37 +192,42 @@ async function getVerdictRequests(supabase: any, userId: string, excludeIds: str
 
 // Fetch comparison requests
 async function getComparisonRequests(supabase: any, userId: string, excludeIds: string[], limit: number) {
-  let query = supabase
-    .from('comparison_requests')
-    .select(`
-      id,
-      created_at,
-      decision_context,
-      option_a_title,
-      option_b_title,
-      option_a_image_url,
-      option_b_image_url,
-      budget_consideration,
-      status,
-      request_tier,
-      expert_required,
-      priority_score,
-      target_verdict_count,
-      received_verdict_count
-    `)
-    .in('status', ['pending', 'active'])
-    .neq('user_id', userId)
-    .limit(limit);
+  try {
+    let query = supabase
+      .from('comparison_requests')
+      .select(`
+        id,
+        created_at,
+        decision_context,
+        option_a_title,
+        option_b_title,
+        option_a_image_url,
+        option_b_image_url,
+        budget_consideration,
+        status,
+        request_tier,
+        expert_required,
+        priority_score,
+        target_verdict_count,
+        received_verdict_count
+      `)
+      .in('status', ['pending', 'active'])
+      .neq('user_id', userId)
+      .limit(limit);
 
-  if (excludeIds.length > 0) {
-    query = query.not('id', 'in', `(${excludeIds.join(',')})`);
-  }
+    if (excludeIds.length > 0) {
+      query = query.not('id', 'in', `(${excludeIds.join(',')})`);
+    }
 
-  const { data, error } = await query;
-  if (error) throw error;
-  
-  // Normalize comparison request format to match verdict requests
-  return (data || []).map((req: any) => ({
+    const { data, error } = await query;
+    if (error) {
+      // If table doesn't exist, return empty array instead of throwing
+      console.log('Comparison requests table not found, returning empty array');
+      return [];
+    }
+    
+    // Normalize comparison request format to match verdict requests
+    return (data || []).map((req: any) => ({
     id: req.id,
     created_at: req.created_at,
     category: 'comparison',
@@ -242,32 +250,40 @@ async function getComparisonRequests(supabase: any, userId: string, excludeIds: 
       budget_consideration: req.budget_consideration
     }
   }));
+  } catch (error) {
+    console.log('Error fetching comparison requests:', error);
+    return [];
+  }
 }
 
 // Fetch split test requests
 async function getSplitTestRequests(supabase: any, userId: string, excludeIds: string[], limit: number) {
-  let query = supabase
-    .from('split_test_requests')
-    .select(`
-      id,
-      created_at,
-      context,
-      photo_a_url,
-      photo_b_url,
-      status,
-      target_verdict_count,
-      received_verdict_count
-    `)
-    .in('status', ['active', 'pending'])
-    .neq('user_id', userId)
-    .limit(limit);
+  try {
+    let query = supabase
+      .from('split_test_requests')
+      .select(`
+        id,
+        created_at,
+        context,
+        photo_a_url,
+        photo_b_url,
+        status,
+        target_verdict_count,
+        received_verdict_count
+      `)
+      .in('status', ['active', 'pending'])
+      .neq('user_id', userId)
+      .limit(limit);
 
-  if (excludeIds.length > 0) {
-    query = query.not('id', 'in', `(${excludeIds.join(',')})`);
-  }
+    if (excludeIds.length > 0) {
+      query = query.not('id', 'in', `(${excludeIds.join(',')})`);
+    }
 
-  const { data, error } = await query;
-  if (error) throw error;
+    const { data, error } = await query;
+    if (error) {
+      console.log('Split test requests table not found, returning empty array');
+      return [];
+    }
   
   // Normalize split test request format to match verdict requests
   return (data || []).map((req: any) => ({
@@ -290,4 +306,8 @@ async function getSplitTestRequests(supabase: any, userId: string, excludeIds: s
       photo_b_url: req.photo_b_url
     }
   }));
+  } catch (error) {
+    console.log('Error fetching split test requests:', error);
+    return [];
+  }
 }

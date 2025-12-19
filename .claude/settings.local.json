@@ -22,7 +22,9 @@
       "Bash(npx supabase:*)",
       "Bash(npm run dev:*)",
       "Bash(npm run typecheck:*)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(find:*)",
+      "Bash(ls:*)"
     ],
     "deny": [],
     "ask": []
