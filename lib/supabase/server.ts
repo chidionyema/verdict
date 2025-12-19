@@ -24,13 +24,20 @@ function getSupabaseUrl(): string {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 
   if (!supabaseUrl) {
-    throw new Error(
-      'Missing NEXT_PUBLIC_SUPABASE_URL for Supabase client. ' +
-        'Set NEXT_PUBLIC_SUPABASE_URL to https://<project-ref>.supabase.co in your environment.'
-    );
+    // During build, env vars may not be set - provide placeholder
+    // The actual API calls will fail, but build can complete
+    return 'https://placeholder.supabase.co';
   }
 
   return supabaseUrl;
+}
+
+function getSupabaseAnonKey(): string {
+  return process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key';
+}
+
+function getSupabaseServiceKey(): string {
+  return process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder-service-key';
 }
 
 export async function createClient(): Promise<SupabaseClient<Database>> {
@@ -38,7 +45,7 @@ export async function createClient(): Promise<SupabaseClient<Database>> {
 
   return createServerClient<Database>(
     getSupabaseUrl(),
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    getSupabaseAnonKey(),
     {
       cookies: {
         getAll() {
@@ -72,7 +79,7 @@ export async function createClient(): Promise<SupabaseClient<Database>> {
 export function createServiceClient(): SupabaseClient<Database> {
   return createServerClient<Database>(
     getSupabaseUrl(),
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    getSupabaseServiceKey(),
     {
       cookies: {
         getAll() {

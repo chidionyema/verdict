@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { Suspense, useState, useEffect, useMemo, useRef } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 import { toast } from '@/components/ui/toast';
@@ -59,7 +59,7 @@ type FilterStatus = 'all' | 'open' | 'closed' | 'cancelled';
 type SortBy = 'newest' | 'oldest' | 'status' | 'progress';
 type DisplayMode = 'grid' | 'list' | 'compact';
 
-export default function WorkspacePage() {
+function WorkspacePageContent() {
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const [requests, setRequests] = useState<any[]>([]);
@@ -842,5 +842,27 @@ export default function WorkspacePage() {
         }
       `}</style>
     </div>
+  );
+}
+
+// Wrap in Suspense for useSearchParams (via useMultiURLState)
+export default function WorkspacePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          <div className="animate-pulse">
+            <div className="h-12 bg-white/60 rounded-xl mb-8 w-1/3"></div>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+              {[1, 2, 3, 4].map(i => (
+                <div key={i} className="h-24 bg-white/60 rounded-xl"></div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    }>
+      <WorkspacePageContent />
+    </Suspense>
   );
 }

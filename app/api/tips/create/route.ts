@@ -3,9 +3,15 @@ import { createClient } from '@/lib/supabase/server';
 import { paymentRateLimiter, checkRateLimit } from '@/lib/rate-limiter';
 import Stripe from 'stripe';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-11-17.clover',
-});
+// Lazy initialization to avoid build-time errors when env vars aren't set
+function getStripeClient() {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error('STRIPE_SECRET_KEY environment variable is required');
+  }
+  return new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: '2025-11-17.clover',
+  });
+}
 
 interface CreateTipRequest {
   reviewerId: string;
@@ -119,6 +125,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create Stripe payment intent
+    const stripe = getStripeClient();
     const processingFee = Math.ceil(amountCents * 0.029 + 30); // 2.9% + $0.30
     const netAmount = amountCents - processingFee;
 

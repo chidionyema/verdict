@@ -26,10 +26,14 @@ export interface QualityMetrics {
 }
 
 export class ReputationManager {
-  private supabase: ReturnType<typeof createClient>;
+  private _supabase: ReturnType<typeof createClient> | null = null;
 
-  constructor() {
-    this.supabase = createClient();
+  // Lazy initialization to avoid build-time errors when env vars aren't set
+  private get supabase(): ReturnType<typeof createClient> {
+    if (!this._supabase) {
+      this._supabase = createClient();
+    }
+    return this._supabase;
   }
 
   /**

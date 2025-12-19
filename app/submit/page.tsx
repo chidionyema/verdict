@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { CreditCard, ArrowLeft } from 'lucide-react';
@@ -8,7 +8,7 @@ import Link from 'next/link';
 import { ModeSelectionCards } from '@/components/mode/ModeSelectionCards';
 import type { Mode } from '@/lib/mode-colors';
 
-export default function SubmitPage() {
+function SubmitPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [selectedMode, setSelectedMode] = useState<Mode | null>(null);
@@ -148,12 +148,25 @@ export default function SubmitPage() {
               Judge others in the community feed
             </Link>
           </p>
-          
+
           <p className="text-sm text-gray-500">
             Judge 3 submissions = Earn 1 credit • Private mode skips judging requirement
           </p>
         </div>
       </div>
     </div>
+  );
+}
+
+// Wrap in Suspense for useSearchParams
+export default function SubmitPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+      </div>
+    }>
+      <SubmitPageContent />
+    </Suspense>
   );
 }
