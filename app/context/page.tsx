@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store';
 import { Briefcase, Heart, Palette, HelpCircle } from 'lucide-react';
+import { toast } from '@/components/ui/toast';
 
 const categories = [
   {
@@ -45,12 +46,19 @@ export default function ContextPage() {
   }, [uploadedMedia, router]);
 
   if (!uploadedMedia) {
-    return null;
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Redirecting to upload...</p>
+        </div>
+      </div>
+    );
   }
 
   const handleContinue = () => {
     if (!selectedCategory || context.length < 20) {
-      alert('Please select a category and provide context (at least 20 characters)');
+      toast.error('Please select a category and provide context (at least 20 characters)');
       return;
     }
 

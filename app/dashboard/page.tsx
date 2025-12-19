@@ -24,6 +24,7 @@ export default function DashboardPage() {
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
   const [sortBy, setSortBy] = useState<SortBy>('newest');
   const [showFilters, setShowFilters] = useState(false);
+  const [notification, setNotification] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
 
   const fetchData = async () => {
     // Only run in browser
@@ -50,7 +51,6 @@ export default function DashboardPage() {
       const res = await fetch('/api/requests');
       if (res.ok) {
         const { requests: requestsData } = await res.json();
-        console.log('Fetched requests:', requestsData);
         setRequests(requestsData || []);
       } else {
         const errorData = await res.json();
@@ -65,13 +65,41 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetchData();
-    
+
     // Check for stored redirect after OAuth
     if (typeof window !== 'undefined') {
       const storedRedirect = sessionStorage.getItem('verdict_redirect_to');
       if (storedRedirect && storedRedirect !== '/dashboard' && storedRedirect !== window.location.pathname) {
         sessionStorage.removeItem('verdict_redirect_to');
         window.location.href = storedRedirect;
+        return;
+      }
+
+      // Check for payment status in URL
+      const params = new URLSearchParams(window.location.search);
+      const purchaseStatus = params.get('purchase');
+      const creditsAdded = params.get('credits');
+
+      if (purchaseStatus === 'success') {
+        setNotification({
+          type: 'success',
+          message: creditsAdded
+            ? `Payment successful! ${creditsAdded} credits have been added to your account.`
+            : 'Payment successful! Your credits have been added.',
+        });
+        // Clear the URL params without reload
+        window.history.replaceState({}, '', '/dashboard');
+      } else if (purchaseStatus === 'cancelled') {
+        setNotification({
+          type: 'info',
+          message: 'Payment was cancelled. No charges were made.',
+        });
+        window.history.replaceState({}, '', '/dashboard');
+      }
+
+      // Auto-dismiss notification after 8 seconds
+      if (purchaseStatus) {
+        setTimeout(() => setNotification(null), 8000);
       }
     }
   }, []);
@@ -198,6 +226,52 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Payment/Action Notification Banner */}
+      {notification && (
+        <div className={`px-4 py-3 ${
+          notification.type === 'success' ? 'bg-green-50 border-b border-green-200' :
+          notification.type === 'error' ? 'bg-red-50 border-b border-red-200' :
+          'bg-blue-50 border-b border-blue-200'
+        }`}>
+          <div className="max-w-6xl mx-auto flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              {notification.type === 'success' && (
+                <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                </div>
+              )}
+              {notification.type === 'error' && (
+                <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+                  <XCircle className="h-5 w-5 text-red-600" />
+                </div>
+              )}
+              {notification.type === 'info' && (
+                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                  <Clock className="h-5 w-5 text-blue-600" />
+                </div>
+              )}
+              <p className={`font-medium ${
+                notification.type === 'success' ? 'text-green-800' :
+                notification.type === 'error' ? 'text-red-800' :
+                'text-blue-800'
+              }`}>
+                {notification.message}
+              </p>
+            </div>
+            <button
+              onClick={() => setNotification(null)}
+              className={`p-1 rounded-full hover:bg-white/50 transition ${
+                notification.type === 'success' ? 'text-green-600' :
+                notification.type === 'error' ? 'text-red-600' :
+                'text-blue-600'
+              }`}
+            >
+              <XCircle className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Feature Discovery Banner */}
       <FeatureDiscoveryBanner />
 
@@ -503,9 +577,16 @@ export default function DashboardPage() {
                         {categoryConfig.icon}
                         {request.category.charAt(0).toUpperCase() + request.category.slice(1)}
                       </span>
+                      {/* Show average rating if available */}
+                      {(request as any).avg_rating != null && (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-yellow-50 text-yellow-700 border border-yellow-200 text-xs font-semibold">
+                          <Star className="h-3 w-3 fill-current text-yellow-500" />
+                          {(request as any).avg_rating.toFixed(1)}
+                        </span>
+                      )}
                     </div>
                     <div className={`flex items-center gap-2 text-sm px-3 py-2 rounded-xl font-semibold shadow-sm ${
-                      request.status === 'closed' 
+                      request.status === 'closed'
                         ? 'bg-green-100 text-green-700 border border-green-200'
                         : request.status === 'in_progress'
                         ? 'bg-blue-100 text-blue-700 border border-blue-200'
@@ -517,7 +598,7 @@ export default function DashboardPage() {
                       <span>{getStatusLabel(request.status)}</span>
                     </div>
                   </div>
-                  
+
                   <p className="text-sm text-gray-700 line-clamp-2 mb-6 leading-relaxed">
                     {request.context}
                   </p>

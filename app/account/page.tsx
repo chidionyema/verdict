@@ -4,8 +4,9 @@ import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useLocale } from 'next-intl';
 import { createClient } from '@/lib/supabase/client';
-import { LogOut, Check } from 'lucide-react';
+import { LogOut, Check, AlertCircle, CheckCircle } from 'lucide-react';
 import { CREDIT_PACKAGES, STANDARD_VERDICT_COUNT } from '@/lib/validations';
+import { toast } from '@/components/ui/toast';
 // Note: Credit package pricing was removed - using simplified pricing model
 import { useLocalizedPricing } from '@/hooks/use-pricing';
 import TierUpgradeCard from '@/components/billing/TierUpgradeCard';
@@ -58,7 +59,7 @@ function AccountContent() {
 
       if (data.demo) {
         // Demo mode - credits added directly
-        alert(`Added ${data.credits_added} credits (demo mode)`);
+        toast.success(`Added ${data.credits_added} credits (demo mode)`);
         fetchProfile();
         setPurchasing(null);
         return;
@@ -67,7 +68,7 @@ function AccountContent() {
       if (data.checkout_url) {
         window.location.href = data.checkout_url;
       } else {
-        alert(data.error || 'Failed to create checkout session');
+        toast.error(data.error || 'Failed to create checkout session');
         setPurchasing(null);
       }
     } catch (error) {
@@ -88,7 +89,7 @@ function AccountContent() {
 
       if (data.demo) {
         // Demo mode - tier upgraded directly
-        alert(`Upgraded to ${data.tier} tier (demo mode)`);
+        toast.success(`Upgraded to ${data.tier} tier (demo mode)`);
         fetchProfile();
         return;
       }
@@ -96,7 +97,7 @@ function AccountContent() {
       if (data.checkout_url) {
         window.location.href = data.checkout_url;
       } else {
-        alert(data.error || 'Failed to create checkout session');
+        toast.error(data.error || 'Failed to create checkout session');
       }
     } catch (error) {
       console.error('Tier upgrade error:', error);
@@ -133,7 +134,7 @@ function AccountContent() {
         {/* Profile Section */}
         <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
           <h2 className="text-xl font-semibold mb-4">Profile</h2>
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm text-gray-500">Email</label>
               <p className="font-medium">{profile?.email || '-'}</p>
@@ -141,6 +142,18 @@ function AccountContent() {
             <div>
               <label className="block text-sm text-gray-500">Display Name</label>
               <p className="font-medium">{profile?.display_name || '-'}</p>
+            </div>
+            <div>
+              <label className="block text-sm text-gray-500">Country</label>
+              <p className="font-medium">{profile?.country || '-'}</p>
+            </div>
+            <div>
+              <label className="block text-sm text-gray-500">Age Range</label>
+              <p className="font-medium">{profile?.age_range || '-'}</p>
+            </div>
+            <div>
+              <label className="block text-sm text-gray-500">Gender</label>
+              <p className="font-medium capitalize">{profile?.gender?.replace('_', ' ') || '-'}</p>
             </div>
             <div>
               <label className="block text-sm text-gray-500">Current Tier</label>

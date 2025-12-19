@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { TouchButton } from '@/components/ui/touch-button';
 import { PricingTiers, type RequestTier } from '@/components/pricing/PricingTiers';
+import { InsufficientCreditsModal } from '@/components/modals/InsufficientCreditsModal';
 import { toast } from '@/components/ui/toast';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
@@ -125,6 +126,8 @@ export function EnhancedComparisonModal({
   const [currentStep, setCurrentStep] = useState<'setup' | 'options' | 'context' | 'tier' | 'review'>('setup');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [showCreditsModal, setShowCreditsModal] = useState(false);
+  const [requiredCredits, setRequiredCredits] = useState(3);
 
   const fileInputRefs = {
     A: useRef<HTMLInputElement>(null),
@@ -268,6 +271,20 @@ export function EnhancedComparisonModal({
 
       if (!response.ok) {
         const errorData = await response.json();
+
+        // Handle insufficient credits specifically
+        if (response.status === 402) {
+          const tierCredits: Record<string, number> = {
+            'community': 1,
+            'standard': 3,
+            'pro': 5,
+          };
+          setRequiredCredits(errorData.required_credits || tierCredits[selectedTier] || 3);
+          setShowCreditsModal(true);
+          setIsSubmitting(false);
+          return;
+        }
+
         throw new Error(errorData.error || 'Failed to create comparison');
       }
 
@@ -349,7 +366,20 @@ export function EnhancedComparisonModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <>
+      {/* Insufficient Credits Modal */}
+      <InsufficientCreditsModal
+        isOpen={showCreditsModal}
+        onClose={() => setShowCreditsModal(false)}
+        requiredCredits={requiredCredits}
+        currentCredits={userCredits}
+        onPurchaseSuccess={() => {
+          fetchUserCredits();
+          setShowCreditsModal(false);
+        }}
+      />
+
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-3xl shadow-2xl max-w-5xl w-full max-h-[95vh] overflow-hidden">
         {/* Header */}
         <div className="bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 p-6 text-white">
@@ -413,83 +443,111 @@ export function EnhancedComparisonModal({
                 <div className="space-y-6">
                   <div className="text-center">
                     <h3 className="text-xl font-semibold text-gray-900 mb-2">Define Your Options</h3>
-                    <p className="text-gray-600">Describe the two choices you're comparing</p>
+                    <p className="text-gray-600">
+                      {category === 'appearance'
+                        ? 'Add photos and descriptions for each option'
+                        : 'Paste your text content or describe each option'
+                      }
+                    </p>
                   </div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {(['A', 'B'] as const).map((side) => (
-                      <div key={side} className="space-y-4 border border-gray-200 rounded-xl p-6">
+                      <div key={side} className={`space-y-4 border-2 rounded-xl p-6 ${
+                        options[side].title ? 'border-purple-300 bg-purple-50/30' : 'border-gray-200'
+                      }`}>
                         <div className="flex items-center gap-2 mb-4">
-                          <div className="w-8 h-8 bg-purple-600 text-white rounded-full flex items-center justify-center font-bold">
+                          <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-lg shadow-md">
                             {side}
                           </div>
-                          <span className="font-semibold text-gray-900">Option {side}</span>
+                          <span className="font-semibold text-gray-900 text-lg">Option {side}</span>
                         </div>
 
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Title</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Title / Label
+                          </label>
                           <input
                             type="text"
                             value={options[side].title}
                             onChange={(e) => updateOption(side, 'title', e.target.value)}
-                            placeholder={`Option ${side} name`}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                            placeholder={category === 'appearance' ? `Photo ${side} name` : `e.g., "Version ${side}" or "Option ${side}"`}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-base"
                           />
                         </div>
 
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            {category === 'appearance'
+                              ? 'Description / Context'
+                              : 'Text Content (paste your text here)'
+                            }
+                          </label>
                           <textarea
                             value={options[side].description}
                             onChange={(e) => updateOption(side, 'description', e.target.value)}
-                            placeholder="Describe this option..."
-                            rows={3}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                            placeholder={
+                              category === 'appearance'
+                                ? 'Where/when was this taken? Any context?'
+                                : `Paste or type the full text for Option ${side} here...\n\nFor example: email copy, bio text, message draft, etc.`
+                            }
+                            rows={category === 'appearance' ? 3 : 6}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-base resize-y min-h-[100px]"
                           />
+                          <p className="text-xs text-gray-500 mt-1">
+                            {options[side].description.length} characters
+                          </p>
                         </div>
 
-                        {category === 'appearance' && (
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Image (Optional)</label>
-                            {options[side].image ? (
-                              <div className="relative border border-gray-300 rounded-lg overflow-hidden">
-                                <Image
-                                  src={options[side].image!.preview}
-                                  alt={`Option ${side}`}
-                                  width={200}
-                                  height={200}
-                                  className="w-full h-32 object-cover"
-                                />
-                                <button
-                                  onClick={() => updateOption(side, 'image', undefined)}
-                                  className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs"
-                                >
-                                  <X className="w-4 h-4" />
-                                </button>
-                              </div>
-                            ) : (
-                              <div
-                                onClick={() => fileInputRefs[side].current?.click()}
-                                className="border-2 border-dashed border-gray-300 rounded-lg h-32 flex items-center justify-center cursor-pointer hover:border-purple-400"
-                              >
-                                <div className="text-center">
-                                  <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                                  <p className="text-sm text-gray-600">Add image</p>
-                                </div>
-                              </div>
+                        {/* Image upload - available for ALL categories */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            {category === 'appearance' ? 'Photo' : 'Image (Optional)'}
+                            {category !== 'appearance' && (
+                              <span className="text-gray-400 font-normal ml-1">- add visuals if relevant</span>
                             )}
-                            <input
-                              ref={fileInputRefs[side]}
-                              type="file"
-                              accept="image/*"
-                              onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                if (file) handleImageUpload(side, file);
-                              }}
-                              className="hidden"
-                            />
-                          </div>
-                        )}
+                          </label>
+                          {options[side].image ? (
+                            <div className="relative border border-gray-300 rounded-lg overflow-hidden group">
+                              <Image
+                                src={options[side].image!.preview}
+                                alt={`Option ${side}`}
+                                width={200}
+                                height={200}
+                                className="w-full h-40 object-cover"
+                              />
+                              <button
+                                onClick={() => updateOption(side, 'image', undefined)}
+                                className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg opacity-80 hover:opacity-100 transition cursor-pointer"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ) : (
+                            <div
+                              onClick={() => fileInputRefs[side].current?.click()}
+                              className="border-2 border-dashed border-gray-300 rounded-lg h-32 flex items-center justify-center cursor-pointer hover:border-purple-400 hover:bg-purple-50/50 transition-all"
+                            >
+                              <div className="text-center">
+                                <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                                <p className="text-sm text-gray-600 font-medium">
+                                  {category === 'appearance' ? 'Upload photo' : 'Add image'}
+                                </p>
+                                <p className="text-xs text-gray-400">Click or drag</p>
+                              </div>
+                            </div>
+                          )}
+                          <input
+                            ref={fileInputRefs[side]}
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleImageUpload(side, file);
+                            }}
+                            className="hidden"
+                          />
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -749,5 +807,6 @@ export function EnhancedComparisonModal({
         </div>
       </div>
     </div>
+    </>
   );
 }

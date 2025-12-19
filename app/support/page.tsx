@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { 
-  MessageCircle, 
-  Plus, 
+import { toast } from '@/components/ui/toast';
+import {
+  MessageCircle,
+  Plus,
   Clock,
   AlertCircle,
   CheckCircle,
@@ -134,10 +135,10 @@ export default function SupportPage() {
       fetchTickets();
       
       // Show success message
-      alert('Support ticket created successfully! We\'ll get back to you within 24 hours.');
+      toast.success('Support ticket created successfully! We\'ll get back to you within 24 hours.');
 
     } catch (err: any) {
-      alert(err.message || 'Failed to create support ticket');
+      toast.error(err.message || 'Failed to create support ticket');
     } finally {
       setSubmitting(false);
     }

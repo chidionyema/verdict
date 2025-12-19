@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store';
 import { Clock, DollarSign, Send, ArrowLeft } from 'lucide-react';
 import { ResponseTemplates } from '@/components/judge/ResponseTemplates';
+import { toast } from '@/components/ui/toast';
 
 export default function VerdictSubmissionPage({
   params,
@@ -46,11 +47,11 @@ export default function VerdictSubmissionPage({
 
   const handleSubmit = async () => {
     if (verdictSummary.trim().length < 10) {
-      alert('Please start with one clear sentence for your verdict (at least 10 characters)');
+      toast.error('Please start with one clear sentence for your verdict (at least 10 characters)');
       return;
     }
     if (reasons.length < 40) {
-      alert('Please provide at least 40 characters explaining your reasoning');
+      toast.error('Please provide at least 40 characters explaining your reasoning');
       return;
     }
 
@@ -76,7 +77,7 @@ export default function VerdictSubmissionPage({
 
       if (!response.ok) {
         const error = await response.json();
-        alert(error.error || 'Failed to submit verdict');
+        toast.error(error.error || 'Failed to submit verdict');
         setSubmitting(false);
         return;
       }
@@ -86,7 +87,7 @@ export default function VerdictSubmissionPage({
       router.push('/judge/dashboard?success=true');
     } catch (error) {
       console.error('Submit error:', error);
-      alert('Failed to submit verdict. Please try again.');
+      toast.error('Failed to submit verdict. Please try again.');
       setSubmitting(false);
     }
   };

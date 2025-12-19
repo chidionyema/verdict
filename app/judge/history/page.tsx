@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Clock, Star, ArrowLeft, Filter, MessageSquare, Award } from 'lucide-react';
+import { toast } from '@/components/ui/toast';
 
 interface VerdictResponse {
   id: string;
@@ -40,7 +41,7 @@ export default function JudgeHistoryPage() {
       setResponses(data.responses || []);
     } catch (error) {
       console.error('Fetch error:', error);
-      alert('Failed to load your verdict history');
+      toast.error('Failed to load your verdict history');
     } finally {
       setLoading(false);
     }

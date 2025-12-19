@@ -135,16 +135,44 @@ async function fetchVerdictRequests(supabase: any, userId: string, searchParams:
     throw new Error(`Database query failed: ${error.message || error.code || 'Unknown error'}`);
   }
 
-  // Return requests with received_verdict_count as the count
-  return (requests || []).map((request: any) => ({
-    ...request,
-    verdict_count: request.received_verdict_count || 0,
-    avg_rating: null,
-    folder_id: null // Add for compatibility with UI
-  }));
+  // Fetch verdict responses for all requests to calculate average ratings
+  const requestIds = (requests || []).map((r: any) => r.id);
+  let verdictsByRequest: Record<string, any[]> = {};
+
+  if (requestIds.length > 0) {
+    const { data: verdicts } = await supabase
+      .from('verdict_responses')
+      .select('request_id, rating')
+      .in('request_id', requestIds);
+
+    if (verdicts) {
+      verdicts.forEach((v: any) => {
+        if (!verdictsByRequest[v.request_id]) {
+          verdictsByRequest[v.request_id] = [];
+        }
+        verdictsByRequest[v.request_id].push(v);
+      });
+    }
+  }
+
+  // Return requests with calculated average rating
+  return (requests || []).map((request: any) => {
+    const reqVerdicts = verdictsByRequest[request.id] || [];
+    const validRatings = reqVerdicts.filter((v: any) => v.rating != null);
+    const avgRating = validRatings.length > 0
+      ? validRatings.reduce((sum: number, v: any) => sum + v.rating, 0) / validRatings.length
+      : null;
+
+    return {
+      ...request,
+      verdict_count: request.received_verdict_count || 0,
+      avg_rating: avgRating,
+      folder_id: null // Add for compatibility with UI
+    };
+  });
 }
 
-// Fetch comparison requests for user
+// Fetch comparison requests for user with average ratings
 async function fetchComparisonRequestsForUser(supabase: any, userId: string) {
   try {
     const { data: requests, error } = await supabase
@@ -170,38 +198,65 @@ async function fetchComparisonRequestsForUser(supabase: any, userId: string) {
       return [];
     }
 
-  // Normalize comparison request format to match verdict requests
-  return (requests || []).map((req: any) => ({
-    id: req.id,
-    created_at: req.created_at,
-    category: 'comparison',
-    subcategory: 'decision',
-    media_type: 'comparison',
-    media_url: req.option_a_image_url,
-    text_content: req.decision_context,
-    context: `Compare: ${req.option_a_title} vs ${req.option_b_title}`,
-    target_verdict_count: req.target_verdict_count,
-    received_verdict_count: req.received_verdict_count,
-    status: req.status,
-    request_tier: req.request_tier,
-    folder_id: null,
-    verdict_count: req.received_verdict_count,
-    avg_rating: null, // TODO: Calculate from comparison_responses
-    comparison_data: {
-      option_a_title: req.option_a_title,
-      option_b_title: req.option_b_title,
-      option_a_image_url: req.option_a_image_url,
-      option_b_image_url: req.option_b_image_url,
-      winning_option: req.winning_option
+    // Fetch verdicts for all comparison requests to calculate average confidence
+    const requestIds = (requests || []).map((r: any) => r.id);
+    let verdictsByRequest: Record<string, any[]> = {};
+
+    if (requestIds.length > 0) {
+      const { data: verdicts } = await supabase
+        .from('comparison_verdicts')
+        .select('comparison_request_id, confidence_score')
+        .in('comparison_request_id', requestIds);
+
+      if (verdicts) {
+        verdicts.forEach((v: any) => {
+          if (!verdictsByRequest[v.comparison_request_id]) {
+            verdictsByRequest[v.comparison_request_id] = [];
+          }
+          verdictsByRequest[v.comparison_request_id].push(v);
+        });
+      }
     }
-  }));
+
+    // Normalize comparison request format to match verdict requests
+    return (requests || []).map((req: any) => {
+      const reqVerdicts = verdictsByRequest[req.id] || [];
+      const avgRating = reqVerdicts.length > 0
+        ? reqVerdicts.reduce((sum: number, v: any) => sum + (v.confidence_score || 0), 0) / reqVerdicts.length
+        : null;
+
+      return {
+        id: req.id,
+        created_at: req.created_at,
+        category: 'comparison',
+        subcategory: 'decision',
+        media_type: 'comparison',
+        media_url: req.option_a_image_url,
+        text_content: req.decision_context,
+        context: `Compare: ${req.option_a_title} vs ${req.option_b_title}`,
+        target_verdict_count: req.target_verdict_count,
+        received_verdict_count: req.received_verdict_count,
+        status: req.status,
+        request_tier: req.request_tier,
+        folder_id: null,
+        verdict_count: req.received_verdict_count,
+        avg_rating: avgRating,
+        comparison_data: {
+          option_a_title: req.option_a_title,
+          option_b_title: req.option_b_title,
+          option_a_image_url: req.option_a_image_url,
+          option_b_image_url: req.option_b_image_url,
+          winning_option: req.winning_option
+        }
+      };
+    });
   } catch (error) {
     console.log('Error fetching comparison requests:', error);
     return [];
   }
 }
 
-// Fetch split test requests for user
+// Fetch split test requests for user with consensus strength as rating
 async function fetchSplitTestRequestsForUser(supabase: any, userId: string) {
   try {
     const { data: requests, error } = await supabase
@@ -225,30 +280,32 @@ async function fetchSplitTestRequestsForUser(supabase: any, userId: string) {
       return [];
     }
 
-  // Normalize split test request format to match verdict requests
-  return (requests || []).map((req: any) => ({
-    id: req.id,
-    created_at: req.created_at,
-    category: 'split_test',
-    subcategory: 'photo_comparison',
-    media_type: 'split_test',
-    media_url: req.photo_a_url,
-    text_content: req.context,
-    context: `Photo A vs Photo B: ${req.context}`,
-    target_verdict_count: req.target_verdict_count,
-    received_verdict_count: req.received_verdict_count,
-    status: req.status,
-    request_tier: 'basic',
-    folder_id: null,
-    verdict_count: req.received_verdict_count,
-    avg_rating: null, // TODO: Calculate from split_test_verdicts
-    split_test_data: {
-      photo_a_url: req.photo_a_url,
-      photo_b_url: req.photo_b_url,
-      winning_photo: req.winning_photo,
-      consensus_strength: req.consensus_strength
-    }
-  }));
+    // Normalize split test request format to match verdict requests
+    // Use consensus_strength as the "rating" since it indicates how decisive the result was
+    return (requests || []).map((req: any) => ({
+      id: req.id,
+      created_at: req.created_at,
+      category: 'split_test',
+      subcategory: 'photo_comparison',
+      media_type: 'split_test',
+      media_url: req.photo_a_url,
+      text_content: req.context,
+      context: `Photo A vs Photo B: ${req.context}`,
+      target_verdict_count: req.target_verdict_count,
+      received_verdict_count: req.received_verdict_count,
+      status: req.status,
+      request_tier: 'basic',
+      folder_id: null,
+      verdict_count: req.received_verdict_count,
+      // Use consensus_strength (0-100) scaled to 1-10 for consistency
+      avg_rating: req.consensus_strength ? (req.consensus_strength / 10) : null,
+      split_test_data: {
+        photo_a_url: req.photo_a_url,
+        photo_b_url: req.photo_b_url,
+        winning_photo: req.winning_photo,
+        consensus_strength: req.consensus_strength
+      }
+    }));
   } catch (error) {
     console.log('Error fetching split test requests:', error);
     return [];

@@ -35,10 +35,12 @@ import {
   XCircle,
   AlertCircle,
   Heart,
-  Users
+  Users,
+  Plus
 } from 'lucide-react';
 import type { Profile } from '@/lib/database.types';
 import JudgeProgression from '@/components/judge/JudgeProgression';
+import { EmptyState } from '@/components/ui/EmptyStates';
 
 interface QueueRequest {
   id: string;
@@ -1103,10 +1105,18 @@ export default function JudgeDashboardPage() {
                       </div>
                       
                       <button
-                        onClick={() => router.push(`/judge/requests/${filteredQueue[0].id}`)}
+                        onClick={() => {
+                          if (filteredQueue[0].request_type === 'comparison') {
+                            router.push(`/judge/comparisons/${filteredQueue[0].id}`);
+                          } else if (filteredQueue[0].request_type === 'split_test') {
+                            router.push(`/judge/split-tests/${filteredQueue[0].id}`);
+                          } else {
+                            router.push(`/judge/requests/${filteredQueue[0].id}`);
+                          }
+                        }}
                         className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-8 py-4 rounded-2xl font-bold text-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5 min-w-[200px] group"
                       >
-                        Start Now
+                        {filteredQueue[0].request_type === 'comparison' ? 'Compare Options' : 'Start Now'}
                         <ArrowRight className="h-5 w-5 inline ml-2 group-hover:translate-x-1 transition-transform" />
                       </button>
                     </div>
@@ -1138,25 +1148,28 @@ export default function JudgeDashboardPage() {
                   </div>
                 </div>
               ) : filteredQueue.length === 0 ? (
-                <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl border border-white/50 p-12 text-center">
-                  <div className="w-20 h-20 bg-gradient-to-br from-orange-100 to-amber-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <Search className="h-10 w-10 text-orange-600" />
-                  </div>
-                  <h3 className="text-2xl font-bold text-gray-900 mb-3">
-                    No matching requests
-                  </h3>
-                  <p className="text-gray-600 mb-8 max-w-md mx-auto">
-                    Try adjusting your filters or search terms to see more requests
-                  </p>
-                  <button
-                    onClick={() => {
-                      setQueueFilter('all');
-                      setSearchQuery('');
-                    }}
-                    className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-3 rounded-xl font-semibold hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5"
-                  >
-                    Clear All Filters
-                  </button>
+                <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl border border-white/50 p-12">
+                  <EmptyState 
+                    variant="no-requests"
+                    title={queue.length === 0 ? "No requests available" : "No matching requests"}
+                    description={queue.length === 0 
+                      ? "Your queue is empty. Check back soon for new requests, or browse the community feed!"
+                      : "Try adjusting your filters or search to see more requests."}
+                    actions={[
+                      {
+                        label: 'Browse Community Feed',
+                        action: () => router.push('/feed'),
+                        variant: 'primary' as const,
+                        icon: Users
+                      },
+                      {
+                        label: 'Submit Your Own',
+                        action: () => router.push('/start'),
+                        variant: 'secondary' as const,
+                        icon: Plus
+                      }
+                    ]}
+                  />
                 </div>
               ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -1235,10 +1248,18 @@ export default function JudgeDashboardPage() {
                             </div>
                             
                             <button
-                              onClick={() => router.push(`/judge/requests/${request.id}`)}
+                              onClick={() => {
+                                if (request.request_type === 'comparison') {
+                                  router.push(`/judge/comparisons/${request.id}`);
+                                } else if (request.request_type === 'split_test') {
+                                  router.push(`/judge/split-tests/${request.id}`);
+                                } else {
+                                  router.push(`/judge/requests/${request.id}`);
+                                }
+                              }}
                               className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-5 py-2.5 rounded-xl font-semibold hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 group/btn"
                             >
-                              Start Verdict
+                              {request.request_type === 'comparison' ? 'Compare Options' : 'Start Verdict'}
                               <ArrowRight className="h-4 w-4 inline ml-1.5 group-hover/btn:translate-x-1 transition-transform" />
                             </button>
                           </div>

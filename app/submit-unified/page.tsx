@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { usePrivatePrice } from '@/hooks/use-pricing';
+import { toast } from '@/components/ui/toast';
 import { 
   ArrowRight, 
   Upload, 
@@ -102,8 +103,20 @@ export default function UnifiedSubmitPage() {
   }, []);
 
   const handleDetailsSubmit = () => {
-    if (!submissionData.category || !submissionData.question || !submissionData.context) {
-      return; // Add proper validation
+    // Validate required fields
+    if (!submissionData.category) {
+      toast.error('Please select a category');
+      return;
+    }
+    
+    if (!submissionData.question || submissionData.question.trim().length < 10) {
+      toast.error('Please enter a question (at least 10 characters)');
+      return;
+    }
+    
+    if (!submissionData.context || submissionData.context.trim().length < 20) {
+      toast.error('Please provide more context (at least 20 characters)');
+      return;
     }
     
     // For comparison media type, launch the modal directly
@@ -158,7 +171,7 @@ export default function UnifiedSubmitPage() {
         // Demo mode - proceed directly to success
         setTimeout(() => setStep('success'), 1000);
       } else if (data.checkout_url) {
-        // Redirect to Stripe checkout
+        // Redirect to Stripe checkout (external URL, must use window.location)
         window.location.href = data.checkout_url;
       }
     } catch (error) {
@@ -629,6 +642,7 @@ function ProcessingStep({ mode }: any) {
 }
 
 function SuccessStep({ mode, submissionData }: any) {
+  const router = useRouter();
   const isRoastMode = submissionData?.roastMode || submissionData?.category === 'roast';
   
   return (
@@ -675,13 +689,13 @@ function SuccessStep({ mode, submissionData }: any) {
       
       <div className="flex gap-4 justify-center">
         <button
-          onClick={() => window.location.href = '/my-requests'}
+          onClick={() => router.push('/my-requests')}
           className="bg-indigo-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-indigo-700 transition-colors"
         >
           View My Requests
         </button>
         <button
-          onClick={() => window.location.href = '/feed'}
+          onClick={() => router.push('/feed')}
           className="bg-gray-100 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:bg-gray-200 transition-colors"
         >
           Browse Community

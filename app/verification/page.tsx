@@ -440,7 +440,7 @@ export default function VerificationPage() {
               
               <TouchButton
                 type="submit"
-                disabled={submitting || (reputation && reputation.reputation_score < 4.0) || false}
+                disabled={submitting || !!(reputation && reputation.reputation_score < 4.0)}
                 loading={submitting}
                 className="bg-purple-600 text-white px-8 py-3 rounded-lg hover:bg-purple-700 disabled:bg-gray-300"
               >

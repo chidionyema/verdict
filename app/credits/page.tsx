@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Check, Star, Zap, Shield } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { toast } from '@/components/ui/toast';
 
 interface CreditPackage {
   id: string;
@@ -55,50 +56,74 @@ export default function CreditsPage() {
 
   const fetchPackages = async () => {
     try {
-      // For now, use the default packages from the schema
-      // In a real app, you'd fetch from the database
-      const defaultPackages: CreditPackage[] = [
-        {
-          id: '1',
-          name: 'Starter',
-          credits: 10,
-          price: 9.99,
-          popular: false,
-          description: 'Perfect for trying out the platform'
-        },
-        {
-          id: '2',
-          name: 'Popular',
-          credits: 25,
-          price: 19.99,
-          popular: true,
-          description: 'Most popular choice for regular users'
-        },
-        {
-          id: '3',
-          name: 'Pro',
-          credits: 60,
-          price: 39.99,
-          popular: false,
-          description: 'Great value for power users'
-        },
-        {
-          id: '4',
-          name: 'Enterprise',
-          credits: 150,
-          price: 89.99,
-          popular: false,
-          description: 'Maximum value for heavy usage'
-        }
-      ];
-      
-      setPackages(defaultPackages);
+      const supabase = createClient();
+      const { data, error } = await (supabase as any)
+        .from('credit_packages')
+        .select('id, name, credits, price, popular, description')
+        .order('credits', { ascending: true });
+
+      if (error) {
+        console.error('Error fetching packages from database:', error);
+        // Fallback to default packages if database fetch fails
+        setPackages(getDefaultPackages());
+        return;
+      }
+
+      if (data && data.length > 0) {
+        setPackages((data as any[]).map(pkg => ({
+          id: pkg.id,
+          name: pkg.name,
+          credits: pkg.credits,
+          price: Number(pkg.price),
+          popular: pkg.popular || false,
+          description: pkg.description || undefined
+        })));
+      } else {
+        // No packages in database, use defaults
+        setPackages(getDefaultPackages());
+      }
     } catch (error) {
       console.error('Error fetching packages:', error);
+      setPackages(getDefaultPackages());
     } finally {
       setLoading(false);
     }
   };
+
+  const getDefaultPackages = (): CreditPackage[] => [
+    {
+      id: '1',
+      name: 'Starter',
+      credits: 10,
+      price: 9.99,
+      popular: false,
+      description: 'Perfect for trying out the platform'
+    },
+    {
+      id: '2',
+      name: 'Popular',
+      credits: 25,
+      price: 19.99,
+      popular: true,
+      description: 'Most popular choice for regular users'
+    },
+    {
+      id: '3',
+      name: 'Pro',
+      credits: 60,
+      price: 39.99,
+      popular: false,
+      description: 'Great value for power users'
+    },
+    {
+      id: '4',
+      name: 'Enterprise',
+      credits: 150,
+      price: 89.99,
+      popular: false,
+      description: 'Maximum value for heavy usage'
+    }
+  ];
 
   const handlePurchase = async (packageData: CreditPackage) => {
     if (!user) {
@@ -109,27 +134,32 @@ export default function CreditsPage() {
     setPurchasing(packageData.id);
     
     try {
-      const response = await fetch('/api/payment/checkout', {
+      const response = await fetch('/api/billing/create-checkout-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          type: 'credit_purchase',
           package_id: packageData.id,
-          success_url: `${window.location.origin}/dashboard?purchase=success`,
-          cancel_url: `${window.location.origin}/credits?purchase=cancelled`
+          credits: packageData.credits,
         })
       });
 
-      if (response.ok) {
-        const { url } = await response.json();
-        window.location.href = url;
-      } else {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to create checkout');
+      const data = await response.json();
+
+      if (data.demo) {
+        // Demo mode - credits added directly
+        toast.success(`Added ${data.credits_added} credits (demo mode)`);
+        fetchUser();
+        return;
+      }
+
+      if (data.checkout_url) {
+        window.location.href = data.checkout_url;
+      } else if (!response.ok) {
+        throw new Error(data.error || 'Failed to create checkout');
       }
     } catch (error) {
       console.error('Purchase error:', error);
-      alert('Failed to start purchase. Please try again.');
+      toast.error('Failed to start purchase. Please try again.');
     } finally {
       setPurchasing(null);
     }

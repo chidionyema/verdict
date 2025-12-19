@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Share2, Download, Copy, ExternalLink, Flame, Zap, TrendingUp } from 'lucide-react';
 import { ViralSharePopup } from '@/components/viral/ViralSharePopup';
 import { useViralSharing } from '@/hooks/useViralSharing';
+import { toast } from '@/components/ui/toast';
 import type { Database } from '@/types/supabase';
 
 type FeedbackResponse = Database['public']['Tables']['feedback_responses']['Row'];
@@ -97,12 +98,12 @@ Try it yourself at askverdict.com 👀
       case 'tiktok':
         // TikTok doesn't have direct URL sharing, so we copy content instead
         handleCopyToClipboard();
-        alert('Content copied! Paste it into your TikTok caption.');
+        toast.success('Content copied! Paste it into your TikTok caption.');
         break;
       case 'instagram':
         // Instagram doesn't have direct URL sharing either
         handleCopyToClipboard();
-        alert('Content copied! Paste it into your Instagram caption.');
+        toast.success('Content copied! Paste it into your Instagram caption.');
         break;
     }
   };

@@ -137,8 +137,8 @@ export async function POST(request: NextRequest) {
         user_id: user.id,
         is_legacy_package: isLegacyPackage.toString(),
       },
-      success_url: `${origin}/account?success=true`,
-      cancel_url: `${origin}/account?canceled=true`,
+      success_url: `${origin}/dashboard?purchase=success`,
+      cancel_url: `${origin}/dashboard?purchase=cancelled`,
     };
 
     if (isLegacyPackage) {

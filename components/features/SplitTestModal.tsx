@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { X, Upload, Zap, CheckCircle, ArrowRight, RotateCcw } from 'lucide-react';
 import { TouchButton } from '@/components/ui/touch-button';
+import { InsufficientCreditsModal } from '@/components/modals/InsufficientCreditsModal';
 import { toast } from '@/components/ui/toast';
 import Image from 'next/image';
+import { createClient } from '@/lib/supabase/client';
 
 interface SplitTestModalProps {
   isOpen: boolean;
@@ -49,6 +51,8 @@ export function SplitTestModal({ isOpen, onClose, category }: SplitTestModalProp
   const [question, setQuestion] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [showCreditsModal, setShowCreditsModal] = useState(false);
+  const [userCredits, setUserCredits] = useState(0);
 
   const fileInputRefs = {
     A: useRef<HTMLInputElement>(null),
@@ -56,6 +60,31 @@ export function SplitTestModal({ isOpen, onClose, category }: SplitTestModalProp
   };
 
   const config = splitTestCategories[category as keyof typeof splitTestCategories] || splitTestCategories.general;
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchUserCredits();
+    }
+  }, [isOpen]);
+
+  const fetchUserCredits = async () => {
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (user) {
+        const { data } = await supabase
+          .from('user_credits')
+          .select('balance')
+          .eq('user_id', user.id)
+          .single();
+
+        setUserCredits((data as any)?.balance || 0);
+      }
+    } catch (error) {
+      console.error('Error fetching credits:', error);
+    }
+  };
 
   const handleImageUpload = (side: 'A' | 'B', file: File) => {
     if (file && file.type.startsWith('image/')) {
@@ -137,6 +166,14 @@ export function SplitTestModal({ isOpen, onClose, category }: SplitTestModalProp
 
       if (!response.ok) {
         const errorData = await response.json();
+
+        // Handle insufficient credits specifically
+        if (response.status === 402) {
+          setShowCreditsModal(true);
+          setIsSubmitting(false);
+          return;
+        }
+
         throw new Error(errorData.error || 'Failed to create split test');
       }
 
@@ -183,7 +220,20 @@ export function SplitTestModal({ isOpen, onClose, category }: SplitTestModalProp
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <>
+      {/* Insufficient Credits Modal */}
+      <InsufficientCreditsModal
+        isOpen={showCreditsModal}
+        onClose={() => setShowCreditsModal(false)}
+        requiredCredits={1}
+        currentCredits={userCredits}
+        onPurchaseSuccess={() => {
+          fetchUserCredits();
+          setShowCreditsModal(false);
+        }}
+      />
+
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[95vh] overflow-hidden">
         {/* Header */}
         <div className="bg-gradient-to-r from-violet-600 to-purple-600 p-6 text-white">
@@ -379,5 +429,6 @@ export function SplitTestModal({ isOpen, onClose, category }: SplitTestModalProp
         </div>
       </div>
     </div>
+    </>
   );
 }

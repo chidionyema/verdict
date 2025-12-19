@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { Heart, X, MessageSquare, Clock, Eye, Users, Zap } from 'lucide-react';
 import { CreditBalance } from '@/components/credits/CreditBalance';
 import { JudgeReputation } from '@/components/reputation/JudgeReputation';
@@ -9,6 +10,7 @@ import { FeedCard } from '@/components/feed/FeedCard';
 import { EmptyState } from '@/components/ui/EmptyStates';
 import { createClient } from '@/lib/supabase/client';
 import { creditManager, CREDIT_ECONOMY_CONFIG } from '@/lib/credits';
+import { toast } from '@/components/ui/toast';
 import type { Database } from '@/lib/database.types';
 
 type FeedRequest = Database['public']['Tables']['feedback_requests']['Row'] & {
@@ -27,6 +29,7 @@ export default function FeedPage() {
   const [judgeStats, setJudgeStats] = useState({ today: 0, streak: 0, totalJudgments: 0 });
   const [creditsEarned, setCreditsEarned] = useState(0);
   const supabaseRef = useRef<ReturnType<typeof createClient> | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
     // Only initialize Supabase client in browser
@@ -51,7 +54,7 @@ export default function FeedPage() {
           await loadJudgeStats(user.id, supabase);
         } else {
           // Redirect to login
-          window.location.href = '/auth/login';
+          router.push('/auth/login');
         }
       } catch (error) {
         console.error('Error initializing feed:', error);
@@ -64,13 +67,22 @@ export default function FeedPage() {
   async function loadFeedItems(supabase: ReturnType<typeof createClient>) {
     try {
       if (!supabase) return;
+      
+      // Add timeout to prevent infinite loading
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Request timeout')), 10000)
+      );
+      
       // Fetch public submissions that haven't been judged by current user
-      const { data: requestsData, error: requestsError } = await supabase
+      const fetchPromise = supabase
         .from('feedback_requests')
         .select('*')
         .eq('visibility', 'public')
         .order('created_at', { ascending: false })
         .limit(50);
+
+      const result = await Promise.race([fetchPromise, timeoutPromise]) as any;
+      const { data: requestsData, error: requestsError } = result;
 
       if (requestsError) throw requestsError;
       
@@ -178,7 +190,7 @@ export default function FeedPage() {
 
     } catch (error) {
       console.error('Error submitting judgment:', error);
-      // TODO: Show error toast
+      toast.error('Failed to submit judgment. Please try again.');
     } finally {
       setJudging(false);
     }
@@ -381,21 +393,21 @@ export default function FeedPage() {
         <div className="max-w-lg mx-auto px-4 py-3">
           <div className="flex items-center justify-around">
             <button
-              onClick={() => window.location.href = '/feed'}
+              onClick={() => router.push('/feed')}
               className="flex flex-col items-center gap-1 text-indigo-600"
             >
               <Heart className="h-5 w-5" />
               <span className="text-xs">Review</span>
             </button>
             <button
-              onClick={() => window.location.href = '/dashboard'}
+              onClick={() => router.push('/dashboard')}
               className="flex flex-col items-center gap-1 text-gray-400"
             >
               <Users className="h-5 w-5" />
               <span className="text-xs">Dashboard</span>
             </button>
             <button
-              onClick={() => window.location.href = '/start'}
+              onClick={() => router.push('/start')}
               className="flex flex-col items-center gap-1 text-gray-400"
             >
               <MessageSquare className="h-5 w-5" />

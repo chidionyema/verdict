@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Heart, CheckCircle, Loader } from 'lucide-react';
+import { toast } from '@/components/ui/toast';
 
 interface ThankJudgesButtonProps {
   requestId: string;
@@ -29,25 +30,30 @@ export function ThankJudgesButton({
     setIsLoading(true);
 
     try {
-      // TODO: Send notifications to judges via API
-      // await fetch('/api/requests/thank-judges', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ requestId }),
-      // });
+      const response = await fetch('/api/requests/thank-judges', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requestId }),
+      });
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to send thanks');
+      }
 
       // Mark as thanked
       localStorage.setItem(`thanked_${requestId}`, 'true');
       setHasThanked(true);
+
+      toast.success(data.message || `Thank you sent to ${judgeCount} judges!`);
 
       if (onSuccess) {
         onSuccess();
       }
     } catch (error) {
       console.error('Failed to thank judges:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to send thanks. Please try again.');
     } finally {
       setIsLoading(false);
     }

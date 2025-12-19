@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { X, Share2, Flame, TrendingUp, Users, Zap } from 'lucide-react';
+import { toast } from '@/components/ui/toast';
 
 interface ViralSharePopupProps {
   isOpen: boolean;
@@ -44,22 +45,22 @@ export function ViralSharePopup({ isOpen, onClose, shareContent, roastData }: Vi
         window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareContent)}`, '_blank');
       }
     },
-    { 
-      name: 'TikTok', 
-      color: 'bg-black hover:bg-gray-800', 
+    {
+      name: 'TikTok',
+      color: 'bg-black hover:bg-gray-800',
       action: () => {
         setPlatform('tiktok');
         navigator.clipboard.writeText(shareContent);
-        alert('Caption copied! Open TikTok and paste into your video description.');
+        toast.success('Caption copied! Open TikTok and paste into your video description.');
       }
     },
-    { 
-      name: 'Instagram', 
-      color: 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600', 
+    {
+      name: 'Instagram',
+      color: 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600',
       action: () => {
         setPlatform('instagram');
         navigator.clipboard.writeText(shareContent);
-        alert('Caption copied! Open Instagram and paste into your post/story.');
+        toast.success('Caption copied! Open Instagram and paste into your post/story.');
       }
     }
   ];

@@ -14,6 +14,7 @@ import {
   RefreshCw,
   DollarSign
 } from 'lucide-react';
+import { toast } from '@/components/ui/toast';
 
 interface ContentReport {
   id: string;
@@ -106,13 +107,12 @@ export default function AdminModerationPage() {
       
       // Refresh data after action
       await fetchModerationData();
-      
-      // Show success message (you could add a toast here)
-      console.log('Action successful:', result.message);
-      
+
+      toast.success(result.message || 'Action completed successfully');
+
     } catch (err) {
       console.error('Action failed:', err);
-      // Show error message (you could add a toast here)
+      toast.error(err instanceof Error ? err.message : 'Action failed');
     } finally {
       setActionLoading(null);
     }

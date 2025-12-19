@@ -307,13 +307,15 @@ export async function submitRequest(input: SubmitRequestInput): Promise<SubmitRe
     }
 
     let mediaUrl: string | null = null;
+    let secondMediaUrl: string | null = null;
 
     // Handle file upload if files are provided
     if (input.files && input.files.length > 0) {
-      const file = input.files[0]; // Use first file for now
+      // Upload first file
+      const file = input.files[0];
       const fileExt = file.name.split('.').pop();
       const fileName = `${user.id}/${Date.now()}.${fileExt}`;
-      const filePath = input.requestType === 'comparison' || input.requestType === 'split_test' 
+      const filePath = input.requestType === 'comparison' || input.requestType === 'split_test'
         ? `comparison-requests/${fileName}`
         : `verdict-requests/${fileName}`;
 
@@ -326,12 +328,36 @@ export async function submitRequest(input: SubmitRequestInput): Promise<SubmitRe
         return { success: false, error: 'Failed to upload file' };
       }
 
-      // Get public URL
+      // Get public URL for first file
       const { data: publicUrl } = supabase.storage
         .from('user-content')
         .getPublicUrl(filePath);
 
       mediaUrl = publicUrl.publicUrl;
+
+      // Upload second file if provided (for comparisons and split tests)
+      if (input.files.length > 1 && (input.requestType === 'comparison' || input.requestType === 'split_test')) {
+        const secondFile = input.files[1];
+        const secondFileExt = secondFile.name.split('.').pop();
+        const secondFileName = `${user.id}/${Date.now()}_b.${secondFileExt}`;
+        const secondFilePath = `comparison-requests/${secondFileName}`;
+
+        const { data: secondUploadData, error: secondUploadError } = await supabase.storage
+          .from('user-content')
+          .upload(secondFilePath, secondFile);
+
+        if (secondUploadError) {
+          console.error('Second file upload error:', secondUploadError);
+          return { success: false, error: 'Failed to upload second file' };
+        }
+
+        // Get public URL for second file
+        const { data: secondPublicUrl } = supabase.storage
+          .from('user-content')
+          .getPublicUrl(secondFilePath);
+
+        secondMediaUrl = secondPublicUrl.publicUrl;
+      }
     }
 
     // Determine the appropriate table based on request type
@@ -346,7 +372,7 @@ export async function submitRequest(input: SubmitRequestInput): Promise<SubmitRe
           title: `Comparison: ${input.category}`,
           description: input.context,
           option_a_url: mediaUrl,
-          option_b_url: input.files?.[1] ? 'placeholder' : null, // Handle second file separately
+          option_b_url: secondMediaUrl,
           category: input.category,
           target_responses: input.targetVerdictCount,
           credits_used: input.creditsToUse,
@@ -361,7 +387,7 @@ export async function submitRequest(input: SubmitRequestInput): Promise<SubmitRe
           title: `Split Test: ${input.category}`,
           description: input.context,
           image_a_url: mediaUrl,
-          image_b_url: input.files?.[1] ? 'placeholder' : null, // Handle second file separately
+          image_b_url: secondMediaUrl,
           target_demographics: input.demographicFilters || {},
           target_responses: input.targetVerdictCount,
           credits_used: input.creditsToUse,

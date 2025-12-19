@@ -26,7 +26,9 @@
       "Bash(find:*)",
       "Bash(ls:*)",
       "Bash(touch:*)",
-      "WebFetch(domain:www.askverdict.com)"
+      "WebFetch(domain:www.askverdict.com)",
+      "Bash(cat:*)",
+      "Bash(xargs -I {} sh -c 'echo \"\"=== {} ===\"\" && head -50 {}')"
     ],
     "deny": [],
     "ask": []

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Upload, Image, FileText } from 'lucide-react';
 import { useStore } from '@/lib/store';
+import { toast } from '@/components/ui/toast';
 
 export default function UploadPage() {
   const router = useRouter();
@@ -43,8 +44,8 @@ export default function UploadPage() {
   };
 
   const handleTextSubmit = () => {
-    if (textContent.length < 120) {
-      alert('Please write at least 50 characters');
+    if (textContent.length < 50) {
+      toast.error('Please write at least 50 characters');
       return;
     }
 

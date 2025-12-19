@@ -3,15 +3,16 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { toast } from '@/components/ui/toast';
 
 // Force dynamic rendering to avoid Supabase client issues during build
 export const dynamic = 'force-dynamic';
-import { 
-  CheckCircle, 
-  AlertCircle, 
-  Clock, 
-  Shield, 
-  Users, 
+import {
+  CheckCircle,
+  AlertCircle,
+  Clock,
+  Shield,
+  Users,
   Star, 
   ArrowRight,
   ChevronLeft,
@@ -100,6 +101,9 @@ export default function JudgeQualificationPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDemographics, setShowDemographics] = useState(false);
   const [demographicsCompleted, setDemographicsCompleted] = useState(false);
+  const [isCompletingSetup, setIsCompletingSetup] = useState(false);
+  const [setupError, setSetupError] = useState<string | null>(null);
+  const [lastDemographicsData, setLastDemographicsData] = useState<any>(null);
 
   useEffect(() => {
     // Only run in browser
@@ -179,6 +183,10 @@ export default function JudgeQualificationPage() {
   };
 
   const handleDemographicsComplete = async (demographicsData: any) => {
+    setIsCompletingSetup(true);
+    setSetupError(null);
+    setLastDemographicsData(demographicsData);
+
     try {
       // Save demographics
       const demographicsRes = await fetch('/api/judge/demographics', {
@@ -193,7 +201,8 @@ export default function JudgeQualificationPage() {
 
         // Check if it's a database setup issue
         if (errorData.instructions) {
-          alert(`Database Setup Required:\n\n${errorData.details}\n\nPlease contact your administrator to run the database migration:\n${errorData.migrationFile}`);
+          setSetupError('Database setup required. Please contact support.');
+          console.error(`Database Setup Required:\n${errorData.details}\nMigration file: ${errorData.migrationFile}`);
           throw new Error(errorData.error);
         }
 
@@ -204,14 +213,15 @@ export default function JudgeQualificationPage() {
       const profileRes = await fetch('/api/profile', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           is_judge: true,
           judge_qualification_date: new Date().toISOString()
         }),
       });
-      
+
       if (profileRes.ok) {
         setDemographicsCompleted(true);
+        setIsCompletingSetup(false);
         setTimeout(() => {
           router.push('/judge');
         }, 3000);
@@ -220,7 +230,15 @@ export default function JudgeQualificationPage() {
       }
     } catch (error) {
       console.error('Error completing judge setup:', error);
-      alert('There was an error completing your setup. Please try again.');
+      setSetupError(error instanceof Error ? error.message : 'There was an error completing your setup.');
+      toast.error('There was an error completing your setup. Please try again.');
+      setIsCompletingSetup(false);
+    }
+  };
+
+  const handleRetrySetup = () => {
+    if (lastDemographicsData) {
+      handleDemographicsComplete(lastDemographicsData);
     }
   };
 
@@ -543,6 +561,30 @@ export default function JudgeQualificationPage() {
                         You can now start reviewing requests and earning credits. Thank you for joining our community of judges!
                       </p>
                     </div>
+                  </div>
+                </div>
+              ) : isCompletingSetup ? (
+                <div className="text-center space-y-6">
+                  <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-indigo-600 mx-auto"></div>
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900 mb-2">Setting Up Your Profile...</h2>
+                    <p className="text-gray-600">Please wait while we complete your judge registration.</p>
+                  </div>
+                </div>
+              ) : setupError ? (
+                <div className="text-center space-y-6">
+                  <div className="bg-red-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto">
+                    <AlertCircle className="h-8 w-8 text-red-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900 mb-2">Setup Failed</h2>
+                    <p className="text-gray-600 mb-4">{setupError}</p>
+                    <button
+                      onClick={handleRetrySetup}
+                      className="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 transition"
+                    >
+                      Try Again
+                    </button>
                   </div>
                 </div>
               ) : (

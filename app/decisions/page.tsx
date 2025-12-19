@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client';
 import { ArrowLeft, Filter, Search, Calendar, BarChart3, Move, Folder as FolderIcon } from 'lucide-react';
 import FolderManager from '@/components/folders/FolderManager';
 import Link from 'next/link';
+import { toast } from '@/components/ui/toast';
 
 interface Request {
   id: string;
@@ -137,7 +138,7 @@ export default function DecisionsPage() {
       setShowMoveModal(false);
     } catch (error) {
       console.error('Error moving requests:', error);
-      alert('Failed to move requests');
+      toast.error('Failed to move requests');
     }
   };
 

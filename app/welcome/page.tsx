@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 export const dynamic = 'force-dynamic';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { ChevronRight, User, CreditCard, Camera, CheckCircle, ArrowRight } from 'lucide-react';
+import { ChevronRight, User, CreditCard, Camera, CheckCircle, ArrowRight, AlertCircle } from 'lucide-react';
 
 interface Profile {
   display_name: string;
@@ -35,6 +35,8 @@ export default function WelcomePage() {
   });
   const [currentStep, setCurrentStep] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveError, setSaveError] = useState('');
 
   useEffect(() => {
     const getUser = async () => {
@@ -73,15 +75,26 @@ export default function WelcomePage() {
 
   const updateProfile = async (updates: Partial<Profile>) => {
     if (!user || typeof window === 'undefined') return;
-    
+
+    setSaveError('');
+    setSaveSuccess(false);
+
     const supabase = createClient();
     const { error } = await (supabase
       .from('profiles')
       .update as any)(updates)
       .eq('id', user.id);
-    
-    if (!error) {
+
+    if (error) {
+      setSaveError('Failed to save profile. Please try again.');
+    } else {
       setProfile(prev => ({ ...prev, ...updates }));
+      setSaveSuccess(true);
+      // Auto-advance to next step after save
+      setTimeout(() => {
+        setCurrentStep(2);
+        setSaveSuccess(false);
+      }, 1500);
     }
   };
 
@@ -255,13 +268,53 @@ export default function WelcomePage() {
                   </div>
                 </div>
                 
+                {/* Validation message */}
+                {(!profile.display_name || !profile.country || !profile.age_range) && (
+                  <div className="mt-4 flex items-center gap-2 text-amber-600 text-sm">
+                    <AlertCircle className="h-4 w-4" />
+                    <span>
+                      Please fill in{' '}
+                      {[
+                        !profile.display_name && 'Display Name',
+                        !profile.country && 'Country',
+                        !profile.age_range && 'Age Range',
+                      ]
+                        .filter(Boolean)
+                        .join(', ')}
+                    </span>
+                  </div>
+                )}
+
+                {/* Success message */}
+                {saveSuccess && (
+                  <div className="mt-4 flex items-center gap-2 text-green-600 text-sm bg-green-50 p-3 rounded-lg">
+                    <CheckCircle className="h-4 w-4" />
+                    <span>Profile saved successfully!</span>
+                  </div>
+                )}
+
+                {/* Error message */}
+                {saveError && (
+                  <div className="mt-4 flex items-center gap-2 text-red-600 text-sm bg-red-50 p-3 rounded-lg">
+                    <AlertCircle className="h-4 w-4" />
+                    <span>{saveError}</span>
+                  </div>
+                )}
+
                 <div className="mt-6 flex gap-4">
                   <button
                     onClick={() => updateProfile(profile)}
                     disabled={!profile.display_name || !profile.country || !profile.age_range}
                     className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed"
                   >
-                    Save Profile
+                    {saveSuccess ? (
+                      <span className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4" />
+                        Saved!
+                      </span>
+                    ) : (
+                      'Save Profile'
+                    )}
                   </button>
                   <button
                     onClick={() => setCurrentStep(2)}

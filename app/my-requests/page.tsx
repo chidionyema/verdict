@@ -59,18 +59,14 @@ export default function MyRequestsPage() {
         return;
       }
 
-      console.log('Current user:', user.id);
-
-      // Fetch requests using the fixed API
+      // Fetch requests using the API
       const res = await fetch('/api/requests');
-      console.log('API Response status:', res.status);
-      
+
       if (res.ok) {
         const data = await res.json();
-        console.log('API Response data:', data);
         const fetchedRequests = data.requests || [];
         setRequests(fetchedRequests);
-        
+
         // Store initial counts for comparison
         const counts: Record<string, number> = {};
         fetchedRequests.forEach((req: any) => {
@@ -82,16 +78,6 @@ export default function MyRequestsPage() {
         console.error('API Error:', errorData);
         setError(`API Error: ${errorData.error || 'Unknown error'}`);
       }
-      
-      // Also try direct Supabase query
-      console.log('Trying direct Supabase query...');
-      const { data: directRequests, error: directError } = await supabase
-        .from('verdict_requests')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-      
-      console.log('Direct Supabase query result:', { directRequests, directError });
       
     } catch (err) {
       console.error('Fetch error:', err);
@@ -589,7 +575,14 @@ export default function MyRequestsPage() {
                           </div>
                         </div>
                       </div>
-                      <button className="text-gray-400 hover:text-gray-600">
+                      <button
+                        onClick={() => {
+                          const viewUrl = request.view_url || `/requests/${request.id}`;
+                          window.location.href = viewUrl;
+                        }}
+                        className="text-gray-400 hover:text-gray-600 cursor-pointer"
+                        title="View details"
+                      >
                         <MoreHorizontal className="h-5 w-5" />
                       </button>
                     </div>
@@ -642,11 +635,45 @@ export default function MyRequestsPage() {
                         {getPrimaryCtaLabel(request)}
                       </Link>
                       {request.status === 'closed' && (
-                        <button className="px-3 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">
+                        <button
+                          onClick={async () => {
+                            const shareUrl = `${window.location.origin}${request.view_url || `/requests/${request.id}`}`;
+                            if (navigator.share) {
+                              try {
+                                await navigator.share({
+                                  title: 'Check out my verdict results',
+                                  text: request.context?.substring(0, 100) || 'My verdict request results',
+                                  url: shareUrl,
+                                });
+                              } catch (err) {
+                                // User cancelled or share failed, fallback to copy
+                                await navigator.clipboard.writeText(shareUrl);
+                                toast.success('Link copied to clipboard!');
+                              }
+                            } else {
+                              await navigator.clipboard.writeText(shareUrl);
+                              toast.success('Link copied to clipboard!');
+                            }
+                          }}
+                          className="px-3 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition cursor-pointer"
+                          title="Share results"
+                        >
                           <Share2 className="h-4 w-4" />
                         </button>
                       )}
-                      <button className="px-3 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">
+                      <button
+                        onClick={async () => {
+                          const requestUrl = `${window.location.origin}${request.view_url || `/requests/${request.id}`}`;
+                          try {
+                            await navigator.clipboard.writeText(requestUrl);
+                            toast.success('Link copied to clipboard!');
+                          } catch (err) {
+                            toast.error('Failed to copy link');
+                          }
+                        }}
+                        className="px-3 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition cursor-pointer"
+                        title="Copy link"
+                      >
                         <Copy className="h-4 w-4" />
                       </button>
                     </div>

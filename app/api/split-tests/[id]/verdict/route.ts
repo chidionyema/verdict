@@ -196,18 +196,48 @@ export async function POST(
         transaction_source_id: (verdict as any)?.id || splitTestId,
         transaction_description: 'Split Test Judgment Reward',
       });
-    } catch (error) {
-      console.log('award_credits RPC not found, skipping');
+    } catch (rpcError) {
+      // Fallback: Direct database update if RPC not available
+      console.error('award_credits RPC failed, using fallback:', rpcError);
+      try {
+        // Update user credits balance directly
+        const { data: currentCredits } = await (supabase as any)
+          .from('user_credits')
+          .select('balance')
+          .eq('user_id', user.id)
+          .single();
+
+        if (currentCredits) {
+          await (supabase as any)
+            .from('user_credits')
+            .update({ balance: ((currentCredits as any).balance || 0) + creditAmount })
+            .eq('user_id', user.id);
+        }
+
+        // Record the transaction
+        await supabase.from('credit_transactions').insert({
+          user_id: user.id,
+          amount: creditAmount,
+          type: 'earned',
+          description: 'Split Test Judgment Reward',
+          source: 'split_test_verdict',
+          source_id: (verdict as any)?.id || splitTestId,
+        } as any);
+      } catch (fallbackError) {
+        console.error('Credit award fallback also failed:', fallbackError);
+        // Don't fail the verdict submission - log for monitoring
+      }
     }
 
-    // Update judge reputation and gamification metrics
+    // Update judge reputation (non-critical, can silently fail)
     try {
       await (supabase as any).rpc('update_judge_reputation', {
         target_user_id: user.id,
-        quality_score: Math.round((photoARating + photoBRating) / 2), // Average rating as quality indicator
+        quality_score: Math.round((photoARating + photoBRating) / 2),
       });
     } catch (error) {
-      console.log('update_judge_reputation RPC not found, skipping');
+      // Reputation update is non-critical, just log
+      console.error('update_judge_reputation failed:', error);
     }
 
     // Log the judgment action (skip if table doesn't exist yet)

@@ -19,6 +19,7 @@ import {
   Target,
   Upload,
   Type,
+  Mic,
   Image as ImageIcon,
   Plus,
   Check,
@@ -40,7 +41,7 @@ import { RippleButton, MagneticButton, PulseElement, AnimatedProgressRing, Confe
 export const dynamic = 'force-dynamic';
 
 type RequestType = 'verdict' | 'comparison' | 'split_test';
-type MediaType = 'photo' | 'text';
+type MediaType = 'photo' | 'text' | 'audio';
 type Category = 'appearance' | 'profile' | 'writing' | 'decision';
 type Tier = 'community' | 'standard' | 'premium';
 
@@ -110,6 +111,15 @@ const MEDIA_TYPES = [
     subtitle: 'Paste or type your content',
     icon: Type,
     gradient: 'from-indigo-500 to-blue-500',
+  },
+  {
+    id: 'audio' as MediaType,
+    title: 'Audio/Voice',
+    subtitle: 'Upload voice recordings or audio',
+    icon: Mic,
+    accept: 'audio/*',
+    gradient: 'from-purple-500 to-pink-500',
+    badge: 'Beta',
   },
 ];
 
@@ -582,6 +592,11 @@ export default function CreateRequestPage() {
                     </PulseElement>
                     <h4 className="font-semibold text-gray-900">{type.title}</h4>
                     <p className="text-sm text-gray-600">{type.subtitle}</p>
+                    {type.badge && (
+                      <span className="inline-block mt-2 bg-orange-100 text-orange-700 text-xs px-2 py-1 rounded-full">
+                        {type.badge}
+                      </span>
+                    )}
                   </RippleButton>
                 ))}
               </div>

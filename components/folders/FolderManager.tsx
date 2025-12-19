@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Plus, Search, SortAsc, Grid, List, FolderOpen } from 'lucide-react';
 import FolderCard from './FolderCard';
 import CreateFolderModal from './CreateFolderModal';
+import { toast } from '@/components/ui/toast';
 
 interface Folder {
   id: string;
@@ -124,13 +125,12 @@ export default function FolderManager({
         onFolderSelect(null);
       }
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Failed to delete folder');
+      toast.error(err instanceof Error ? err.message : 'Failed to delete folder');
     }
   };
 
   const handleEditFolder = (folderId: string) => {
     // TODO: Implement edit modal
-    console.log('Edit folder:', folderId);
   };
 
   const filteredFolders = folders

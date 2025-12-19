@@ -78,7 +78,18 @@ export default function RequestDetailPage({
   const [sortBy, setSortBy] = useState<'date' | 'rating' | 'helpful'>('date');
   const [filterTone, setFilterTone] = useState<'all' | 'encouraging' | 'honest' | 'constructive'>('all');
   const [showAnalytics, setShowAnalytics] = useState(false);
-  const [verdictInteractions, setVerdictInteractions] = useState<Record<string, { helpful: boolean, bookmarked: boolean }>>({});
+  const [verdictInteractions, setVerdictInteractions] = useState<Record<string, { helpful: boolean, bookmarked: boolean }>>(() => {
+    // Load interactions from localStorage
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem(`verdict_interactions_${id}`);
+        return stored ? JSON.parse(stored) : {};
+      } catch {
+        return {};
+      }
+    }
+    return {};
+  });
 
   // Shareable verdict functionality
   const { 
@@ -154,7 +165,16 @@ export default function RequestDetailPage({
 
   const fetchRequest = async () => {
     try {
-      const res = await fetch(`/api/requests/${id}`);
+      // Add timeout to prevent infinite loading
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
+      const res = await fetch(`/api/requests/${id}`, {
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      
       if (!res.ok) {
         if (res.status === 404) {
           setError('Request not found');
@@ -187,8 +207,12 @@ export default function RequestDetailPage({
       
       setLoading(false);
     } catch (err) {
-      console.error('Error fetching request:', err);
-      setError('Failed to load request');
+      if (err instanceof Error && err.name === 'AbortError') {
+        setError('Request timed out. Please try again.');
+      } else {
+        console.error('Error fetching request:', err);
+        setError('Failed to load request');
+      }
       setLoading(false);
     }
   };
@@ -204,13 +228,24 @@ export default function RequestDetailPage({
   };
 
   const toggleVerdictInteraction = (verdictId: string, type: 'helpful' | 'bookmarked') => {
-    setVerdictInteractions(prev => ({
-      ...prev,
-      [verdictId]: {
-        ...prev[verdictId],
-        [type]: !prev[verdictId]?.[type]
+    setVerdictInteractions(prev => {
+      const updated = {
+        ...prev,
+        [verdictId]: {
+          ...prev[verdictId],
+          [type]: !prev[verdictId]?.[type]
+        }
+      };
+      // Persist to localStorage
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem(`verdict_interactions_${id}`, JSON.stringify(updated));
+        } catch (e) {
+          console.error('Failed to persist verdict interactions:', e);
+        }
       }
-    }));
+      return updated;
+    });
   };
 
   // Filter and sort verdicts
@@ -455,7 +490,42 @@ export default function RequestDetailPage({
                     <Share2 className="h-4 w-4" />
                     Share Results
                   </button>
-                  <button className="flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition">
+                  <button
+                    onClick={() => {
+                      // Export request data as JSON
+                      const exportData = {
+                        request: {
+                          id: request.id,
+                          category: request.category,
+                          context: request.context,
+                          status: request.status,
+                          created_at: request.created_at,
+                          media_type: request.media_type,
+                        },
+                        verdicts: verdicts.map(v => ({
+                          rating: v.rating,
+                          feedback: v.feedback,
+                          created_at: v.created_at,
+                        })),
+                        summary: {
+                          total_verdicts: verdicts.length,
+                          average_rating: verdicts.length > 0
+                            ? (verdicts.reduce((sum, v) => sum + (v.rating || 0), 0) / verdicts.length).toFixed(1)
+                            : null,
+                        }
+                      };
+                      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `verdict-${request.id.slice(0, 8)}.json`;
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                      URL.revokeObjectURL(url);
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition cursor-pointer"
+                  >
                     <Download className="h-4 w-4" />
                     Export
                   </button>
@@ -1057,7 +1127,7 @@ export default function RequestDetailPage({
                 <ThankJudgesButton
                   requestId={request.id}
                   judgeCount={verdicts.length}
-                  onSuccess={() => alert('Your appreciation has been sent to all judges!')}
+                  onSuccess={() => toast.success('Your appreciation has been sent to all judges!')}
                 />
               </div>
 

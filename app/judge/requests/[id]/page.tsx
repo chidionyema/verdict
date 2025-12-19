@@ -29,7 +29,16 @@ export default function JudgeVerdictPage({
 
   const fetchRequest = async () => {
     try {
-      const res = await fetch(`/api/requests/${id}`);
+      // Add timeout to prevent infinite loading
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
+      const res = await fetch(`/api/requests/${id}`, {
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      
       if (!res.ok) {
         setError('Request not found or not available');
         setLoading(false);
@@ -40,7 +49,11 @@ export default function JudgeVerdictPage({
       setRequest(data.request);
       setLoading(false);
     } catch (err) {
-      setError('Failed to load request');
+      if (err instanceof Error && err.name === 'AbortError') {
+        setError('Request timed out. Please try again.');
+      } else {
+        setError('Failed to load request');
+      }
       setLoading(false);
     }
   };
@@ -89,17 +102,49 @@ export default function JudgeVerdictPage({
   if (error && !request) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-600 mb-4">{error}</p>
-          <Link href="/judge" className="text-indigo-600 hover:underline">
-            Back to Dashboard
+        <div className="text-center max-w-md px-4">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-6 mb-4">
+            <p className="text-red-800 font-medium mb-2">Unable to load request</p>
+            <p className="text-red-600 text-sm">{error}</p>
+          </div>
+          <Link 
+            href="/judge" 
+            className="inline-flex items-center text-indigo-600 hover:text-indigo-700 font-medium"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Judge Queue
           </Link>
         </div>
       </div>
     );
   }
 
-  if (!request) return null;
+  if (!request && !loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center max-w-md px-4">
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 mb-4">
+            <p className="text-yellow-800 font-medium mb-2">Request not found</p>
+            <p className="text-yellow-600 text-sm">
+              This request may have been removed or you don't have access to it.
+            </p>
+          </div>
+          <Link 
+            href="/judge" 
+            className="inline-flex items-center text-indigo-600 hover:text-indigo-700 font-medium"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Judge Queue
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // Type guard: if we reach here and request is null, we're still loading
+  if (!request) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">

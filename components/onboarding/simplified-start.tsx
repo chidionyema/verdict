@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { ModeIndicator } from '@/components/mode/ModeIndicator';
 import { PricingTiers, type RequestTier } from '@/components/pricing/PricingTiers';
+import { InsufficientCreditsModal } from '@/components/modals/InsufficientCreditsModal';
 import type { User } from '@supabase/supabase-js';
 import type { Mode } from '@/lib/mode-colors';
 
@@ -106,6 +107,8 @@ export function SimplifiedStart() {
   const [selectedTier, setSelectedTier] = useState<RequestTier>('community');
   const [userCredits, setUserCredits] = useState(0);
   const [userTier, setUserTier] = useState<'community' | 'standard' | 'pro'>('community');
+  const [showCreditsModal, setShowCreditsModal] = useState(false);
+  const [requiredCredits, setRequiredCredits] = useState(1);
 
   useEffect(() => {
     // Only initialize Supabase client in browser
@@ -233,7 +236,7 @@ export function SimplifiedStart() {
   };
 
   const handleTextSubmit = () => {
-    if (textContent.length < 120) {
+    if (textContent.length < 50) {
       setError('Please write at least 50 characters');
       return;
     }
@@ -314,6 +317,21 @@ export function SimplifiedStart() {
 
       if (!res.ok) {
         const data = await res.json();
+
+        // Handle insufficient credits specifically
+        if (res.status === 402) {
+          // Extract required credits from response or calculate from tier
+          const tierCredits: Record<string, number> = {
+            'community': 1,
+            'standard': 3,
+            'pro': 5,
+          };
+          setRequiredCredits(data.required_credits || tierCredits[selectedTier] || 1);
+          setShowCreditsModal(true);
+          setSubmitting(false);
+          return;
+        }
+
         throw new Error(data.details || data.error || 'Failed to create request');
       }
 
@@ -345,19 +363,21 @@ export function SimplifiedStart() {
 
       if (data.demo) {
         // Demo mode - tier upgraded directly
-        alert(`Upgraded to ${data.tier} tier (demo mode)`);
+        // Note: No toast available in this context, use inline notification
         setUserTier(data.tier);
+        setError(`Upgraded to ${data.tier} tier (demo mode)`);
+        setTimeout(() => setError(''), 3000);
         return;
       }
 
       if (data.checkout_url) {
         window.location.href = data.checkout_url;
       } else {
-        alert(data.error || 'Failed to create checkout session');
+        setError(data.error || 'Failed to create checkout session');
       }
     } catch (error) {
       console.error('Tier upgrade error:', error);
-      alert('Failed to upgrade tier. Please try again.');
+      setError('Failed to upgrade tier. Please try again.');
     }
   };
 
@@ -408,8 +428,32 @@ export function SimplifiedStart() {
     );
   }
 
+  // Refresh credits after purchase
+  const refreshCredits = async () => {
+    if (!user) return;
+    const supabase = createClient();
+    const { data } = await supabase
+      .from('user_credits')
+      .select('balance')
+      .eq('user_id', user.id)
+      .single();
+    setUserCredits((data as any)?.balance || 0);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+      {/* Insufficient Credits Modal */}
+      <InsufficientCreditsModal
+        isOpen={showCreditsModal}
+        onClose={() => setShowCreditsModal(false)}
+        requiredCredits={requiredCredits}
+        currentCredits={userCredits}
+        onPurchaseSuccess={() => {
+          refreshCredits();
+          setShowCreditsModal(false);
+        }}
+      />
+
       {/* Progress Header */}
       <div className="bg-white/80 backdrop-blur-sm border-b border-white/20 sticky top-0 z-40">
         <div className="max-w-4xl mx-auto px-6 py-4">
@@ -666,14 +710,14 @@ export function SimplifiedStart() {
                       value={textContent}
                       onChange={(e) => setTextContent(e.target.value)}
                       onBlur={() => setTextContentTouched(true)}
-                      placeholder="Paste your text here... (minimum 120 characters for quality feedback)"
+                      placeholder="Paste your text here... (minimum 50 characters for quality feedback)"
                       className="w-full p-6 border-2 border-gray-300 rounded-2xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 transition-all text-lg resize-none"
                       rows={8}
                     />
                     <div className="absolute bottom-4 right-4 flex items-center gap-2">
                       <span className={`text-sm font-medium ${
-                        textContentTouched && textContent.length < 120 ? 'text-red-500' :
-                        textContent.length >= 120 ? 'text-green-600' : 'text-gray-500'
+                        textContentTouched && textContent.length < 50 ? 'text-red-500' :
+                        textContent.length >= 50 ? 'text-green-600' : 'text-gray-500'
                       }`}>
                         {textContent.length}/500
                       </span>
@@ -693,9 +737,9 @@ export function SimplifiedStart() {
                   <div className="flex justify-end">
                     <button
                       onClick={handleTextSubmit}
-                      disabled={textContent.length < 120}
+                      disabled={textContent.length < 50}
                       className={`inline-flex items-center gap-2 px-8 py-4 rounded-xl font-semibold transition-all ${
-                        textContent.length < 120
+                        textContent.length < 50
                           ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                           : 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:shadow-lg transform hover:scale-105'
                       }`}

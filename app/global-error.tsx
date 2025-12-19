@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 export default function GlobalError({
   error,
@@ -9,6 +11,8 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const router = useRouter();
+  
   useEffect(() => {
     // Log error to console (Better Stack captures server-side)
     console.error('Global error:', error);
@@ -33,7 +37,8 @@ export default function GlobalError({
             padding: '40px',
             borderRadius: '12px',
             boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
-            maxWidth: '400px',
+            maxWidth: '500px',
+            width: '100%',
           }}>
             <h1 style={{ fontSize: '24px', marginBottom: '16px', color: '#111827' }}>
               Something went wrong
@@ -41,21 +46,61 @@ export default function GlobalError({
             <p style={{ color: '#6b7280', marginBottom: '24px', lineHeight: '1.5' }}>
               We apologize for the inconvenience. Our team has been notified and is working on a fix.
             </p>
-            <button
-              onClick={() => reset()}
-              style={{
-                backgroundColor: '#4F46E5',
-                color: 'white',
-                padding: '12px 24px',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                fontSize: '16px',
-                fontWeight: '500',
-              }}
-            >
-              Try again
-            </button>
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px',
+              width: '100%',
+            }}>
+              <button
+                onClick={() => reset()}
+                style={{
+                  backgroundColor: '#4F46E5',
+                  color: 'white',
+                  padding: '12px 24px',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '16px',
+                  fontWeight: '500',
+                  width: '100%',
+                }}
+              >
+                Try again
+              </button>
+              <button
+                onClick={() => router.push('/')}
+                style={{
+                  backgroundColor: '#f3f4f6',
+                  color: '#374151',
+                  padding: '12px 24px',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '16px',
+                  fontWeight: '500',
+                  width: '100%',
+                }}
+              >
+                Go Home
+              </button>
+              <button
+                onClick={() => router.back()}
+                style={{
+                  backgroundColor: 'transparent',
+                  color: '#6b7280',
+                  padding: '12px 24px',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '400',
+                  width: '100%',
+                }}
+              >
+                Go Back
+              </button>
+            </div>
           </div>
         </div>
       </body>

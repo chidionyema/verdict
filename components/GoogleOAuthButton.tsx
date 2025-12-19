@@ -47,11 +47,6 @@ export default function GoogleOAuthButton({
         sessionStorage.setItem('verdict_redirect_to', redirectTo);
       }
 
-      // Debug: Log the redirect URL being used
-      console.log('OAuth redirect URL:', callbackUrl.toString());
-      console.log('SITE_URL env var:', SITE_URL);
-      console.log('Window origin:', typeof window !== 'undefined' ? window.location.origin : 'N/A');
-
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {

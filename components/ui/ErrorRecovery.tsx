@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, createContext, useContext, useRef } from 'react';
 import { AlertTriangle, Undo2, Redo2, RefreshCw, X, CheckCircle } from 'lucide-react';
 import { TouchButton } from '@/components/ui/touch-button';
+import { toast } from '@/components/ui/toast';
 
 // Action types for undo/redo system
 interface Action {
@@ -137,8 +138,7 @@ export function ErrorRecoveryProvider({ children }: { children: React.ReactNode 
   }, []);
 
   const showSuccessToast = (message: string) => {
-    // In a real app, this would integrate with your toast system
-    console.log('Success:', message);
+    toast.success(message);
   };
 
   // Keyboard shortcuts

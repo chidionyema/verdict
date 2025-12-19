@@ -1921,6 +1921,127 @@ ALTER TABLE public.password_resets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.profile_completion_steps ENABLE ROW LEVEL SECURITY;
 
+-- ============================================================================
+-- GRANT PERMISSIONS FOR AUTHENTICATED AND ANON ROLES
+-- ============================================================================
+-- PostgreSQL requires GRANT permissions (base access) in addition to RLS policies (row filtering)
+
+-- Core tables - authenticated users need full CRUD
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.profiles TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.user_credits TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.verdict_requests TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.verdict_responses TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.decision_folders TO authenticated;
+
+-- Expert system tables
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.expert_verifications TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.expert_queue_preferences TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.request_assignments TO authenticated;
+
+-- Reputation system tables
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.judge_reputation TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.reviewer_ratings TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.reputation_history TO authenticated;
+
+-- Calibration system tables
+GRANT SELECT ON public.calibration_tests TO authenticated;
+GRANT SELECT ON public.calibration_tests TO anon;
+GRANT SELECT, INSERT, UPDATE ON public.calibration_results TO authenticated;
+
+-- Pricing and payment tables
+GRANT SELECT ON public.pricing_tiers TO authenticated;
+GRANT SELECT ON public.pricing_tiers TO anon;
+GRANT SELECT, INSERT, UPDATE ON public.payment_transactions TO authenticated;
+GRANT SELECT ON public.promo_codes TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.user_payment_methods TO authenticated;
+
+-- Transaction tables
+GRANT SELECT, INSERT ON public.credit_transactions TO authenticated;
+GRANT SELECT, INSERT, UPDATE ON public.transactions TO authenticated;
+
+-- Consensus analysis
+GRANT SELECT, INSERT, UPDATE ON public.consensus_analysis TO authenticated;
+
+-- Comparison system tables
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.comparison_requests TO authenticated;
+GRANT SELECT ON public.comparison_requests TO anon;
+GRANT SELECT, INSERT, UPDATE ON public.comparison_verdicts TO authenticated;
+
+-- Session and activity tables
+GRANT SELECT, INSERT, UPDATE ON public.judge_sessions TO authenticated;
+GRANT SELECT, INSERT, UPDATE ON public.admin_notifications TO authenticated;
+
+-- Legacy support tables
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.verdicts TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.feedback_requests TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.feedback_responses TO authenticated;
+GRANT SELECT, INSERT, UPDATE ON public.judge_verifications TO authenticated;
+
+-- Demographics tables
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.judge_demographics TO authenticated;
+GRANT SELECT, INSERT, UPDATE ON public.judge_availability TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.request_judge_preferences TO authenticated;
+
+-- Payment and financial tables
+GRANT SELECT, INSERT, UPDATE ON public.payments TO authenticated;
+GRANT SELECT, INSERT, UPDATE ON public.judge_earnings TO authenticated;
+GRANT SELECT, INSERT, UPDATE ON public.payouts TO authenticated;
+GRANT SELECT ON public.credit_packages TO authenticated;
+GRANT SELECT ON public.credit_packages TO anon;
+
+-- Subscription tables
+GRANT SELECT ON public.subscription_plans TO authenticated;
+GRANT SELECT ON public.subscription_plans TO anon;
+GRANT SELECT, INSERT, UPDATE ON public.subscriptions TO authenticated;
+
+-- Moderation and quality tables
+GRANT SELECT, INSERT ON public.content_reports TO authenticated;
+GRANT SELECT, INSERT ON public.content_flags TO authenticated;
+GRANT SELECT, INSERT ON public.content_moderation_logs TO authenticated;
+GRANT SELECT, INSERT ON public.user_moderation_actions TO authenticated;
+GRANT SELECT, INSERT, UPDATE ON public.judge_performance_metrics TO authenticated;
+GRANT SELECT, INSERT, UPDATE ON public.judge_qualifications TO authenticated;
+GRANT SELECT ON public.judge_tiers TO authenticated;
+GRANT SELECT ON public.judge_tiers TO anon;
+GRANT SELECT, INSERT, UPDATE ON public.verdict_quality_ratings TO authenticated;
+
+-- Notification and communication tables
+GRANT SELECT, INSERT, UPDATE ON public.notifications TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.user_device_tokens TO authenticated;
+GRANT SELECT, INSERT ON public.notification_logs TO authenticated;
+
+-- Support tables
+GRANT SELECT, INSERT, UPDATE ON public.support_tickets TO authenticated;
+GRANT SELECT, INSERT ON public.support_ticket_replies TO authenticated;
+GRANT SELECT ON public.help_articles TO authenticated;
+GRANT SELECT ON public.help_articles TO anon;
+GRANT SELECT, INSERT ON public.help_article_feedback TO authenticated;
+
+-- Admin tables (admin-only via RLS)
+GRANT SELECT, INSERT, UPDATE ON public.admin_request_actions TO authenticated;
+
+-- Search and discovery tables
+GRANT SELECT, INSERT, UPDATE ON public.popular_searches TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.saved_searches TO authenticated;
+GRANT SELECT, INSERT ON public.search_analytics TO authenticated;
+GRANT SELECT ON public.content_tags TO authenticated;
+GRANT SELECT ON public.content_tags TO anon;
+GRANT SELECT, INSERT, DELETE ON public.verdict_request_tags TO authenticated;
+
+-- Auth and session tables
+GRANT SELECT, INSERT, UPDATE ON public.email_verifications TO authenticated;
+GRANT SELECT, INSERT, UPDATE ON public.password_resets TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.user_sessions TO authenticated;
+
+-- Integration and webhook tables
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.integration_configs TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.webhook_endpoints TO authenticated;
+GRANT SELECT, INSERT ON public.webhook_deliveries TO authenticated;
+
+-- Audit and compliance tables
+GRANT SELECT, INSERT ON public.audit_logs TO authenticated;
+GRANT SELECT, INSERT, UPDATE ON public.profile_completion_steps TO authenticated;
+
 -- Profiles policies
 CREATE POLICY "Users can view their own profile" ON public.profiles
   FOR SELECT USING (auth.uid() = id);
@@ -1942,13 +2063,23 @@ CREATE POLICY "Public read for calibration tests" ON public.calibration_tests
 CREATE POLICY "Users can access their own credits" ON public.user_credits
   FOR ALL USING (auth.uid() = user_id);
 
+-- verdict_requests policies (drop first to allow re-runs)
+DROP POLICY IF EXISTS "Users can access their own requests" ON public.verdict_requests;
+DROP POLICY IF EXISTS "Judges can view open requests" ON public.verdict_requests;
+DROP POLICY IF EXISTS "Judges can view in_progress requests" ON public.verdict_requests;
+DROP POLICY IF EXISTS "users_own_requests" ON public.verdict_requests;
+
 CREATE POLICY "Users can access their own requests" ON public.verdict_requests
-  FOR ALL USING (auth.uid() = user_id);
+  FOR ALL
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
 
 CREATE POLICY "Judges can view open requests" ON public.verdict_requests
   FOR SELECT USING (
-    status IN ('open', 'in_progress') AND 
-    auth.uid() IN (SELECT id FROM public.profiles WHERE is_judge = true)
+    status IN ('open', 'in_progress')
+    AND auth.uid() != user_id
+    AND deleted_at IS NULL
+    AND EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND is_judge = true)
   );
 
 CREATE POLICY "Users can access their own folders" ON public.decision_folders
@@ -2072,18 +2203,7 @@ CREATE POLICY "users_own_sessions" ON public.user_sessions
 CREATE POLICY "users_own_completion_steps" ON public.profile_completion_steps
   FOR ALL USING (auth.uid() = user_id);
 
--- Special policy for judges viewing in-progress requests
-CREATE POLICY "Judges can view in_progress requests" ON public.verdict_requests
-  FOR SELECT USING (
-    auth.uid() != user_id
-    AND (status = 'in_progress' OR status = 'open')
-    AND deleted_at IS NULL
-    AND EXISTS (
-      SELECT 1
-      FROM public.profiles
-      WHERE id = auth.uid() AND is_judge = true
-    )
-  );
+-- Note: verdict_requests policies are defined earlier in this file (search for "verdict_requests policies")
 
 -- ============================================================================
 -- INITIAL DATA SEEDING

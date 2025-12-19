@@ -151,12 +151,21 @@ export default function SplitTestPage() {
   };
 
   const getWinnerBadge = () => {
-    if (!winner || winner === 'tie') return null;
-    
+    if (!winner) return null;
+
+    if (winner === 'tie') {
+      return (
+        <div className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
+          <Trophy className="w-4 h-4" />
+          It's a Tie!
+        </div>
+      );
+    }
+
     return (
       <div className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium ${
-        winner === 'A' 
-          ? 'bg-green-100 text-green-800' 
+        winner === 'A'
+          ? 'bg-green-100 text-green-800'
           : 'bg-blue-100 text-blue-800'
       }`}>
         <Trophy className="w-4 h-4" />
@@ -329,6 +338,27 @@ export default function SplitTestPage() {
                 )}
               </div>
             </div>
+
+            {/* Waiting for Verdicts State */}
+            {splitTest.verdicts.length === 0 && splitTest.status !== 'completed' && (
+              <div className="bg-white rounded-xl p-6 shadow-sm">
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Clock className="w-8 h-8 text-emerald-600 animate-pulse" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Waiting for Judge Verdicts</h3>
+                  <p className="text-gray-600 mb-4">
+                    Your split test is being evaluated. You'll receive {splitTest.target_verdict_count} verdicts.
+                  </p>
+                  <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
+                    <div className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <div className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <div className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                    <span className="ml-2">Usually within 2 hours</span>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Individual Verdicts */}
             {splitTest.verdicts.length > 0 && (
