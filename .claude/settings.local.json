@@ -29,7 +29,8 @@
       "WebFetch(domain:www.askverdict.com)",
       "Bash(cat:*)",
       "Bash(xargs -I {} sh -c 'echo \"\"=== {} ===\"\" && head -50 {}')",
-      "Bash(psql:*)"
+      "Bash(psql:*)",
+      "Bash(npx next lint:*)"
     ],
     "deny": [],
     "ask": []

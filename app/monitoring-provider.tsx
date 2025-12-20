@@ -107,7 +107,7 @@ export default function MonitoringProvider({
   children: React.ReactNode 
 }) {
   return (
-    <Suspense fallback={children}>
+    <Suspense fallback={<div>{children}</div>}>
       <MonitoringProviderInner>
         {children}
       </MonitoringProviderInner>
