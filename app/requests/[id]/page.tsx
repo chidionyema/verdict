@@ -35,6 +35,7 @@ import { getTierConfigByVerdictCount } from '@/lib/validations';
 import { isExperimentEnabled } from '@/lib/experiments';
 import { ReviewerDisplay } from '@/components/experts/ExpertBadge';
 import { HelpfulnessRating } from '@/components/reputation/HelpfulnessRating';
+import { JudgeFeedbackRating } from '@/components/feedback/JudgeFeedbackRating';
 import ConsensusAnalysis from '@/components/consensus/ConsensusAnalysis';
 
 interface VerdictWithNumber extends VerdictResponse {
@@ -225,6 +226,33 @@ export default function RequestDetailPage({
   const handleRatingSubmit = () => {
     // Refresh the data to show updated ratings
     fetchRequest();
+  };
+
+  const handleJudgeRating = async (feedbackId: string, rating: number, comment?: string) => {
+    try {
+      const response = await fetch('/api/feedback/rate-judge', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          feedbackId,
+          rating,
+          comment,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to submit rating');
+      }
+
+      toast.success('Thank you for rating this feedback!');
+      // Refresh to show updated rating
+      fetchRequest();
+    } catch (error) {
+      console.error('Error submitting judge rating:', error);
+      toast.error('Failed to submit rating. Please try again.');
+    }
   };
 
   const toggleVerdictInteraction = (verdictId: string, type: 'helpful' | 'bookmarked') => {
@@ -1003,6 +1031,26 @@ export default function RequestDetailPage({
                       currentUserId={userContext.userId || ''}
                       compact={false}
                     />
+                  )}
+
+                  {/* Judge Feedback Rating */}
+                  {userContext.isSeeker && verdict.judge_id && request.status === 'closed' && (
+                    <div className="mt-4">
+                      <JudgeFeedbackRating
+                        feedback={{
+                          id: verdict.id,
+                          judgeId: verdict.judge_id,
+                          judgeName: verdict.reviewer_info?.expert_title || `Judge #${verdict.judge_number}`,
+                          feedback: verdict.feedback || '',
+                          rating: verdict.rating || 0,
+                          tone: verdict.tone || 'honest',
+                          timestamp: verdict.created_at,
+                          isExpert: verdict.reviewer_info?.is_expert || false
+                        }}
+                        onRating={handleJudgeRating}
+                        className="mt-3"
+                      />
+                    </div>
                   )}
 
                   {/* Enhanced Actions Row */}

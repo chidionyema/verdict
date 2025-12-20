@@ -9,6 +9,7 @@ import Breadcrumb from '@/components/Breadcrumb';
 import { FeatureDiscoveryBanner } from '@/components/discovery/FeatureDiscoveryBanner';
 import { RetentionDiscountBanner } from '@/components/retention/RetentionDiscountBanner';
 import { ReferralWidget } from '@/components/referrals/ReferralDashboard';
+import { JudgePerformanceDashboard } from '@/components/judge/JudgePerformanceDashboard';
 
 type FilterStatus = 'all' | 'open' | 'in_progress' | 'closed' | 'cancelled';
 type SortBy = 'newest' | 'oldest' | 'status' | 'progress';
@@ -287,6 +288,16 @@ export default function DashboardPage() {
       {profile && (
         <div className="max-w-6xl mx-auto px-4 mb-6">
           <ReferralWidget userId={profile.id} />
+        </div>
+      )}
+
+      {/* Judge Performance Dashboard */}
+      {profile && (
+        <div className="max-w-6xl mx-auto px-4 mb-6">
+          <JudgePerformanceDashboard 
+            judgeId={profile.id} 
+            className="w-full"
+          />
         </div>
       )}
 

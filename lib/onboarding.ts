@@ -39,7 +39,7 @@ export const ONBOARDING_STEPS: OnboardingStep[] = [
     title: 'Verify Your Email',
     description: 'Confirm your email address to secure your account',
     icon: '📧',
-    required: true,
+    required: false,
     estimatedTime: '1 min',
     component: 'EmailVerification'
   },

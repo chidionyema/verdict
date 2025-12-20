@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { LinkedInVerification } from '@/components/verification/LinkedInVerification';
+import { StreamlinedLinkedInVerification } from '@/components/verification/StreamlinedLinkedInVerification';
 import { VerifiedBadge } from '@/components/verification/VerifiedBadge';
 import { Shield, ArrowLeft, CheckCircle, Star, TrendingUp, Users, Award } from 'lucide-react';
 import { TouchButton } from '@/components/ui/touch-button';
@@ -105,10 +105,10 @@ export default function JudgeVerifyPage() {
           {/* Main Verification Area */}
           <div className="lg:col-span-2 space-y-6">
             {/* LinkedIn Verification */}
-            <LinkedInVerification
+            <StreamlinedLinkedInVerification
               userId={user?.id || ''}
               isVerified={verificationStatus.isVerified}
-              onVerificationUpdate={handleVerificationUpdate}
+              onVerificationComplete={handleVerificationUpdate}
             />
 
             {/* Future Verification Methods */}

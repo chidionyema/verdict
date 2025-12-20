@@ -5,6 +5,17 @@ import { v4 as uuidv4 } from 'uuid';
 import { log } from '@/lib/logger';
 import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
 
+// File upload security configuration
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB limit
+const ALLOWED_MIME_TYPES = [
+  'image/jpeg',
+  'image/jpg', 
+  'image/png',
+  'image/webp',
+  'image/heic'
+];
+const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.heic'];
+
 // POST /api/upload - Upload image to Supabase Storage
 const POST_Handler = async (request: NextRequest) => {
   try {
@@ -38,18 +49,57 @@ const POST_Handler = async (request: NextRequest) => {
       return NextResponse.json({ error: 'No file provided' }, { status: 400 });
     }
 
-    // Validate file type
+    // Security Layer 1: File size validation
+    if (file.size > MAX_FILE_SIZE) {
+      log.warn('File size exceeded', { 
+        userId: user.id, 
+        fileSize: file.size, 
+        fileName: file.name,
+        maxSize: MAX_FILE_SIZE 
+      });
+      return NextResponse.json({ 
+        error: `File size too large. Maximum size is ${MAX_FILE_SIZE / (1024 * 1024)}MB` 
+      }, { status: 413 });
+    }
+
+    // Security Layer 2: MIME type validation
     const imageTypes = ['image/jpeg', 'image/png', 'image/heic', 'image/webp'];
     const audioTypes = ['audio/webm', 'audio/mpeg', 'audio/mp4', 'audio/ogg'];
     const allowedTypes = [...imageTypes, ...audioTypes];
+    
     if (!allowedTypes.includes(file.type)) {
+      log.warn('Invalid file type uploaded', { 
+        userId: user.id, 
+        fileType: file.type, 
+        fileName: file.name 
+      });
       return NextResponse.json(
         { error: 'Only JPEG, PNG, HEIC, WebP images or supported audio (webm, mp3, mp4, ogg) are allowed' },
         { status: 400 }
       );
     }
 
-    // Validate file size
+    // Security Layer 3: File extension validation (prevent bypass)
+    const fileExtension = file.name.toLowerCase().split('.').pop();
+    const validExtensions = ['jpg', 'jpeg', 'png', 'heic', 'webp', 'webm', 'mp3', 'mp4', 'ogg'];
+    
+    if (!fileExtension || !validExtensions.includes(fileExtension)) {
+      log.warn('Invalid file extension', { 
+        userId: user.id, 
+        fileName: file.name, 
+        extension: fileExtension 
+      });
+      return NextResponse.json({ 
+        error: 'Invalid file extension' 
+      }, { status: 400 });
+    }
+
+    // Security Layer 4: File name sanitization
+    const sanitizedFileName = file.name
+      .replace(/[^a-zA-Z0-9.-]/g, '_') // Replace special chars
+      .substring(0, 100); // Limit name length
+
+    // Validate file size (with different limits for audio vs images)
     const isAudio = audioTypes.includes(file.type);
     const maxSize = isAudio ? 10 * 1024 * 1024 : 5 * 1024 * 1024; // 10MB audio, 5MB image
     if (file.size > maxSize) {

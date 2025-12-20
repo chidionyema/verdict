@@ -233,12 +233,12 @@ export function SplitTestModal({ isOpen, onClose, category }: SplitTestModalProp
         }}
       />
 
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[95vh] overflow-hidden">
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
+      <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[98vh] sm:max-h-[95vh] overflow-hidden">
         {/* Header */}
-        <div className="bg-gradient-to-r from-violet-600 to-purple-600 p-6 text-white">
+        <div className="bg-gradient-to-r from-violet-600 to-purple-600 p-4 sm:p-6 text-white">
           <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold flex items-center gap-2">
+            <h2 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
               <Zap className="h-6 w-6" />
               {config.title}
             </h2>
@@ -252,7 +252,7 @@ export function SplitTestModal({ isOpen, onClose, category }: SplitTestModalProp
           <p className="text-purple-100 mt-2">{config.description}</p>
         </div>
 
-        <div className="p-6">
+        <div className="p-4 sm:p-6 overflow-y-auto max-h-[calc(98vh-120px)] sm:max-h-[calc(95vh-120px)]">
           {!showSuccess ? (
             <div className="space-y-6">
               {/* Question Input */}
@@ -270,7 +270,7 @@ export function SplitTestModal({ isOpen, onClose, category }: SplitTestModalProp
               </div>
 
               {/* Upload Areas */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                 {['A', 'B'].map((side) => (
                   <div key={side} className="space-y-3">
                     <label className="block text-sm font-medium text-gray-700">

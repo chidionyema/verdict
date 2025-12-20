@@ -8,6 +8,8 @@ import { JudgeReputation } from '@/components/reputation/JudgeReputation';
 import { CreditEarningProgress } from '@/components/credits/CreditEarningProgress';
 import { FeedCard } from '@/components/feed/FeedCard';
 import { EmptyState } from '@/components/ui/EmptyStates';
+import { JudgeTraining } from '@/components/training/JudgeTraining';
+import { ProgressiveFeedDashboard } from '@/components/feed/ProgressiveFeedDashboard';
 import { createClient } from '@/lib/supabase/client';
 import { creditManager, CREDIT_ECONOMY_CONFIG } from '@/lib/credits';
 import { toast } from '@/components/ui/toast';
@@ -28,6 +30,8 @@ export default function FeedPage() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [judgeStats, setJudgeStats] = useState({ today: 0, streak: 0, totalJudgments: 0 });
   const [creditsEarned, setCreditsEarned] = useState(0);
+  const [showTraining, setShowTraining] = useState(false);
+  const [trainingCompleted, setTrainingCompleted] = useState(false);
   const supabaseRef = useRef<ReturnType<typeof createClient> | null>(null);
   const router = useRouter();
 
@@ -52,6 +56,16 @@ export default function FeedPage() {
         if (user) {
           await loadFeedItems(supabase);
           await loadJudgeStats(user.id, supabase);
+          
+          // Check if user needs training (new judge with < 3 total judgments)
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('judge_training_completed')
+            .eq('id', user.id)
+            .single();
+
+          const needsTraining = !(profile as any)?.judge_training_completed;
+          setShowTraining(needsTraining);
         } else {
           // Redirect to login
           router.push('/auth/login');
@@ -200,6 +214,24 @@ export default function FeedPage() {
     setCurrentIndex(prev => prev + 1);
   }
 
+  async function handleTrainingComplete() {
+    if (!user || !supabaseRef.current) return;
+    
+    try {
+      // Mark training as completed
+      await (supabaseRef.current
+        .from('profiles')
+        .update as any)({ judge_training_completed: true })
+        .eq('id', user.id);
+
+      setShowTraining(false);
+      setTrainingCompleted(true);
+      toast.success('Training completed! You can now start judging.');
+    } catch (error) {
+      console.error('Error completing training:', error);
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -302,52 +334,32 @@ export default function FeedPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
-        <div className="max-w-lg mx-auto px-4 py-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-xl font-bold text-gray-900">Discover</h1>
-              <p className="text-sm text-gray-500">Review others to earn credits</p>
-            </div>
-            <CreditBalance compact />
-          </div>
+      {/* Progressive Feed Dashboard */}
+      <div className="sticky top-0 z-10">
+        <div className="max-w-lg mx-auto">
+          <ProgressiveFeedDashboard
+            user={user}
+            judgeStats={judgeStats}
+            currentIndex={currentIndex}
+            totalItems={feedItems.length}
+          />
         </div>
       </div>
 
-      {/* Credit Earning Progress - Prominent */}
-      {user && (
-        <div className="bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 border-b border-indigo-200">
-          <div className="max-w-lg mx-auto px-4 py-4">
-            <CreditEarningProgress 
-              userId={user.id} 
-              judgmentsToday={judgeStats.totalJudgments}
-              onCreditEarned={() => {
-                setCreditsEarned(prev => prev + 1);
-                // Reload credits
-                if (supabaseRef.current) {
-                  loadJudgeStats(user.id, supabaseRef.current);
-                }
-              }}
-            />
-          </div>
+      {/* Credit Balance - Minimal in corner */}
+      <div className="fixed top-4 right-4 z-20">
+        <CreditBalance compact />
+      </div>
+
+      {/* Judge Training Modal */}
+      {showTraining && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <JudgeTraining 
+            onComplete={handleTrainingComplete}
+            className="w-full max-w-md"
+          />
         </div>
       )}
-
-      {/* Stats Bar */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="max-w-lg mx-auto px-4 py-2">
-          <div className="flex items-center justify-between text-xs text-gray-600">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-1">
-                <MessageSquare className="h-3 w-3 text-orange-600" />
-                <span className="font-medium">{judgeStats.streak}</span>
-                <span>day streak</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* Main Feed */}
       <div className="max-w-lg mx-auto">
@@ -361,20 +373,6 @@ export default function FeedPage() {
           </div>
         ) : (
           <div className="p-4">
-            {/* Progress indicator */}
-            <div className="mb-4">
-              <div className="flex items-center justify-between text-sm text-gray-500 mb-2">
-                <span>{currentIndex + 1} of {feedItems.length}</span>
-                <span>{feedItems.length - currentIndex - 1} remaining</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div 
-                  className="bg-indigo-600 h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${((currentIndex + 1) / feedItems.length) * 100}%` }}
-                ></div>
-              </div>
-            </div>
-
             {/* Current item */}
             {currentItem && (
               <FeedCard

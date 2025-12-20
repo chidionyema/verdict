@@ -379,12 +379,12 @@ export function EnhancedComparisonModal({
         }}
       />
 
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl shadow-2xl max-w-5xl w-full max-h-[95vh] overflow-hidden">
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4">
+      <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl max-w-5xl w-full max-h-[98vh] sm:max-h-[95vh] overflow-hidden">
         {/* Header */}
-        <div className="bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 p-6 text-white">
+        <div className="bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 p-4 sm:p-6 text-white">
           <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold flex items-center gap-2">
+            <h2 className="text-lg sm:text-2xl font-bold flex items-center gap-2">
               <Scale className="h-6 w-6" />
               {template.title}
             </h2>
@@ -399,7 +399,7 @@ export function EnhancedComparisonModal({
           <p className="text-purple-100 mt-2">{template.description}</p>
         </div>
 
-        <div className="p-6">
+        <div className="p-4 sm:p-6 overflow-y-auto max-h-[calc(98vh-100px)] sm:max-h-[calc(95vh-120px)]">
           {!showSuccess ? (
             <div className="space-y-6">
               {renderStepIndicator()}
@@ -455,9 +455,9 @@ export function EnhancedComparisonModal({
                     </p>
                   </div>
 
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                     {(['A', 'B'] as const).map((side) => (
-                      <div key={side} className={`space-y-4 border-2 rounded-xl p-6 ${
+                      <div key={side} className={`space-y-4 border-2 rounded-xl p-4 sm:p-6 ${
                         options[side].title ? 'border-purple-300 bg-purple-50/30' : 'border-gray-200'
                       }`}>
                         <div className="flex items-center gap-2 mb-4">

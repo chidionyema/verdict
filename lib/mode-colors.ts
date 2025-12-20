@@ -27,9 +27,21 @@ export const modeColors = {
     gradient: 'from-indigo-600 to-purple-600',
     gradientHover: 'from-indigo-700 to-purple-700',
   },
+  expert: {
+    primary: '#1D4ED8',      // Blue-700
+    secondary: '#2563EB',    // Blue-600
+    light: '#DBEAFE',        // Blue-200
+    background: '#EFF6FF',   // Blue-50
+    hover: '#1E40AF',        // Blue-800
+    text: '#1E3A8A',         // Blue-900
+    badgeBg: '#DBEAFE',      // Blue-100
+    badgeText: '#1E3A8A',    // Blue-900
+    gradient: 'from-blue-600 to-indigo-600',
+    gradientHover: 'from-blue-700 to-indigo-700',
+  },
 } as const;
 
-export type Mode = 'community' | 'private';
+export type Mode = 'community' | 'private' | 'expert';
 
 // Helper function to get mode colors
 export function getModeColors(mode: Mode) {
@@ -53,6 +65,14 @@ export const modeClasses = {
     badge: 'bg-purple-100 text-purple-900',
     text: 'text-purple-700',
     bg: 'bg-purple-50',
+  },
+  expert: {
+    button: 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white',
+    buttonOutline: 'border-2 border-blue-600 text-blue-600 hover:bg-blue-50',
+    card: 'border-l-4 border-blue-600 bg-gradient-to-r from-blue-50 to-white',
+    badge: 'bg-blue-100 text-blue-900',
+    text: 'text-blue-700',
+    bg: 'bg-blue-50',
   },
 } as const;
 

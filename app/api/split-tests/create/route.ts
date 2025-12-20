@@ -214,20 +214,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Deduct credit from user
-    let creditError;
-    try {
-      const result = await (supabase as any).rpc('spend_credits', {
-        target_user_id: user.id,
-        credit_amount: 1,
-        transaction_source: 'split_test',
-        transaction_source_id: splitTest,
-        transaction_description: 'Split Test Creation',
-      });
-      creditError = result.error;
-    } catch (error) {
-      creditError = error;
-    }
+    // Deduct credit from user using unified credit system
+    const { data: deductResult, error: creditError } = await (supabase as any).rpc('deduct_credits', {
+      p_user_id: user.id,
+      p_credits: 1
+    });
 
     if (creditError) {
       // Clean up on credit deduction failure
@@ -239,8 +230,24 @@ export async function POST(request: NextRequest) {
 
       console.error('Error deducting credits:', creditError);
       return NextResponse.json(
-        { error: 'Failed to process credit payment' },
+        { error: `Failed to deduct credits: ${creditError.message}` },
         { status: 500 }
+      );
+    }
+
+    // Check if deduction was successful
+    const result = deductResult?.[0];
+    if (!result || !result.success) {
+      // Clean up on insufficient credits
+      await Promise.all([
+        serviceSupabase.storage.from('split-test-photos').remove([photoAPath]),
+        serviceSupabase.storage.from('split-test-photos').remove([photoBPath]),
+        supabase.from('split_test_requests').delete().eq('id', splitTest),
+      ]);
+
+      return NextResponse.json(
+        { error: result?.message || 'Insufficient credits' },
+        { status: 400 }
       );
     }
 

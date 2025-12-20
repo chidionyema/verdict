@@ -118,22 +118,16 @@ export async function createVerdictRequest(
     profile = newProfile;
   }
 
-  // Use atomic deduct_credits function to prevent race conditions
-  const { data: deductResult, error: deductError } = await (supabase.rpc as any)('deduct_credits', {
-    p_user_id: userId,
-    p_credits: creditsToUse
-  });
+  // Use protected credit deduction to prevent race conditions and double spending
+  const { safeDeductCredits, generateSecureRequestId } = require('./credit-guard');
+  
+  const requestId = generateSecureRequestId(userId);
+  const deductionResult = await safeDeductCredits(userId, creditsToUse, requestId);
 
-  if (deductError) {
-    throw new Error(`Failed to deduct credits: ${deductError.message}`);
-  }
-
-  // Check if deduction was successful
-  const result = (deductResult as any)?.[0];
-  if (!result || !result.success) {
-    const err = new Error(result?.message || 'Insufficient credits');
+  if (!deductionResult.success) {
+    const err = new Error(deductionResult.message);
     // @ts-expect-error augment error
-    err.code = 'INSUFFICIENT_CREDITS';
+    err.code = deductionResult.message.includes('Insufficient') ? 'INSUFFICIENT_CREDITS' : 'DEDUCTION_FAILED';
     throw err;
   }
 

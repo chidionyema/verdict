@@ -15,18 +15,69 @@ const getStripe = () => {
 
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
+// Webhook replay protection - store processed event IDs
+const processedEvents = new Set<string>();
+const eventTimeouts = new Map<string, NodeJS.Timeout>();
+
+// Clean up old events every hour
+setInterval(() => {
+  const oneHourAgo = Date.now() - (60 * 60 * 1000);
+  for (const [eventId, timeout] of eventTimeouts.entries()) {
+    if (timeout && Date.now() > oneHourAgo) {
+      processedEvents.delete(eventId);
+      eventTimeouts.delete(eventId);
+    }
+  }
+}, 60 * 60 * 1000);
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.text();
-    const sig = (await headers()).get('stripe-signature')!;
+    const sig = (await headers()).get('stripe-signature');
+
+    if (!sig) {
+      log.error('Missing Stripe signature header');
+      return NextResponse.json({ error: 'Missing signature' }, { status: 400 });
+    }
+
+    if (!endpointSecret) {
+      log.error('STRIPE_WEBHOOK_SECRET not configured');
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
 
     let event: Stripe.Event;
 
     try {
       event = getStripe().webhooks.constructEvent(body, sig, endpointSecret);
     } catch (err: any) {
-      log.error('Webhook signature verification failed', err, { message: err.message });
+      log.error('Webhook signature verification failed', err, { 
+        message: err.message,
+        signature: sig.substring(0, 20) + '...' // Log partial signature for debugging
+      });
       return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
+    }
+
+    // Prevent replay attacks
+    if (processedEvents.has(event.id)) {
+      log.warn('Webhook replay attack detected', { eventId: event.id, type: event.type });
+      return NextResponse.json({ error: 'Event already processed' }, { status: 200 }); // Return 200 to prevent retries
+    }
+
+    // Mark event as processed
+    processedEvents.add(event.id);
+    eventTimeouts.set(event.id, setTimeout(() => {
+      processedEvents.delete(event.id);
+      eventTimeouts.delete(event.id);
+    }, 60 * 60 * 1000)); // Clean up after 1 hour
+
+    // Validate event timestamp (prevent old event replay)
+    const eventTime = event.created * 1000; // Convert to milliseconds
+    const now = Date.now();
+    const maxAge = 5 * 60 * 1000; // 5 minutes
+    
+    if (now - eventTime > maxAge) {
+      log.warn('Webhook event too old', { eventId: event.id, age: now - eventTime });
+      return NextResponse.json({ error: 'Event too old' }, { status: 400 });
     }
 
     const supabase = await createClient();

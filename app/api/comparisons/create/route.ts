@@ -250,17 +250,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Deduct credits from user
-    const { error: creditError } = await (supabase as any).rpc('spend_credits', {
-      target_user_id: user.id,
-      credit_amount: creditsRequired,
-      transaction_source: 'comparison_request',
-      transaction_source_id: comparisonId,
-      transaction_description: `${requestTier} tier comparison request`,
+    // Deduct credits from user using unified credit system
+    const { data: deductResult, error: creditError } = await (supabase as any).rpc('deduct_credits', {
+      p_user_id: user.id,
+      p_credits: creditsRequired
     });
 
     if (creditError) {
       // Clean up on credit deduction failure
+      const cleanupTasks: Promise<any>[] = [
+        (supabase as any).from('comparison_requests').delete().eq('id', comparisonId)
+      ];
+
+      log.error('Error deducting credits:', creditError);
+      return NextResponse.json(
+        { error: `Failed to deduct credits: ${creditError.message}` },
+        { status: 500 }
+      );
+    }
+
+    // Check if deduction was successful
+    const result = deductResult?.[0];
+    if (!result || !result.success) {
+      // Clean up on insufficient credits
       const cleanupTasks: Promise<any>[] = [
         (supabase as any).from('comparison_requests').delete().eq('id', comparisonId)
       ];
@@ -274,10 +286,9 @@ export async function POST(request: NextRequest) {
       }
       await Promise.all(cleanupTasks);
 
-      log.error('Error deducting credits:', creditError);
       return NextResponse.json(
-        { error: 'Failed to process credit payment' },
-        { status: 500 }
+        { error: result?.message || 'Insufficient credits' },
+        { status: 400 }
       );
     }
 

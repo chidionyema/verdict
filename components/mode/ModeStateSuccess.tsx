@@ -15,11 +15,13 @@ interface ModeStateSuccessProps {
 const defaultTitles = {
   community: 'Credit Earned!',
   private: 'Payment Confirmed!',
+  expert: 'Expert Assigned!',
 };
 
 const defaultMessages = {
   community: 'You\'ve earned 1 credit. Ready to submit!',
   private: 'Your private submission is confirmed. Results coming soon!',
+  expert: 'Your expert has been assigned. Premium feedback incoming!',
 };
 
 export function ModeStateSuccess({ 
@@ -50,13 +52,13 @@ export function ModeStateSuccess({
       
       {title && (
         <h3 className={cn('text-lg font-bold mb-2', modeColor)}>
-          {title || defaultTitles[mode]}
+          {title || defaultTitles[mode as keyof typeof defaultTitles]}
         </h3>
       )}
       
       {message && (
         <p className={cn('text-sm text-center mb-4', modeColor)}>
-          {message || defaultMessages[mode]}
+          {message || defaultMessages[mode as keyof typeof defaultMessages]}
         </p>
       )}
       

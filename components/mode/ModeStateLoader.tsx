@@ -13,6 +13,7 @@ interface ModeStateLoaderProps {
 const defaultMessages = {
   community: 'Processing...',
   private: 'Processing payment...',
+  expert: 'Connecting to expert...',
 };
 
 export function ModeStateLoader({ 
@@ -31,7 +32,7 @@ export function ModeStateLoader({
     )}>
       <Loader2 className={cn('h-8 w-8 animate-spin mb-4', modeColor)} />
       <p className={cn('text-sm font-medium', modeColor)}>
-        {message || defaultMessages[mode]}
+        {message || defaultMessages[mode as keyof typeof defaultMessages]}
       </p>
     </div>
   );

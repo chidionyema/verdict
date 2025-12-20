@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import { CreditCard, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { ModeSelectionCards } from '@/components/mode/ModeSelectionCards';
+import { ProminentCreditEarning } from '@/components/credits/ProminentCreditEarning';
 import type { Mode } from '@/lib/mode-colors';
 import { useLocalizedPricing } from '@/hooks/use-pricing';
 
@@ -91,7 +92,7 @@ function SubmitPageContent() {
         </div>
 
         {/* User Status */}
-        {userCredits > 0 && (
+        {userCredits > 0 ? (
           <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-8 text-center">
             <div className="flex items-center justify-center gap-2">
               <CreditCard className="h-5 w-5 text-green-600" />
@@ -99,6 +100,16 @@ function SubmitPageContent() {
                 You have {userCredits} {userCredits === 1 ? 'credit' : 'credits'} available
               </span>
             </div>
+            <p className="text-xs text-green-600 mt-1">
+              Each credit gets you honest feedback from 3 reviewers
+            </p>
+          </div>
+        ) : (
+          <div className="mb-8">
+            <ProminentCreditEarning 
+              userCredits={userCredits}
+              showFullDetails={false}
+            />
           </div>
         )}
 
@@ -142,18 +153,12 @@ function SubmitPageContent() {
           </div>
         </div>
 
-        {/* Bottom CTA */}
-        <div className="mt-12 text-center">
-          <p className="text-gray-600 mb-4">
-            Need credits?{' '}
-            <Link href="/feed" className="text-indigo-600 hover:text-indigo-700 font-medium">
-              Judge others in the community feed
-            </Link>
-          </p>
-
-          <p className="text-sm text-gray-500">
-            Judge 3 submissions = Earn 1 credit • Private mode skips judging requirement
-          </p>
+        {/* Prominent Credit Earning Section */}
+        <div className="mt-16">
+          <ProminentCreditEarning 
+            userCredits={userCredits}
+            showFullDetails={userCredits === 0}
+          />
         </div>
       </div>
     </div>

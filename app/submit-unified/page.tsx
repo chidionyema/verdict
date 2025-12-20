@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { usePrivatePrice } from '@/hooks/use-pricing';
 import { toast } from '@/components/ui/toast';
+import { EmbeddedStripePayment } from '@/components/payment/EmbeddedStripePayment';
 import { 
   ArrowRight, 
   Upload, 
@@ -169,32 +170,30 @@ export default function UnifiedSubmitPage() {
     setTimeout(() => setStep('success'), 2000); // Simulate processing
   };
 
-  const handlePayment = async () => {
+  const handlePaymentSuccess = async (paymentData: any) => {
     setStep('processing');
     
     try {
-      const response = await fetch('/api/submit/payment', {
+      const response = await fetch('/api/submit/process-payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ submissionData })
+        body: JSON.stringify({ 
+          paymentIntentId: paymentData.id,
+          submissionData 
+        })
       });
       
       const data = await response.json();
       
       if (!response.ok) {
-        throw new Error(data.error || 'Payment failed');
+        throw new Error(data.error || 'Failed to process submission');
       }
       
-      if (data.demo) {
-        // Demo mode - proceed directly to success
-        setTimeout(() => setStep('success'), 1000);
-      } else if (data.checkout_url) {
-        // Redirect to Stripe checkout (external URL, must use window.location)
-        window.location.href = data.checkout_url;
-      }
+      // Success! Move to success step
+      setTimeout(() => setStep('success'), 1000);
     } catch (error) {
-      console.error('Payment error:', error);
-      // Handle error - could show error state
+      console.error('Payment processing error:', error);
+      toast.error('Payment successful but submission failed. Please contact support.');
       setStep('payment'); // Return to payment step
     }
   };
@@ -262,7 +261,7 @@ export default function UnifiedSubmitPage() {
             <PaymentStep
               privatePrice={privatePrice}
               submissionData={submissionData}
-              onPay={handlePayment}
+              onPaymentSuccess={handlePaymentSuccess}
             />
           )}
 
@@ -588,7 +587,7 @@ function ModeSelectionStep({ userCredits, privatePrice, onSelect }: any) {
   );
 }
 
-function PaymentStep({ privatePrice, submissionData, onPay }: any) {
+function PaymentStep({ privatePrice, submissionData, onPaymentSuccess }: any) {
   return (
     <div className="p-8">
       <h2 className="text-3xl font-bold text-gray-900 mb-2">Secure Payment</h2>
@@ -625,17 +624,15 @@ function PaymentStep({ privatePrice, submissionData, onPay }: any) {
         </div>
       </div>
 
-      <button
-        onClick={onPay}
-        className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-4 rounded-xl font-semibold hover:shadow-lg transition-all flex items-center justify-center gap-2"
-      >
-        <CreditCard className="h-5 w-5" />
-        Pay {privatePrice} with Stripe
-      </button>
-      
-      <p className="text-xs text-gray-500 mt-4 text-center">
-        Secure payment powered by Stripe. Your card information is never stored on our servers.
-      </p>
+      {/* Embedded Stripe Payment */}
+      <EmbeddedStripePayment
+        amount={Math.round(parseFloat(privatePrice.replace(/[£$]/g, '')) * 100)}
+        currency="gbp"
+        description={`Private feedback: ${submissionData.question?.substring(0, 50)}...`}
+        onSuccess={onPaymentSuccess}
+        onError={(error: string) => toast.error(`Payment failed: ${error}`)}
+        className="mt-6"
+      />
     </div>
   );
 }

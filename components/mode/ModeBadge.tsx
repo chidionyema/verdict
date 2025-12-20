@@ -12,6 +12,7 @@ interface ModeBadgeProps {
 const modeLabels = {
   community: 'Community',
   private: 'Private',
+  expert: 'Expert',
 };
 
 export function ModeBadge({ mode, className = '', children }: ModeBadgeProps) {
@@ -19,7 +20,7 @@ export function ModeBadge({ mode, className = '', children }: ModeBadgeProps) {
   
   return (
     <Badge className={`${classes} ${className}`}>
-      {children || modeLabels[mode]}
+      {children || modeLabels[mode as keyof typeof modeLabels]}
     </Badge>
   );
 }

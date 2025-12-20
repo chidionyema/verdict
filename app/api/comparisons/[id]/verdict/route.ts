@@ -16,6 +16,7 @@ interface SubmitComparisonVerdictRequest {
   budgetConsideration: string;
   timeSpentSeconds: number;
   judgeExpertise: string[];
+  decisionScores?: Record<string, { option_a: number; option_b: number }>;
 }
 
 export async function POST(
@@ -39,6 +40,7 @@ export async function POST(
       budgetConsideration,
       timeSpentSeconds,
       judgeExpertise,
+      decisionScores,
     }: SubmitComparisonVerdictRequest = await request.json();
 
     // Validate input
@@ -176,6 +178,7 @@ export async function POST(
         budget_consideration: budgetConsideration.trim(),
         judge_expertise: judgeExpertise,
         time_spent_seconds: timeSpentSeconds,
+        decision_scores: decisionScores || null,
       } as any)
       .select()
       .single();

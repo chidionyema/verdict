@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { log } from '@/lib/logger';
+import { validateAndSanitizeInput, validateRequestBody, auditSecurityEvent } from '@/lib/security-validation';
 import {
   validateContext,
   validateCategory,

@@ -91,18 +91,25 @@ export function DecisionScoringMatrix({ verdicts, category, isProTier = false }:
   // Process verdicts to extract scoring data
   const criteria = getCriteriaByCategory(category);
   const processedCriteria: DecisionCriterion[] = criteria.map(criterion => {
-    // Simulate scoring calculation based on verdict data
-    // In real implementation, this would parse decision_scores from verdicts
+    // Extract real decision scores from verdicts
     const scores = verdicts.map(v => {
       const decisionScores = v.decision_scores as any;
-      return decisionScores?.[criterion.name as keyof typeof decisionScores] || {
-        option_a: Math.random() * 10,
-        option_b: Math.random() * 10
+      if (decisionScores && decisionScores[criterion.name as keyof typeof decisionScores]) {
+        return decisionScores[criterion.name as keyof typeof decisionScores];
+      }
+      // Fallback to overall ratings if no specific decision scores
+      return {
+        option_a: (v as any).option_a_rating || 5,
+        option_b: (v as any).option_b_rating || 5
       };
-    });
+    }).filter(Boolean); // Remove any null/undefined scores
 
-    const avgOptionA = scores.reduce((sum, s) => sum + (s.option_a || 0), 0) / Math.max(scores.length, 1);
-    const avgOptionB = scores.reduce((sum, s) => sum + (s.option_b || 0), 0) / Math.max(scores.length, 1);
+    const avgOptionA = scores.length > 0 
+      ? scores.reduce((sum, s) => sum + (s.option_a || 0), 0) / scores.length
+      : 5;
+    const avgOptionB = scores.length > 0 
+      ? scores.reduce((sum, s) => sum + (s.option_b || 0), 0) / scores.length
+      : 5;
     
     // Determine consensus strength based on score variance
     const variance = scores.reduce((sum, s) => 

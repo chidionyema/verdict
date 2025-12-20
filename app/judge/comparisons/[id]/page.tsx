@@ -5,8 +5,9 @@ import { useRouter } from 'next/navigation';
 import {
   Clock, DollarSign, Send, ArrowLeft, Scale, CheckCircle,
   ThumbsUp, ThumbsDown, Plus, X, Star, Zap, Target,
-  AlertCircle, Lightbulb
+  AlertCircle, Lightbulb, Crown
 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
 import { toast } from '@/components/ui/toast';
 
@@ -60,6 +61,7 @@ export default function JudgeComparisonPage({
 
   const [budgetConsideration, setBudgetConsideration] = useState('');
   const [judgeExpertise, setJudgeExpertise] = useState<string[]>([]);
+  const [decisionScores, setDecisionScores] = useState<Record<string, { option_a: number; option_b: number }>>({});
 
   const [timeRemaining, setTimeRemaining] = useState(180); // 3 minutes
   const [submitting, setSubmitting] = useState(false);
@@ -104,6 +106,41 @@ export default function JudgeComparisonPage({
     'Life coach', 'Financial advisor', 'Marketing expert',
     'Designer', 'Consultant', 'Personal experience'
   ];
+
+  // Decision criteria by category for Pro tier scoring
+  const getCriteriaByCategory = (category: string): string[] => {
+    const criteriaMap: Record<string, string[]> = {
+      career: ['Growth Potential', 'Financial Benefits', 'Work-Life Balance', 'Learning Opportunities', 'Company Culture', 'Job Security'],
+      lifestyle: ['Quality of Life', 'Cost of Living', 'Social Connections', 'Convenience', 'Future Potential', 'Personal Values'],
+      business: ['ROI Potential', 'Market Opportunity', 'Risk Level', 'Resource Requirements', 'Competitive Advantage', 'Scalability'],
+      appearance: ['Overall Appeal', 'Appropriateness', 'Personal Style', 'Comfort & Confidence', 'Trendy vs Timeless']
+    };
+    return criteriaMap[category] || criteriaMap.career;
+  };
+
+  const isProTier = comparison?.request_tier === 'pro';
+  const currentCriteria = comparison ? getCriteriaByCategory(comparison.category) : [];
+
+  // Initialize decision scores when comparison loads
+  useEffect(() => {
+    if (comparison && isProTier) {
+      const initialScores: Record<string, { option_a: number; option_b: number }> = {};
+      currentCriteria.forEach(criterion => {
+        initialScores[criterion] = { option_a: 5, option_b: 5 };
+      });
+      setDecisionScores(initialScores);
+    }
+  }, [comparison]);
+
+  const updateDecisionScore = (criterion: string, option: 'option_a' | 'option_b', score: number) => {
+    setDecisionScores(prev => ({
+      ...prev,
+      [criterion]: {
+        ...prev[criterion],
+        [option]: score
+      }
+    }));
+  };
 
   const toggleExpertise = (exp: string) => {
     setJudgeExpertise(prev =>
@@ -194,6 +231,7 @@ export default function JudgeComparisonPage({
           budgetConsideration: budgetConsideration.trim(),
           timeSpentSeconds,
           judgeExpertise,
+          decisionScores: isProTier ? decisionScores : undefined,
         }),
       });
 
@@ -559,6 +597,74 @@ export default function JudgeComparisonPage({
               ))}
             </div>
           </div>
+
+          {/* Pro Tier Decision Scoring */}
+          {isProTier && (
+            <div className="mb-6 border-t pt-6">
+              <div className="flex items-center gap-2 mb-4">
+                <Crown className="w-5 h-5 text-purple-600" />
+                <h3 className="text-lg font-semibold text-purple-900">Pro Analysis - Decision Criteria Scoring</h3>
+                <Badge className="bg-purple-100 text-purple-700">Pro Exclusive</Badge>
+              </div>
+              <p className="text-sm text-gray-600 mb-4">
+                Score each option on the key factors that matter for this decision. This creates a detailed scoring matrix for the requestor.
+              </p>
+              
+              <div className="space-y-6">
+                {currentCriteria.map((criterion) => (
+                  <div key={criterion} className="bg-gray-50 rounded-lg p-4">
+                    <h4 className="font-medium text-gray-900 mb-3">{criterion}</h4>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Option A Scoring */}
+                      <div>
+                        <label className="block text-sm text-gray-700 mb-2">
+                          Option A - {comparison.option_a_title}: {decisionScores[criterion]?.option_a || 5}/10
+                        </label>
+                        <input
+                          type="range"
+                          min="1"
+                          max="10"
+                          value={decisionScores[criterion]?.option_a || 5}
+                          onChange={(e) => updateDecisionScore(criterion, 'option_a', parseInt(e.target.value))}
+                          className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-green-600"
+                        />
+                        <div className="flex justify-between text-xs text-gray-500 mt-1">
+                          <span>Poor</span>
+                          <span>Excellent</span>
+                        </div>
+                      </div>
+
+                      {/* Option B Scoring */}
+                      <div>
+                        <label className="block text-sm text-gray-700 mb-2">
+                          Option B - {comparison.option_b_title}: {decisionScores[criterion]?.option_b || 5}/10
+                        </label>
+                        <input
+                          type="range"
+                          min="1"
+                          max="10"
+                          value={decisionScores[criterion]?.option_b || 5}
+                          onChange={(e) => updateDecisionScore(criterion, 'option_b', parseInt(e.target.value))}
+                          className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                        />
+                        <div className="flex justify-between text-xs text-gray-500 mt-1">
+                          <span>Poor</span>
+                          <span>Excellent</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="mt-4 bg-purple-50 border border-purple-200 rounded-lg p-3">
+                <p className="text-sm text-purple-800">
+                  🎯 <strong>Pro Insight:</strong> These detailed scores will be used to generate a comprehensive decision matrix showing exactly which factors favor each option.
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Earnings Preview */}
           <div className="bg-green-50 rounded-lg p-4 mb-6">

@@ -27,7 +27,7 @@ function SignupContent() {
     setLoading(true);
     setError('');
 
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -41,7 +41,17 @@ function SignupContent() {
       return;
     }
 
-    setSuccess(true);
+    // If user is immediately available (no email confirmation required), redirect them
+    if (data.user && !data.user.email_confirmed_at) {
+      // Show success message but allow them to continue
+      setSuccess(true);
+    } else if (data.user) {
+      // User is ready, redirect immediately
+      router.push(redirect);
+    } else {
+      setSuccess(true);
+    }
+    
     setLoading(false);
   };
 
@@ -80,44 +90,44 @@ function SignupContent() {
               </svg>
             </div>
 
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Check your email</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Account Created!</h2>
             <p className="text-gray-600 mb-6">
-              We sent a confirmation link to <strong>{email}</strong>. Click the link to complete your signup.
+              You can start using the platform now. We also sent a confirmation link to <strong>{email}</strong> to secure your account.
             </p>
 
             {/* What to do section */}
             <div className="bg-gray-50 rounded-xl p-4 mb-6 text-left">
-              <p className="text-sm font-semibold text-gray-900 mb-2">Next steps:</p>
+              <p className="text-sm font-semibold text-gray-900 mb-2">You can now:</p>
               <ol className="text-sm text-gray-600 space-y-1">
-                <li>1. Check your inbox (and spam folder)</li>
-                <li>2. Click the confirmation link</li>
-                <li>3. Start getting expert feedback</li>
+                <li>✅ Start submitting for feedback</li>
+                <li>✅ Judge others to earn credits</li>
+                <li>📧 Verify email later for full security</li>
               </ol>
             </div>
 
             {/* Action buttons */}
             <div className="space-y-3">
+              <Link
+                href={redirect}
+                className="block w-full py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition text-center"
+              >
+                Continue to Platform
+              </Link>
+
               <button
                 onClick={handleResendEmail}
                 disabled={loading}
-                className="w-full py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition disabled:bg-gray-300 cursor-pointer"
+                className="w-full py-3 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 transition cursor-pointer"
               >
                 {loading ? 'Sending...' : 'Resend verification email'}
               </button>
 
               <button
                 onClick={() => setSuccess(false)}
-                className="w-full py-3 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 transition cursor-pointer"
+                className="w-full py-3 bg-gray-50 text-gray-600 rounded-lg font-medium hover:bg-gray-100 transition cursor-pointer"
               >
                 Use different email
               </button>
-
-              <Link
-                href="/auth/login"
-                className="block w-full py-3 border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition text-center"
-              >
-                Already verified? Sign in
-              </Link>
             </div>
 
             {/* Help text */}

@@ -184,24 +184,25 @@ export default function SplitTestPage() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-4 w-full sm:w-auto">
               <Link href="/my-requests">
                 <TouchButton variant="outline" size="sm">
                   <ArrowLeft className="w-4 h-4 mr-2" />
-                  Back
+                  <span className="hidden sm:inline">Back</span>
                 </TouchButton>
               </Link>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                  <RotateCcw className="w-6 h-6 text-orange-600" />
-                  Photo Split Test
+              <div className="min-w-0 flex-1">
+                <h1 className="text-lg sm:text-2xl font-bold text-gray-900 flex items-center gap-2">
+                  <RotateCcw className="w-5 h-5 sm:w-6 sm:h-6 text-orange-600" />
+                  <span className="hidden sm:inline">Photo Split Test</span>
+                  <span className="sm:hidden">Split Test</span>
                 </h1>
-                <p className="text-gray-600 mt-1">{splitTest.context}</p>
+                <p className="text-sm sm:text-base text-gray-600 mt-1 line-clamp-2">{splitTest.context}</p>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
               <Badge variant={isCompleted ? "default" : "secondary"}>
                 {isCompleted ? 'Completed' : 'In Progress'}
               </Badge>
@@ -261,9 +262,9 @@ export default function SplitTestPage() {
             </div>
 
             {/* Side-by-Side Photos */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
               {/* Photo A */}
-              <div className={`bg-white rounded-xl p-6 shadow-sm border-2 transition-all ${
+              <div className={`bg-white rounded-xl p-4 sm:p-6 shadow-sm border-2 transition-all ${
                 winner === 'A' ? 'border-green-500 bg-green-50' : 'border-gray-200'
               }`}>
                 <div className="flex items-center gap-3 mb-4">
@@ -301,7 +302,7 @@ export default function SplitTestPage() {
               </div>
 
               {/* Photo B */}
-              <div className={`bg-white rounded-xl p-6 shadow-sm border-2 transition-all ${
+              <div className={`bg-white rounded-xl p-4 sm:p-6 shadow-sm border-2 transition-all ${
                 winner === 'B' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
               }`}>
                 <div className="flex items-center gap-3 mb-4">
@@ -396,7 +397,7 @@ export default function SplitTestPage() {
                       
                       <p className="text-gray-700 mb-3">{verdict.reasoning}</p>
                       
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mt-4">
                         <div className="bg-green-50 border border-green-200 rounded-lg p-3">
                           <h5 className="font-medium text-green-900 mb-1">
                             Photo A ({verdict.photo_a_rating}/10)

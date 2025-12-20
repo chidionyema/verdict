@@ -2,12 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Coins, TrendingUp, Gift, History } from 'lucide-react';
-import { creditManager } from '@/lib/credits';
 import { createClient } from '@/lib/supabase/client';
-import type { Database } from '@/types/supabase';
-
-type UserCredits = Database['public']['Tables']['user_credits']['Row'];
-type CreditTransaction = Database['public']['Tables']['credit_transactions']['Row'];
 
 interface CreditBalanceProps {
   userId?: string;
@@ -15,9 +10,14 @@ interface CreditBalanceProps {
   compact?: boolean;
 }
 
+interface ProfileCredits {
+  id: string;
+  credits: number;
+  display_name?: string;
+}
+
 export function CreditBalance({ userId, showTransactions = false, compact = false }: CreditBalanceProps) {
-  const [credits, setCredits] = useState<UserCredits | null>(null);
-  const [transactions, setTransactions] = useState<CreditTransaction[]>([]);
+  const [profile, setProfile] = useState<ProfileCredits | null>(null);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
 
@@ -43,15 +43,19 @@ export function CreditBalance({ userId, showTransactions = false, compact = fals
     try {
       setLoading(true);
       
-      // Fetch credits
-      const userCredits = await creditManager.getUserCredits(targetUserId);
-      setCredits(userCredits);
+      // Fetch credits from profiles table (single source of truth)
+      const { data: profileData, error } = await supabase
+        .from('profiles')
+        .select('id, credits, display_name')
+        .eq('id', targetUserId)
+        .single();
 
-      // Fetch recent transactions if requested
-      if (showTransactions) {
-        const recentTransactions = await creditManager.getRecentTransactions(targetUserId, 5);
-        setTransactions(recentTransactions);
+      if (error) {
+        console.error('Error fetching profile credits:', error);
+        return;
       }
+
+      setProfile(profileData);
     } catch (error) {
       console.error('Error fetching credits:', error);
     } finally {
@@ -69,7 +73,7 @@ export function CreditBalance({ userId, showTransactions = false, compact = fals
     );
   }
 
-  if (!credits) {
+  if (!profile) {
     return (
       <div className="flex items-center gap-2 text-gray-500">
         <Coins className="h-4 w-4" />
@@ -82,7 +86,7 @@ export function CreditBalance({ userId, showTransactions = false, compact = fals
     return (
       <div className="flex items-center gap-2">
         <Coins className="h-4 w-4 text-yellow-600" />
-        <span className="font-semibold">{credits.balance}</span>
+        <span className="font-semibold">{profile.credits}</span>
         <span className="text-sm text-gray-500">credits</span>
       </div>
     );
@@ -103,26 +107,15 @@ export function CreditBalance({ userId, showTransactions = false, compact = fals
             </div>
           </div>
           <div className="text-right">
-            <div className="text-3xl font-bold text-yellow-600">{credits.balance}</div>
+            <div className="text-3xl font-bold text-yellow-600">{profile.credits}</div>
             <div className="text-sm text-gray-500">available</div>
           </div>
         </div>
 
-        {/* Stats Row */}
-        <div className="grid grid-cols-2 gap-4 pt-4 border-t border-yellow-200">
-          <div className="text-center">
-            <div className="flex items-center justify-center gap-1 text-green-600 mb-1">
-              <TrendingUp className="h-4 w-4" />
-              <span className="font-semibold">{credits.earned_total}</span>
-            </div>
-            <div className="text-xs text-gray-500">Total Earned</div>
-          </div>
-          <div className="text-center">
-            <div className="flex items-center justify-center gap-1 text-purple-600 mb-1">
-              <Gift className="h-4 w-4" />
-              <span className="font-semibold">{credits.spent_total}</span>
-            </div>
-            <div className="text-xs text-gray-500">Total Spent</div>
+        {/* Simplified stats - no detailed tracking needed for now */}
+        <div className="pt-4 border-t border-yellow-200 text-center">
+          <div className="text-sm text-gray-600">
+            Current Balance: <span className="font-semibold">{profile.credits} credits</span>
           </div>
         </div>
       </div>
@@ -137,35 +130,16 @@ export function CreditBalance({ userId, showTransactions = false, compact = fals
         </ul>
       </div>
 
-      {/* Recent Transactions */}
-      {showTransactions && transactions.length > 0 && (
-        <div className="space-y-3">
-          <div className="flex items-center gap-2 text-gray-700">
+      {/* Simplified - no transaction history for now */}
+      {showTransactions && (
+        <div className="bg-gray-50 rounded-lg p-4">
+          <div className="flex items-center gap-2 text-gray-700 mb-2">
             <History className="h-4 w-4" />
-            <span className="font-medium">Recent Activity</span>
+            <span className="font-medium">Transaction History</span>
           </div>
-          <div className="space-y-2">
-            {transactions.map((transaction) => (
-              <div key={transaction.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                <div>
-                  <div className="font-medium text-sm">
-                    {transaction.type === 'earned' && '✅ Earned credits'}
-                    {transaction.type === 'spent' && '💳 Spent credits'}
-                    {transaction.type === 'bonus' && '🎉 Streak bonus'}
-                    {transaction.type === 'refund' && '↩️ Refund'}
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    {transaction.description || transaction.source}
-                  </div>
-                </div>
-                <div className={`font-semibold ${
-                  transaction.amount > 0 ? 'text-green-600' : 'text-red-600'
-                }`}>
-                  {transaction.amount > 0 ? '+' : ''}{transaction.amount}
-                </div>
-              </div>
-            ))}
-          </div>
+          <p className="text-sm text-gray-600">
+            Detailed transaction history will be available soon.
+          </p>
         </div>
       )}
     </div>
