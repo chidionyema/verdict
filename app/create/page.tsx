@@ -33,7 +33,7 @@ import {
   Lightbulb,
   TrendingUp,
 } from 'lucide-react';
-import { submitRequest } from '@/lib/verdicts';
+import { submitRequest } from '@/lib/verdicts-client';
 import FeatureDiscovery from '@/components/discovery/FeatureDiscovery';
 import { RippleButton, MagneticButton, PulseElement, AnimatedProgressRing, ConfettiBurst } from '@/components/ui/MicroInteractions';
 
