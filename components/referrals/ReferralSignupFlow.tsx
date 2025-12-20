@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Gift, Check, Users, Sparkles } from 'lucide-react';
 import { referralService, isValidReferralCode } from '@/lib/referral-system';
@@ -9,7 +9,7 @@ interface ReferralSignupFlowProps {
   onReferralApplied?: (referralCode: string) => void;
 }
 
-export function ReferralSignupFlow({ onReferralApplied }: ReferralSignupFlowProps) {
+function ReferralSignupFlowInner({ onReferralApplied }: ReferralSignupFlowProps) {
   const searchParams = useSearchParams();
   const [referralCode, setReferralCode] = useState<string>('');
   const [isValid, setIsValid] = useState<boolean>(false);
@@ -144,6 +144,21 @@ export function ReferralSignupFlow({ onReferralApplied }: ReferralSignupFlowProp
         </p>
       </div>
     </div>
+  );
+}
+
+export function ReferralSignupFlow({ onReferralApplied }: ReferralSignupFlowProps) {
+  return (
+    <Suspense fallback={
+      <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg border border-green-200 p-4">
+        <div className="animate-pulse">
+          <div className="h-4 bg-green-200 rounded w-3/4 mb-3"></div>
+          <div className="h-3 bg-green-100 rounded w-1/2"></div>
+        </div>
+      </div>
+    }>
+      <ReferralSignupFlowInner onReferralApplied={onReferralApplied} />
+    </Suspense>
   );
 }
 

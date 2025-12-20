@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { getDestination, type RoutingDecision } from '@/lib/routing';
@@ -11,7 +11,7 @@ interface SmartEntryPointProps {
   enableLogging?: boolean;
 }
 
-export function SmartEntryPoint({ children, enableLogging = false }: SmartEntryPointProps) {
+function SmartEntryPointInner({ children, enableLogging = false }: SmartEntryPointProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -121,8 +121,25 @@ export function SmartEntryPoint({ children, enableLogging = false }: SmartEntryP
   return <>{children}</>;
 }
 
+export function SmartEntryPoint({ children, enableLogging = false }: SmartEntryPointProps) {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    }>
+      <SmartEntryPointInner enableLogging={enableLogging}>
+        {children}
+      </SmartEntryPointInner>
+    </Suspense>
+  );
+}
+
 // Hook for accessing routing state in components
-export function useSmartRouting() {
+function useSmartRoutingInner() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [routingState, setRoutingState] = useState<{
@@ -141,6 +158,19 @@ export function useSmartRouting() {
       reason: searchParams.get('routing_reason') || undefined
     });
   }, [pathname, searchParams]);
+
+  return routingState;
+}
+
+export function useSmartRouting() {
+  const [routingState, setRoutingState] = useState<{
+    isRouting: boolean;
+    currentPath: string;
+    reason?: string;
+  }>({
+    isRouting: false,
+    currentPath: '/'
+  });
 
   return routingState;
 }

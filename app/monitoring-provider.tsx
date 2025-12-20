@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, Suspense } from 'react';
 import { initMonitoring, setUserContext, addBreadcrumb } from '@/lib/monitoring/sentry';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 
-export default function MonitoringProvider({ 
+function MonitoringProviderInner({ 
   children 
 }: { 
   children: React.ReactNode 
@@ -99,4 +99,18 @@ export default function MonitoringProvider({
   }, []);
   
   return <>{children}</>;
+}
+
+export default function MonitoringProvider({ 
+  children 
+}: { 
+  children: React.ReactNode 
+}) {
+  return (
+    <Suspense fallback={children}>
+      <MonitoringProviderInner>
+        {children}
+      </MonitoringProviderInner>
+    </Suspense>
+  );
 }
