@@ -31,14 +31,14 @@ function MonitoringProviderInner({
           // Get user profile for additional context
           const { data: profile } = await supabase
             .from('profiles')
-            .select('pricing_tier, total_submissions, judge_verified')
+            .select('onboarding_completed')
             .eq('id', user.id)
-            .single();
+            .maybeSingle();
           
           setUserContext(user.id, {
-            plan: (profile as any)?.pricing_tier || 'free',
-            totalRequests: (profile as any)?.total_submissions || 0,
-            isJudge: (profile as any)?.judge_verified || false,
+            plan: 'free', // Default plan
+            totalRequests: 0, // Default submissions
+            isJudge: false, // Default judge status
           });
         }
       } catch (error) {

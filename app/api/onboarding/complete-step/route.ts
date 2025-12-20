@@ -56,11 +56,31 @@ export async function POST(request: NextRequest) {
     }
 
     // Get updated onboarding state
-    const { data: updatedProfile } = await supabase
+    const { data: updatedProfile, error: fetchError } = await supabase
       .from('profiles')
       .select('onboarding_completed')
       .eq('id', user.id)
-      .single();
+      .maybeSingle();
+
+    // If profile doesn't exist, create it first
+    if (!updatedProfile && fetchError?.code === 'PGRST116') {
+      const { error: createError } = await (supabase
+        .from('profiles')
+        .insert as any)({
+          id: user.id,
+          email: user.email,
+          display_name: user.email?.split('@')[0] || 'User',
+          credits: 3,
+          onboarding_completed: false,
+          is_judge: false,
+          is_admin: false
+        });
+
+      if (createError) {
+        log.error('Failed to create profile during onboarding', createError);
+        return NextResponse.json({ error: 'Failed to create profile' }, { status: 500 });
+      }
+    }
 
     log.info('Onboarding step completed successfully', {
       userId: user.id,
@@ -111,20 +131,40 @@ export async function GET(request: NextRequest) {
     }
 
     // Get onboarding state
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('onboarding_completed')
       .eq('id', user.id)
-      .single();
+      .maybeSingle();
+
+    // If profile doesn't exist, create it first
+    if (!profile && profileError?.code === 'PGRST116') {
+      const { error: createError } = await (supabase
+        .from('profiles')
+        .insert as any)({
+          id: user.id,
+          email: user.email,
+          display_name: user.email?.split('@')[0] || 'User',
+          credits: 3,
+          onboarding_completed: false,
+          is_judge: false,
+          is_admin: false
+        });
+
+      if (createError) {
+        log.error('Failed to create profile during onboarding get', createError);
+        return NextResponse.json({ error: 'Failed to create profile' }, { status: 500 });
+      }
+    }
 
     // Create a default onboarding state
     const defaultOnboardingState = {
-      profile_completed: true, // Default to true if profile exists
+      profile_completed: !!profile, // True if profile exists
       tutorial_completed: false,
       guidelines_accepted: false,
       first_submission_completed: false,
       first_judgment_completed: false,
-      email_verified: true, // Assume verified if they have a profile
+      email_verified: !!profile, // True if profile exists
       safety_training_completed: false,
       onboarding_completed: (profile as any)?.onboarding_completed || false
     };

@@ -119,9 +119,10 @@ export class OnboardingManager {
         .from('profiles')
         .select('onboarding_completed')
         .eq('id', userId)
-        .single();
+        .maybeSingle(); // Use maybeSingle() instead of single()
 
-      if (error) {
+      // Handle case where profile doesn't exist yet
+      if (error && error.code !== 'PGRST116') {
         console.error('Error fetching onboarding state:', {
           message: error.message,
           code: error.code,
@@ -134,12 +135,12 @@ export class OnboardingManager {
 
       // Return a default state based on available data
       const onboardingState: OnboardingState = {
-        profile_completed: true, // Default to true if profile exists
+        profile_completed: data ? true : false, // False if no profile exists yet
         tutorial_completed: false,
         guidelines_accepted: false,
         first_submission_completed: false,
         first_judgment_completed: false,
-        email_verified: true, // Assume verified if they have a profile
+        email_verified: data ? true : false, // False if no profile exists yet
         safety_training_completed: false,
         onboarding_completed: (data as any)?.onboarding_completed || false
       };
