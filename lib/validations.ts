@@ -164,7 +164,8 @@ export function getSubmissionConfig(mode: SubmissionMode) {
   return SUBMISSION_MODEL[mode];
 }
 
-// Standard configuration - all submissions get 3 feedback reports
+// Standard configuration - use dynamic tier configuration
+// Note: This is kept for backward compatibility but should use getTierConfig().default_judges
 export const STANDARD_VERDICT_COUNT = 3;
 
 export type PackageId = keyof typeof CREDIT_PACKAGES;
@@ -173,7 +174,8 @@ export function isValidPackageId(id: string): id is PackageId {
   return id in CREDIT_PACKAGES;
 }
 
-// Legacy backward compatibility exports (to be removed after migration)
+// DEPRECATED: Legacy tiers - use dynamic-pricing.ts instead
+// These are kept only for backward compatibility during migration
 export const VERDICT_TIERS = {
   basic: { verdicts: 3, price_cents: 199 },
   detailed: { verdicts: 3, price_cents: 499 }
@@ -185,15 +187,18 @@ export const VERDICT_TIER_PRICING = {
 } as const;
 
 export function getTierConfigByVerdictCount(count: number) {
-  // Legacy compatibility - always return standard config
+  // DEPRECATED: Use dynamic-pricing.ts instead
+  // This function is kept for backward compatibility during migration
+  const { getTierConfig } = require('./pricing/dynamic-pricing');
+  const standardConfig = getTierConfig('standard');
   return {
-    verdicts: STANDARD_VERDICT_COUNT,
-    price_cents: 349, // Default to mid-tier pricing
-    name: 'Standard',
-    credits: 1,
-    tier: 'detailed',
-    price: 3.49,
-    judgePayout: 0.75
+    verdicts: standardConfig.default_judges,
+    price_cents: standardConfig.base_price_cents,
+    name: standardConfig.name,
+    credits: standardConfig.credits_required,
+    tier: 'standard',
+    price: standardConfig.base_price_cents / 100,
+    judgePayout: standardConfig.judge_payout_cents / 100
   };
 }
 

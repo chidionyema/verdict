@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { log } from '@/lib/logger';
 
 // GET /api/judge/demographics - Get judge demographics
@@ -50,8 +50,9 @@ export async function POST(request: NextRequest) {
 
     if (profileError) {
       if (profileError.code === 'PGRST116') {
-        // Insert a minimal profile row so the FK constraint passes
-        const { error: insertError } = await supabase.from('profiles').insert({
+        // Use service role client to bypass RLS for profile creation
+        const serviceClient = createServiceClient();
+        const { error: insertError } = await (serviceClient as any).from('profiles').insert({
           id: user.id,
           email: user.email,
           display_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'New Judge',
@@ -69,7 +70,9 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Failed to load profile' }, { status: 500 });
       }
     } else if (!existingProfile) {
-      const { error: insertError } = await supabase.from('profiles').insert({
+      // Use service role client to bypass RLS for profile creation
+      const serviceClient = createServiceClient();
+      const { error: insertError } = await (serviceClient as any).from('profiles').insert({
         id: user.id,
         email: user.email,
         display_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'New Judge',

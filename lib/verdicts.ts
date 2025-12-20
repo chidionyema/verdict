@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database, VerdictRequest, VerdictResponse } from './database.types';
 import { createClient } from '@/lib/supabase/client';
+import { createServiceClient } from '@/lib/supabase/server';
 
 type DbClient = SupabaseClient<Database>;
 
@@ -95,7 +96,9 @@ export async function createVerdictRequest(
 
   // Create profile with starter credits if it doesn't exist
   if (!profile) {
-    const { data: newProfile, error: createError } = await (supabase as any)
+    // Use service role client to bypass RLS for profile creation
+    const serviceClient = createServiceClient();
+    const { data: newProfile, error: createError } = await (serviceClient as any)
       .from('profiles')
       .insert({
         id: userId,

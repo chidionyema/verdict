@@ -3,10 +3,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { stripe, isDemoMode } from '@/lib/stripe';
 import { CREDIT_PACKAGES, isValidPackageId } from '@/lib/validations';
+import { TIER_CONFIGURATIONS, getTierConfig, calculateTierPrice } from '@/lib/pricing/dynamic-pricing';
 import { log } from '@/lib/logger';
 
-// Pricing tier configuration for new model
-const TIER_PRICING = {
+// DEPRECATED: Use dynamic-pricing.ts instead
+// Keeping for backward compatibility during migration
+const LEGACY_TIER_PRICING = {
   standard: {
     price_cents: 300, // £3.00
     name: 'Standard Tier',
@@ -19,14 +21,36 @@ const TIER_PRICING = {
     name: 'Professional Tier',  
     description: 'Expert-only feedback + LLM synthesis + A/B comparison',
     credits: 1,
-    tier: 'pro'
+    tier: 'expert' // Map 'pro' to 'expert'
   }
 } as const;
 
-type TierId = keyof typeof TIER_PRICING;
+type TierId = keyof typeof LEGACY_TIER_PRICING;
 
 function isValidTierId(id: string): id is TierId {
-  return id in TIER_PRICING;
+  return id in LEGACY_TIER_PRICING || id in TIER_CONFIGURATIONS;
+}
+
+function getTierPricing(tierId: string, judgeCount: number = 3) {
+  // Use dynamic pricing system
+  if (tierId in TIER_CONFIGURATIONS) {
+    const config = getTierConfig(tierId);
+    const pricing = calculateTierPrice(tierId, judgeCount);
+    return {
+      price_cents: pricing.total_cents,
+      name: config.name,
+      description: config.description,
+      credits: config.credits_required,
+      tier: tierId
+    };
+  }
+  
+  // Legacy fallback
+  if (tierId in LEGACY_TIER_PRICING) {
+    return LEGACY_TIER_PRICING[tierId as TierId];
+  }
+  
+  throw new Error(`Invalid tier ID: ${tierId}`);
 }
 
 // POST /api/billing/create-checkout-session
@@ -44,15 +68,16 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { package_id, tier_id } = body;
+    const { package_id, tier_id, judge_count } = body;
 
     // Support both legacy credit packages and new pricing tiers
     let pkg;
     let isLegacyPackage = false;
     
     if (tier_id && isValidTierId(tier_id)) {
-      // New pricing tier model
-      pkg = TIER_PRICING[tier_id];
+      // New dynamic pricing tier model
+      const judgeCount = judge_count || 3;
+      pkg = getTierPricing(tier_id, judgeCount);
     } else if (package_id && isValidPackageId(package_id)) {
       // Legacy credit packages
       pkg = CREDIT_PACKAGES[package_id];
