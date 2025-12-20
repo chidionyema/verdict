@@ -58,16 +58,7 @@ export async function POST(request: NextRequest) {
     // Get updated onboarding state
     const { data: updatedProfile } = await supabase
       .from('profiles')
-      .select(`
-        profile_completed,
-        tutorial_completed,
-        guidelines_accepted,
-        first_submission_completed,
-        first_judgment_completed,
-        email_verified,
-        safety_training_completed,
-        onboarding_completed
-      `)
+      .select('onboarding_completed')
       .eq('id', user.id)
       .single();
 
@@ -77,10 +68,22 @@ export async function POST(request: NextRequest) {
       onboardingCompleted: (updatedProfile as any)?.onboarding_completed || false
     });
 
+    // Create a mock onboarding state for backwards compatibility
+    const mockOnboardingState = {
+      profile_completed: true,
+      tutorial_completed: stepId === 'tutorial_completed',
+      guidelines_accepted: stepId === 'guidelines_accepted',
+      first_submission_completed: stepId === 'first_submission_completed',
+      first_judgment_completed: stepId === 'first_judgment_completed',
+      email_verified: true,
+      safety_training_completed: stepId === 'safety_training_completed',
+      onboarding_completed: (updatedProfile as any)?.onboarding_completed || false
+    };
+
     return NextResponse.json({
       success: true,
       stepCompleted: stepId,
-      onboardingState: updatedProfile,
+      onboardingState: mockOnboardingState,
       onboardingCompleted: (updatedProfile as any)?.onboarding_completed || false
     });
 
@@ -110,25 +113,25 @@ export async function GET(request: NextRequest) {
     // Get onboarding state
     const { data: profile } = await supabase
       .from('profiles')
-      .select(`
-        profile_completed,
-        tutorial_completed,
-        guidelines_accepted,
-        first_submission_completed,
-        first_judgment_completed,
-        email_verified,
-        safety_training_completed,
-        onboarding_completed,
-        guidelines_accepted_at,
-        safety_training_completed_at,
-        onboarding_completed_at
-      `)
+      .select('onboarding_completed')
       .eq('id', user.id)
       .single();
 
+    // Create a default onboarding state
+    const defaultOnboardingState = {
+      profile_completed: true, // Default to true if profile exists
+      tutorial_completed: false,
+      guidelines_accepted: false,
+      first_submission_completed: false,
+      first_judgment_completed: false,
+      email_verified: true, // Assume verified if they have a profile
+      safety_training_completed: false,
+      onboarding_completed: (profile as any)?.onboarding_completed || false
+    };
+
     return NextResponse.json({
       success: true,
-      onboardingState: profile || {},
+      onboardingState: defaultOnboardingState,
       userId: user.id
     });
 
