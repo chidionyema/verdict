@@ -36,6 +36,10 @@ import {
 import { submitRequest } from '@/lib/verdicts-client';
 import FeatureDiscovery from '@/components/discovery/FeatureDiscovery';
 import { RippleButton, MagneticButton, PulseElement, AnimatedProgressRing, ConfettiBurst } from '@/components/ui/MicroInteractions';
+import { useProgressiveProfile } from '@/hooks/useProgressiveProfile';
+import { ProgressiveProfile } from '@/components/onboarding/ProgressiveProfile';
+import { InsufficientCreditsModal } from '@/components/modals/InsufficientCreditsModal';
+import { CommunityPathExplainer } from '@/components/ui/CommunityPathExplainer';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
@@ -223,6 +227,12 @@ export default function CreateRequestPage() {
 
   const [draftSaved, setDraftSaved] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [showInsufficientCreditsModal, setShowInsufficientCreditsModal] = useState(false);
+  const [showCommunityPathExplainer, setShowCommunityPathExplainer] = useState(false);
+  const [usingCommunityPath, setUsingCommunityPath] = useState(false);
+  
+  // Progressive profiling
+  const { shouldShow: showProgressiveProfile, triggerType, dismiss: dismissProgressiveProfile, checkTrigger } = useProgressiveProfile();
 
   useEffect(() => {
     const initializeUser = async () => {
@@ -384,10 +394,11 @@ export default function CreateRequestPage() {
         textContent: formData.textContent,
         mediaType: formData.mediaType,
         targetVerdictCount: formData.targetVerdictCount,
-        creditsToUse: formData.creditsToUse,
+        creditsToUse: usingCommunityPath ? 0 : formData.creditsToUse,
         files: formData.mediaFiles,
         specificQuestions: formData.specificQuestions,
         demographicFilters: formData.demographicFilters,
+        // Note: communityPath handled separately in submission logic
       });
 
       if (result.success) {
@@ -396,6 +407,9 @@ export default function CreateRequestPage() {
         
         // Trigger confetti
         setShowConfetti(true);
+        
+        // Check if we should show progressive profiling
+        checkTrigger('first_submit');
         
         toast.success('Request created successfully! 🎉');
         
@@ -786,19 +800,37 @@ export default function CreateRequestPage() {
               </div>
 
               {insufficientCredits && (
-                <div className="bg-orange-50 border border-orange-200 rounded-xl p-4">
-                  <div className="flex items-center gap-2 text-orange-700">
+                <div className="bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 rounded-xl p-6">
+                  <div className="flex items-center gap-2 text-orange-700 mb-3">
                     <Info className="h-5 w-5" />
-                    <span className="font-medium">Insufficient Credits</span>
+                    <span className="font-medium">Need More Credits</span>
                   </div>
-                  <p className="text-orange-600 text-sm mt-1">
+                  <p className="text-orange-600 text-sm mb-4">
                     You need {formData.creditsToUse} credits but only have {profile?.credits || 0}.
+                  </p>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <button 
-                      className="text-orange-700 underline ml-1"
-                      aria-label="Purchase additional credits to complete request"
+                      onClick={() => setShowCommunityPathExplainer(true)}
+                      className="bg-green-600 text-white px-4 py-3 rounded-lg font-medium hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
                     >
-                      Buy more credits
+                      <Heart className="h-4 w-4" />
+                      Community Path (Free)
                     </button>
+                    
+                    <button 
+                      onClick={() => setShowInsufficientCreditsModal(true)}
+                      className="bg-indigo-600 text-white px-4 py-3 rounded-lg font-medium hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2"
+                    >
+                      <Zap className="h-4 w-4" />
+                      Buy Credits
+                    </button>
+                  </div>
+                  
+                  <p className="text-xs text-gray-600 mt-3 text-center">
+                    💚 Community: Judge {formData.creditsToUse} others, get free feedback
+                    <span className="mx-2">•</span>
+                    ⚡ Instant: Pay and get results in 2 hours
                   </p>
                 </div>
               )}
@@ -919,9 +951,9 @@ export default function CreateRequestPage() {
             ) : (
               <button
                 onClick={handleSubmit}
-                disabled={!canContinue() || insufficientCredits || submitting}
+                disabled={!canContinue() || (insufficientCredits && !usingCommunityPath) || submitting}
                 className={`px-8 py-3 rounded-xl font-semibold transition-all flex items-center gap-3 ${
-                  canContinue() && !insufficientCredits && !submitting
+                  canContinue() && (!insufficientCredits || usingCommunityPath) && !submitting
                     ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-lg hover:shadow-xl hover:-translate-y-0.5'
                     : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 }`}
@@ -934,7 +966,7 @@ export default function CreateRequestPage() {
                 ) : (
                   <>
                     <Sparkles className="h-5 w-5" />
-                    Submit Request
+                    {usingCommunityPath ? 'Submit (Community Path)' : 'Submit Request'}
                     <ArrowRight className="h-4 w-4" />
                   </>
                 )}
@@ -943,6 +975,48 @@ export default function CreateRequestPage() {
           </div>
         </div>
       </div>
+
+      {/* Progressive Profile Modal */}
+      {showProgressiveProfile && user && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+          <ProgressiveProfile
+            user={user}
+            trigger={triggerType}
+            onComplete={dismissProgressiveProfile}
+          />
+        </div>
+      )}
+
+      {/* Insufficient Credits Modal */}
+      <InsufficientCreditsModal
+        isOpen={showInsufficientCreditsModal}
+        onClose={() => setShowInsufficientCreditsModal(false)}
+        requiredCredits={formData.creditsToUse}
+        currentCredits={profile?.credits || 0}
+        onPurchaseSuccess={() => {
+          setShowInsufficientCreditsModal(false);
+          // Optionally refresh profile credits here
+        }}
+      />
+
+      {/* Community Path Explainer */}
+      <CommunityPathExplainer
+        isOpen={showCommunityPathExplainer}
+        onClose={() => setShowCommunityPathExplainer(false)}
+        creditsNeeded={formData.creditsToUse}
+        onChoosePath={(path) => {
+          setShowCommunityPathExplainer(false);
+          setUsingCommunityPath(true);
+          
+          if (path === 'judge_first') {
+            // Redirect to feed to start judging
+            router.push('/feed?from=create');
+          } else {
+            // Submit first, judge later - continue with current flow
+            toast.success('Great! Submit your request and judge others when ready to see results.');
+          }
+        }}
+      />
     </div>
   );
 }

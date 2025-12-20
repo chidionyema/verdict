@@ -49,10 +49,11 @@ const TRAINING_CARDS: TrainingCard[] = [
 
 interface JudgeTrainingProps {
   onComplete: () => void;
+  onSkip?: () => void;
   className?: string;
 }
 
-export function JudgeTraining({ onComplete, className = '' }: JudgeTrainingProps) {
+export function JudgeTraining({ onComplete, onSkip, className = '' }: JudgeTrainingProps) {
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [userAction, setUserAction] = useState<'like' | 'dislike' | null>(null);
   const [showExplanation, setShowExplanation] = useState(false);
@@ -96,7 +97,7 @@ export function JudgeTraining({ onComplete, className = '' }: JudgeTrainingProps
 
   return (
     <div className={`max-w-lg mx-auto ${className}`}>
-      <div className="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden max-h-[90vh] flex flex-col">
         {/* Header */}
         <div className="bg-gradient-to-r from-indigo-500 to-purple-600 px-6 py-4">
           <div className="flex items-center justify-between">
@@ -106,26 +107,37 @@ export function JudgeTraining({ onComplete, className = '' }: JudgeTrainingProps
                 Learn to give quality feedback
               </p>
             </div>
-            <div className="text-white text-right">
-              <div className="text-sm opacity-80">
-                {currentCardIndex + 1} of {TRAINING_CARDS.length}
+            <div className="flex items-center gap-4 text-white">
+              <div className="text-right">
+                <div className="text-sm opacity-80">
+                  {currentCardIndex + 1} of {TRAINING_CARDS.length}
+                </div>
+                <div className="flex gap-1 mt-1">
+                  {TRAINING_CARDS.map((_, index) => (
+                    <div
+                      key={index}
+                      className={`w-2 h-2 rounded-full ${
+                        index <= currentCardIndex ? 'bg-white' : 'bg-white/30'
+                      }`}
+                    />
+                  ))}
+                </div>
               </div>
-              <div className="flex gap-1 mt-1">
-                {TRAINING_CARDS.map((_, index) => (
-                  <div
-                    key={index}
-                    className={`w-2 h-2 rounded-full ${
-                      index <= currentCardIndex ? 'bg-white' : 'bg-white/30'
-                    }`}
-                  />
-                ))}
-              </div>
+              {onSkip && (
+                <button
+                  onClick={onSkip}
+                  className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                  aria-label="Close training"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              )}
             </div>
           </div>
         </div>
 
         {/* Content */}
-        <div className="p-6">
+        <div className="p-6 flex-1 overflow-y-auto">
           <div className="space-y-4">
             <div>
               <h4 className="font-semibold text-gray-900 mb-2">{currentCard.title}</h4>
@@ -248,13 +260,23 @@ export function JudgeTraining({ onComplete, className = '' }: JudgeTrainingProps
           </div>
         </div>
 
-        {/* Progress indicator */}
-        <div className="px-6 pb-4">
-          <div className="flex items-center gap-2 text-xs text-gray-500">
-            <MessageSquare className="h-3 w-3" />
-            <span>
-              {completedCards.size} of {TRAINING_CARDS.length} examples completed
-            </span>
+        {/* Footer with progress and skip option */}
+        <div className="bg-gray-50 px-6 py-4 border-t flex-shrink-0">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-xs text-gray-500">
+              <MessageSquare className="h-3 w-3" />
+              <span>
+                {completedCards.size} of {TRAINING_CARDS.length} examples completed
+              </span>
+            </div>
+            {onSkip && (
+              <button
+                onClick={onSkip}
+                className="text-sm text-gray-600 hover:text-gray-800 font-medium"
+              >
+                Skip Training
+              </button>
+            )}
           </div>
         </div>
       </div>

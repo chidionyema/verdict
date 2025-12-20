@@ -22,7 +22,7 @@ import {
   AlertTriangle,
   X
 } from 'lucide-react';
-import { ProfileSetup } from './ProfileSetup';
+import { ProgressiveProfile } from './ProgressiveProfile';
 import { GuidelinesAcceptance } from './GuidelinesAcceptance';
 import { SafetyTraining } from './SafetyTraining';
 
@@ -301,10 +301,11 @@ function OnboardingStepContent({
   switch (step.id) {
     case 'profile_completed':
       return (
-        <ProfileSetup
+        <ProgressiveProfile
           user={user}
           onComplete={onComplete}
           loading={loading}
+          trigger="signup"
         />
       );
     

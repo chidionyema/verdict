@@ -10,6 +10,8 @@ import { FeedCard } from '@/components/feed/FeedCard';
 import { EmptyState } from '@/components/ui/EmptyStates';
 import { JudgeTraining } from '@/components/training/JudgeTraining';
 import { ProgressiveFeedDashboard } from '@/components/feed/ProgressiveFeedDashboard';
+import { ProgressiveProfile } from '@/components/onboarding/ProgressiveProfile';
+import { useProgressiveProfile } from '@/hooks/useProgressiveProfile';
 import { createClient } from '@/lib/supabase/client';
 import { creditManager, CREDIT_ECONOMY_CONFIG } from '@/lib/credits';
 import { toast } from '@/components/ui/toast';
@@ -32,6 +34,9 @@ export default function FeedPage() {
   const [creditsEarned, setCreditsEarned] = useState(0);
   const [showTraining, setShowTraining] = useState(false);
   const [trainingCompleted, setTrainingCompleted] = useState(false);
+  
+  // Progressive profiling
+  const { shouldShow: showProgressiveProfile, triggerType, dismiss: dismissProgressiveProfile, checkTrigger } = useProgressiveProfile();
   const supabaseRef = useRef<ReturnType<typeof createClient> | null>(null);
   const router = useRouter();
 
@@ -190,6 +195,9 @@ export default function FeedPage() {
       if (responseData && responseData.id) {
         // Award credits for judging
         await creditManager.awardCreditsForJudging(user.id, responseData.id);
+        
+        // Check if we should show progressive profiling after earning credits
+        checkTrigger('credits_earned');
       }
 
       // Update stats
@@ -230,6 +238,11 @@ export default function FeedPage() {
     } catch (error) {
       console.error('Error completing training:', error);
     }
+  }
+
+  function handleTrainingSkip() {
+    setShowTraining(false);
+    toast.error('Training is required to start judging. You can access it later from your profile.');
   }
 
   if (loading) {
@@ -353,10 +366,27 @@ export default function FeedPage() {
 
       {/* Judge Training Modal */}
       {showTraining && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+          onClick={handleTrainingSkip}
+        >
+          <div onClick={(e) => e.stopPropagation()}>
+            <JudgeTraining 
+              onComplete={handleTrainingComplete}
+              onSkip={handleTrainingSkip}
+              className="w-full max-w-md"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Progressive Profile Modal */}
+      {showProgressiveProfile && user && !showTraining && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <JudgeTraining 
-            onComplete={handleTrainingComplete}
-            className="w-full max-w-md"
+          <ProgressiveProfile
+            user={user}
+            trigger={triggerType}
+            onComplete={dismissProgressiveProfile}
           />
         </div>
       )}

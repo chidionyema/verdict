@@ -28,7 +28,7 @@ interface OnboardingStep {
 export default function WelcomePage() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
-  const [useNewOnboarding, setUseNewOnboarding] = useState(true);
+  // Always use the unified OnboardingFlow system
   const [profile, setProfile] = useState<Profile>({
     display_name: '',
     country: '',
@@ -147,8 +147,8 @@ export default function WelcomePage() {
     );
   }
 
-  // Use new onboarding flow
-  if (useNewOnboarding && user) {
+  // Always use unified onboarding flow
+  if (user) {
     return (
       <OnboardingFlow 
         user={user} 

@@ -44,7 +44,7 @@ import { EmptyState } from '@/components/ui/EmptyStates';
 import { FeatureDiscoveryBanner } from '@/components/discovery/FeatureDiscoveryBanner';
 import { RetentionDiscountBanner } from '@/components/retention/RetentionDiscountBanner';
 import { ReferralWidget } from '@/components/referrals/ReferralDashboard';
-import SmartOnboarding from '@/components/onboarding/SmartOnboarding';
+import { OnboardingFlow } from '@/components/onboarding/OnboardingFlow';
 import FeatureDiscovery from '@/components/discovery/FeatureDiscovery';
 import { MagneticButton, FloatingHearts, BounceCounter, AnimatedProgressRing, PulseElement } from '@/components/ui/MicroInteractions';
 import { useMultiURLState, generateShareableURL, deepLinkUtils } from '@/lib/state/urlState';
@@ -399,10 +399,10 @@ function WorkspacePageContent() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       {/* Smart Onboarding */}
       {showOnboarding && user && (
-        <SmartOnboarding
-          userId={user.id}
-          userProfile={profile}
+        <OnboardingFlow
+          user={user}
           onComplete={() => setShowOnboarding(false)}
+          allowSkip={true}
         />
       )}
       

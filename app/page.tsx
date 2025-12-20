@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { SmartLink } from "@/components/routing/SmartEntryPoint";
 import Script from "next/script";
@@ -13,7 +14,11 @@ import { InteractiveFeedbackPreview } from "@/components/landing/InteractiveFeed
 import { PricingTableSection } from "@/components/landing/pricing-table";
 import { EconomyExplanationSection } from "@/components/landing/economy-explanation";
 import { SmartExitIntent } from "@/components/conversion/SmartExitIntent";
+import { ExitIntentModal } from "@/components/conversion/ExitIntentModal";
+import { useExitIntent } from "@/hooks/useExitIntent";
 import { LiveActivityTicker } from "@/components/social-proof/LiveActivityTicker";
+import { AuthenticSocialProof } from "@/components/social-proof/AuthenticSocialProof";
+import { GuestBrowseSection } from "@/components/landing/GuestBrowseSection";
 import { getSchemaPrice } from "@/lib/localization";
 import { useLocalizedPricing } from "@/hooks/use-pricing";
 import { Clock, Shield, CheckCircle, Eye, Star, Users, Lock } from "lucide-react";
@@ -22,6 +27,27 @@ export default function HomePage() {
   const router = useRouter();
   const pricing = useLocalizedPricing();
   const schemaPrice = getSchemaPrice();
+  
+  // Check for welcome parameter (new users redirected from auth)
+  const [showWelcomeBanner, setShowWelcomeBanner] = useState(false);
+  
+  // Advanced exit-intent detection
+  const { showExitIntent, dismissExitIntent } = useExitIntent({
+    threshold: 50,
+    delay: 5000, // Wait 5 seconds before enabling
+    aggressive: false
+  });
+  
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('welcome') === 'true') {
+        setShowWelcomeBanner(true);
+        // Clean URL without page reload
+        window.history.replaceState({}, '', window.location.pathname);
+      }
+    }
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
@@ -54,6 +80,30 @@ export default function HomePage() {
 
       {/* Live Activity Ticker */}
       <LiveActivityTicker />
+      
+      {/* Authentic Social Proof - Real data without fabrication */}
+      <AuthenticSocialProof />
+
+      {/* Welcome Banner for New Users */}
+      {showWelcomeBanner && (
+        <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white py-4">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <CheckCircle className="h-5 w-5" />
+                <span className="font-medium">Welcome! Account created successfully.</span>
+                <span className="text-green-100">Explore below, then complete your profile when ready.</span>
+              </div>
+              <button
+                onClick={() => setShowWelcomeBanner(false)}
+                className="text-green-100 hover:text-white p-1"
+              >
+                ×
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Feature Discovery Banner */}
       <FeatureDiscoveryBanner />
@@ -99,6 +149,9 @@ export default function HomePage() {
       <div className="bg-gradient-to-br from-white via-indigo-50/30 to-purple-50/30 backdrop-blur-sm">
         <InteractiveDemo />
       </div>
+      
+      {/* Guest Browse Section - Let visitors explore real content */}
+      <GuestBrowseSection />
       
       {/* Social Proof - Early trust building */}
       <SocialProofSection />
@@ -382,7 +435,14 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Smart Exit-intent modal with personalized offers */}
+      {/* Advanced Exit-Intent Modal - Primary */}
+      <ExitIntentModal 
+        isOpen={showExitIntent}
+        onClose={dismissExitIntent}
+        source="landing"
+      />
+      
+      {/* Smart Exit-intent modal with personalized offers - Fallback */}
       <SmartExitIntent />
 
       {/* Mobile sticky CTA */}
