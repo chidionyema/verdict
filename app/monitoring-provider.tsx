@@ -15,26 +15,34 @@ function MonitoringProviderInner({
   
   useEffect(() => {
     // Initialize monitoring on app load
-    initMonitoring();
+    try {
+      initMonitoring();
+    } catch (error) {
+      console.error('Failed to initialize monitoring:', error);
+    }
     
     // Set user context if authenticated
     const setupUserContext = async () => {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (user) {
-        // Get user profile for additional context
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('pricing_tier, total_submissions, judge_verified')
-          .eq('id', user.id)
-          .single();
+      try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
         
-        setUserContext(user.id, {
-          plan: (profile as any)?.pricing_tier || 'free',
-          totalRequests: (profile as any)?.total_submissions || 0,
-          isJudge: (profile as any)?.judge_verified || false,
-        });
+        if (user) {
+          // Get user profile for additional context
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('pricing_tier, total_submissions, judge_verified')
+            .eq('id', user.id)
+            .single();
+          
+          setUserContext(user.id, {
+            plan: (profile as any)?.pricing_tier || 'free',
+            totalRequests: (profile as any)?.total_submissions || 0,
+            isJudge: (profile as any)?.judge_verified || false,
+          });
+        }
+      } catch (error) {
+        console.error('Failed to setup user context:', error);
       }
     };
     
@@ -43,14 +51,18 @@ function MonitoringProviderInner({
   
   // Track navigation
   useEffect(() => {
-    addBreadcrumb(
-      `Navigated to ${pathname}`,
-      'navigation',
-      { 
-        path: pathname,
-        query: Object.fromEntries(searchParams.entries()),
-      }
-    );
+    try {
+      addBreadcrumb(
+        `Navigated to ${pathname}`,
+        'navigation',
+        { 
+          path: pathname,
+          query: Object.fromEntries(searchParams.entries()),
+        }
+      );
+    } catch (error) {
+      console.error('Failed to track navigation:', error);
+    }
   }, [pathname, searchParams]);
   
   // Track performance metrics

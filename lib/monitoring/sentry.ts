@@ -11,7 +11,8 @@ import { log } from '@/lib/logger';
 
 // Initialize Sentry only in production
 export function initMonitoring() {
-  if (process.env.NODE_ENV !== 'production') {
+  // Only initialize in production, not in development to avoid errors
+  if (process.env.NODE_ENV !== 'production' || !process.env.NEXT_PUBLIC_SENTRY_DSN) {
     return;
   }
 

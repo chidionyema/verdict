@@ -23,6 +23,9 @@ function SmartEntryPointInner({ children, enableLogging = false }: SmartEntryPoi
   useEffect(() => {
     const initializeRouting = async () => {
       try {
+        if (enableLogging) {
+          console.log('SmartEntryPoint: Starting initialization', { pathname });
+        }
         // Get current user
         const { data: { user: currentUser } } = await supabase.auth.getUser();
         setUser(currentUser);
