@@ -6,11 +6,11 @@ const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
 // Content Security Policy
 const ContentSecurityPolicy = `
   default-src 'self';
-  script-src 'self' 'unsafe-eval' 'unsafe-inline' https://js.stripe.com https://challenges.cloudflare.com;
+  script-src 'self' 'unsafe-eval' 'unsafe-inline' https://js.stripe.com https://challenges.cloudflare.com https://vercel.live;
   style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
   img-src 'self' blob: data: https://*.supabase.co https://*.stripe.com https://via.placeholder.com;
   font-src 'self' https://fonts.gstatic.com;
-  connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://api.resend.com;
+  connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://api.resend.com https://vercel.live https://vitals.vercel-analytics.com;
   frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://challenges.cloudflare.com;
   object-src 'none';
   base-uri 'self';
@@ -23,6 +23,11 @@ const nextConfig: NextConfig = {
   // Performance optimizations
   compress: true,
   poweredByHeader: false,
+  
+  // Vercel-specific optimizations
+  experimental: {
+    serverComponentsExternalPackages: ['@supabase/supabase-js'],
+  },
 
   // Image optimization
   images: {

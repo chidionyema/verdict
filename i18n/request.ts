@@ -60,11 +60,21 @@ async function loadMessages(locale: Locale) {
 }
 
 export default getRequestConfig(async () => {
-  const locale = await getLocaleFromRequest();
-  const messages = await loadMessages(locale);
+  try {
+    const locale = await getLocaleFromRequest();
+    const messages = await loadMessages(locale);
 
-  return {
-    locale,
-    messages,
-  };
+    return {
+      locale,
+      messages,
+    };
+  } catch (error) {
+    console.error('Error loading locale configuration:', error);
+    // Fallback to default configuration
+    const messages = await loadMessages(defaultLocale);
+    return {
+      locale: defaultLocale,
+      messages,
+    };
+  }
 });

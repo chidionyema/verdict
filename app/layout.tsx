@@ -9,7 +9,7 @@ import { ToastContainer } from "@/components/ui/toast";
 import { CookieConsentBanner } from "@/components/cookie-consent";
 import { AnalyticsProvider } from "@/components/analytics-provider";
 import { I18nProvider } from "@/components/i18n-provider";
-import { PageErrorBoundary } from "@/components/ui/error-boundary";
+import { PageErrorBoundary, ComponentErrorBoundary } from "@/components/ui/error-boundary";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { AccessibilityWrapper } from "@/components/accessibility/AccessibilityWrapper";
 import { SmartEntryPoint } from "@/components/routing/SmartEntryPoint";
@@ -18,6 +18,7 @@ import { isRTL, type Locale, locales } from "@/i18n.config";
 import { generateAlternateLinks } from "@/lib/i18n-metadata";
 import { NORTH_STAR_TAGLINE } from "@/lib/copy";
 import MonitoringProvider from "./monitoring-provider";
+import "@/lib/env-validation";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -115,18 +116,23 @@ export default async function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <I18nProvider locale={locale} messages={messages}>
-          <MonitoringProvider>
-            <SafariViewportFix />
-            <AccessibilityWrapper>
-              <SmartEntryPoint enableLogging={process.env.NODE_ENV === 'development'}>
-              <Navigation />
-              <PageErrorBoundary>
-                <main id="main-content" tabIndex={-1} className="focus:outline-none">
-                  {children}
-                </main>
-              </PageErrorBoundary>
-            </SmartEntryPoint>
-          </AccessibilityWrapper>
+          <ComponentErrorBoundary>
+            <MonitoringProvider>
+              <SafariViewportFix />
+              <AccessibilityWrapper>
+                <ComponentErrorBoundary>
+                  <SmartEntryPoint enableLogging={process.env.NODE_ENV === 'development'}>
+                    <Navigation />
+                    <PageErrorBoundary>
+                      <main id="main-content" tabIndex={-1} className="focus:outline-none">
+                        {children}
+                      </main>
+                    </PageErrorBoundary>
+                  </SmartEntryPoint>
+                </ComponentErrorBoundary>
+              </AccessibilityWrapper>
+            </MonitoringProvider>
+          </ComponentErrorBoundary>
 
           {/* Global footer with legal links */}
           <footer className="border-t border-gray-200 bg-white/80 backdrop-blur-sm mt-8">
@@ -162,7 +168,6 @@ export default async function RootLayout({
           <ToastContainer />
           <CookieConsentBanner />
           <AnalyticsProvider />
-          </MonitoringProvider>
         </I18nProvider>
       </body>
     </html>

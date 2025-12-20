@@ -23,9 +23,13 @@ function getSupabaseUrl(): string {
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 
-  if (!supabaseUrl) {
+  if (!supabaseUrl || supabaseUrl === 'https://placeholder.supabase.co') {
     // During build, env vars may not be set - provide placeholder
     // The actual API calls will fail, but build can complete
+    if (typeof window !== 'undefined') {
+      // Runtime error in browser
+      throw new Error('NEXT_PUBLIC_SUPABASE_URL is not configured');
+    }
     return 'https://placeholder.supabase.co';
   }
 
@@ -33,7 +37,14 @@ function getSupabaseUrl(): string {
 }
 
 function getSupabaseAnonKey(): string {
-  return process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key';
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!anonKey || anonKey === 'placeholder-anon-key') {
+    if (typeof window !== 'undefined') {
+      throw new Error('NEXT_PUBLIC_SUPABASE_ANON_KEY is not configured');
+    }
+    return 'placeholder-anon-key';
+  }
+  return anonKey;
 }
 
 function getSupabaseServiceKey(): string {
