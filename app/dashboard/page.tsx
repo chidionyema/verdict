@@ -10,6 +10,10 @@ import { FeatureDiscoveryBanner } from '@/components/discovery/FeatureDiscoveryB
 import { RetentionDiscountBanner } from '@/components/retention/RetentionDiscountBanner';
 import { ReferralWidget } from '@/components/referrals/ReferralDashboard';
 import { JudgePerformanceDashboard } from '@/components/judge/JudgePerformanceDashboard';
+import { EmptyState } from '@/components/empty-states/EmptyState';
+import { SmartCreditSuggestions, useSmartCreditSuggestions } from '@/components/credits/SmartCreditSuggestions';
+import { SocialProofWidget, useSocialProof } from '@/components/social-proof/SocialProofWidget';
+import { RetentionHooks, useRetentionHooks } from '@/components/retention/RetentionHooks';
 
 type FilterStatus = 'all' | 'open' | 'in_progress' | 'closed' | 'cancelled';
 type SortBy = 'newest' | 'oldest' | 'status' | 'progress';
@@ -26,6 +30,15 @@ export default function DashboardPage() {
   const [sortBy, setSortBy] = useState<SortBy>('newest');
   const [showFilters, setShowFilters] = useState(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
+  
+  // Smart credit suggestions
+  const shouldShowCreditSuggestions = useSmartCreditSuggestions(profile);
+  
+  // Social proof
+  const { shouldShow: shouldShowSocialProof, dismiss: dismissSocialProof } = useSocialProof();
+  
+  // Retention hooks
+  const { retentionData, updateRetentionData } = useRetentionHooks(profile?.id || '');
 
   const fetchData = async () => {
     // Only run in browser
@@ -305,6 +318,8 @@ export default function DashboardPage() {
         <div className="max-w-6xl mx-auto px-4">
           {/* Breadcrumb */}
           <Breadcrumb className="mb-6" />
+
+          {/* TODO: Add smart credit suggestions after launch */}
         
         {/* Header */}
         <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center mb-8 gap-4">
@@ -351,6 +366,34 @@ export default function DashboardPage() {
             </Link>
           </div>
         </div>
+
+        {/* Smart Credit Suggestions */}
+        {shouldShowCreditSuggestions && profile && (
+          <SmartCreditSuggestions
+            userId={profile.id}
+            userProfile={{
+              credits: profile.credits || 0,
+              total_submissions: requests.length,
+              total_reviews: 0, // TODO: Add to profile schema
+              last_review_date: undefined,
+              signup_date: profile.created_at
+            }}
+            currentPage="dashboard"
+          />
+        )}
+
+        {/* Social Proof Widget */}
+        {shouldShowSocialProof && (
+          <div className="mb-6">
+            <SocialProofWidget 
+              variant="compact" 
+              placement="dashboard"
+              showUserActivity={false}
+              showStats={true}
+              showRecentActivity={true}
+            />
+          </div>
+        )}
 
         {/* Filter Panel */}
         {showFilters && (
@@ -452,52 +495,15 @@ export default function DashboardPage() {
 
         {/* Premium Requests Grid */}
         {requests.length === 0 ? (
-          <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl border border-white/50 p-12 text-center relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 via-purple-500/5 to-pink-500/5" />
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-64 bg-gradient-to-br from-indigo-400 to-purple-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20" />
-            
-            <div className="max-w-2xl mx-auto relative z-10">
-              <div className="w-32 h-32 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-8 shadow-2xl animate-pulse">
-                <Sparkles className="h-16 w-16 text-white" />
-              </div>
-              
-              <div className="mb-8">
-                <h3 className="text-4xl font-bold text-gray-900 mb-4">
-                  Ready for Your First Verdict?
-                </h3>
-                <p className="text-xl text-gray-600 leading-relaxed">
-                  Transform uncertainty into confidence. Upload content, ask questions, get expert feedback from real people in minutes.
-                </p>
-              </div>
-              
-              <Link
-                href="/start"
-                className="inline-flex items-center gap-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-10 py-5 rounded-2xl hover:shadow-2xl transition-all duration-300 font-bold text-lg hover:-translate-y-1 group mb-8"
-              >
-                <Sparkles className="h-6 w-6 animate-spin" />
-                Create Your First Request
-                <ArrowRight className="h-6 w-6 group-hover:translate-x-1 transition-transform" />
-              </Link>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-white/50 backdrop-blur rounded-2xl p-6 border border-white/50">
-                  <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center mb-4 mx-auto">
-                    <Crown className="h-6 w-6 text-white" />
-                  </div>
-                  <h4 className="font-bold text-gray-900 mb-2">3 Free Requests Included</h4>
-                  <p className="text-gray-600 text-sm">No upfront cost, start immediately</p>
-                </div>
-                
-                <div className="bg-white/50 backdrop-blur rounded-2xl p-6 border border-white/50">
-                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center mb-4 mx-auto">
-                    <Clock className="h-6 w-6 text-white" />
-                  </div>
-                  <h4 className="font-bold text-gray-900 mb-2">Results within 2 Hours</h4>
-                  <p className="text-gray-600 text-sm">Lightning-fast expert feedback</p>
-                </div>
-              </div>
-            </div>
-          </div>
+          <EmptyState 
+            type="dashboard" 
+            userProfile={{
+              credits: profile?.credits || 0,
+              total_submissions: requests.length || 0,
+              total_reviews: 0, // TODO: Add total_reviews to profile schema
+              name: profile?.display_name || undefined
+            }}
+          />
         ) : filteredAndSortedRequests.length === 0 ? (
           <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl border border-white/50 p-12 text-center">
             <div className="w-20 h-20 bg-gradient-to-br from-gray-100 to-slate-100 rounded-full flex items-center justify-center mx-auto mb-6">

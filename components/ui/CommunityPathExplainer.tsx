@@ -65,7 +65,7 @@ export function CommunityPathExplainer({
                 </div>
                 <div className="flex items-center gap-2 text-sm text-gray-700">
                   <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                  <span>Earn {creditsNeeded} credit{creditsNeeded > 1 ? 's' : ''}</span>
+                  <span>Earn {creditsNeeded} credit{creditsNeeded > 1 ? 's' : ''} + money</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm text-gray-700">
                   <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
@@ -79,7 +79,7 @@ export function CommunityPathExplainer({
                   <span className="text-sm font-medium text-green-800">Best Choice</span>
                 </div>
                 <p className="text-xs text-green-700 mt-1">
-                  See how feedback works first, give better requests
+                  See how feedback works first, earn money, give better requests
                 </p>
               </div>
               
@@ -148,8 +148,8 @@ export function CommunityPathExplainer({
                 <div className="bg-indigo-100 rounded-full w-10 h-10 flex items-center justify-center mx-auto mb-2">
                   <span className="font-bold text-indigo-600">2</span>
                 </div>
-                <p className="font-medium text-gray-900">Earn Credits</p>
-                <p className="text-gray-600">Get {creditsNeeded} credit{creditsNeeded > 1 ? 's' : ''} for quality feedback</p>
+                <p className="font-medium text-gray-900">Earn Credits + Money</p>
+                <p className="text-gray-600">Get {creditsNeeded} credit{creditsNeeded > 1 ? 's' : ''} + cash for quality feedback</p>
               </div>
               <div className="text-center">
                 <div className="bg-indigo-100 rounded-full w-10 h-10 flex items-center justify-center mx-auto mb-2">

@@ -18,6 +18,7 @@ import {
   Home,
   BarChart3,
   Users,
+  DollarSign,
   Scale,
   RotateCcw,
   Award,
@@ -75,12 +76,11 @@ export default function Navigation() {
   const submitDropdownRef = useRef<HTMLDivElement>(null);
   const profileDropdownRef = useRef<HTMLDivElement>(null);
 
-  // Smart context detection
+  // Simple context detection
   const isHomePage = pathname === '/';
-  const isWorkspacePage = pathname === '/workspace';
   const isCreatePage = pathname === '/create';
-  const isJudgePage = pathname?.startsWith('/judge');
-  const isFeedPage = pathname === '/feed';
+  const isReviewPage = pathname?.startsWith('/review') || pathname?.startsWith('/judge');
+  const isFeedPage = pathname === '/feed' || pathname === '/dashboard';
 
   // Fetch user profile and stats
   const fetchUserData = async (userId: string) => {
@@ -199,17 +199,15 @@ export default function Navigation() {
     }
   };
 
-  // Smart logo destination
+  // Simple logo destination
   const getLogoDestination = () => {
     if (!user) return '/';
-    return '/workspace';
+    return '/dashboard';
   };
 
-  // Smart "New Request" button context
-  const getNewRequestLabel = () => {
-    if (isWorkspacePage) return 'New Request';
-    if (userStats.activeRequests === 0) return 'Start First Request';
-    return 'Create Request';
+  // Simple "Create" button
+  const getCreateLabel = () => {
+    return userStats.activeRequests === 0 ? 'Get Feedback' : 'Create Request';
   };
 
   // Define navigation item interface
@@ -219,44 +217,54 @@ export default function Navigation() {
     icon: any;
     active?: boolean;
     badge?: number;
+    highlight?: boolean;
+    toggle?: boolean;
   }
 
-  // Contextual navigation items
+  // Simplified navigation items
   const getMainNavItems = (): NavItem[] => {
     if (!user) {
       return [
-        { href: '/feed', label: 'Community', icon: Users },
-        { href: '/help', label: 'How It Works', icon: HelpCircle },
+        { href: '/feed', label: 'Explore', icon: Eye },
+        { href: '/become-a-judge', label: 'Earn Money', icon: Sparkles, highlight: true },
       ];
     }
 
     const items: NavItem[] = [
       { 
-        href: '/workspace', 
-        label: 'Workspace', 
-        icon: Grid,
-        active: isWorkspacePage,
+        href: '/dashboard', 
+        label: 'Dashboard', 
+        icon: Home,
+        active: isFeedPage,
         badge: userStats.activeRequests > 0 ? userStats.activeRequests : undefined,
+      },
+      {
+        href: '/review', 
+        label: 'Review Others', 
+        icon: Users,
+        active: isReviewPage,
+        badge: userStats.pendingVerdicts > 5 ? userStats.pendingVerdicts : undefined,
       },
     ];
 
-    // Add judge navigation if user is a judge
+    // Add judge earnings link for active judges
     if (userProfile?.is_judge) {
       items.push({
-        href: '/judge',
-        label: 'Judge Queue',
-        icon: Shield,
-        active: isJudgePage,
-        badge: userStats.pendingVerdicts > 0 ? userStats.pendingVerdicts : undefined,
+        href: '/judge/earnings',
+        label: 'Earnings',
+        icon: DollarSign,
+        active: pathname?.includes('/earnings'),
+      });
+    } else {
+      // Show "Become Judge" for non-judges
+      items.push({
+        href: '/become-a-judge',
+        label: 'Earn Money',
+        icon: Sparkles,
+        active: pathname === '/become-a-judge',
+        highlight: true,
       });
     }
-
-    items.push({
-      href: '/feed', 
-      label: 'Community', 
-      icon: Users,
-      active: isFeedPage,
-    });
 
     return items;
   };
@@ -308,6 +316,10 @@ export default function Navigation() {
                 className={`flex items-center space-x-2 px-3 py-2 rounded-lg font-medium transition-all relative ${
                   item.active 
                     ? 'bg-indigo-100 text-indigo-700'
+                    : item.highlight && item.toggle
+                    ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700'
+                    : item.highlight
+                    ? 'bg-green-100 text-green-700 hover:bg-green-200'
                     : 'text-gray-700 hover:bg-gray-100'
                 }`}
               >
@@ -332,69 +344,51 @@ export default function Navigation() {
                     className="flex items-center space-x-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2 rounded-lg hover:shadow-lg transition-all font-medium group relative overflow-hidden"
                   >
                     <Plus className="h-4 w-4 group-hover:rotate-90 transition-transform" />
-                    <span>{getNewRequestLabel()}</span>
+                    <span>{getCreateLabel()}</span>
                     <ChevronDown className="h-4 w-4" />
                   </MagneticButton>
 
                   {showSubmitDropdown && (
-                    <div className="absolute top-full mt-2 right-0 w-64 bg-white rounded-xl shadow-xl border border-gray-200 py-2 z-50">
+                    <div className="absolute top-full mt-2 right-0 w-56 bg-white rounded-xl shadow-xl border border-gray-200 py-2 z-50">
                       <div className="px-4 py-2 border-b border-gray-100">
-                        <p className="text-sm font-medium text-gray-900">Quick Create</p>
-                        <p className="text-xs text-gray-700">Choose your feedback type</p>
+                        <p className="text-sm font-medium text-gray-900">What do you need feedback on?</p>
                       </div>
                       
                       <Link
-                        href="/create?type=verdict"
+                        href="/create?type=photo"
                         onClick={() => setShowSubmitDropdown(false)}
                         className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 transition-colors"
                       >
-                        <MessageSquare className="h-5 w-5 text-blue-600" />
+                        <Camera className="h-5 w-5 text-blue-600" />
                         <div>
-                          <p className="font-medium text-gray-900">Standard Feedback</p>
-                          <p className="text-xs text-gray-700">Get expert opinions</p>
+                          <p className="font-medium text-gray-900">Photo or Image</p>
+                          <p className="text-xs text-gray-700">Get opinions on photos</p>
                         </div>
                       </Link>
                       
                       <Link
-                        href="/create?type=comparison"
+                        href="/create?type=text"
                         onClick={() => setShowSubmitDropdown(false)}
                         className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 transition-colors"
                       >
-                        <Scale className="h-5 w-5 text-purple-600" />
+                        <FileText className="h-5 w-5 text-green-600" />
                         <div>
-                          <p className="font-medium text-gray-900">A/B Comparison</p>
-                          <p className="text-xs text-gray-700">Compare two options</p>
+                          <p className="font-medium text-gray-900">Text or Writing</p>
+                          <p className="text-xs text-gray-700">Get feedback on text</p>
                         </div>
-                        <span className="ml-auto text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full">
-                          Advanced
-                        </span>
                       </Link>
                       
                       <Link
-                        href="/create?type=split_test"
+                        href="/create?type=decision"
                         onClick={() => setShowSubmitDropdown(false)}
                         className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 transition-colors"
                       >
-                        <RotateCcw className="h-5 w-5 text-orange-600" />
+                        <MessageSquare className="h-5 w-5 text-purple-600" />
                         <div>
-                          <p className="font-medium text-gray-900">Split Test</p>
-                          <p className="text-xs text-gray-700">Test with demographics</p>
+                          <p className="font-medium text-gray-900">Decision or Question</p>
+                          <p className="text-xs text-gray-700">Get advice on choices</p>
                         </div>
-                        <span className="ml-auto text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full">
-                          Pro
-                        </span>
                       </Link>
-
-                      <div className="border-t border-gray-100 mt-2 pt-2">
-                        <Link
-                          href="/create"
-                          onClick={() => setShowSubmitDropdown(false)}
-                          className="flex items-center space-x-3 px-4 py-2 text-indigo-600 hover:bg-indigo-50 transition-colors"
-                        >
-                          <Sparkles className="h-4 w-4" />
-                          <span className="font-medium">Full Creation Flow</span>
-                        </Link>
-                      </div>
                     </div>
                   )}
                 </div>
@@ -588,7 +582,7 @@ export default function Navigation() {
                     className="flex items-center space-x-3 px-4 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white mx-4 rounded-lg"
                   >
                     <Plus className="h-5 w-5" />
-                    <span>{getNewRequestLabel()}</span>
+                    <span>{getCreateLabel()}</span>
                   </Link>
 
                   <div className="px-4 py-2">

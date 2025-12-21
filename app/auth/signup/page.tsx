@@ -11,7 +11,7 @@ import { toast } from '@/components/ui/toast';
 function SignupContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirect = searchParams.get('redirect') || '/welcome';
+  const redirect = searchParams.get('redirect') || '/';
   const referralCode = searchParams.get('ref') || '';
 
   const [email, setEmail] = useState('');
@@ -41,13 +41,9 @@ function SignupContent() {
       return;
     }
 
-    // If user is immediately available (no email confirmation required), redirect them
-    if (data.user && !data.user.email_confirmed_at) {
-      // Show success message but allow them to continue
+    // Always show success and let them start using the platform
+    if (data.user) {
       setSuccess(true);
-    } else if (data.user) {
-      // User is ready, redirect immediately
-      router.push(redirect);
     } else {
       setSuccess(true);
     }
@@ -90,49 +86,38 @@ function SignupContent() {
               </svg>
             </div>
 
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Account Created!</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome! You're All Set</h2>
             <p className="text-gray-600 mb-6">
-              You can start using the platform now. We also sent a confirmation link to <strong>{email}</strong> to secure your account.
+              Your account is ready to use. Start getting feedback from real people right away!
             </p>
 
-            {/* What to do section */}
-            <div className="bg-gray-50 rounded-xl p-4 mb-6 text-left">
-              <p className="text-sm font-semibold text-gray-900 mb-2">You can now:</p>
-              <ol className="text-sm text-gray-600 space-y-1">
-                <li>✅ Start submitting for feedback</li>
-                <li>✅ Judge others to earn credits</li>
-                <li>📧 Verify email later for full security</li>
-              </ol>
+            {/* Welcome bonus highlight */}
+            <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-4 mb-6 text-center">
+              <p className="text-lg font-bold text-green-900 mb-1">🎉 Welcome Bonus</p>
+              <p className="text-2xl font-bold text-green-800 mb-1">3 FREE Credits</p>
+              <p className="text-sm text-green-700">Each credit gets you 3 feedback reports from real people</p>
             </div>
 
-            {/* Action buttons */}
+            {/* Single clear action */}
             <div className="space-y-3">
               <Link
                 href={redirect}
-                className="block w-full py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition text-center"
+                className="block w-full py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-bold text-lg hover:shadow-lg transition text-center"
               >
-                Continue to Platform
+                Get Your First Feedback →
               </Link>
 
               <button
-                onClick={handleResendEmail}
-                disabled={loading}
-                className="w-full py-3 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 transition cursor-pointer"
-              >
-                {loading ? 'Sending...' : 'Resend verification email'}
-              </button>
-
-              <button
                 onClick={() => setSuccess(false)}
-                className="w-full py-3 bg-gray-50 text-gray-600 rounded-lg font-medium hover:bg-gray-100 transition cursor-pointer"
+                className="w-full py-2 bg-gray-50 text-gray-600 rounded-lg font-medium hover:bg-gray-100 transition cursor-pointer text-sm"
               >
                 Use different email
               </button>
             </div>
 
-            {/* Help text */}
+            {/* Simple note about email */}
             <p className="text-xs text-gray-500 mt-6">
-              Didn't receive the email? Check your spam folder or try a different email address.
+              We sent a confirmation email to <strong>{email}</strong> for account security
             </p>
           </div>
         </div>

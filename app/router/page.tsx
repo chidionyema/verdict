@@ -230,7 +230,7 @@ export default function RouterTestPage() {
                           <ArrowRight className="h-4 w-4 text-indigo-600" />
                           <span className="font-medium">→ {result.destination}</span>
                         </div>
-                        <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getResultColor(result.reason)}`}>
+                        <div className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getResultColor(result.reason || '')}`}>
                           {result.reason}
                         </div>
                         {result.params && (

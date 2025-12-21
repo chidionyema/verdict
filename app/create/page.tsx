@@ -40,6 +40,14 @@ import { useProgressiveProfile } from '@/hooks/useProgressiveProfile';
 import { ProgressiveProfile } from '@/components/onboarding/ProgressiveProfile';
 import { InsufficientCreditsModal } from '@/components/modals/InsufficientCreditsModal';
 import { CommunityPathExplainer } from '@/components/ui/CommunityPathExplainer';
+import { SmartJudgeRecruitment } from '@/components/judge/SmartJudgeRecruitment';
+import { ErrorRecovery, useErrorRecovery } from '@/components/error/ErrorRecovery';
+import { ProgressiveHints } from '@/components/onboarding/ProgressiveHints';
+import { FeedbackPreview } from '@/components/feedback/FeedbackPreview';
+// TODO: Re-enable after launch
+// import { SmartCreditSuggestions, useSmartCreditSuggestions } from '@/components/credits/SmartCreditSuggestions';
+// import { SocialProofWidget, useSocialProof } from '@/components/social-proof/SocialProofWidget';
+// import { MobileCreateOptimizations } from '@/components/mobile/MobileCreateOptimizations';
 
 // Force dynamic rendering
 export const dynamic = 'force-dynamic';
@@ -64,9 +72,9 @@ interface FormData {
 }
 
 const STEPS = [
-  { id: 'type', title: 'Request Type', subtitle: 'Choose your feedback style' },
-  { id: 'content', title: 'Add Content', subtitle: 'Upload or write what you need feedback on' },
-  { id: 'details', title: 'Details', subtitle: 'Customize your request' },
+  { id: 'content', title: 'Add Content', subtitle: 'What do you need feedback on?' },
+  { id: 'details', title: 'Feedback Options', subtitle: 'Choose how many opinions you want' },
+  { id: 'preview', title: 'Quality Preview', subtitle: 'See what feedback to expect' },
   { id: 'review', title: 'Review & Submit', subtitle: 'Confirm and launch your request' },
 ];
 
@@ -233,6 +241,13 @@ export default function CreateRequestPage() {
   
   // Progressive profiling
   const { shouldShow: showProgressiveProfile, triggerType, dismiss: dismissProgressiveProfile, checkTrigger } = useProgressiveProfile();
+  
+  // Error recovery system
+  const { error, isRetrying, handleError, retry, clearError } = useErrorRecovery();
+  
+  // TODO: Re-enable after launch
+  // const shouldShowCreditSuggestions = useSmartCreditSuggestions(profile);
+  // const { shouldShow: shouldShowSocialProof } = useSocialProof();
 
   useEffect(() => {
     const initializeUser = async () => {
@@ -331,16 +346,16 @@ export default function CreateRequestPage() {
 
   const canContinue = () => {
     switch (currentStep) {
-      case 0: // Type selection
-        return true;
-      case 1: // Content
+      case 0: // Content upload
         if (formData.mediaType === 'text') {
-          return formData.textContent.trim().length > 10;
+          return formData.textContent.trim().length > 10 && formData.context.trim().length > 10;
         } else {
-          return formData.mediaFiles.length > 0 || formData.context.trim().length > 10;
+          return formData.mediaFiles.length > 0 && formData.context.trim().length > 10;
         }
-      case 2: // Details
-        return formData.context.trim().length > 10;
+      case 1: // Details
+        return true;
+      case 2: // Preview
+        return true;
       case 3: // Review
         return true;
       default:
@@ -363,17 +378,43 @@ export default function CreateRequestPage() {
   const handleFileUpload = (files: FileList | null) => {
     if (!files) return;
     
-    const newFiles = Array.from(files);
-    if (formData.requestType === 'comparison' || formData.requestType === 'split_test') {
-      if (formData.mediaFiles.length + newFiles.length > 2) {
-        toast.error('Maximum 2 files for comparison requests');
+    try {
+      const newFiles = Array.from(files);
+      
+      // Validate file types
+      const invalidFiles = newFiles.filter(file => {
+        const isImage = file.type.startsWith('image/');
+        const isAudio = file.type.startsWith('audio/');
+        return !isImage && !isAudio;
+      });
+      
+      if (invalidFiles.length > 0) {
+        handleError('file_format', `File format not supported: ${invalidFiles[0].name}`, { files: newFiles });
         return;
       }
+      
+      // Validate file sizes
+      const oversizedFiles = newFiles.filter(file => file.size > 10 * 1024 * 1024); // 10MB
+      if (oversizedFiles.length > 0) {
+        handleError('upload', `File too large: ${oversizedFiles[0].name} (max 10MB)`, { files: newFiles });
+        return;
+      }
+      
+      // Validate count for comparison requests
+      if (formData.requestType === 'comparison' || formData.requestType === 'split_test') {
+        if (formData.mediaFiles.length + newFiles.length > 2) {
+          handleError('upload', 'Maximum 2 files allowed for comparison requests', { files: newFiles });
+          return;
+        }
+      }
+      
+      updateFormData({
+        mediaFiles: [...formData.mediaFiles, ...newFiles],
+      });
+      
+    } catch (err) {
+      handleError('upload', 'Failed to process files. Please try again.', { files });
     }
-    
-    updateFormData({
-      mediaFiles: [...formData.mediaFiles, ...newFiles],
-    });
   };
 
   const removeFile = (index: number) => {
@@ -387,6 +428,13 @@ export default function CreateRequestPage() {
     
     setSubmitting(true);
     try {
+      // Check credits before submission
+      if (!usingCommunityPath && (profile?.credits || 0) < formData.creditsToUse) {
+        handleError('quota', `You need ${formData.creditsToUse} credits but only have ${profile?.credits || 0}`, formData);
+        setSubmitting(false);
+        return;
+      }
+      
       const result = await submitRequest({
         requestType: formData.requestType,
         category: formData.category,
@@ -398,7 +446,6 @@ export default function CreateRequestPage() {
         files: formData.mediaFiles,
         specificQuestions: formData.specificQuestions,
         demographicFilters: formData.demographicFilters,
-        // Note: communityPath handled separately in submission logic
       });
 
       if (result.success) {
@@ -418,11 +465,28 @@ export default function CreateRequestPage() {
           router.push(`/requests/${result.requestId}`);
         }, 1000);
       } else {
-        toast.error(result.error || 'Failed to create request');
+        // Handle specific error types
+        if (result.error?.includes('authentication') || result.error?.includes('unauthorized')) {
+          handleError('auth', 'Please log in to submit your request', formData);
+        } else if (result.error?.includes('credits') || result.error?.includes('insufficient')) {
+          handleError('quota', 'You don\'t have enough credits for this request', formData);
+        } else if (result.error?.includes('network') || result.error?.includes('connection')) {
+          handleError('network', 'Connection failed. Please check your internet and try again.', formData);
+        } else {
+          handleError('submission', result.error || 'Failed to create request', formData);
+        }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Submit error:', error);
-      toast.error('Something went wrong. Please try again.');
+      
+      // Handle network errors
+      if (error.message?.includes('fetch') || error.message?.includes('network')) {
+        handleError('network', 'Connection problem. Please check your internet and try again.', formData);
+      } else if (error.message?.includes('auth') || error.message?.includes('401')) {
+        handleError('auth', 'Your session expired. Please log in again.', formData);
+      } else {
+        handleError('submission', 'Something went wrong. Please try again.', formData);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -467,6 +531,8 @@ export default function CreateRequestPage() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 relative">
       <ConfettiBurst trigger={showConfetti} />
       <div className="max-w-4xl mx-auto px-4 py-8">
+        {/* TODO: Add smart credit suggestions after launch */}
+
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 via-blue-900 to-indigo-900 bg-clip-text text-transparent mb-2">
@@ -519,145 +585,54 @@ export default function CreateRequestPage() {
           </div>
         </div>
 
+        {/* Progressive Hints */}
+        <ProgressiveHints 
+          currentStep={currentStep}
+          formData={formData}
+          onHintAction={(action) => {
+            // Handle hint actions
+            if (action === 'show_examples') {
+              // Examples are handled within the component
+            }
+          }}
+        />
+
+        {/* TODO: Add mobile optimizations after launch */}
+
         {/* Step Content */}
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-white/50 shadow-xl p-8 mb-8">
-          {/* Step 0: Request Type */}
+          {/* Step 0: Combined Content Upload */}
           {currentStep === 0 && (
-            <div className="space-y-6">
+            <div className="space-y-8">
               <div className="text-center mb-8">
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">What type of feedback do you need?</h3>
-                <p className="text-gray-600">Choose the style that best fits your request</p>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {REQUEST_TYPES.map((type) => (
-                  <button
-                    key={type.id}
-                    onClick={() => updateFormData({ requestType: type.id })}
-                    className={`p-6 rounded-xl border-2 transition-all duration-300 text-left relative overflow-hidden group hover:shadow-xl hover:-translate-y-1 ${
-                      formData.requestType === type.id
-                        ? 'border-indigo-300 bg-gradient-to-br from-indigo-50 to-purple-50 shadow-lg'
-                        : 'border-gray-200 hover:border-gray-300 bg-white'
-                    }`}
-                  >
-                    {type.badge && (
-                      <div className="absolute top-3 right-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-xs font-bold px-2 py-1 rounded-full">
-                        {type.badge}
-                      </div>
-                    )}
-                    {type.popular && (
-                      <div className="absolute top-3 right-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xs font-bold px-2 py-1 rounded-full">
-                        Most Popular
-                      </div>
-                    )}
-                    
-                    <div className={`w-12 h-12 rounded-xl bg-gradient-to-r ${type.gradient} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
-                      <type.icon className="h-6 w-6 text-white" />
-                    </div>
-                    
-                    <h4 className="text-lg font-bold text-gray-900 mb-2">{type.title}</h4>
-                    <p className="text-gray-600 text-sm mb-4">{type.subtitle}</p>
-                    
-                    <ul className="space-y-2">
-                      {type.features.map((feature) => (
-                        <li key={feature} className="text-sm text-gray-700 flex items-center gap-2">
-                          <Check className="h-4 w-4 text-green-500" />
-                          {feature}
-                        </li>
-                      ))}
-                    </ul>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Step 1: Content */}
-          {currentStep === 1 && (
-            <div className="space-y-6">
-              <div className="text-center mb-8">
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">Add your content</h3>
-                <p className="text-gray-600">
-                  {formData.requestType === 'comparison' 
-                    ? 'Upload 2 options to compare' 
-                    : 'Upload or write what you need feedback on'}
-                </p>
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">What do you need feedback on?</h3>
+                <p className="text-gray-600">Upload your content and tell us what you want to know</p>
               </div>
 
-              {/* Media Type Selection */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-                {MEDIA_TYPES.map((type) => (
-                  <RippleButton
-                    key={type.id}
-                    onClick={() => updateFormData({ mediaType: type.id })}
-                    className={`p-4 rounded-xl border-2 transition-all text-left hover:shadow-lg hover:-translate-y-1 ${
-                      formData.mediaType === type.id
-                        ? 'border-indigo-300 bg-gradient-to-br from-indigo-50 to-purple-50 shadow-lg'
-                        : 'border-gray-200 hover:border-gray-300 bg-white'
-                    }`}
-                  >
-                    <PulseElement 
-                      intensity={formData.mediaType === type.id ? "medium" : "low"} 
-                      color={formData.mediaType === type.id ? "blue" : "blue"}
+              {/* Simple Media Type Selection */}
+              <div className="mb-8">
+                <h4 className="text-lg font-semibold text-gray-900 mb-4">Choose content type:</h4>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {MEDIA_TYPES.map((type) => (
+                    <button
+                      key={type.id}
+                      onClick={() => updateFormData({ mediaType: type.id })}
+                      className={`p-4 rounded-xl border-2 transition-all text-left hover:shadow-lg hover:-translate-y-1 ${
+                        formData.mediaType === type.id
+                          ? 'border-indigo-300 bg-gradient-to-br from-indigo-50 to-purple-50 shadow-lg'
+                          : 'border-gray-200 hover:border-gray-300 bg-white'
+                      }`}
                     >
                       <div className={`w-8 h-8 rounded-lg bg-gradient-to-r ${type.gradient} flex items-center justify-center mb-2`}>
                         <type.icon className="h-4 w-4 text-white" />
                       </div>
-                    </PulseElement>
-                    <h4 className="font-semibold text-gray-900">{type.title}</h4>
-                    <p className="text-sm text-gray-600">{type.subtitle}</p>
-                    {type.badge && (
-                      <span className="inline-block mt-2 bg-orange-100 text-orange-700 text-xs px-2 py-1 rounded-full">
-                        {type.badge}
-                      </span>
-                    )}
-                  </RippleButton>
-                ))}
-              </div>
-
-              {/* Feature Discovery for Advanced Options */}
-              {formData.requestType === 'verdict' && (
-                <div className="mb-8">
-                  <FeatureDiscovery
-                    userId={user?.id}
-                    userProfile={profile}
-                    requestHistory={[]}
-                    compact={true}
-                    onFeatureSelect={(featureId) => {
-                      if (featureId === 'comparison') {
-                        updateFormData({ requestType: 'comparison' });
-                      } else if (featureId === 'split_test') {
-                        updateFormData({ requestType: 'split_test' });
-                      }
-                    }}
-                  />
-                </div>
-              )}
-
-              {/* Category Selection */}
-              <div className="mb-8">
-                <h4 className="text-lg font-semibold text-gray-900 mb-4">What category is this?</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {CATEGORIES.map((category) => (
-                    <button
-                      key={category.id}
-                      onClick={() => updateFormData({ category: category.id })}
-                      className={`p-4 rounded-xl border-2 transition-all text-left ${
-                        formData.category === category.id
-                          ? 'border-indigo-300 bg-indigo-50'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3 mb-2">
-                        <span className="text-2xl">{category.emoji}</span>
-                        <div>
-                          <h5 className="font-semibold text-gray-900">{category.title}</h5>
-                          <p className="text-sm text-gray-600">{category.subtitle}</p>
-                        </div>
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        Examples: {category.examples.slice(0, 2).join(', ')}
-                      </div>
+                      <h4 className="font-semibold text-gray-900">{type.title}</h4>
+                      <p className="text-sm text-gray-600">{type.subtitle}</p>
+                      {type.badge && (
+                        <span className="inline-block mt-2 bg-orange-100 text-orange-700 text-xs px-2 py-1 rounded-full">
+                          {type.badge}
+                        </span>
+                      )}
                     </button>
                   ))}
                 </div>
@@ -745,8 +720,8 @@ export default function CreateRequestPage() {
             </div>
           )}
 
-          {/* Step 2: Details */}
-          {currentStep === 2 && (
+          {/* Step 1: Details */}
+          {currentStep === 1 && (
             <div className="space-y-6">
               <div className="text-center mb-8">
                 <h3 className="text-2xl font-bold text-gray-900 mb-2">Choose your feedback level</h3>
@@ -835,6 +810,15 @@ export default function CreateRequestPage() {
                 </div>
               )}
             </div>
+          )}
+
+          {/* Step 2: Feedback Preview */}
+          {currentStep === 2 && (
+            <FeedbackPreview
+              formData={formData}
+              onContinue={handleNext}
+              onEdit={() => setCurrentStep(0)}
+            />
           )}
 
           {/* Step 3: Review */}
@@ -935,7 +919,7 @@ export default function CreateRequestPage() {
           </button>
 
           <div className="flex items-center gap-4">
-            {currentStep < STEPS.length - 1 ? (
+            {currentStep < STEPS.length - 1 && currentStep !== 2 ? (
               <button
                 onClick={handleNext}
                 disabled={!canContinue()}
@@ -948,12 +932,12 @@ export default function CreateRequestPage() {
                 Continue
                 <ChevronRight className="h-4 w-4" />
               </button>
-            ) : (
+            ) : currentStep === STEPS.length - 1 ? (
               <button
                 onClick={handleSubmit}
                 disabled={!canContinue() || (insufficientCredits && !usingCommunityPath) || submitting}
                 className={`px-8 py-3 rounded-xl font-semibold transition-all flex items-center gap-3 ${
-                  canContinue() && (!insufficientCredits || usingCommunityPath) && !submitting
+                  canContinue() && (currentStep < 2 || !insufficientCredits || usingCommunityPath) && !submitting
                     ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-lg hover:shadow-xl hover:-translate-y-0.5'
                     : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 }`}
@@ -971,7 +955,7 @@ export default function CreateRequestPage() {
                   </>
                 )}
               </button>
-            )}
+            ) : null}
           </div>
         </div>
       </div>
@@ -1017,6 +1001,40 @@ export default function CreateRequestPage() {
           }
         }}
       />
+
+      {/* Smart Judge Recruitment */}
+      <SmartJudgeRecruitment userId={user?.id} />
+
+      {/* TODO: Add social proof after launch */}
+
+      {/* Error Recovery Modal */}
+      {error && (
+        <ErrorRecovery
+          error={error}
+          onRetry={() => retry(handleSubmit)}
+          onAlternative={() => {
+            clearError();
+            // Handle specific alternatives based on error type
+            switch (error.type) {
+              case 'quota':
+                setShowInsufficientCreditsModal(true);
+                break;
+              case 'auth':
+                router.push('/auth/login');
+                break;
+              default:
+                // Generic alternative - go back to editing
+                break;
+            }
+          }}
+          onSupport={() => {
+            clearError();
+            // Implement support modal or redirect
+            window.open('mailto:support@askverdict.com?subject=Upload Error&body=Error: ' + error.message);
+          }}
+          isRetrying={isRetrying}
+        />
+      )}
     </div>
   );
 }
