@@ -462,7 +462,7 @@ export function SimplifiedStart() {
               <div className="w-8 h-8 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg flex items-center justify-center">
                 <Sparkles className="w-4 h-4 text-white" />
               </div>
-              <span className="font-semibold text-gray-900">Verdict</span>
+              <span className="font-semibold text-gray-900">AskVerdict</span>
             </div>
             <div className="flex items-center gap-4">
               {socialProof.map((item, index) => (

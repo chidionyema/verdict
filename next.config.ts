@@ -25,9 +25,7 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   
   // Vercel-specific optimizations
-  experimental: {
-    serverComponentsExternalPackages: ['@supabase/supabase-js'],
-  },
+  serverExternalPackages: ['@supabase/supabase-js'],
 
   // Image optimization
   images: {

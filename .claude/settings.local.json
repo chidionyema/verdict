@@ -31,7 +31,8 @@
       "Bash(xargs -I {} sh -c 'echo \"\"=== {} ===\"\" && head -50 {}')",
       "Bash(psql:*)",
       "Bash(npx next lint:*)",
-      "Bash(npm audit:*)"
+      "Bash(npm audit:*)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []

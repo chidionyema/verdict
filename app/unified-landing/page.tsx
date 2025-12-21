@@ -120,17 +120,17 @@ export default function UnifiedLanding() {
                 <Sparkles className="h-5 w-5 text-white" />
               </div>
               <span className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                Verdict
+                AskVerdict
               </span>
             </div>
 
             <div className="flex items-center space-x-6">
-              <Link href="/explore" className="text-gray-700 hover:text-gray-900 font-medium">
+              <Link href="/feed" className="text-gray-700 hover:text-gray-900 font-medium">
                 Explore
               </Link>
-              <Link href="/how-it-works" className="text-gray-700 hover:text-gray-900 font-medium">
+              <a href="#how-it-works" className="text-gray-700 hover:text-gray-900 font-medium">
                 How It Works
-              </Link>
+              </a>
               <Link href="/auth/login" className="text-gray-700 hover:text-gray-900 font-medium">
                 Sign In
               </Link>
@@ -206,7 +206,7 @@ export default function UnifiedLanding() {
         <div className="max-w-6xl mx-auto px-4">
           <div className="text-center mb-16">
             <h2 className="text-3xl font-bold text-gray-900 mb-4">
-              Why choose Verdict?
+              Why choose AskVerdict?
             </h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
               We've built the most trusted platform for getting authentic, helpful feedback 
@@ -239,7 +239,7 @@ export default function UnifiedLanding() {
       </section>
 
       {/* How It Works */}
-      <section className="py-20 bg-gradient-to-br from-gray-50 to-blue-50">
+      <section id="how-it-works" className="py-20 bg-gradient-to-br from-gray-50 to-blue-50">
         <div className="max-w-4xl mx-auto px-4 text-center">
           <h2 className="text-3xl font-bold text-gray-900 mb-16">
             Get feedback in 3 simple steps
@@ -344,7 +344,7 @@ export default function UnifiedLanding() {
             </Link>
             
             <Link
-              href="/explore"
+              href="/feed"
               className="border-2 border-white text-white px-8 py-4 rounded-xl font-semibold text-lg hover:bg-white hover:text-indigo-600 transition-all flex items-center justify-center gap-2"
             >
               <Users className="h-5 w-5" />
@@ -377,7 +377,7 @@ export default function UnifiedLanding() {
               <div className="w-8 h-8 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-lg flex items-center justify-center">
                 <Sparkles className="h-5 w-5 text-white" />
               </div>
-              <span className="text-xl font-bold">Verdict</span>
+              <span className="text-xl font-bold">AskVerdict</span>
             </div>
             
             <div className="flex items-center space-x-6">
@@ -388,7 +388,7 @@ export default function UnifiedLanding() {
           </div>
           
           <div className="mt-8 pt-8 border-t border-gray-800 text-center text-gray-400">
-            <p>&copy; 2024 Verdict. Get honest feedback on anything.</p>
+            <p>&copy; 2024 AskVerdict. Get honest feedback on anything.</p>
           </div>
         </div>
       </footer>

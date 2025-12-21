@@ -45,8 +45,8 @@ export async function getLocalizedMetadata(locale: Locale): Promise<{
   try {
     const messages = await import(`@/messages/${locale}.json`);
     return {
-      title: messages.Metadata?.title || 'Verdict',
-      titleTemplate: messages.Metadata?.titleTemplate || '{title} | Verdict',
+      title: messages.Metadata?.title || 'AskVerdict',
+      titleTemplate: messages.Metadata?.titleTemplate || '{title} | AskVerdict',
       description: messages.Metadata?.description || '',
       keywords: messages.Metadata?.keywords || '',
     };
@@ -54,8 +54,8 @@ export async function getLocalizedMetadata(locale: Locale): Promise<{
     // Fallback to default locale
     const messages = await import(`@/messages/${defaultLocale}.json`);
     return {
-      title: messages.Metadata?.title || 'Verdict',
-      titleTemplate: messages.Metadata?.titleTemplate || '{title} | Verdict',
+      title: messages.Metadata?.title || 'AskVerdict',
+      titleTemplate: messages.Metadata?.titleTemplate || '{title} | AskVerdict',
       description: messages.Metadata?.description || '',
       keywords: messages.Metadata?.keywords || '',
     };
@@ -81,8 +81,8 @@ export async function generatePageMetadata(
     },
     description: localizedMeta.description,
     keywords: localizedMeta.keywords.split(', '),
-    authors: [{ name: 'Verdict' }],
-    creator: 'Verdict',
+    authors: [{ name: 'AskVerdict' }],
+    creator: 'AskVerdict',
 
     // Canonical and alternates
     alternates: {
@@ -97,7 +97,7 @@ export async function generatePageMetadata(
       url: generateCanonicalUrl(canonicalPath, locale),
       title: localizedMeta.title,
       description: localizedMeta.description,
-      siteName: 'Verdict',
+      siteName: 'AskVerdict',
       images: [
         {
           url: `${APP_URL}/og-image.png`,
@@ -161,7 +161,7 @@ export function generateOrganizationJsonLd(): object {
   return {
     '@context': 'https://schema.org',
     '@type': 'Organization',
-    name: 'Verdict',
+    name: 'AskVerdict',
     url: APP_URL,
     logo: `${APP_URL}/logo.png`,
     sameAs: [
@@ -232,11 +232,11 @@ export function generateServiceJsonLd(locale: Locale): object {
   return {
     '@context': 'https://schema.org',
     '@type': 'Service',
-    name: 'Verdict',
+    name: 'AskVerdict',
     description: descriptions[locale] || descriptions.en,
     provider: {
       '@type': 'Organization',
-      name: 'Verdict',
+      name: 'AskVerdict',
       url: APP_URL,
     },
     serviceType: 'Feedback Service',

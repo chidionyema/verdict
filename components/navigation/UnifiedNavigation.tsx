@@ -93,8 +93,8 @@ export function UnifiedNavigation() {
     if (!user) {
       // Anonymous users: simple discovery
       return [
-        { href: '/explore', label: 'Explore', icon: Users, description: 'See community feedback' },
-        { href: '/how-it-works', label: 'How it Works', icon: MessageSquare, description: 'Learn the process' }
+        { href: '/feed', label: 'Explore', icon: Users, description: 'See community feedback' },
+        { href: '/', label: 'How it Works', icon: MessageSquare, description: 'Learn the process' }
       ];
     }
     
@@ -196,7 +196,7 @@ export function UnifiedNavigation() {
                 <Sparkles className="h-5 w-5 text-white" />
               </div>
               <span className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                Verdict
+                AskVerdict
               </span>
             </Link>
           </div>
@@ -271,12 +271,12 @@ export function UnifiedNavigation() {
                       </div>
                       
                       <Link 
-                        href="/settings" 
+                        href="/account" 
                         role="menuitem"
                         className="block px-4 py-2 text-gray-700 hover:bg-gray-50 focus:bg-gray-50 focus:outline-none"
                         onClick={() => setUserMenuOpen(false)}
                       >
-                        Settings
+                        Account Settings
                       </Link>
                       
                       <button 

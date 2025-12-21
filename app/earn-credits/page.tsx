@@ -139,7 +139,7 @@ export default function EarnCreditsPage() {
               help center
             </a>{' '}
             or learn more about{' '}
-            <a href="/how-it-works" className="text-indigo-600 hover:text-indigo-700">
+            <a href="/help" className="text-indigo-600 hover:text-indigo-700">
               how credits work
             </a>
           </p>

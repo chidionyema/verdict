@@ -177,7 +177,7 @@ export default function BecomeJudgePage() {
       {/* Hero Section */}
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 opacity-90"></div>
-        <div className="absolute inset-0 bg-[url(\'/grid.svg\')] opacity-20"></div>
+        <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-20"></div>
         
         <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-24">
           <motion.div
