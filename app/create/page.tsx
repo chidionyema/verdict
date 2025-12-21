@@ -72,10 +72,8 @@ interface FormData {
 }
 
 const STEPS = [
-  { id: 'content', title: 'Add Content', subtitle: 'What do you need feedback on?' },
-  { id: 'details', title: 'Feedback Options', subtitle: 'Choose how many opinions you want' },
-  { id: 'preview', title: 'Quality Preview', subtitle: 'See what feedback to expect' },
-  { id: 'review', title: 'Review & Submit', subtitle: 'Confirm and launch your request' },
+  { id: 'content', title: 'Get Feedback', subtitle: 'What do you need feedback on and how many opinions?' },
+  { id: 'submit', title: 'Review & Submit', subtitle: 'Confirm details and launch your request' },
 ];
 
 const REQUEST_TYPES = [
@@ -174,7 +172,7 @@ const TIERS = [
   {
     id: 'community' as Tier,
     title: 'Community',
-    subtitle: '3 verdicts from community',
+    subtitle: '3 feedback reports from community',
     price: '1 credit',
     verdictCount: 3,
     credits: 1,
@@ -186,7 +184,7 @@ const TIERS = [
   {
     id: 'standard' as Tier,
     title: 'Standard',
-    subtitle: '5 verdicts from verified judges',
+    subtitle: '5 feedback reports from verified judges',
     price: '2 credits',
     verdictCount: 5,
     credits: 2,
@@ -199,7 +197,7 @@ const TIERS = [
   {
     id: 'premium' as Tier,
     title: 'Premium',
-    subtitle: '10 verdicts from expert judges',
+    subtitle: '10 feedback reports from expert judges',
     price: '4 credits',
     verdictCount: 10,
     credits: 4,
@@ -339,24 +337,101 @@ export default function CreateRequestPage() {
     }
   }, [formData.tier]);
 
+  // Smart tier selection when profile loads
+  useEffect(() => {
+    if (profile && formData.tier === 'standard') { // Only auto-select if still at default
+      const suggestedTier = determineTierFromProfile(profile);
+      if (suggestedTier !== 'standard') {
+        updateFormData({ tier: suggestedTier });
+      }
+    }
+  }, [profile]);
+
+  // Smart category detection when context changes
+  useEffect(() => {
+    if (formData.context.length > 20) { // Only trigger after meaningful context
+      const suggestedCategory = detectCategoryFromContext(formData.context);
+      if (suggestedCategory !== formData.category) {
+        // Only auto-change if user hasn't manually selected a different category
+        updateFormData({ category: suggestedCategory });
+      }
+    }
+  }, [formData.context]);
+
   const updateFormData = (updates: Partial<FormData>) => {
     setFormData(prev => ({ ...prev, ...updates }));
     setDraftSaved(false);
   };
 
+  // Smart placeholder based on category and media type
+  const getSmartPlaceholder = () => {
+    const { category, mediaType } = formData;
+    
+    if (category === 'appearance' && mediaType === 'photo') {
+      return "Tell us about this photo - is it for dating, professional use, or social media? What impression do you want to make?";
+    }
+    if (category === 'profile' && mediaType === 'photo') {
+      return "Is this for LinkedIn, dating apps, or social media? What specific feedback would help you improve this profile photo?";
+    }
+    if (category === 'writing' && mediaType === 'text') {
+      return "What type of writing feedback are you looking for - tone, clarity, persuasiveness? Who is your target audience?";
+    }
+    if (category === 'decision') {
+      return "Describe your situation and the choice you're facing. What factors are you considering? What outcome do you hope for?";
+    }
+    
+    // Fallback for other combinations
+    return "Provide context and specific questions you'd like answered. The more details you share, the better feedback you'll receive.";
+  };
+
+  // Smart tier selection based on user profile
+  const determineTierFromProfile = (profileData: any) => {
+    if (!profileData?.credits || profileData.credits < 2) {
+      return 'community'; // Users with insufficient credits default to free path
+    }
+    if (profileData.credits >= 4 && profileData.total_submissions > 3) {
+      return 'premium'; // Experienced users with credits get premium
+    }
+    return 'standard'; // Default for most users
+  };
+
+  // Smart category detection based on context keywords
+  const detectCategoryFromContext = (text: string) => {
+    const lowerText = text.toLowerCase();
+    
+    // Profile-related keywords
+    if (lowerText.includes('dating') || lowerText.includes('linkedin') || lowerText.includes('profile') || 
+        lowerText.includes('bio') || lowerText.includes('professional') || lowerText.includes('headshot')) {
+      return 'profile';
+    }
+    
+    // Writing-related keywords
+    if (lowerText.includes('essay') || lowerText.includes('copy') || lowerText.includes('message') || 
+        lowerText.includes('email') || lowerText.includes('writing') || lowerText.includes('text') ||
+        lowerText.includes('resume') || lowerText.includes('letter')) {
+      return 'writing';
+    }
+    
+    // Decision-related keywords
+    if (lowerText.includes('decision') || lowerText.includes('choose') || lowerText.includes('should i') ||
+        lowerText.includes('career') || lowerText.includes('job') || lowerText.includes('offer') ||
+        lowerText.includes('investment') || lowerText.includes('advice')) {
+      return 'decision';
+    }
+    
+    // Default to appearance if no clear indicators
+    return 'appearance';
+  };
+
   const canContinue = () => {
     switch (currentStep) {
-      case 0: // Content upload
+      case 0: // Combined content + options
         if (formData.mediaType === 'text') {
           return formData.textContent.trim().length > 10 && formData.context.trim().length > 10;
         } else {
           return formData.mediaFiles.length > 0 && formData.context.trim().length > 10;
         }
-      case 1: // Details
-        return true;
-      case 2: // Preview
-        return true;
-      case 3: // Review
+      case 1: // Final review
         return true;
       default:
         return false;
@@ -374,6 +449,31 @@ export default function CreateRequestPage() {
       setCurrentStep(currentStep - 1);
     }
   };
+
+  // Keyboard shortcuts and accessibility
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Escape key to close modals/dropdowns
+      if (e.key === 'Escape') {
+        setShowInsufficientCreditsModal(false);
+        setShowCommunityPathExplainer(false);
+      }
+      
+      // Ctrl/Cmd + Enter to proceed to next step or submit
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        if (canContinue()) {
+          if (currentStep < STEPS.length - 1) {
+            handleNext();
+          } else {
+            handleSubmit();
+          }
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [currentStep]);
 
   const handleFileUpload = (files: FileList | null) => {
     if (!files) return;
@@ -408,8 +508,20 @@ export default function CreateRequestPage() {
         }
       }
       
+      // Auto-detect media type from first uploaded file
+      let autoDetectedMediaType = formData.mediaType;
+      if (formData.mediaFiles.length === 0 && newFiles.length > 0) {
+        const firstFile = newFiles[0];
+        if (firstFile.type.startsWith('image/')) {
+          autoDetectedMediaType = 'photo';
+        } else if (firstFile.type.startsWith('audio/')) {
+          autoDetectedMediaType = 'audio';
+        }
+      }
+
       updateFormData({
         mediaFiles: [...formData.mediaFiles, ...newFiles],
+        mediaType: autoDetectedMediaType,
       });
       
     } catch (err) {
@@ -536,7 +648,7 @@ export default function CreateRequestPage() {
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 via-blue-900 to-indigo-900 bg-clip-text text-transparent mb-2">
-            Create New Request
+            Get Feedback
           </h1>
           <p className="text-gray-600">
             Get expert feedback in minutes • {profile?.credits || 0} credits available
@@ -601,7 +713,7 @@ export default function CreateRequestPage() {
 
         {/* Step Content */}
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-white/50 shadow-xl p-8 mb-8">
-          {/* Step 0: Combined Content Upload */}
+          {/* Step 0: Combined Content Upload + Tier Selection */}
           {currentStep === 0 && (
             <div className="space-y-8">
               <div className="text-center mb-8">
@@ -641,25 +753,26 @@ export default function CreateRequestPage() {
               {/* File Upload */}
               {formData.mediaType !== 'text' && (
                 <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="file-upload" className="block text-sm font-medium text-gray-700 mb-2">
                     Upload {formData.mediaType === 'photo' ? 'Images' : 'Audio Files'}
                     {(formData.requestType === 'comparison' || formData.requestType === 'split_test') && ' (2 files max)'}
                   </label>
-                  <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-indigo-400 transition-colors">
+                  <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-indigo-400 transition-colors focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-500">
                     <input
                       type="file"
                       multiple={formData.requestType === 'verdict'}
                       accept={MEDIA_TYPES.find(t => t.id === formData.mediaType)?.accept}
                       onChange={(e) => handleFileUpload(e.target.files)}
-                      className="hidden"
+                      className="sr-only"
                       id="file-upload"
+                      aria-describedby="file-upload-help"
                     />
-                    <label htmlFor="file-upload" className="cursor-pointer">
-                      <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                    <label htmlFor="file-upload" className="cursor-pointer block w-full h-full">
+                      <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" aria-hidden="true" />
                       <p className="text-gray-600">
                         Click to upload or drag and drop
                       </p>
-                      <p className="text-sm text-gray-500 mt-1">
+                      <p id="file-upload-help" className="text-sm text-gray-500 mt-1">
                         {formData.mediaType === 'photo' ? 'JPG, PNG, GIF up to 10MB' : 'MP3, WAV up to 25MB'}
                       </p>
                     </label>
@@ -704,76 +817,166 @@ export default function CreateRequestPage() {
 
               {/* Context */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="context-input" className="block text-sm font-medium text-gray-700 mb-2">
                   Context & Questions
                 </label>
                 <textarea
+                  id="context-input"
                   value={formData.context}
                   onChange={(e) => updateFormData({ context: e.target.value })}
-                  placeholder="Provide context and specific questions you'd like answered..."
+                  placeholder={getSmartPlaceholder()}
                   className="w-full h-32 px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+                  aria-describedby="context-help"
+                  aria-required="true"
+                  aria-invalid={formData.context.length < 10 && formData.context.length > 0 ? 'true' : 'false'}
                 />
-                <p className="text-xs text-gray-500 mt-2">
-                  Be specific about what feedback you're looking for
+                <p id="context-help" className="text-xs text-gray-500 mt-2">
+                  Be specific about what feedback you're looking for (minimum 10 characters)
                 </p>
+                
+                {/* Quick Start Suggestions */}
+                {!formData.context && (
+                  <div className="mt-3">
+                    <p className="text-xs font-medium text-gray-700 mb-2">Quick Start:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {formData.category === 'appearance' && formData.mediaType === 'photo' && (
+                        <>
+                          <button
+                            onClick={() => updateFormData({ context: "Rate this photo 1-10 and explain what would make it better. Is this good for dating apps?" })}
+                            className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-xs hover:bg-blue-100 transition-colors"
+                          >
+                            Rate & Improve
+                          </button>
+                          <button
+                            onClick={() => updateFormData({ context: "Should I use this photo for professional networking like LinkedIn?" })}
+                            className="px-3 py-1 bg-green-50 text-green-700 rounded-full text-xs hover:bg-green-100 transition-colors"
+                          >
+                            Professional Use
+                          </button>
+                        </>
+                      )}
+                      {formData.category === 'writing' && (
+                        <>
+                          <button
+                            onClick={() => updateFormData({ context: "How can I improve the tone and clarity of this writing? Is it persuasive?" })}
+                            className="px-3 py-1 bg-purple-50 text-purple-700 rounded-full text-xs hover:bg-purple-100 transition-colors"
+                          >
+                            Tone & Clarity
+                          </button>
+                          <button
+                            onClick={() => updateFormData({ context: "Does this come across as professional and appropriate for work?" })}
+                            className="px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full text-xs hover:bg-indigo-100 transition-colors"
+                          >
+                            Professional Check
+                          </button>
+                        </>
+                      )}
+                      {formData.category === 'decision' && (
+                        <button
+                          onClick={() => updateFormData({ context: "I'm facing a tough decision. What would you choose and why? What am I not considering?" })}
+                          className="px-3 py-1 bg-orange-50 text-orange-700 rounded-full text-xs hover:bg-orange-100 transition-colors"
+                        >
+                          Decision Help
+                        </button>
+                      )}
+                      <button
+                        onClick={() => updateFormData({ context: "Please give me honest, specific feedback. What should I know?" })}
+                        className="px-3 py-1 bg-gray-50 text-gray-700 rounded-full text-xs hover:bg-gray-100 transition-colors"
+                      >
+                        General Feedback
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Tier Selection */}
+              <div className="mt-8">
+                <div className="text-center mb-6">
+                  <h4 id="tier-selection-heading" className="text-lg font-bold text-gray-900 mb-2">Choose your feedback level</h4>
+                  <p className="text-gray-600">Select the quality and quantity of feedback you need</p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4" role="radiogroup" aria-labelledby="tier-selection-heading">
+                  {TIERS.map((tier) => (
+                    <button
+                      key={tier.id}
+                      onClick={() => updateFormData({ tier: tier.id })}
+                      className={`p-4 rounded-xl border-2 transition-all duration-300 text-left relative hover:shadow-lg hover:-translate-y-1 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${
+                        formData.tier === tier.id
+                          ? 'border-indigo-300 bg-gradient-to-br from-indigo-50 to-purple-50 shadow-lg'
+                          : 'border-gray-200 hover:border-gray-300 bg-white'
+                      }`}
+                      role="radio"
+                      aria-checked={formData.tier === tier.id}
+                      aria-describedby={`tier-${tier.id}-description`}
+                    >
+                      {tier.badge && (
+                        <div className="absolute top-2 right-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xs font-bold px-2 py-1 rounded-full" aria-hidden="true">
+                          {tier.badge}
+                        </div>
+                      )}
+                      {tier.popular && (
+                        <div className="absolute top-2 right-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-xs font-bold px-2 py-1 rounded-full" aria-hidden="true">
+                          Recommended
+                        </div>
+                      )}
+                      
+                      <div className={`w-10 h-10 rounded-lg bg-gradient-to-r ${tier.gradient} flex items-center justify-center mb-3`}>
+                        <tier.icon className="h-5 w-5 text-white" aria-hidden="true" />
+                      </div>
+                      
+                      <h5 className="font-bold text-gray-900 mb-1">{tier.title}</h5>
+                      <p id={`tier-${tier.id}-description`} className="text-sm text-gray-600 mb-2">{tier.subtitle}</p>
+                      <p className="text-lg font-bold text-indigo-600">{tier.price}</p>
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           )}
 
-          {/* Step 1: Details */}
+          {/* Step 1: Final Review & Submit */}
           {currentStep === 1 && (
             <div className="space-y-6">
               <div className="text-center mb-8">
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">Choose your feedback level</h3>
-                <p className="text-gray-600">Select the quality and quantity of feedback you need</p>
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">Review & Submit</h3>
+                <p className="text-gray-600">Confirm your request details and submit</p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {TIERS.map((tier) => (
-                  <button
-                    key={tier.id}
-                    onClick={() => updateFormData({ tier: tier.id })}
-                    className={`p-6 rounded-xl border-2 transition-all duration-300 text-left relative overflow-hidden group hover:shadow-xl hover:-translate-y-1 ${
-                      formData.tier === tier.id
-                        ? 'border-indigo-300 bg-gradient-to-br from-indigo-50 to-purple-50 shadow-lg'
-                        : 'border-gray-200 hover:border-gray-300 bg-white'
-                    }`}
-                  >
-                    {tier.badge && (
-                      <div className="absolute top-3 right-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xs font-bold px-2 py-1 rounded-full">
-                        {tier.badge}
-                      </div>
-                    )}
-                    {tier.popular && (
-                      <div className="absolute top-3 right-3 bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-xs font-bold px-2 py-1 rounded-full">
-                        Recommended
-                      </div>
-                    )}
-                    
-                    <div className={`w-12 h-12 rounded-xl bg-gradient-to-r ${tier.gradient} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
-                      <tier.icon className="h-6 w-6 text-white" />
-                    </div>
-                    
-                    <h4 className="text-lg font-bold text-gray-900 mb-1">{tier.title}</h4>
-                    <p className="text-gray-600 text-sm mb-2">{tier.subtitle}</p>
-                    <p className="text-2xl font-bold text-indigo-600 mb-4">{tier.price}</p>
-                    
-                    <div className="space-y-2 mb-4">
-                      {tier.features.map((feature) => (
-                        <div key={feature} className="text-sm text-gray-700 flex items-center gap-2">
-                          <Check className="h-4 w-4 text-green-500" />
-                          {feature}
-                        </div>
-                      ))}
-                    </div>
-                    
-                    <div className="text-xs text-gray-500">
-                      Typical turnaround: {tier.turnaround}
-                    </div>
-                  </button>
-                ))}
+              {/* Request Summary */}
+              <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl p-6 border border-indigo-200">
+                <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <Eye className="h-5 w-5 text-indigo-600" />
+                  Request Summary
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="font-medium text-gray-700">Content Type:</span>
+                    <span className="ml-2 text-gray-900 capitalize">{formData.mediaType}</span>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-700">Feedback Level:</span>
+                    <span className="ml-2 text-gray-900">{TIERS.find(t => t.id === formData.tier)?.title}</span>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-700">Expected Response:</span>
+                    <span className="ml-2 text-gray-900">{TIERS.find(t => t.id === formData.tier)?.subtitle}</span>
+                  </div>
+                  <div>
+                    <span className="font-medium text-gray-700">Cost:</span>
+                    <span className="ml-2 text-gray-900">{TIERS.find(t => t.id === formData.tier)?.price}</span>
+                  </div>
+                </div>
+                
+                {formData.context && (
+                  <div className="mt-4 pt-4 border-t border-indigo-200">
+                    <span className="font-medium text-gray-700">Your Request:</span>
+                    <p className="mt-2 text-gray-900 bg-white/60 rounded-lg p-3">{formData.context}</p>
+                  </div>
+                )}
               </div>
 
+              {/* Insufficient Credits handling */}
               {insufficientCredits && (
                 <div className="bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 rounded-xl p-6">
                   <div className="flex items-center gap-2 text-orange-700 mb-3">
@@ -812,17 +1015,8 @@ export default function CreateRequestPage() {
             </div>
           )}
 
-          {/* Step 2: Feedback Preview */}
-          {currentStep === 2 && (
-            <FeedbackPreview
-              formData={formData}
-              onContinue={handleNext}
-              onEdit={() => setCurrentStep(0)}
-            />
-          )}
 
-          {/* Step 3: Review */}
-          {currentStep === 3 && (
+          {/* Step 3 removed - simplified to 2-step flow */}
             <div className="space-y-6">
               <div className="text-center mb-8">
                 <h3 className="text-2xl font-bold text-gray-900 mb-2">Review & Submit</h3>
@@ -900,7 +1094,6 @@ export default function CreateRequestPage() {
                 </div>
               </div>
             </div>
-          )}
         </div>
 
         {/* Navigation */}
@@ -919,7 +1112,7 @@ export default function CreateRequestPage() {
           </button>
 
           <div className="flex items-center gap-4">
-            {currentStep < STEPS.length - 1 && currentStep !== 2 ? (
+            {currentStep < STEPS.length - 1 ? (
               <button
                 onClick={handleNext}
                 disabled={!canContinue()}
@@ -937,7 +1130,7 @@ export default function CreateRequestPage() {
                 onClick={handleSubmit}
                 disabled={!canContinue() || (insufficientCredits && !usingCommunityPath) || submitting}
                 className={`px-8 py-3 rounded-xl font-semibold transition-all flex items-center gap-3 ${
-                  canContinue() && (currentStep < 2 || !insufficientCredits || usingCommunityPath) && !submitting
+                  canContinue() && (!insufficientCredits || usingCommunityPath) && !submitting
                     ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-lg hover:shadow-xl hover:-translate-y-0.5'
                     : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 }`}
@@ -950,7 +1143,7 @@ export default function CreateRequestPage() {
                 ) : (
                   <>
                     <Sparkles className="h-5 w-5" />
-                    {usingCommunityPath ? 'Submit (Community Path)' : 'Submit Request'}
+                    {usingCommunityPath ? 'Get Feedback (Community Path)' : 'Get Feedback'}
                     <ArrowRight className="h-4 w-4" />
                   </>
                 )}

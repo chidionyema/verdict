@@ -49,6 +49,7 @@ export function UnifiedNavigation() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   useEffect(() => {
     initializeUser();
@@ -137,6 +138,33 @@ export function UnifiedNavigation() {
     router.push('/');
   };
 
+  // Handle keyboard navigation for dropdowns
+  const handleUserMenuKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      setUserMenuOpen(false);
+    } else if (e.key === 'ArrowDown' && !userMenuOpen) {
+      setUserMenuOpen(true);
+    }
+  };
+
+  // Close menus when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!event.target) return;
+      const target = event.target as Element;
+      
+      if (!target.closest('[data-user-menu]')) {
+        setUserMenuOpen(false);
+      }
+      if (!target.closest('[data-mobile-menu]')) {
+        setMobileMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   if (loading) {
     return (
       <nav className="bg-white/90 backdrop-blur-xl border-b border-gray-200/50 sticky top-0 z-50">
@@ -174,20 +202,21 @@ export function UnifiedNavigation() {
           </div>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-6">
+          <nav className="hidden md:flex items-center space-x-6" aria-label="Main navigation">
             {getNavigationItems().map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center space-x-2 px-3 py-2 rounded-lg font-medium transition-all group relative ${
+                className={`flex items-center space-x-2 px-3 py-2 rounded-lg font-medium transition-all group relative focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${
                   item.active 
                     ? 'bg-indigo-100 text-indigo-700'
                     : item.primary
                     ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 shadow-lg'
                     : 'text-gray-700 hover:bg-gray-100'
                 }`}
+                aria-current={item.active ? 'page' : undefined}
               >
-                <item.icon className="h-4 w-4" />
+                <item.icon className="h-4 w-4" aria-hidden="true" />
                 <span>{item.label}</span>
                 
                 {item.badge && (
@@ -215,31 +244,53 @@ export function UnifiedNavigation() {
                 </div>
 
                 {/* User Menu */}
-                <div className="relative group">
-                  <button className="flex items-center space-x-2 text-gray-700 hover:bg-gray-100 px-3 py-2 rounded-lg">
+                <div className="relative" data-user-menu>
+                  <button 
+                    onClick={() => setUserMenuOpen(!userMenuOpen)}
+                    onKeyDown={handleUserMenuKeyDown}
+                    className="flex items-center space-x-2 text-gray-700 hover:bg-gray-100 px-3 py-2 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                    aria-haspopup="menu"
+                    aria-expanded={userMenuOpen}
+                    aria-label="User account menu"
+                  >
                     <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center">
-                      <User className="h-4 w-4 text-indigo-600" />
+                      <User className="h-4 w-4 text-indigo-600" aria-hidden="true" />
                     </div>
                   </button>
                   
                   {/* Dropdown */}
-                  <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-200 py-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none group-hover:pointer-events-auto">
-                    <div className="px-4 py-2 border-b border-gray-100">
-                      <p className="font-medium text-gray-900">{profile?.display_name || 'Account'}</p>
-                      <p className="text-sm text-gray-600">{userState} user</p>
-                    </div>
-                    
-                    <Link href="/settings" className="block px-4 py-2 text-gray-700 hover:bg-gray-50">
-                      Settings
-                    </Link>
-                    
-                    <button 
-                      onClick={handleSignOut}
-                      className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-50"
+                  {userMenuOpen && (
+                    <div 
+                      className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-50"
+                      role="menu"
+                      aria-labelledby="user-menu-button"
                     >
-                      Sign Out
-                    </button>
-                  </div>
+                      <div className="px-4 py-2 border-b border-gray-100">
+                        <p className="font-medium text-gray-900">{profile?.display_name || 'Account'}</p>
+                        <p className="text-sm text-gray-600">{userState} user</p>
+                      </div>
+                      
+                      <Link 
+                        href="/settings" 
+                        role="menuitem"
+                        className="block px-4 py-2 text-gray-700 hover:bg-gray-50 focus:bg-gray-50 focus:outline-none"
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        Settings
+                      </Link>
+                      
+                      <button 
+                        onClick={() => {
+                          handleSignOut();
+                          setUserMenuOpen(false);
+                        }}
+                        role="menuitem"
+                        className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-50 focus:bg-gray-50 focus:outline-none"
+                      >
+                        Sign Out
+                      </button>
+                    </div>
+                  )}
                 </div>
               </>
             )}
@@ -260,22 +311,25 @@ export function UnifiedNavigation() {
                 </Link>
               </div>
             )}
-          </div>
+          </nav>
 
           {/* Mobile Menu Button */}
-          <div className="md:hidden flex items-center">
+          <div className="md:hidden flex items-center" data-mobile-menu>
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="text-gray-700 hover:bg-gray-100 p-2 rounded-lg"
+              className="text-gray-700 hover:bg-gray-100 p-2 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+              aria-expanded={mobileMenuOpen}
+              aria-controls="mobile-menu"
+              aria-label={mobileMenuOpen ? 'Close menu' : 'Open menu'}
             >
-              {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+              {mobileMenuOpen ? <X className="h-6 w-6" aria-hidden="true" /> : <Menu className="h-6 w-6" aria-hidden="true" />}
             </button>
           </div>
         </div>
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-t border-gray-200 py-4">
+          <div id="mobile-menu" className="md:hidden border-t border-gray-200 py-4" role="navigation" aria-label="Mobile navigation">
             <div className="space-y-2">
               {getNavigationItems().map((item) => (
                 <Link

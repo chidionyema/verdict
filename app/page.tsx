@@ -151,7 +151,7 @@ export default function HomePage() {
             <div className="bg-white rounded-xl p-6 shadow-lg border-2 border-green-200">
               <div className="text-2xl mb-3">🆓</div>
               <h3 className="text-lg font-bold text-green-900 mb-2">Free Path</h3>
-              <p className="text-gray-700 mb-4">Judge 3 submissions → Earn 1 credit → Submit for free</p>
+              <p className="text-gray-700 mb-4">Judge 3 requests → Earn 1 credit → Submit for free</p>
               <div className="text-sm text-green-800 bg-green-50 rounded-lg p-3">
                 Help others decide, get free feedback in return
               </div>
@@ -202,7 +202,7 @@ export default function HomePage() {
 
           {/* How Judging Works Section */}
           <div className="mt-20 max-w-4xl mx-auto">
-            <h2 className="text-3xl font-bold text-center mb-6 bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">Want to be a reviewer?</h2>
+            <h2 className="text-3xl font-bold text-center mb-6 bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">Want to be a judge?</h2>
             <p className="text-lg text-gray-600 text-center mb-8 max-w-2xl mx-auto">
               Help others make better decisions and earn rewards.
             </p>
@@ -212,7 +212,7 @@ export default function HomePage() {
                   <div className="bg-gradient-to-br from-indigo-100 to-purple-100 rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
                     <Users className="h-6 w-6 text-indigo-600" />
                   </div>
-                  <h4 className="font-semibold mb-2">Review submissions</h4>
+                  <h4 className="font-semibold mb-2">Judge requests</h4>
                   <p className="text-gray-600 text-sm">In your areas of interest</p>
                 </div>
                 <div className="text-center group">
@@ -252,7 +252,7 @@ export default function HomePage() {
               
               <div className="bg-white/70 backdrop-blur-xl rounded-2xl p-6 shadow-xl border border-white/20 hover:shadow-2xl transition-all duration-500 group">
                 <h3 className="font-semibold text-lg mb-3 text-gray-900 group-hover:text-indigo-600 transition-colors duration-300">How anonymous?</h3>
-                <p className="text-gray-600">Completely anonymous. No profiles or names shared. Private submissions never appear in public feed.</p>
+                <p className="text-gray-600">Completely anonymous. No profiles or names shared. Private requests never appear in public feed.</p>
               </div>
               
               <div className="bg-white/70 backdrop-blur-xl rounded-2xl p-6 shadow-xl border border-white/20 hover:shadow-2xl transition-all duration-500 group">
@@ -277,8 +277,8 @@ export default function HomePage() {
                   <div className="flex items-start gap-4">
                     <div className="flex-shrink-0 w-10 h-10 bg-green-600 rounded-full flex items-center justify-center text-white font-bold">1</div>
                     <div>
-                      <h4 className="font-semibold text-gray-900 mb-1">Review 3 submissions</h4>
-                      <p className="text-gray-600 text-sm">Browse the feed and review others' submissions (~15 min)</p>
+                      <h4 className="font-semibold text-gray-900 mb-1">Judge 3 requests</h4>
+                      <p className="text-gray-600 text-sm">Browse the feed and judge others' requests (~15 min)</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-4">

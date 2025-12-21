@@ -3,7 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
 import { getLocale, getMessages } from "next-intl/server";
 import "./globals.css";
-import Navigation from "@/components/Navigation";
+import { UnifiedNavigation } from "@/components/navigation/UnifiedNavigation";
 import FloatingActionButton from "@/components/FloatingActionButton";
 import { ToastContainer } from "@/components/ui/toast";
 import { CookieConsentBanner } from "@/components/cookie-consent";
@@ -122,7 +122,7 @@ export default async function RootLayout({
               <AccessibilityWrapper>
                 <ComponentErrorBoundary>
                   <SmartEntryPoint enableLogging={process.env.NODE_ENV === 'development'}>
-                    <Navigation />
+                    <UnifiedNavigation />
                     <PageErrorBoundary>
                       <main id="main-content" tabIndex={-1} className="focus:outline-none">
                         {children}

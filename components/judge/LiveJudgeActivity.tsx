@@ -50,7 +50,7 @@ export function LiveJudgeActivity() {
   const simulateActivity = () => {
     // Add realistic simulated activities between API calls
     const sampleActivities = [
-      { judge: 'Sarah M.', action: 'completed verdict', amount: 0.85, category: 'dating_photos' },
+      { judge: 'Sarah M.', action: 'completed review', amount: 0.85, category: 'dating_photos' },
       { judge: 'Mike R.', action: 'earned streak bonus', amount: 5.00, streak: 7 },
       { judge: 'Emma L.', action: 'reached Expert level', level: 'Expert' },
       { judge: 'James K.', action: 'completed pro verdict', amount: 2.00, category: 'business' },
