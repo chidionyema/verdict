@@ -32,7 +32,7 @@ export function UnifiedOnboarding({ user, onComplete }: UnifiedOnboardingProps) 
       const supabase = createClient();
       
       // Mark onboarding as complete and give welcome credits
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('profiles')
         .update({ 
           onboarding_completed: true,
