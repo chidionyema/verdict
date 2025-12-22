@@ -13,7 +13,7 @@ import { ProgressiveFeedDashboard } from '@/components/feed/ProgressiveFeedDashb
 import { ProgressiveProfile } from '@/components/onboarding/ProgressiveProfile';
 import { useProgressiveProfile } from '@/hooks/useProgressiveProfile';
 import { createClient } from '@/lib/supabase/client';
-import { creditManager, CREDIT_ECONOMY_CONFIG } from '@/lib/credits';
+import { creditManagerClient, CREDIT_ECONOMY_CONFIG } from '@/lib/credits-client';
 import { toast } from '@/components/ui/toast';
 import type { Database } from '@/lib/database.types';
 
@@ -137,7 +137,7 @@ export default function FeedPage() {
   async function loadJudgeStats(userId: string, supabase: ReturnType<typeof createClient>) {
     try {
       if (!supabase) return;
-      const reputation = await creditManager.getJudgeReputation(userId);
+      const reputation = await creditManagerClient.getJudgeReputation(userId);
       
       // Calculate today's judgments count
       const today = new Date();
@@ -194,7 +194,7 @@ export default function FeedPage() {
 
       if (responseData && responseData.id) {
         // Award credits for judging
-        await creditManager.awardCreditsForJudging(user.id, responseData.id);
+        await creditManagerClient.awardCreditsForJudging(user.id, responseData.id);
         
         // Check if we should show progressive profiling after earning credits
         checkTrigger('credits_earned');
