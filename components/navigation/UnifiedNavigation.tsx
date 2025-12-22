@@ -103,7 +103,7 @@ export function UnifiedNavigation() {
       href: '/dashboard',
       label: TERMINOLOGY.NAV.HOME,
       icon: Grid,
-      active: pathname === '/dashboard' || pathname === '/workspace',
+      active: pathname === '/dashboard',
       description: 'Your requests and activity'
     });
     

@@ -1,10 +1,9 @@
 'use client';
 
-import { Suspense } from 'react';
 import { useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-function WorkspaceRedirectContent() {
+export default function WorkspaceRedirect() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -21,23 +20,7 @@ function WorkspaceRedirectContent() {
       <div className="text-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto mb-4"></div>
         <p className="text-gray-600">Redirecting to dashboard...</p>
-        <p className="text-sm text-gray-500 mt-2">Workspace has been moved to Dashboard</p>
       </div>
     </div>
-  );
-}
-
-export default function WorkspaceRedirectPage() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
-        </div>
-      </div>
-    }>
-      <WorkspaceRedirectContent />
-    </Suspense>
   );
 }

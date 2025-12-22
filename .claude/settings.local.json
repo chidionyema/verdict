@@ -32,7 +32,8 @@
       "Bash(psql:*)",
       "Bash(npx next lint:*)",
       "Bash(npm audit:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(curl:*)"
     ],
     "deny": [],
     "ask": []

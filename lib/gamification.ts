@@ -366,17 +366,27 @@ export class GamificationManager {
       };
     }
 
-    // Deduct credits (they'll be restored if payout fails)
+    // EMERGENCY FIX: Use safe credit deduction instead of legacy spend_credits
     try {
-      await (this.supabase as any).rpc('spend_credits', {
-        target_user_id: userId,
-        credit_amount: credits,
-        transaction_source: 'payout',
-        transaction_source_id: (payout as any)?.id,
-        transaction_description: `Payout request: ${credits} credits → $${payoutCalculation.netAmount.toFixed(2)}`,
-      });
+      const { safeDeductCredits } = require('./credit-guard');
+      
+      const requestId = `payout_${(payout as any)?.id || Date.now()}_${userId}`;
+      const result = await safeDeductCredits(userId, credits, requestId);
+      
+      if (!result.success) {
+        console.error('Failed to deduct credits for payout:', result.message);
+        // Consider failing the payout if credits can't be deducted
+        return {
+          success: false,
+          error: `Failed to deduct credits: ${result.message}`,
+        };
+      }
     } catch (error) {
-      console.log('spend_credits RPC not found, skipping');
+      console.error('Error deducting credits for payout:', error);
+      return {
+        success: false,
+        error: 'Credit deduction failed',
+      };
     }
 
     return {

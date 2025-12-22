@@ -28,29 +28,45 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     }
 
-    // Always set credits to 5 for testing
-    const { error: updateError } = await (supabase as any)
-      .from('profiles')
-      .update({ credits: 5 })
-      .eq('id', targetUserId);
-
-    if (updateError) {
-      return NextResponse.json({ error: 'Failed to fix credits' }, { status: 500 });
+    // EMERGENCY FIX: Use safe credit operations instead of direct database manipulation
+    // Import the safe credit functions
+    const { safeRefundCredits, safeDeductCredits } = require('@/lib/credit-guard');
+    
+    const currentCredits = (profile as any).credits || 0;
+    const targetCredits = body.credits || 5; // Allow custom credit amount from request body
+    
+    let result;
+    if (targetCredits > currentCredits) {
+      // Need to add credits - use refund function
+      const creditsToAdd = targetCredits - currentCredits;
+      result = await safeRefundCredits(targetUserId, creditsToAdd, `Admin credit adjustment by ${adminAuth.user!.id}`);
+    } else if (targetCredits < currentCredits) {
+      // Need to deduct credits
+      const creditsToRemove = currentCredits - targetCredits;
+      const requestId = `admin_fix_${Date.now()}_${adminAuth.user!.id}`;
+      result = await safeDeductCredits(targetUserId, creditsToRemove, requestId);
+    } else {
+      // Credits already at target amount
+      result = { success: true, newBalance: currentCredits, message: 'Credits already at target amount' };
+    }
+    
+    if (!result.success) {
+      return NextResponse.json({ error: `Failed to adjust credits: ${result.message}` }, { status: 500 });
     }
 
     // Audit the action
     await auditAdminAction(adminAuth.user!, 'fix_credits', {
       target_user_id: targetUserId,
       target_email: (profile as any).email,
-      old_credits: (profile as any).credits,
-      new_credits: 5
+      old_credits: currentCredits,
+      new_credits: result.newBalance
     });
 
     return NextResponse.json({ 
-      message: 'Credits set to 5',
+      message: `Credits adjusted successfully`,
       target_user: targetUserId,
-      old_credits: (profile as any).credits,
-      new_credits: 5
+      old_credits: currentCredits,
+      new_credits: result.newBalance
     });
 
   } catch (error) {

@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 export const dynamic = 'force-dynamic';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { OnboardingFlow } from '@/components/onboarding/OnboardingFlow';
+import { WelcomeExperience } from '@/components/onboarding/WelcomeExperience';
 import { getUserOnboarding } from '@/lib/onboarding';
 import { ChevronRight, User, CreditCard, Camera, CheckCircle, ArrowRight, AlertCircle } from 'lucide-react';
 
@@ -147,13 +147,12 @@ export default function WelcomePage() {
     );
   }
 
-  // Always use unified onboarding flow
+  // Use new welcome experience
   if (user) {
     return (
-      <OnboardingFlow 
+      <WelcomeExperience 
         user={user} 
         onComplete={handleOnboardingComplete}
-        allowSkip={false}
       />
     );
   }

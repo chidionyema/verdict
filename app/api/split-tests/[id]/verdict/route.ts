@@ -197,36 +197,20 @@ export async function POST(
         transaction_description: 'Split Test Judgment Reward',
       });
     } catch (rpcError) {
-      // Fallback: Direct database update if RPC not available
-      console.error('award_credits RPC failed, using fallback:', rpcError);
-      try {
-        // Update user credits balance directly
-        const { data: currentCredits } = await (supabase as any)
-          .from('user_credits')
-          .select('balance')
-          .eq('user_id', user.id)
-          .single();
-
-        if (currentCredits) {
-          await (supabase as any)
-            .from('user_credits')
-            .update({ balance: ((currentCredits as any).balance || 0) + creditAmount })
-            .eq('user_id', user.id);
-        }
-
-        // Record the transaction
-        await supabase.from('credit_transactions').insert({
-          user_id: user.id,
-          amount: creditAmount,
-          type: 'earned',
-          description: 'Split Test Judgment Reward',
-          source: 'split_test_verdict',
-          source_id: (verdict as any)?.id || splitTestId,
-        } as any);
-      } catch (fallbackError) {
-        console.error('Credit award fallback also failed:', fallbackError);
-        // Don't fail the verdict submission - log for monitoring
-      }
+      // EMERGENCY FIX: Remove dangerous fallback - fail safely instead
+      console.error('award_credits RPC failed - credit system temporarily unavailable:', rpcError);
+      
+      // Log the failure for investigation but don't manipulate credits unsafely
+      console.error('CRITICAL: Credit award failed for user', user.id, 'amount:', creditAmount);
+      
+      // Return error instead of dangerous fallback
+      return NextResponse.json(
+        { 
+          error: 'Credit system temporarily unavailable. Your judgment was recorded but credits will be awarded later.',
+          details: 'Please contact support if this persists.'
+        }, 
+        { status: 503 }
+      );
     }
 
     // Update judge reputation (non-critical, can silently fail)

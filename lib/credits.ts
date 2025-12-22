@@ -111,15 +111,11 @@ export class CreditManager {
     description: string
   ): Promise<boolean> {
     try {
-      const { data, error } = await (this.supabase.rpc as any)('spend_credits', {
-        target_user_id: userId,
-        credit_amount: creditsToSpend,
-        transaction_source: 'submission',
-        transaction_source_id: submissionId,
-        transaction_description: description
-      });
-
-      return !error && data === true;
+      // EMERGENCY FIX: Use safe credit deduction instead of legacy spend_credits
+      const { safeDeductCredits } = require('./credit-guard');
+      
+      const result = await safeDeductCredits(userId, creditsToSpend, submissionId);
+      return result.success;
     } catch (error) {
       console.error('Error spending credits:', error);
       return false;

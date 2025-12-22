@@ -307,7 +307,22 @@ export const deepLinkUtils = {
     return url.toString();
   },
 
-  // Create a deep link to workspace with filters
+  // Create a deep link to dashboard with filters
+  createDashboardLink: (filters: {
+    view?: string;
+    filter?: string;
+    search?: string;
+    sort?: string;
+    display?: string;
+  }) => {
+    const url = new URL('/dashboard', window.location.origin);
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value) url.searchParams.set(key, value);
+    });
+    return url.toString();
+  },
+
+  // Legacy compatibility - redirect workspace to dashboard
   createWorkspaceLink: (filters: {
     view?: string;
     filter?: string;
@@ -315,7 +330,7 @@ export const deepLinkUtils = {
     sort?: string;
     display?: string;
   }) => {
-    const url = new URL('/workspace', window.location.origin);
+    const url = new URL('/dashboard', window.location.origin);
     Object.entries(filters).forEach(([key, value]) => {
       if (value) url.searchParams.set(key, value);
     });

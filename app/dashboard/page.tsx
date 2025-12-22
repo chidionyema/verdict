@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { Plus, Image, FileText, Clock, CheckCircle, XCircle, Search, Filter, SortAsc, SortDesc, Sparkles, TrendingUp, Activity, Users, Award, Target, BarChart3, Star, ArrowRight, Crown, Heart, MessageSquare, Eye } from 'lucide-react';
@@ -14,6 +14,8 @@ import { EmptyState } from '@/components/empty-states/EmptyState';
 import { SmartCreditSuggestions, useSmartCreditSuggestions } from '@/components/credits/SmartCreditSuggestions';
 import { SocialProofWidget, useSocialProof } from '@/components/social-proof/SocialProofWidget';
 import { RetentionHooks, useRetentionHooks } from '@/components/retention/RetentionHooks';
+import { ProgressiveOnboarding } from '@/components/onboarding/ProgressiveOnboarding';
+import { toast } from '@/components/ui/toast';
 
 type FilterStatus = 'all' | 'open' | 'in_progress' | 'closed' | 'cancelled';
 type SortBy = 'newest' | 'oldest' | 'status' | 'progress';
@@ -30,6 +32,9 @@ export default function DashboardPage() {
   const [sortBy, setSortBy] = useState<SortBy>('newest');
   const [showFilters, setShowFilters] = useState(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
+  const [showProgressiveOnboarding, setShowProgressiveOnboarding] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const previousCountsRef = useRef<Record<string, number>>({});
   
   // Smart credit suggestions
   const shouldShowCreditSuggestions = useSmartCreditSuggestions(profile);
@@ -53,12 +58,20 @@ export default function DashboardPage() {
       // Fetch profile
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
+        setUser(user);
         const { data: profileData } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', user.id)
           .single();
         setProfile(profileData);
+        
+        // Show progressive onboarding for new users
+        if (profileData) {
+          const isNewUser = !(profileData as any).display_name || (profileData as any).total_submissions === 0;
+          const hasSeenWelcome = localStorage.getItem(`welcome-shown-${user.id}`);
+          setShowProgressiveOnboarding(isNewUser && !hasSeenWelcome);
+        }
       }
 
       // Fetch requests
@@ -117,6 +130,84 @@ export default function DashboardPage() {
       }
     }
   }, []);
+
+  // Real-time subscription for verdict updates
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!user?.id) return;
+
+    try {
+      const supabase = createClient();
+      
+      const channel = supabase
+        .channel('dashboard-updates')
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'verdict_requests',
+            filter: `user_id=eq.${user.id}`,
+          },
+          (payload) => {
+            const updatedRequest = payload.new as any;
+            const oldRequest = payload.old as any;
+            
+            const oldCount = oldRequest?.received_verdict_count || previousCountsRef.current[updatedRequest.id] || 0;
+            const newCount = updatedRequest?.received_verdict_count || 0;
+            
+            if (newCount > oldCount) {
+              setRequests((prev) => {
+                const updated = prev.map((req) =>
+                  req.id === updatedRequest.id
+                    ? { ...req, ...updatedRequest }
+                    : req
+                );
+                
+                previousCountsRef.current[updatedRequest.id] = newCount;
+                return updated;
+              });
+
+              // Smart notification
+              const verdictsReceived = newCount - oldCount;
+              if (newCount >= updatedRequest.target_verdict_count) {
+                toast.success(
+                  `🎉 Request complete! All ${newCount} verdicts received.`
+                );
+              } else {
+                const remaining = updatedRequest.target_verdict_count - newCount;
+                toast.success(
+                  `📝 New verdict received! ${remaining} more to go.`
+                );
+              }
+            }
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'verdict_requests',
+            filter: `user_id=eq.${user.id}`,
+          },
+          (payload) => {
+            const newRequest = payload.new as any;
+            setRequests((prev) => [newRequest, ...prev]);
+            toast.success(
+              `✨ New request "${newRequest.context?.substring(0, 50) || 'created'}" is now live!`
+            );
+          }
+        )
+        .subscribe();
+
+      return () => {
+        channel.unsubscribe();
+      };
+    } catch (error) {
+      console.error('Error setting up real-time subscription:', error);
+    }
+  }, [user?.id]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -295,6 +386,17 @@ export default function DashboardPage() {
           userId={profile.id}
           hasCompletedRequest={requests.some(r => r.status === 'closed')}
         />
+      )}
+
+      {/* Progressive Onboarding */}
+      {showProgressiveOnboarding && user && (
+        <div className="max-w-6xl mx-auto px-4 mb-6">
+          <ProgressiveOnboarding
+            user={user}
+            onDismiss={() => setShowProgressiveOnboarding(false)}
+            context="dashboard"
+          />
+        </div>
       )}
 
       {/* Referral Program Widget */}

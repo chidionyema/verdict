@@ -13,12 +13,12 @@ interface AppState {
   sidebarOpen: boolean;
   theme: 'light' | 'dark' | 'auto';
   
-  // Workspace State
-  workspaceView: 'overview' | 'active' | 'history' | 'analytics';
-  workspaceFilter: 'all' | 'open' | 'closed' | 'cancelled';
-  workspaceSearch: string;
-  workspaceSort: 'newest' | 'oldest' | 'status' | 'progress';
-  workspaceDisplay: 'grid' | 'list' | 'compact';
+  // Dashboard State
+  dashboardView: 'overview' | 'active' | 'history' | 'analytics';
+  dashboardFilter: 'all' | 'open' | 'closed' | 'cancelled';
+  dashboardSearch: string;
+  dashboardSort: 'newest' | 'oldest' | 'status' | 'progress';
+  dashboardDisplay: 'grid' | 'list' | 'compact';
   
   // Create Form State
   createFormData: {
@@ -78,13 +78,13 @@ interface AppActions {
   setSidebarOpen: (open: boolean) => void;
   setTheme: (theme: 'light' | 'dark' | 'auto') => void;
   
-  // Workspace Actions
-  setWorkspaceView: (view: AppState['workspaceView']) => void;
-  setWorkspaceFilter: (filter: AppState['workspaceFilter']) => void;
-  setWorkspaceSearch: (search: string) => void;
-  setWorkspaceSort: (sort: AppState['workspaceSort']) => void;
-  setWorkspaceDisplay: (display: AppState['workspaceDisplay']) => void;
-  setWorkspaceState: (state: Partial<Pick<AppState, 'workspaceView' | 'workspaceFilter' | 'workspaceSearch' | 'workspaceSort' | 'workspaceDisplay'>>) => void;
+  // Dashboard Actions
+  setDashboardView: (view: AppState['dashboardView']) => void;
+  setDashboardFilter: (filter: AppState['dashboardFilter']) => void;
+  setDashboardSearch: (search: string) => void;
+  setDashboardSort: (sort: AppState['dashboardSort']) => void;
+  setDashboardDisplay: (display: AppState['dashboardDisplay']) => void;
+  setDashboardState: (state: Partial<Pick<AppState, 'dashboardView' | 'dashboardFilter' | 'dashboardSearch' | 'dashboardSort' | 'dashboardDisplay'>>) => void;
   
   // Create Form Actions
   setCreateFormData: (data: Partial<AppState['createFormData']>) => void;
@@ -132,12 +132,12 @@ const initialState: AppState = {
   sidebarOpen: false,
   theme: 'light',
   
-  // Workspace State
-  workspaceView: 'overview',
-  workspaceFilter: 'all',
-  workspaceSearch: '',
-  workspaceSort: 'newest',
-  workspaceDisplay: 'grid',
+  // Dashboard State
+  dashboardView: 'overview',
+  dashboardFilter: 'all',
+  dashboardSearch: '',
+  dashboardSort: 'newest',
+  dashboardDisplay: 'grid',
   
   // Create Form State
   createFormData: {
@@ -189,13 +189,13 @@ export const useAppStore = create<AppState & AppActions>()(
       setSidebarOpen: (sidebarOpen) => set({ sidebarOpen }),
       setTheme: (theme) => set({ theme }),
       
-      // Workspace Actions
-      setWorkspaceView: (workspaceView) => set({ workspaceView }),
-      setWorkspaceFilter: (workspaceFilter) => set({ workspaceFilter }),
-      setWorkspaceSearch: (workspaceSearch) => set({ workspaceSearch }),
-      setWorkspaceSort: (workspaceSort) => set({ workspaceSort }),
-      setWorkspaceDisplay: (workspaceDisplay) => set({ workspaceDisplay }),
-      setWorkspaceState: (updates) => set((state) => ({ ...state, ...updates })),
+      // Dashboard Actions
+      setDashboardView: (dashboardView) => set({ dashboardView }),
+      setDashboardFilter: (dashboardFilter) => set({ dashboardFilter }),
+      setDashboardSearch: (dashboardSearch) => set({ dashboardSearch }),
+      setDashboardSort: (dashboardSort) => set({ dashboardSort }),
+      setDashboardDisplay: (dashboardDisplay) => set({ dashboardDisplay }),
+      setDashboardState: (updates) => set((state) => ({ ...state, ...updates })),
       
       // Create Form Actions
       setCreateFormData: (data) => set((state) => ({ 
@@ -291,10 +291,10 @@ export const useAppStore = create<AppState & AppActions>()(
       partialize: (state) => ({
         // Only persist certain parts of the state
         theme: state.theme,
-        workspaceView: state.workspaceView,
-        workspaceFilter: state.workspaceFilter,
-        workspaceSort: state.workspaceSort,
-        workspaceDisplay: state.workspaceDisplay,
+        dashboardView: state.dashboardView,
+        dashboardFilter: state.dashboardFilter,
+        dashboardSort: state.dashboardSort,
+        dashboardDisplay: state.dashboardDisplay,
         createFormData: state.createFormData,
         judgeQueueType: state.judgeQueueType,
         judgeFilter: state.judgeFilter,
@@ -309,35 +309,38 @@ export const useAppStore = create<AppState & AppActions>()(
 );
 
 // Selectors for commonly used state combinations
-export const useWorkspaceState = () => {
+export const useDashboardState = () => {
   const {
-    workspaceView,
-    workspaceFilter,
-    workspaceSearch,
-    workspaceSort,
-    workspaceDisplay,
-    setWorkspaceView,
-    setWorkspaceFilter,
-    setWorkspaceSearch,
-    setWorkspaceSort,
-    setWorkspaceDisplay,
-    setWorkspaceState,
+    dashboardView,
+    dashboardFilter,
+    dashboardSearch,
+    dashboardSort,
+    dashboardDisplay,
+    setDashboardView,
+    setDashboardFilter,
+    setDashboardSearch,
+    setDashboardSort,
+    setDashboardDisplay,
+    setDashboardState,
   } = useAppStore();
   
   return {
-    view: workspaceView,
-    filter: workspaceFilter,
-    search: workspaceSearch,
-    sort: workspaceSort,
-    display: workspaceDisplay,
-    setView: setWorkspaceView,
-    setFilter: setWorkspaceFilter,
-    setSearch: setWorkspaceSearch,
-    setSort: setWorkspaceSort,
-    setDisplay: setWorkspaceDisplay,
-    setState: setWorkspaceState,
+    view: dashboardView,
+    filter: dashboardFilter,
+    search: dashboardSearch,
+    sort: dashboardSort,
+    display: dashboardDisplay,
+    setView: setDashboardView,
+    setFilter: setDashboardFilter,
+    setSearch: setDashboardSearch,
+    setSort: setDashboardSort,
+    setDisplay: setDashboardDisplay,
+    setState: setDashboardState,
   };
 };
+
+// Legacy compatibility - redirect to dashboard state
+export const useWorkspaceState = useDashboardState;
 
 export const useJudgeState = () => {
   const {

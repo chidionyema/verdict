@@ -166,7 +166,6 @@ export class UnifiedRouter {
           shouldRedirect: true
         };
         
-      case '/workspace':
       case '/my-requests':
         // Legacy routes redirect to dashboard
         return {

@@ -611,7 +611,7 @@ export default function CreateRequestPage() {
           <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
             <Sparkles className="h-8 w-8 text-white" />
           </div>
-          <p className="text-gray-600">Loading your workspace...</p>
+          <p className="text-gray-600">Loading your dashboard...</p>
         </div>
       </div>
     );

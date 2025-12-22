@@ -1,0 +1,666 @@
+{
+  "askVerdict_userJourney": {
+    "metadata": {
+      "version": "2.0",
+      "timestamp": "2024-12-21",
+      "description": "Complete end-to-end user journey trace for AskVerdict application",
+      "analysisDepth": "comprehensive",
+      "technicalImplementation": "included"
+    },
+    "entryPoints": {
+      "primary": {
+        "route": "/",
+        "component": "app/page.tsx",
+        "features": [
+          "DynamicHero",
+          "SocialProofSection", 
+          "InteractiveDemo",
+          "PricingTable",
+          "GuestBrowseSection",
+          "SmartExitIntent"
+        ],
+        "userActions": [
+          {
+            "action": "browse_without_signup",
+            "target": "GuestBrowseSection",
+            "conversion_rate": "low",
+            "next_step": "auth_prompts"
+          },
+          {
+            "action": "click_get_started",
+            "target": "/auth/signup",
+            "conversion_rate": "high",
+            "incentive": "3_free_credits"
+          },
+          {
+            "action": "explore_demo",
+            "target": "InteractiveDemo",
+            "education": "feedback_quality_preview"
+          },
+          {
+            "action": "exit_intent",
+            "target": "ExitIntentModal",
+            "offer": "free_verdict_claim"
+          }
+        ]
+      },
+      "alternatives": [
+        {
+          "route": "/landing-v2",
+          "purpose": "A/B_testing_variant",
+          "component": "app/landing-v2/page.tsx"
+        },
+        {
+          "route": "/unified-landing", 
+          "purpose": "simplified_messaging",
+          "component": "app/unified-landing/page.tsx"
+        }
+      ],
+      "categorySpecific": [
+        {
+          "route": "/dating",
+          "component": "app/dating/page.tsx",
+          "seo_optimized": true,
+          "target_audience": "dating_profile_optimization"
+        },
+        {
+          "route": "/career",
+          "component": "app/career/page.tsx", 
+          "target_audience": "professional_decisions"
+        },
+        {
+          "route": "/style",
+          "component": "app/style/page.tsx",
+          "target_audience": "fashion_feedback"
+        }
+      ]
+    },
+    "authenticationFlow": {
+      "signup": {
+        "route": "/auth/signup",
+        "component": "app/auth/signup/page.tsx",
+        "methods": ["email_password", "google_oauth"],
+        "welcome_bonus": {
+          "credits": 3,
+          "immediate": true,
+          "messaging": "Start with 3 free requests"
+        },
+        "flow": {
+          "step1": {
+            "action": "credential_entry",
+            "validation": "email_format_password_strength",
+            "error_handling": "inline_feedback"
+          },
+          "step2": {
+            "action": "account_creation",
+            "database": "supabase_profiles_insert",
+            "side_effects": ["credit_allocation", "onboarding_state_init"]
+          },
+          "step3": {
+            "action": "redirect_decision",
+            "logic": "smart_routing_to_welcome_or_dashboard",
+            "component": "lib/unified-routing.ts"
+          }
+        },
+        "success_state": {
+          "notification": "welcome_banner",
+          "credits_awarded": 3,
+          "immediate_access": true
+        }
+      },
+      "login": {
+        "route": "/auth/login", 
+        "component": "app/auth/login/page.tsx",
+        "redirect_logic": "intended_destination_or_dashboard",
+        "state_restoration": "session_and_profile_data"
+      },
+      "additional": {
+        "email_verification": "/auth/verify-email",
+        "password_reset": "/auth/forgot-password", 
+        "oauth_callback": "/auth/callback"
+      }
+    },
+    "onboardingExperiences": {
+      "current_new_approach": {
+        "component": "components/onboarding/WelcomeExperience.tsx",
+        "philosophy": "try_first_setup_later",
+        "duration": "under_2_minutes",
+        "choices": [
+          {
+            "id": "try-now",
+            "title": "Get Feedback Right Now",
+            "description": "Ask about anything - dating profile, outfit, decision, email",
+            "action": "Start Free Request",
+            "href": "/create",
+            "benefit": "Instant value - see how it works",
+            "time": "2 min",
+            "conversion_expected": "highest"
+          },
+          {
+            "id": "help-others", 
+            "title": "Help Others & Earn Credits",
+            "description": "Give feedback to real people and earn free submission credits",
+            "action": "Browse Requests",
+            "href": "/review",
+            "benefit": "Build karma, earn credits",
+            "time": "5 min"
+          },
+          {
+            "id": "explore",
+            "title": "See What Others Ask About", 
+            "description": "Browse community requests to get inspired",
+            "action": "Explore Community",
+            "href": "/feed",
+            "benefit": "Find inspiration, no commitment",
+            "time": "1 min"
+          }
+        ]
+      },
+      "progressive_onboarding": {
+        "component": "components/onboarding/ProgressiveOnboarding.tsx",
+        "trigger_contexts": ["dashboard", "first-visit", "first-submission"],
+        "max_steps_shown": 3,
+        "dismissable": true,
+        "storage": "localStorage_per_user"
+      },
+      "legacy_blocking_flow": {
+        "component": "components/onboarding/OnboardingFlow.tsx",
+        "status": "replaced_with_progressive_approach",
+        "issues": ["friction_heavy", "blocks_value_experience", "required_setup"]
+      },
+      "contextual_nudges": {
+        "component": "components/onboarding/ContextualNudges.tsx",
+        "triggers": [
+          {
+            "id": "first-submission-help",
+            "context": "user_creating_first_request",
+            "message": "Add context about what kind of feedback you want",
+            "priority": 90
+          },
+          {
+            "id": "earn-credits",
+            "context": "user_has_no_credits",
+            "message": "Review 3 submissions to earn 1 free credit", 
+            "priority": 85,
+            "non_dismissable": true
+          },
+          {
+            "id": "complete-profile",
+            "context": "incomplete_profile",
+            "message": "Add your background so reviewers can give more tailored advice",
+            "priority": 60
+          }
+        ],
+        "display": "bottom_right_toast",
+        "analytics": "engagement_tracking_per_user"
+      }
+    },
+    "coreUserPaths": {
+      "createRequest": {
+        "route": "/create",
+        "component": "app/create/page.tsx", 
+        "alternativeComponent": "components/onboarding/SimplifiedStart.tsx",
+        "flow": {
+          "step1_content_selection": {
+            "media_types": ["photo", "text", "audio"],
+            "upload_handling": {
+              "validation": "file_size_type_safety",
+              "preview": "immediate_visual_feedback",
+              "storage": "supabase_storage",
+              "error_recovery": "retry_mechanism"
+            },
+            "text_input": {
+              "smart_placeholders": "category_specific_examples",
+              "character_limits": "reasonable_but_flexible"
+            }
+          },
+          "step2_context_and_options": {
+            "context_field": {
+              "purpose": "improve_feedback_quality",
+              "examples": "what_kind_of_feedback_wanted"
+            },
+            "category_selection": {
+              "options": ["appearance", "profile", "writing", "decision"],
+              "auto_detection": "smart_categorization"
+            },
+            "tier_selection": {
+              "community": {
+                "cost": "1_credit_or_3_judgments",
+                "reviewers": "community_members", 
+                "response_time": "24_48_hours"
+              },
+              "standard": {
+                "cost": "$7",
+                "reviewers": "verified_judges",
+                "response_time": "2_4_hours"
+              },
+              "premium": {
+                "cost": "$15",
+                "reviewers": "expert_judges",
+                "response_time": "under_2_hours",
+                "features": ["detailed_feedback", "video_responses"]
+              }
+            }
+          },
+          "step3_payment_and_submission": {
+            "credit_validation": "sufficient_balance_check",
+            "payment_processing": {
+              "gateway": "stripe",
+              "instant_credit_addition": true
+            },
+            "submission": {
+              "database_insert": "requests_table",
+              "queue_assignment": "judge_matching_algorithm",
+              "notifications": "real_time_updates"
+            }
+          }
+        },
+        "success_state": {
+          "celebration": "confetti_animation",
+          "tracking_page": "/requests/[id]",
+          "expectations_set": "response_time_estimate"
+        },
+        "features": [
+          "auto_save_drafts",
+          "mobile_optimized",
+          "smart_hints", 
+          "real_time_cost_calculation"
+        ]
+      },
+      "reviewOthers": {
+        "routes": ["/review", "/feed"],
+        "components": ["app/feed/page.tsx", "ReviewInterface"],
+        "mobile_first": {
+          "interface": "tinder_style_cards",
+          "gestures": ["swipe_left_skip", "swipe_right_review"],
+          "quick_actions": "one_tap_rating"
+        },
+        "review_process": {
+          "step1": {
+            "action": "content_preview",
+            "context": "full_request_details",
+            "ui": "immersive_card_view"
+          },
+          "step2": {
+            "action": "provide_feedback",
+            "options": [
+              {
+                "type": "quick_rating",
+                "scale": "like_dislike_or_1_10",
+                "required": true
+              },
+              {
+                "type": "detailed_feedback", 
+                "optional": true,
+                "reward": "higher_credit_earning"
+              }
+            ]
+          },
+          "step3": {
+            "action": "submission",
+            "instant_feedback": "credit_earning_animation",
+            "progress_tracking": "toward_next_free_submission"
+          }
+        },
+        "gamification": {
+          "credit_progress": "visual_progress_bar",
+          "streak_bonuses": "7_day_judging_streaks",
+          "reputation_system": "quality_score_tracking",
+          "achievements": "milestone_unlocks"
+        }
+      },
+      "browseFeed": {
+        "routes": ["/discover", "/feed"],
+        "access_levels": {
+          "guest": {
+            "content": "public_submissions_for_inspiration",
+            "limitations": "cannot_submit_or_review",
+            "conversion_prompts": "contextual_signup_nudges"
+          },
+          "authenticated": {
+            "content": "full_community_feed",
+            "interactions": "can_review_and_earn_credits"
+          }
+        },
+        "filtering": {
+          "categories": ["all", "dating", "career", "style", "decisions"],
+          "content_types": ["photos", "text", "mixed"],
+          "popularity": "trending_recent_top_rated"
+        }
+      }
+    },
+    "paymentAndCreditSystems": {
+      "creditEconomy": {
+        "configuration": {
+          "earning_ratio": "3_judgments_equals_1_credit",
+          "paid_bypass": "$7_for_instant_feedback",
+          "welcome_bonus": "3_free_credits_on_signup"
+        },
+        "paths": {
+          "community_path": {
+            "flow": "judge_3_others → earn_1_credit → submit_for_free",
+            "time_investment": "15_30_minutes_judging"
+          },
+          "paid_path": {
+            "flow": "pay_$7 → instant_submission → results_in_2_4_hours",
+            "target_audience": "time_conscious_users"
+          }
+        },
+        "advanced_features": {
+          "streak_bonuses": {
+            "trigger": "7_consecutive_days_judging",
+            "reward": "bonus_credits"
+          },
+          "reputation_multipliers": {
+            "trusted_judges": "earn_credits_faster",
+            "expert_level": "access_to_premium_requests"
+          }
+        }
+      },
+      "purchaseFlow": {
+        "integration": "stripe_checkout",
+        "packages": [
+          {
+            "credits": 1,
+            "price": "$7",
+            "popular": false
+          },
+          {
+            "credits": 5,
+            "price": "$30",
+            "discount": "14%",
+            "popular": true
+          },
+          {
+            "credits": 10,
+            "price": "$55",
+            "discount": "21%"
+          }
+        ],
+        "instant_application": true,
+        "demo_mode": "test_transactions_in_development"
+      }
+    },
+    "judgeReviewerFlows": {
+      "becomingJudge": {
+        "route": "/become-a-judge",
+        "component": "app/become-a-judge/page.tsx",
+        "marketing_elements": [
+          "earnings_calculator",
+          "success_stories", 
+          "live_judge_activity",
+          "transparent_payment_terms"
+        ],
+        "qualification": {
+          "route": "/judge/qualify",
+          "component": "app/judge/qualify/page.tsx",
+          "duration": "5_minutes",
+          "content": ["feedback_quality_test", "community_guidelines_acceptance"],
+          "pass_rate": "approximately_80%",
+          "retry_policy": "24_hour_cooldown"
+        }
+      },
+      "judgeDashboard": {
+        "route": "/judge",
+        "component": "app/judge/page.tsx",
+        "features": {
+          "earnings_tracking": {
+            "real_time_balance": true,
+            "payout_requests": "minimum_$20",
+            "payment_schedule": "weekly_friday_payouts"
+          },
+          "performance_metrics": {
+            "quality_score": "1_10_rating_from_submitters",
+            "response_time": "average_completion_speed",
+            "consistency": "rating_variance_tracking"
+          },
+          "reputation_system": {
+            "tiers": [
+              {
+                "level": "rookie",
+                "requirements": "0_5_verdicts",
+                "rate": "$0.60_per_review"
+              },
+              {
+                "level": "regular", 
+                "requirements": "5_30_verdicts_8_quality",
+                "rate": "$0.60_per_review",
+                "perks": ["priority_requests"]
+              },
+              {
+                "level": "trusted",
+                "requirements": "30_100_verdicts_8.5_quality", 
+                "rate": "$0.70_per_review",
+                "perks": ["premium_request_access"]
+              },
+              {
+                "level": "expert",
+                "requirements": "100_verdicts_9_quality",
+                "rate": "$0.80_per_review",
+                "perks": ["complex_requests", "video_responses"]
+              },
+              {
+                "level": "elite",
+                "requirements": "500_verdicts_9.5_quality",
+                "rate": "$1.00_per_review",
+                "perks": ["maximum_earnings", "special_badges"]
+              }
+            ]
+          },
+          "queue_management": {
+            "smart_filtering": "match_judge_expertise_to_requests",
+            "real_time_updates": "live_request_notifications",
+            "workload_balancing": "prevent_judge_burnout"
+          }
+        }
+      }
+    },
+    "profileAndAccountManagement": {
+      "dashboard": {
+        "route": "/dashboard",
+        "component": "app/dashboard/page.tsx",
+        "features": {
+          "request_overview": {
+            "status_tracking": ["open", "in_progress", "completed"],
+            "progress_visualization": "percentage_bars",
+            "eta_estimates": "realistic_completion_times"
+          },
+          "credit_management": {
+            "current_balance": "prominent_display",
+            "earning_opportunities": "contextual_suggestions",
+            "purchase_options": "quick_access_to_store"
+          },
+          "smart_filtering": {
+            "status": "all_open_completed_cancelled",
+            "search": "request_content_and_context",
+            "date_range": "custom_filtering"
+          },
+          "empty_states": {
+            "new_user": "encouraging_first_steps",
+            "no_requests": "inspiration_and_creation_prompts",
+            "no_credits": "clear_earning_paths"
+          }
+        }
+      },
+      "accountSettings": {
+        "route": "/account",
+        "component": "app/account/page.tsx",
+        "sections": {
+          "profile_management": {
+            "demographics": ["age_range", "location", "gender"],
+            "preferences": ["feedback_style", "notification_settings"],
+            "privacy": ["anonymous_submissions", "profile_visibility"]
+          },
+          "billing_and_credits": {
+            "purchase_history": "detailed_transaction_log",
+            "credit_balance": "current_and_pending",
+            "subscription_management": "premium_features"
+          },
+          "notification_preferences": {
+            "email": "important_updates_only_or_all",
+            "push": "mobile_notifications",
+            "frequency": "immediate_daily_weekly"
+          }
+        }
+      }
+    },
+    "technicalImplementation": {
+      "routingSystem": {
+        "component": "lib/unified-routing.ts",
+        "smart_entry_point": {
+          "logic": "determine_user_destination_based_on_state",
+          "states": ["NEW", "ONBOARDED", "CONTRIBUTOR", "ADVANCED"],
+          "decision_tree": {
+            "NEW": "welcome_experience_or_onboarding",
+            "ONBOARDED": "dashboard_with_guidance",
+            "CONTRIBUTOR": "full_dashboard_access",
+            "ADVANCED": "power_user_features"
+          }
+        }
+      },
+      "userStateManagement": {
+        "component": "lib/terminology.ts",
+        "consistent_language": "single_source_of_truth_for_UI_text",
+        "progressive_disclosure": "features_revealed_based_on_maturity",
+        "contextual_actions": "recommendations_based_on_current_state"
+      },
+      "keyComponents": {
+        "UnifiedNavigation": {
+          "component": "components/navigation/UnifiedNavigation.tsx",
+          "adaptive_behavior": "changes_based_on_user_state",
+          "context_awareness": "shows_relevant_actions_only"
+        },
+        "SmartEntryPoint": {
+          "component": "components/routing/SmartEntryPoint.tsx", 
+          "intelligent_routing": "directs_users_to_most_valuable_next_step"
+        },
+        "ProgressiveOnboarding": {
+          "component": "components/onboarding/ProgressiveOnboarding.tsx",
+          "context_aware_guidance": "appears_when_relevant"
+        }
+      },
+      "database_schema": {
+        "supabase_tables": {
+          "profiles": "user_demographics_and_preferences",
+          "requests": "feedback_submissions_and_status",
+          "verdicts": "judge_responses_and_ratings",
+          "credits": "user_balance_and_transactions",
+          "notifications": "system_and_user_communications"
+        }
+      }
+    },
+    "successAndErrorStates": {
+      "success_flows": {
+        "request_creation": {
+          "celebration": "confetti_animation",
+          "redirect": "tracking_page_with_progress",
+          "notifications": "real_time_updates_as_reviews_come_in"
+        },
+        "payment_success": {
+          "immediate_credit_addition": true,
+          "dashboard_redirect": "with_success_notification",
+          "receipt_email": "automatic_confirmation"
+        },
+        "judgment_completion": {
+          "credit_earning_animation": "visual_reward",
+          "progress_tracking": "toward_next_milestone",
+          "streak_continuation": "gamification_elements"
+        }
+      },
+      "error_recovery": {
+        "upload_failures": {
+          "retry_mechanisms": "automatic_and_manual",
+          "alternative_formats": "graceful_degradation",
+          "helpful_messaging": "clear_next_steps"
+        },
+        "payment_issues": {
+          "clear_error_messaging": "user_friendly_explanations",
+          "support_contact": "easy_help_access",
+          "fallback_options": "alternative_payment_methods"
+        },
+        "network_problems": {
+          "offline_detection": "service_worker_implementation",
+          "retry_logic": "intelligent_background_sync",
+          "user_communication": "status_transparency"
+        }
+      }
+    },
+    "userJourneyFlowSummaries": {
+      "new_user_ideal_path": {
+        "duration": "15_30_minutes_first_session",
+        "steps": [
+          {
+            "step": 1,
+            "action": "land_on_homepage",
+            "duration": "30_60_seconds",
+            "conversion_goal": "understand_value_proposition"
+          },
+          {
+            "step": 2,
+            "action": "signup_with_welcome_bonus",
+            "duration": "1_2_minutes", 
+            "result": "3_free_credits_awarded"
+          },
+          {
+            "step": 3,
+            "action": "choose_welcome_path",
+            "options": ["create_request", "help_others", "explore"],
+            "recommendation": "create_request_for_immediate_value"
+          },
+          {
+            "step": 4,
+            "action": "create_first_request",
+            "duration": "5_10_minutes",
+            "education": "learn_platform_mechanics"
+          },
+          {
+            "step": 5,
+            "action": "wait_for_results",
+            "duration": "2_24_hours",
+            "engagement": "judge_others_while_waiting"
+          },
+          {
+            "step": 6,
+            "action": "receive_feedback",
+            "emotional_impact": "high_value_realization",
+            "next_step": "likely_to_submit_again"
+          }
+        ]
+      },
+      "returning_user_path": {
+        "login": "smart_redirect_to_dashboard",
+        "check_status": "see_progress_on_existing_requests", 
+        "new_activity": "create_requests_or_earn_credits",
+        "engagement_cycle": "continuous_value_loop"
+      },
+      "judge_development_path": {
+        "discovery": "learn_about_earning_opportunity",
+        "qualification": "quick_5_minute_test",
+        "onboarding": "first_few_judgments_with_guidance",
+        "regular_activity": "build_reputation_and_earnings",
+        "expertise_development": "unlock_higher_paying_tiers",
+        "advanced_features": "complex_requests_and_premium_rates"
+      }
+    },
+    "metricsAndAnalytics": {
+      "conversionFunnels": {
+        "landing_to_signup": "track_CTA_effectiveness",
+        "signup_to_first_submission": "onboarding_success_rate",
+        "first_submission_to_repeat": "value_realization_metric",
+        "free_to_paid": "monetization_conversion"
+      },
+      "engagementMetrics": {
+        "session_duration": "time_spent_per_visit",
+        "feature_adoption": "which_features_drive_retention",
+        "user_lifecycle": "progression_through_states",
+        "churn_prevention": "early_warning_indicators"
+      },
+      "qualityMetrics": {
+        "feedback_satisfaction": "submitter_ratings_of_judges",
+        "platform_nps": "overall_user_satisfaction",
+        "content_quality": "automated_and_manual_moderation",
+        "judge_performance": "consistency_and_helpfulness"
+      }
+    }
+  }
+}
