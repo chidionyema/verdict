@@ -94,8 +94,8 @@ export const PROGRESSION_MILESTONES: ProgressionMilestone[] = [
     ],
     celebration: {
       title: 'You\'re a Helper Now! 🤝',
-      message: 'That felt good, didn\'t it? Your first judgment earned you 0.5 credits.',
-      credits_bonus: 0.5
+      message: 'That felt good, didn\'t it? Your first judgment earned you 1 point toward a credit.',
+      credits_bonus: 1
     }
   },
 

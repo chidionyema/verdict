@@ -25,9 +25,9 @@ export interface EconomicsConfig {
 }
 
 export const BALANCED_ECONOMICS: EconomicsConfig = {
-  // 1 judgment = 0.5 credits (2:1 ratio instead of 3:1)
-  JUDGMENT_BASE_VALUE: 0.5,
-  JUDGMENT_TO_CREDIT_RATIO: 2,
+  // 1 judgment = 1 point, 3 points = 1 credit (consistent with main system)
+  JUDGMENT_BASE_VALUE: 1,
+  JUDGMENT_TO_CREDIT_RATIO: 3,
   
   // Supply/demand creates 0.75x to 1.5x multipliers
   SUPPLY_DEMAND_MULTIPLIER: 1.0, // Baseline
@@ -215,14 +215,11 @@ function getPendingRequests(): number {
 /**
  * Economics Summary - The New Math:
  * 
- * OLD SYSTEM (Broken):
- * - 3 judgments = 1 credit
- * - 1 credit = 1 private request
- * - Each new user needs 3 judgments to ask 1 question
- * - Creates 9:1 review debt spiral
- * 
- * NEW SYSTEM (Sustainable):
- * - 2 judgments = 1 credit (immediate 33% improvement)
+ * CURRENT SYSTEM (Consistent):
+ * - 3 judgments = 1 credit (3 points = 1 credit)
+ * - 1 credit = 1 private request  
+ * - Clear 3:1 ratio maintained across all systems
+ * - Balanced to prevent debt spiral while maintaining quality
  * - 1 judgment = immediate public ask ability 
  * - Progressive tiers reward sustained contribution
  * - Dynamic pricing balances supply/demand

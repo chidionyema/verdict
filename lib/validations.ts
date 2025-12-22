@@ -181,9 +181,11 @@ export const VERDICT_TIERS = {
   detailed: { verdicts: 3, price_cents: 499 }
 } as const;
 
+// DEPRECATED: Use CREDIT_PACKAGES for consistent pricing
+// Kept for backward compatibility - will be removed
 export const VERDICT_TIER_PRICING = {
-  basic: { verdicts: 3, price_cents: 199, name: 'Basic', credits: 1, tier: 'basic', price: 1.99, judgePayout: 0.5 },
-  detailed: { verdicts: 3, price_cents: 499, name: 'Detailed', credits: 1, tier: 'detailed', price: 4.99, judgePayout: 0.75 }
+  basic: { verdicts: 3, price_cents: 349, name: 'Basic', credits: 1, tier: 'basic', price: 3.49, judgePayout: 1.16 },
+  detailed: { verdicts: 5, price_cents: 698, name: 'Standard', credits: 2, tier: 'detailed', price: 6.98, judgePayout: 1.40 }
 } as const;
 
 export function getTierConfigByVerdictCount(count: number) {

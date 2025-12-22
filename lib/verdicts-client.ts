@@ -89,7 +89,7 @@ export async function submitRequest(input: SubmitRequestInput): Promise<SubmitRe
       
     } else if (input.requestType === 'comparison') {
       // Create comparison request
-      const response = await fetch('/api/comparisons', {
+      const response = await fetch('/api/comparisons/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
