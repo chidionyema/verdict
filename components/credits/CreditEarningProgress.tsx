@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Zap, TrendingUp, Sparkles } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
-import { CREDIT_ECONOMY_CONFIG } from '@/lib/credits-client';
+import { CREDIT_ECONOMY_CONFIG } from '@/lib/credits';
 
 interface CreditEarningProgressProps {
   userId: string;

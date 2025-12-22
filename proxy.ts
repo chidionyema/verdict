@@ -185,17 +185,17 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  // Check reviewer access for reviewer-specific routes
-  if (isReviewerRoute && user) {
+  // Check judge access for judge-specific routes
+  if (isJudgeRoute && user) {
     const { data: profile } = await supabase
       .from('profiles')
-      .select('is_reviewer')
+      .select('is_judge')
       .eq('id', user.id)
       .single();
 
-    if (!profile?.is_reviewer) {
+    if (!profile?.is_judge) {
       const url = request.nextUrl.clone();
-      url.pathname = '/become-reviewer';
+      url.pathname = '/become-judge';
       return NextResponse.redirect(url);
     }
   }

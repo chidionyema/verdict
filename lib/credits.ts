@@ -8,7 +8,7 @@ type JudgeReputation = Database['public']['Tables']['judge_reputation']['Row'];
 
 export const CREDIT_ECONOMY_CONFIG = {
   JUDGMENTS_PER_CREDIT: 3, // Judge 3 submissions = earn 1 credit
-  CREDIT_VALUE_PER_JUDGMENT: 0.34, // 1/3 = ~0.34 credits per judgment
+  CREDIT_VALUE_PER_JUDGMENT: 1, // 1 full point per judgment (3 points = 1 credit)
   STREAK_BONUS_THRESHOLD: 7, // 7 days in a row
   STREAK_BONUS_CREDITS: 1, // Bonus credit for streak
   

@@ -12,7 +12,7 @@ export const JUDGE_TIER_SYSTEM = {
       color: 'from-gray-500 to-slate-500',
       requirements: { judgments: 0, consensus: 0 },
       benefits: [
-        'Basic credit earning (0.34 per judgment)',
+        'Basic credit earning (1 point per judgment)',
         'Access to public feed',
         'Standard response time'
       ],
@@ -26,7 +26,7 @@ export const JUDGE_TIER_SYSTEM = {
       color: 'from-blue-500 to-indigo-500',
       requirements: { judgments: 25, consensus: 55 },
       benefits: [
-        '10% credit bonus (0.37 per judgment)',
+        '10% credit bonus (1.1 points per judgment)',
         'Priority in relevant categories',
         'Basic streak bonuses'
       ],

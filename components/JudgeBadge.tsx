@@ -13,7 +13,7 @@ import {
   CheckCircle2
 } from 'lucide-react';
 
-export interface ReviewerCredentials {
+export interface JudgeCredentials {
   id: string;
   expertise: string[];
   rating: number;
@@ -22,10 +22,10 @@ export interface ReviewerCredentials {
   verifiedProfessional?: boolean;
   specialization?: string;
   yearsExperience?: number;
-  badges: ReviewerBadge[];
+  badges: JudgeBadge[];
 }
 
-export interface ReviewerBadge {
+export interface JudgeBadge {
   type: 'top-rated' | 'fast-responder' | 'subject-expert' | 'empathy-champion' | 'detailed-feedback';
   label: string;
   icon: React.ReactNode;
@@ -70,7 +70,7 @@ const BADGE_CONFIG = {
   }
 };
 
-export function ReviewerBadgeDisplay({ badge }: { badge: ReviewerBadge }) {
+export function JudgeBadgeDisplay({ badge }: { badge: JudgeBadge }) {
   const config = BADGE_CONFIG[badge.type];
   
   return (
@@ -83,7 +83,7 @@ export function ReviewerBadgeDisplay({ badge }: { badge: ReviewerBadge }) {
   );
 }
 
-export function ReviewerQualityCard({ reviewer }: { reviewer: ReviewerCredentials }) {
+export function JudgeQualityCard({ judge }: { judge: JudgeCredentials }) {
   const getExpertiseIcon = (expertise: string) => {
     switch (expertise.toLowerCase()) {
       case 'career': return <Briefcase className="h-4 w-4" />;
@@ -99,20 +99,20 @@ export function ReviewerQualityCard({ reviewer }: { reviewer: ReviewerCredential
       {/* Header with verification */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
-          {reviewer.verifiedProfessional && (
+          {judge.verifiedProfessional && (
             <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-500 rounded-full flex items-center justify-center text-white shadow-lg">
               <CheckCircle2 className="h-6 w-6" />
             </div>
           )}
           <div>
             <h3 className="font-bold text-gray-900 flex items-center gap-2">
-              Reviewer #{reviewer.id.slice(-4)}
-              {reviewer.verifiedProfessional && (
+              Judge #{judge.id.slice(-4)}
+              {judge.verifiedProfessional && (
                 <Shield className="h-4 w-4 text-green-600" />
               )}
             </h3>
-            {reviewer.specialization && (
-              <p className="text-sm text-gray-600">{reviewer.specialization}</p>
+            {judge.specialization && (
+              <p className="text-sm text-gray-600">{judge.specialization}</p>
             )}
           </div>
         </div>
@@ -121,9 +121,9 @@ export function ReviewerQualityCard({ reviewer }: { reviewer: ReviewerCredential
         <div className="text-right">
           <div className="flex items-center gap-1">
             <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
-            <span className="font-bold text-lg">{reviewer.rating.toFixed(1)}</span>
+            <span className="font-bold text-lg">{judge.rating.toFixed(1)}</span>
           </div>
-          <p className="text-xs text-gray-500">{reviewer.totalReviews} reviews</p>
+          <p className="text-xs text-gray-500">{judge.totalReviews} reviews</p>
         </div>
       </div>
 
@@ -131,7 +131,7 @@ export function ReviewerQualityCard({ reviewer }: { reviewer: ReviewerCredential
       <div className="mb-4">
         <p className="text-sm font-semibold text-gray-700 mb-2">Areas of Expertise:</p>
         <div className="flex flex-wrap gap-2">
-          {reviewer.expertise.map((area, index) => (
+          {judge.expertise.map((area, index) => (
             <div key={index} className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 rounded-lg">
               {getExpertiseIcon(area)}
               <span className="text-sm font-medium text-gray-700">{area}</span>
@@ -144,21 +144,21 @@ export function ReviewerQualityCard({ reviewer }: { reviewer: ReviewerCredential
       <div className="grid grid-cols-2 gap-4 mb-4">
         <div className="bg-gradient-to-br from-gray-50 to-slate-50 rounded-xl p-3">
           <p className="text-xs text-gray-600">Avg Response Time</p>
-          <p className="text-lg font-bold text-gray-900">{reviewer.responseTime}min</p>
+          <p className="text-lg font-bold text-gray-900">{judge.responseTime}min</p>
         </div>
-        {reviewer.yearsExperience && (
+        {judge.yearsExperience && (
           <div className="bg-gradient-to-br from-gray-50 to-slate-50 rounded-xl p-3">
             <p className="text-xs text-gray-600">Experience</p>
-            <p className="text-lg font-bold text-gray-900">{reviewer.yearsExperience}+ years</p>
+            <p className="text-lg font-bold text-gray-900">{judge.yearsExperience}+ years</p>
           </div>
         )}
       </div>
 
       {/* Badges */}
-      {reviewer.badges.length > 0 && (
+      {judge.badges.length > 0 && (
         <div className="flex flex-wrap gap-2">
-          {reviewer.badges.map((badge, index) => (
-            <ReviewerBadgeDisplay key={index} badge={badge} />
+          {judge.badges.map((badge, index) => (
+            <JudgeBadgeDisplay key={index} badge={badge} />
           ))}
         </div>
       )}
@@ -167,7 +167,7 @@ export function ReviewerQualityCard({ reviewer }: { reviewer: ReviewerCredential
 }
 
 // Mini badge for inline display
-export function ReviewerMiniProfile({ rating, totalReviews, isVerified }: { rating: number; totalReviews: number; isVerified?: boolean }) {
+export function JudgeMiniProfile({ rating, totalReviews, isVerified }: { rating: number; totalReviews: number; isVerified?: boolean }) {
   return (
     <div className="inline-flex items-center gap-2 text-sm">
       {isVerified && (
