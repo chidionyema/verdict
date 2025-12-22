@@ -70,7 +70,7 @@ export function ProminentCreditEarning({
             </div>
           </div>
           <Link
-            href="/feed"
+            href="/judge"
             className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition text-sm font-medium"
           >
             <span>Start Earning</span>
@@ -157,7 +157,7 @@ export function ProminentCreditEarning({
       {/* Action Buttons */}
       <div className="space-y-3">
         <Link
-          href="/feed"
+          href="/judge"
           className="block w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white py-3 px-4 rounded-lg font-semibold hover:from-green-700 hover:to-emerald-700 transition text-center"
         >
           <span className="flex items-center justify-center gap-2">

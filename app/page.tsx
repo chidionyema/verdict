@@ -9,7 +9,7 @@ import { FeaturesComparison } from "@/components/landing/features-comparison";
 import { SocialProofSection } from "@/components/landing/social-proof-section";
 import { InteractiveDemo } from "@/components/landing/interactive-demo";
 import { FeatureDiscoveryBanner } from "@/components/discovery/FeatureDiscoveryBanner";
-import { ReviewerShowcase } from "@/components/landing/reviewer-showcase";
+import { JudgeShowcase } from "@/components/landing/judge-showcase";
 import { InteractiveFeedbackPreview } from "@/components/landing/InteractiveFeedbackPreview";
 import { PricingTableSection } from "@/components/landing/pricing-table";
 import { EconomyExplanationSection } from "@/components/landing/economy-explanation";
@@ -191,7 +191,7 @@ export default function HomePage() {
       
       
       {/* Reviewer showcase with quality indicators */}
-      <ReviewerShowcase />
+      <JudgeShowcase />
 
 
       {/* Pricing table */}

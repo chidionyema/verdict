@@ -33,7 +33,8 @@
       "Bash(npx next lint:*)",
       "Bash(npm audit:*)",
       "Bash(git add:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(mv:*)"
     ],
     "deny": [],
     "ask": []

@@ -106,7 +106,7 @@ export function SmartCreditSuggestions({
         difficulty: 'easy',
         action: {
           label: 'Start Reviewing',
-          href: '/review'
+          href: '/judge'
         },
         icon: Heart,
         color: 'red',
@@ -127,7 +127,7 @@ export function SmartCreditSuggestions({
         difficulty: 'easy',
         action: {
           label: 'Earn Free Credits',
-          href: '/review'
+          href: '/judge'
         },
         icon: Coins,
         color: 'orange',
@@ -148,7 +148,7 @@ export function SmartCreditSuggestions({
         difficulty: 'easy',
         action: {
           label: 'Review Your First',
-          href: '/review'
+          href: '/judge'
         },
         icon: Users,
         color: 'blue',
@@ -169,7 +169,7 @@ export function SmartCreditSuggestions({
         difficulty: 'easy',
         action: {
           label: 'Quick Review',
-          href: '/review'
+          href: '/judge'
         },
         icon: Clock,
         color: 'green',
@@ -190,7 +190,7 @@ export function SmartCreditSuggestions({
         difficulty: 'medium',
         action: {
           label: 'Start Streak',
-          href: '/review'
+          href: '/judge'
         },
         icon: Award,
         color: 'purple',
@@ -253,7 +253,7 @@ export function SmartCreditSuggestions({
         difficulty: 'easy',
         action: {
           label: 'Review First',
-          href: '/review'
+          href: '/judge'
         },
         icon: Target,
         color: 'blue',

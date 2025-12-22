@@ -10,8 +10,7 @@ const PROTECTED_ROUTES = [
   '/results',
   '/waiting',
   '/account',
-  '/reviewer',
-  '/become-reviewer',
+  '/judge',
   '/start',
   '/success',
 ];
@@ -20,7 +19,7 @@ const PROTECTED_ROUTES = [
 const ADMIN_ROUTES = ['/admin'];
 
 // Routes that require reviewer access
-const REVIEWER_ROUTES = ['/reviewer/dashboard', '/reviewer/feedback', '/reviewer/my-feedback', '/reviewer/performance'];
+const JUDGE_ROUTES = ['/judge/dashboard', '/judge/feedback', '/judge/my-feedback', '/judge/performance'];
 
 // Auth pages
 const AUTH_ROUTES = ['/auth/login', '/auth/signup'];
@@ -160,7 +159,7 @@ export async function proxy(request: NextRequest) {
   // Check route type
   const isProtectedRoute = PROTECTED_ROUTES.some((route) => pathname.startsWith(route));
   const isAdminRoute = ADMIN_ROUTES.some((route) => pathname.startsWith(route));
-  const isReviewerRoute = REVIEWER_ROUTES.some((route) => pathname.startsWith(route));
+  const isJudgeRoute = JUDGE_ROUTES.some((route) => pathname.startsWith(route));
   const isAuthRoute = AUTH_ROUTES.some((route) => pathname.startsWith(route));
 
   // Redirect unauthenticated users from protected routes

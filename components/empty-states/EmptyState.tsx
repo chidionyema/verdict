@@ -56,7 +56,7 @@ const EMPTY_STATES = {
     subtitle: "Review others' submissions to earn free credits",
     description: "Help people make better decisions and earn credits for your own requests. Each review takes 3-5 minutes.",
     action: {
-      primary: { label: "Start Reviewing", href: "/review", icon: Heart },
+      primary: { label: "Start Judging", href: "/judge", icon: Heart },
       secondary: { label: "Learn More", href: "/become-a-judge", icon: Target }
     },
     illustration: "🤝",
@@ -68,7 +68,7 @@ const EMPTY_STATES = {
     subtitle: "Get more credits to submit requests",
     description: "Earn credits by reviewing others' submissions (free) or purchase credits for instant access.",
     action: {
-      primary: { label: "Earn Free Credits", href: "/review", icon: Heart },
+      primary: { label: "Earn Free Credits", href: "/judge", icon: Heart },
       secondary: { label: "Buy Credits", href: "/credits/buy", icon: Sparkles }
     },
     illustration: "⭐",
@@ -81,7 +81,7 @@ const EMPTY_STATES = {
     description: "Once you submit a request, you'll get notifications as people respond with their opinions.",
     action: {
       primary: { label: "Create Request", href: "/create", icon: Plus },
-      secondary: { label: "Review Others", href: "/review", icon: Users }
+      secondary: { label: "Judge Others", href: "/judge", icon: Users }
     },
     illustration: "🔔",
     color: "purple"

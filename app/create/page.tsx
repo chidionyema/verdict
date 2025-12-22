@@ -987,7 +987,7 @@ export default function CreateRequestPage() {
           
           if (path === 'judge_first') {
             // Redirect to feed to start judging
-            router.push('/feed?from=create');
+            router.push('/judge?from=create');
           } else {
             // Submit first, judge later - continue with current flow
             toast.success('Great! Submit your request and judge others when ready to see results.');

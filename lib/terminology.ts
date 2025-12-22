@@ -36,7 +36,7 @@ export const TERMINOLOGY = {
   NAV: {
     HOME: 'Dashboard', 
     CREATE: 'Get Feedback',
-    REVIEW: 'Help & Earn',
+    JUDGE: 'Judge & Earn',
     PROFILE: 'My Account'
   },
   

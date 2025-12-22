@@ -93,7 +93,7 @@ export function UnifiedNavigation() {
     if (!user) {
       // Anonymous users: simple discovery
       return [
-        { href: '/feed', label: 'Explore', icon: Users, description: 'See community feedback' },
+        { href: '/judge', label: 'Judge', icon: Users, description: 'Help others get feedback' },
         { href: '/', label: 'How it Works', icon: MessageSquare, description: 'Learn the process' }
       ];
     }
@@ -120,11 +120,11 @@ export function UnifiedNavigation() {
     // Show help/earn after user understands core value
     if (userState !== 'NEW') {
       items.push({
-        href: '/review',
-        label: TERMINOLOGY.NAV.REVIEW,
+        href: '/judge',
+        label: TERMINOLOGY.NAV.JUDGE,
         icon: Users,
-        active: pathname === '/review' || pathname === '/feed',
-        description: 'Help others and earn credits',
+        active: pathname === '/judge',
+        description: 'Judge others and earn credits',
         badge: profile?.credits ? undefined : 'Earn'
       });
     }

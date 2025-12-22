@@ -1,11 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { ReviewerQualityCard, type ReviewerCredentials } from '@/components/ReviewerBadge';
+import { JudgeQualityCard, type JudgeCredentials } from '@/components/JudgeBadge';
 import { ChevronLeft, ChevronRight, Users, Shield, Star, Clock } from 'lucide-react';
 
-// Sample reviewer data showcasing different expertise levels
-const FEATURED_REVIEWERS: ReviewerCredentials[] = [
+// Sample judge data showcasing different expertise levels
+const FEATURED_REVIEWERS: JudgeCredentials[] = [
   {
     id: 'r1234',
     expertise: ['Career', 'Business', 'Leadership'],
@@ -16,7 +16,7 @@ const FEATURED_REVIEWERS: ReviewerCredentials[] = [
     specialization: 'HR Professional',
     yearsExperience: 12,
     badges: [
-      { type: 'top-rated', label: 'Top 5% Reviewer', icon: null as any, color: '' },
+      { type: 'top-rated', label: 'Top 5% Judge', icon: null as any, color: '' },
       { type: 'subject-expert', label: 'Career Expert', icon: null as any, color: '' },
       { type: 'fast-responder', label: 'Quick Response', icon: null as any, color: '' }
     ]
@@ -60,19 +60,19 @@ const FEATURED_REVIEWERS: ReviewerCredentials[] = [
     badges: [
       { type: 'subject-expert', label: 'Writing Expert', icon: null as any, color: '' },
       { type: 'detailed-feedback', label: 'Thorough Reviews', icon: null as any, color: '' },
-      { type: 'top-rated', label: 'Top Reviewer', icon: null as any, color: '' }
+      { type: 'top-rated', label: 'Top Judge', icon: null as any, color: '' }
     ]
   }
 ];
 
-export function ReviewerShowcase() {
+export function JudgeShowcase() {
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  const nextReviewer = () => {
+  const nextJudge = () => {
     setCurrentIndex((prev) => (prev + 1) % FEATURED_REVIEWERS.length);
   };
 
-  const prevReviewer = () => {
+  const prevJudge = () => {
     setCurrentIndex((prev) => (prev - 1 + FEATURED_REVIEWERS.length) % FEATURED_REVIEWERS.length);
   };
 
@@ -82,7 +82,7 @@ export function ReviewerShowcase() {
         {/* Section Header */}
         <div className="text-center mb-12">
           <h2 className="text-4xl font-bold text-gray-900 mb-4">
-            Meet Our Expert Reviewers
+            Meet Our Expert Judges
           </h2>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
             Real professionals and experienced individuals ready to give you honest, constructive feedback
@@ -94,7 +94,7 @@ export function ReviewerShowcase() {
           <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-6 text-center shadow-lg">
             <Users className="h-8 w-8 text-indigo-600 mx-auto mb-3" />
             <p className="text-3xl font-bold text-gray-900">127+</p>
-            <p className="text-sm text-gray-600">Active Reviewers</p>
+            <p className="text-sm text-gray-600">Active Judges</p>
           </div>
           <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-6 text-center shadow-lg">
             <Shield className="h-8 w-8 text-green-600 mx-auto mb-3" />
@@ -113,25 +113,25 @@ export function ReviewerShowcase() {
           </div>
         </div>
 
-        {/* Reviewer Carousel */}
+        {/* Judge Carousel */}
         <div className="relative max-w-4xl mx-auto">
           <div className="flex items-center justify-between gap-4">
             <button
-              onClick={prevReviewer}
+              onClick={prevJudge}
               className="p-3 bg-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110"
-              aria-label="Previous reviewer"
+              aria-label="Previous judge"
             >
               <ChevronLeft className="h-6 w-6 text-gray-700" />
             </button>
 
             <div className="flex-1">
-              <ReviewerQualityCard reviewer={FEATURED_REVIEWERS[currentIndex]} />
+              <JudgeQualityCard judge={FEATURED_REVIEWERS[currentIndex]} />
             </div>
 
             <button
-              onClick={nextReviewer}
+              onClick={nextJudge}
               className="p-3 bg-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110"
-              aria-label="Next reviewer"
+              aria-label="Next judge"
             >
               <ChevronRight className="h-6 w-6 text-gray-700" />
             </button>
@@ -148,7 +148,7 @@ export function ReviewerShowcase() {
                     ? 'w-8 bg-indigo-600'
                     : 'bg-gray-300 hover:bg-gray-400'
                 }`}
-                aria-label={`Go to reviewer ${index + 1}`}
+                aria-label={`Go to judge ${index + 1}`}
               />
             ))}
           </div>
@@ -157,13 +157,13 @@ export function ReviewerShowcase() {
         {/* CTA */}
         <div className="text-center mt-12">
           <p className="text-lg text-gray-600 mb-6">
-            Every reviewer is carefully vetted to ensure you get valuable, actionable feedback
+            Every judge is carefully vetted to ensure you get valuable, actionable feedback
           </p>
           <button
             onClick={() => window.location.href = '/start-simple'}
             className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-8 py-4 rounded-xl font-bold text-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5"
           >
-            Get Feedback from Expert Reviewers →
+            Get Feedback from Expert Judges →
           </button>
         </div>
       </div>

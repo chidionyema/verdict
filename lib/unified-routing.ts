@@ -233,7 +233,7 @@ export class UnifiedRouter {
         
       case 'ONBOARDED':
         // Has submitted but not reviewed others
-        return (profile.credits || 0) > 0 ? '/dashboard' : '/review';
+        return (profile.credits || 0) > 0 ? '/dashboard' : '/judge';
         
       case 'CONTRIBUTOR':
       case 'ADVANCED':
@@ -249,7 +249,7 @@ export class UnifiedRouter {
    */
   static requiresUserState(path: string): keyof typeof TERMINOLOGY.USER_STATES | null {
     if (path.startsWith('/advanced')) return 'CONTRIBUTOR';
-    if (path.startsWith('/review')) return 'ONBOARDED';
+    if (path.startsWith('/judge')) return 'ONBOARDED';
     return null;
   }
 }
