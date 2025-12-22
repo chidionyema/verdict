@@ -40,7 +40,7 @@ const POST_Handler = async (request: NextRequest) => {
       .eq('id', user.id)
       .single();
 
-    if (!profile?.is_judge) {
+    if (!profile || profile.is_judge !== true) {
       return NextResponse.json(
         { error: 'Must be a judge to submit verdicts' },
         { status: 403 }
