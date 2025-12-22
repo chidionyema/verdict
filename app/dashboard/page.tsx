@@ -14,7 +14,7 @@ import { EmptyState } from '@/components/empty-states/EmptyState';
 import { SmartCreditSuggestions, useSmartCreditSuggestions } from '@/components/credits/SmartCreditSuggestions';
 import { SocialProofWidget, useSocialProof } from '@/components/social-proof/SocialProofWidget';
 import { RetentionHooks, useRetentionHooks } from '@/components/retention/RetentionHooks';
-import { ProgressiveOnboarding } from '@/components/onboarding/ProgressiveOnboarding';
+// Removed ProgressiveOnboarding - component deleted in cleanup
 import { toast } from '@/components/ui/toast';
 
 type FilterStatus = 'all' | 'open' | 'in_progress' | 'closed' | 'cancelled';

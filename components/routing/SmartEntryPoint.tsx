@@ -45,8 +45,19 @@ function SmartEntryPointInner({ children, enableLogging = false }: SmartEntryPoi
           return;
         }
 
+        // Get user profile if authenticated
+        let userProfile = null;
+        if (currentUser) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', currentUser.id)
+            .single();
+          userProfile = profile;
+        }
+
         // Get routing decision
-        const decision = await getDestination(pathname, currentUser);
+        const decision = await getDestination(pathname, currentUser, userProfile);
         
         if (enableLogging) {
           console.log('Smart Router Decision:', {

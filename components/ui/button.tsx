@@ -10,6 +10,7 @@ const buttonVariants = cva(
       variant: {
         primary: "bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm hover:shadow-md disabled:bg-indigo-400 disabled:cursor-not-allowed",
         secondary: "bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 shadow-sm hover:shadow-md disabled:bg-gray-200 disabled:text-gray-600 disabled:cursor-not-allowed",
+        success: "bg-green-600 hover:bg-green-700 text-white shadow-sm hover:shadow-md disabled:bg-green-400 disabled:cursor-not-allowed",
         outline: "bg-transparent border border-gray-300 hover:bg-gray-50 text-gray-700 disabled:text-gray-600 disabled:cursor-not-allowed",
         ghost: "bg-transparent hover:bg-gray-100 text-gray-700 disabled:text-gray-600 disabled:cursor-not-allowed",
         destructive: "bg-red-600 hover:bg-red-700 text-white shadow-sm hover:shadow-md disabled:bg-red-400 disabled:cursor-not-allowed",

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Zap, TrendingUp, Sparkles } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
-import { CREDIT_ECONOMY_CONFIG } from '@/lib/credits';
+import { CREDIT_ECONOMY_CONFIG } from '@/lib/credits-client';
 
 interface CreditEarningProgressProps {
   userId: string;
@@ -51,10 +51,10 @@ export function CreditEarningProgress({ userId, judgmentsToday = 0, onCreditEarn
     }
   }
 
-  // Calculate progress
+  // Calculate progress - now using judgment points system
   const judgmentsNeeded = CREDIT_ECONOMY_CONFIG.JUDGMENTS_PER_CREDIT;
   const progress = (judgmentsCount % judgmentsNeeded) / judgmentsNeeded;
-  const partialCredits = (judgmentsCount % judgmentsNeeded) * CREDIT_ECONOMY_CONFIG.CREDIT_VALUE_PER_JUDGMENT;
+  const judgmentPoints = judgmentsCount % judgmentsNeeded; // Points toward next credit
   const judgmentsRemaining = judgmentsNeeded - (judgmentsCount % judgmentsNeeded);
   const creditsEarned = Math.floor(judgmentsCount / judgmentsNeeded);
 
@@ -121,7 +121,7 @@ export function CreditEarningProgress({ userId, judgmentsToday = 0, onCreditEarn
           <div className="flex items-center gap-2 text-gray-700">
             <TrendingUp className="h-4 w-4 text-green-600" />
             <span>
-              {partialCredits.toFixed(1)} credits earned so far
+              {judgmentPoints} point{judgmentPoints === 1 ? '' : 's'} earned
             </span>
           </div>
           {judgmentsRemaining < judgmentsNeeded && (

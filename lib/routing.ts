@@ -28,9 +28,22 @@ export const smartRouter = {
   }
 };
 
-export const getDestination = (path?: string, user?: any, profile?: any): RoutingDecision => {
-  console.warn('getDestination deprecated. Use UnifiedRouter.route() from lib/unified-routing.ts');
-  return { destination: '/dashboard', reason: 'deprecated', params: {} };
+export const getDestination = async (path?: string, user?: any, profile?: any): Promise<RoutingDecision> => {
+  // Use UnifiedRouter for routing logic
+  const { UnifiedRouter } = await import('./unified-routing');
+  
+  // If no path provided, use root
+  const requestedPath = path || '/';
+  
+  // Get routing result from UnifiedRouter
+  const result = UnifiedRouter.route(requestedPath, user, profile);
+  
+  // Convert to legacy RoutingDecision format
+  return {
+    destination: result.destination,
+    reason: result.reason,
+    params: {}
+  };
 };
 
 export const updatePreferences = (userId: string, prefs: any): Promise<void> => {

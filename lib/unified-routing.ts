@@ -108,26 +108,31 @@ export class UnifiedRouter {
   }
   
   /**
-   * Onboarding flow - single path to completion
+   * Onboarding flow - single path to completion through creation
    */
   private static handleOnboardingFlow(requestedPath: string): RoutingResult {
-    const allowedDuringOnboarding = [
-      '/onboarding',
-      '/auth/logout'
-    ];
-    
-    if (allowedDuringOnboarding.includes(requestedPath)) {
+    // ONLY allow /create for onboarding - immediate value
+    if (requestedPath === '/create') {
       return {
-        destination: requestedPath,
-        reason: 'Onboarding flow',
+        destination: '/create?onboarding=true',
+        reason: 'Onboarding through creation',
         shouldRedirect: false
       };
     }
     
-    // Redirect all other requests to onboarding
+    // Allow logout during onboarding
+    if (requestedPath === '/auth/logout') {
+      return {
+        destination: requestedPath,
+        reason: 'Logout allowed',
+        shouldRedirect: false
+      };
+    }
+    
+    // All other requests redirect to create - single onboarding path
     return {
-      destination: '/onboarding',
-      reason: 'Complete onboarding first',
+      destination: '/create?onboarding=true',
+      reason: 'Single onboarding path through creation',
       shouldRedirect: true
     };
   }
@@ -140,6 +145,7 @@ export class UnifiedRouter {
     
     // Allow all basic paths for authenticated users
     const alwaysAllowedPaths = [
+      '/',
       '/dashboard',
       '/create', 
       '/review',
@@ -159,11 +165,11 @@ export class UnifiedRouter {
     // Handle specific routes
     switch (requestedPath) {
       case '/':
-        // Homepage redirects to dashboard for authenticated users
+        // Allow authenticated users to view landing page
         return {
-          destination: '/dashboard',
-          reason: 'Authenticated users see dashboard',
-          shouldRedirect: true
+          destination: '/',
+          reason: 'Landing page accessible to all users',
+          shouldRedirect: false
         };
         
       case '/my-requests':
@@ -175,11 +181,11 @@ export class UnifiedRouter {
         };
         
       case '/feed':
-      case '/judge':
-        // Legacy review interfaces redirect to unified review page
+      case '/review':
+        // All judging interfaces redirect to unified judge page
         return {
-          destination: '/review',
-          reason: 'Unified review interface',
+          destination: '/judge',
+          reason: 'Unified judging interface',
           shouldRedirect: true
         };
         

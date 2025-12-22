@@ -72,8 +72,7 @@ interface FormData {
 }
 
 const STEPS = [
-  { id: 'content', title: 'Get Feedback', subtitle: 'What do you need feedback on and how many opinions?' },
-  { id: 'submit', title: 'Review & Submit', subtitle: 'Confirm details and launch your request' },
+  { id: 'submit', title: 'Get Feedback', subtitle: 'Upload content, choose feedback level, and submit' },
 ];
 
 const REQUEST_TYPES = [
@@ -424,31 +423,15 @@ export default function CreateRequestPage() {
   };
 
   const canContinue = () => {
-    switch (currentStep) {
-      case 0: // Combined content + options
-        if (formData.mediaType === 'text') {
-          return formData.textContent.trim().length > 10 && formData.context.trim().length > 10;
-        } else {
-          return formData.mediaFiles.length > 0 && formData.context.trim().length > 10;
-        }
-      case 1: // Final review
-        return true;
-      default:
-        return false;
+    // Single step validation - must have content and context
+    if (formData.mediaType === 'text') {
+      return formData.textContent.trim().length > 10 && formData.context.trim().length > 10;
+    } else {
+      return formData.mediaFiles.length > 0 && formData.context.trim().length > 10;
     }
   };
 
-  const handleNext = () => {
-    if (canContinue() && currentStep < STEPS.length - 1) {
-      setCurrentStep(currentStep + 1);
-    }
-  };
-
-  const handleBack = () => {
-    if (currentStep > 0) {
-      setCurrentStep(currentStep - 1);
-    }
-  };
+  // Removed multi-step navigation - single step form
 
   // Keyboard shortcuts and accessibility
   useEffect(() => {
@@ -459,14 +442,10 @@ export default function CreateRequestPage() {
         setShowCommunityPathExplainer(false);
       }
       
-      // Ctrl/Cmd + Enter to proceed to next step or submit
+      // Ctrl/Cmd + Enter to submit
       if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
         if (canContinue()) {
-          if (currentStep < STEPS.length - 1) {
-            handleNext();
-          } else {
-            handleSubmit();
-          }
+          handleSubmit();
         }
       }
     };
@@ -637,7 +616,7 @@ export default function CreateRequestPage() {
     );
   }
 
-  const insufficientCredits = (profile?.credits || 0) < formData.creditsToUse;
+  // Removed insufficientCredits - handled inline
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 relative">
@@ -661,40 +640,10 @@ export default function CreateRequestPage() {
           )}
         </div>
 
-        {/* Progress Steps */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            {STEPS.map((step, index) => (
-              <div key={step.id} className="flex items-center">
-                <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all ${
-                    index <= currentStep
-                      ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg'
-                      : 'bg-white border-2 border-gray-300 text-gray-400'
-                  }`}
-                >
-                  {index < currentStep ? (
-                    <Check className="h-5 w-5" />
-                  ) : (
-                    index + 1
-                  )}
-                </div>
-                {index < STEPS.length - 1 && (
-                  <div
-                    className={`h-1 w-20 mx-2 transition-all ${
-                      index < currentStep
-                        ? 'bg-gradient-to-r from-indigo-600 to-purple-600'
-                        : 'bg-gray-300'
-                    }`}
-                  />
-                )}
-              </div>
-            ))}
-          </div>
-          <div className="text-center mt-4">
-            <h2 className="text-xl font-bold text-gray-900">{STEPS[currentStep].title}</h2>
-            <p className="text-gray-600">{STEPS[currentStep].subtitle}</p>
-          </div>
+        {/* Simple Header */}
+        <div className="text-center mb-8">
+          <h2 className="text-xl font-bold text-gray-900">Upload content and choose feedback level</h2>
+          <p className="text-gray-600">Complete all sections below and submit to get feedback</p>
         </div>
 
         {/* Progressive Hints */}
@@ -711,19 +660,13 @@ export default function CreateRequestPage() {
 
         {/* TODO: Add mobile optimizations after launch */}
 
-        {/* Step Content */}
+        {/* Single Form Content */}
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl border border-white/50 shadow-xl p-8 mb-8">
-          {/* Step 0: Combined Content Upload + Tier Selection */}
-          {currentStep === 0 && (
-            <div className="space-y-8">
-              <div className="text-center mb-8">
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">What do you need feedback on?</h3>
-                <p className="text-gray-600">Upload your content and tell us what you want to know</p>
-              </div>
+          <div className="space-y-8">
 
-              {/* Simple Media Type Selection */}
-              <div className="mb-8">
-                <h4 className="text-lg font-semibold text-gray-900 mb-4">Choose content type:</h4>
+            {/* Content Type Selection */}
+            <div className="mb-8">
+              <h4 className="text-lg font-semibold text-gray-900 mb-4">Choose content type:</h4>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {MEDIA_TYPES.map((type) => (
                     <button
@@ -890,268 +833,125 @@ export default function CreateRequestPage() {
                 )}
               </div>
 
-              {/* Tier Selection */}
-              <div className="mt-8">
-                <div className="text-center mb-6">
-                  <h4 id="tier-selection-heading" className="text-lg font-bold text-gray-900 mb-2">Choose your feedback level</h4>
-                  <p className="text-gray-600">Select the quality and quantity of feedback you need</p>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4" role="radiogroup" aria-labelledby="tier-selection-heading">
-                  {TIERS.map((tier) => (
-                    <button
-                      key={tier.id}
-                      onClick={() => updateFormData({ tier: tier.id })}
-                      className={`p-4 rounded-xl border-2 transition-all duration-300 text-left relative hover:shadow-lg hover:-translate-y-1 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${
-                        formData.tier === tier.id
-                          ? 'border-indigo-300 bg-gradient-to-br from-indigo-50 to-purple-50 shadow-lg'
-                          : 'border-gray-200 hover:border-gray-300 bg-white'
-                      }`}
-                      role="radio"
-                      aria-checked={formData.tier === tier.id}
-                      aria-describedby={`tier-${tier.id}-description`}
-                    >
-                      {tier.badge && (
-                        <div className="absolute top-2 right-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xs font-bold px-2 py-1 rounded-full" aria-hidden="true">
-                          {tier.badge}
-                        </div>
-                      )}
-                      {tier.popular && (
-                        <div className="absolute top-2 right-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-xs font-bold px-2 py-1 rounded-full" aria-hidden="true">
-                          Recommended
-                        </div>
-                      )}
-                      
-                      <div className={`w-10 h-10 rounded-lg bg-gradient-to-r ${tier.gradient} flex items-center justify-center mb-3`}>
-                        <tier.icon className="h-5 w-5 text-white" aria-hidden="true" />
-                      </div>
-                      
-                      <h5 className="font-bold text-gray-900 mb-1">{tier.title}</h5>
-                      <p id={`tier-${tier.id}-description`} className="text-sm text-gray-600 mb-2">{tier.subtitle}</p>
-                      <p className="text-lg font-bold text-indigo-600">{tier.price}</p>
-                    </button>
-                  ))}
-                </div>
+            {/* Tier Selection */}
+            <div className="mt-8">
+              <div className="text-center mb-6">
+                <h4 id="tier-selection-heading" className="text-lg font-bold text-gray-900 mb-2">Choose your feedback level</h4>
+                <p className="text-gray-600">Select the quality and quantity of feedback you need</p>
               </div>
-            </div>
-          )}
-
-          {/* Step 1: Final Review & Submit */}
-          {currentStep === 1 && (
-            <div className="space-y-6">
-              <div className="text-center mb-8">
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">Review & Submit</h3>
-                <p className="text-gray-600">Confirm your request details and submit</p>
-              </div>
-
-              {/* Request Summary */}
-              <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl p-6 border border-indigo-200">
-                <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  <Eye className="h-5 w-5 text-indigo-600" />
-                  Request Summary
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="font-medium text-gray-700">Content Type:</span>
-                    <span className="ml-2 text-gray-900 capitalize">{formData.mediaType}</span>
-                  </div>
-                  <div>
-                    <span className="font-medium text-gray-700">Feedback Level:</span>
-                    <span className="ml-2 text-gray-900">{TIERS.find(t => t.id === formData.tier)?.title}</span>
-                  </div>
-                  <div>
-                    <span className="font-medium text-gray-700">Expected Response:</span>
-                    <span className="ml-2 text-gray-900">{TIERS.find(t => t.id === formData.tier)?.subtitle}</span>
-                  </div>
-                  <div>
-                    <span className="font-medium text-gray-700">Cost:</span>
-                    <span className="ml-2 text-gray-900">{TIERS.find(t => t.id === formData.tier)?.price}</span>
-                  </div>
-                </div>
-                
-                {formData.context && (
-                  <div className="mt-4 pt-4 border-t border-indigo-200">
-                    <span className="font-medium text-gray-700">Your Request:</span>
-                    <p className="mt-2 text-gray-900 bg-white/60 rounded-lg p-3">{formData.context}</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Insufficient Credits handling */}
-              {insufficientCredits && (
-                <div className="bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 rounded-xl p-6">
-                  <div className="flex items-center gap-2 text-orange-700 mb-3">
-                    <Info className="h-5 w-5" />
-                    <span className="font-medium">Need More Credits</span>
-                  </div>
-                  <p className="text-orange-600 text-sm mb-4">
-                    You need {formData.creditsToUse} credits but only have {profile?.credits || 0}.
-                  </p>
-                  
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <button 
-                      onClick={() => setShowCommunityPathExplainer(true)}
-                      className="bg-green-600 text-white px-4 py-3 rounded-lg font-medium hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
-                    >
-                      <Heart className="h-4 w-4" />
-                      Community Path (Free)
-                    </button>
-                    
-                    <button 
-                      onClick={() => setShowInsufficientCreditsModal(true)}
-                      className="bg-indigo-600 text-white px-4 py-3 rounded-lg font-medium hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2"
-                    >
-                      <Zap className="h-4 w-4" />
-                      Buy Credits
-                    </button>
-                  </div>
-                  
-                  <p className="text-xs text-gray-600 mt-3 text-center">
-                    💚 Community: Judge {formData.creditsToUse} others, get free feedback
-                    <span className="mx-2">•</span>
-                    ⚡ Instant: Pay and get results in 2 hours
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-
-
-          {/* Step 3 removed - simplified to 2-step flow */}
-            <div className="space-y-6">
-              <div className="text-center mb-8">
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">Review & Submit</h3>
-                <p className="text-gray-600">Double-check everything looks good</p>
-              </div>
-
-              {/* Summary Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200">
-                  <h4 className="font-semibold text-gray-900 mb-4">Request Details</h4>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Type:</span>
-                      <span className="font-medium">{REQUEST_TYPES.find(t => t.id === formData.requestType)?.title}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Category:</span>
-                      <span className="font-medium">{CATEGORIES.find(c => c.id === formData.category)?.title}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Media:</span>
-                      <span className="font-medium">{MEDIA_TYPES.find(m => m.id === formData.mediaType)?.title}</span>
-                    </div>
-                    {formData.mediaFiles.length > 0 && (
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Files:</span>
-                        <span className="font-medium">{formData.mediaFiles.length} uploaded</span>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4" role="radiogroup" aria-labelledby="tier-selection-heading">
+                {TIERS.map((tier) => (
+                  <button
+                    key={tier.id}
+                    onClick={() => updateFormData({ tier: tier.id })}
+                    className={`p-4 rounded-xl border-2 transition-all duration-300 text-left relative hover:shadow-lg hover:-translate-y-1 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${
+                      formData.tier === tier.id
+                        ? 'border-indigo-300 bg-gradient-to-br from-indigo-50 to-purple-50 shadow-lg'
+                        : 'border-gray-200 hover:border-gray-300 bg-white'
+                    }`}
+                    role="radio"
+                    aria-checked={formData.tier === tier.id}
+                    aria-describedby={`tier-${tier.id}-description`}
+                  >
+                    {tier.badge && (
+                      <div className="absolute top-2 right-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xs font-bold px-2 py-1 rounded-full" aria-hidden="true">
+                        {tier.badge}
                       </div>
                     )}
-                  </div>
-                </div>
-
-                <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-6 border border-green-200">
-                  <h4 className="font-semibold text-gray-900 mb-4">Feedback Plan</h4>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Tier:</span>
-                      <span className="font-medium">{TIERS.find(t => t.id === formData.tier)?.title}</span>
+                    {tier.popular && (
+                      <div className="absolute top-2 right-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-xs font-bold px-2 py-1 rounded-full" aria-hidden="true">
+                        Recommended
+                      </div>
+                    )}
+                    
+                    <div className={`w-10 h-10 rounded-lg bg-gradient-to-r ${tier.gradient} flex items-center justify-center mb-3`}>
+                      <tier.icon className="h-5 w-5 text-white" aria-hidden="true" />
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Verdicts:</span>
-                      <span className="font-medium">{formData.targetVerdictCount}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Cost:</span>
-                      <span className="font-medium">{formData.creditsToUse} credits</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Remaining:</span>
-                      <span className="font-medium">{(profile?.credits || 0) - formData.creditsToUse} credits</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Context Preview */}
-              <div className="bg-gray-50 rounded-xl p-6">
-                <h4 className="font-semibold text-gray-900 mb-3">Your Message to Judges</h4>
-                <p className="text-gray-700 italic">"{formData.context || 'No additional context provided.'}"</p>
-              </div>
-
-              {/* Terms reminder */}
-              <div className="bg-blue-50 rounded-xl p-4">
-                <div className="flex items-start gap-3">
-                  <Info className="h-5 w-5 text-blue-600 mt-0.5" />
-                  <div className="text-sm text-blue-800">
-                    <p className="font-medium mb-1">Before you submit:</p>
-                    <ul className="space-y-1 text-blue-700">
-                      <li>• Your request will be reviewed by real people</li>
-                      <li>• Feedback typically arrives within 2 hours</li>
-                      <li>• Credits are charged when judges start reviewing</li>
-                      <li>• You'll get email notifications for new verdicts</li>
-                    </ul>
-                  </div>
-                </div>
+                    
+                    <h5 className="font-bold text-gray-900 mb-1">{tier.title}</h5>
+                    <p id={`tier-${tier.id}-description`} className="text-sm text-gray-600 mb-2">{tier.subtitle}</p>
+                    <p className="text-lg font-bold text-indigo-600">{tier.price}</p>
+                  </button>
+                ))}
               </div>
             </div>
-        </div>
 
-        {/* Navigation */}
-        <div className="flex justify-between items-center">
-          <button
-            onClick={handleBack}
-            disabled={currentStep === 0}
-            className={`px-6 py-3 rounded-xl font-medium transition-all flex items-center gap-2 ${
-              currentStep === 0
-                ? 'text-gray-400 cursor-not-allowed'
-                : 'text-gray-700 hover:bg-white/80 border border-gray-300'
-            }`}
-          >
-            <ChevronLeft className="h-4 w-4" />
-            Back
-          </button>
-
-          <div className="flex items-center gap-4">
-            {currentStep < STEPS.length - 1 ? (
-              <button
-                onClick={handleNext}
-                disabled={!canContinue()}
-                className={`px-8 py-3 rounded-xl font-semibold transition-all flex items-center gap-2 ${
-                  canContinue()
-                    ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg hover:shadow-xl hover:-translate-y-0.5'
-                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                }`}
-              >
-                Continue
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            ) : currentStep === STEPS.length - 1 ? (
-              <button
-                onClick={handleSubmit}
-                disabled={!canContinue() || (insufficientCredits && !usingCommunityPath) || submitting}
-                className={`px-8 py-3 rounded-xl font-semibold transition-all flex items-center gap-3 ${
-                  canContinue() && (!insufficientCredits || usingCommunityPath) && !submitting
-                    ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-lg hover:shadow-xl hover:-translate-y-0.5'
-                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                }`}
-              >
-                {submitting ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Creating...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="h-5 w-5" />
-                    {usingCommunityPath ? 'Get Feedback (Community Path)' : 'Get Feedback'}
-                    <ArrowRight className="h-4 w-4" />
-                  </>
-                )}
-              </button>
-            ) : null}
+            {/* Insufficient Credits handling */}
+            {((profile?.credits || 0) < formData.creditsToUse) && (
+              <div className="bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 rounded-xl p-6">
+                <div className="flex items-center gap-2 text-orange-700 mb-3">
+                  <Info className="h-5 w-5" />
+                  <span className="font-medium">Need More Credits</span>
+                </div>
+                <p className="text-orange-600 text-sm mb-4">
+                  You need {formData.creditsToUse} credits but only have {profile?.credits || 0}.
+                </p>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <button 
+                    onClick={() => setShowCommunityPathExplainer(true)}
+                    className="bg-green-600 text-white px-4 py-3 rounded-lg font-medium hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Heart className="h-4 w-4" />
+                    Community Path (Free)
+                  </button>
+                  
+                  <button 
+                    onClick={() => setShowInsufficientCreditsModal(true)}
+                    className="bg-indigo-600 text-white px-4 py-3 rounded-lg font-medium hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Zap className="h-4 w-4" />
+                    Buy Credits
+                  </button>
+                </div>
+                
+                <p className="text-xs text-gray-600 mt-3 text-center">
+                  💚 Community: Judge {formData.creditsToUse} others, get free feedback
+                  <span className="mx-2">•</span>
+                  ⚡ Instant: Pay and get results in 2 hours
+                </p>
+              </div>
+            )}
           </div>
         </div>
+
+        {/* Submit Button */}
+        <div className="text-center">
+          <button
+            onClick={handleSubmit}
+            disabled={!canContinue() || (((profile?.credits || 0) < formData.creditsToUse) && !usingCommunityPath) || submitting}
+            className={`px-12 py-4 rounded-xl font-semibold text-lg transition-all flex items-center gap-3 mx-auto ${
+              canContinue() && (((profile?.credits || 0) >= formData.creditsToUse) || usingCommunityPath) && !submitting
+                ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-lg hover:shadow-xl hover:-translate-y-0.5'
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            }`}
+          >
+            {submitting ? (
+              <>
+                <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                Creating Request...
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-6 w-6" />
+                {usingCommunityPath ? 'Get Feedback (Community Path)' : 'Get Feedback'}
+                <ArrowRight className="h-5 w-5" />
+              </>
+            )}
+          </button>
+          
+          {/* Helpful text below button */}
+          <p className="text-sm text-gray-600 mt-4">
+            {canContinue() 
+              ? "Click to submit your request for feedback"
+              : formData.mediaType === 'text' 
+                ? "Please add text content and context to continue"
+                : "Please upload files and add context to continue"
+            }
+          </p>
+        </div>
       </div>
+
 
       {/* Progressive Profile Modal */}
       {showProgressiveProfile && user && (

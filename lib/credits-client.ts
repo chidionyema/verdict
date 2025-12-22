@@ -7,7 +7,7 @@ type JudgeReputation = Database['public']['Tables']['judge_reputation']['Row'];
 
 export const CREDIT_ECONOMY_CONFIG = {
   JUDGMENTS_PER_CREDIT: 3, // Judge 3 submissions = earn 1 credit
-  CREDIT_VALUE_PER_JUDGMENT: 0.34, // 1/3 = ~0.34 credits per judgment
+  CREDIT_VALUE_PER_JUDGMENT: 1, // 1 full point per judgment (3 points = 1 credit)
   STREAK_BONUS_THRESHOLD: 7, // 7 days in a row
   STREAK_BONUS_CREDITS: 1, // Bonus credit for streak
   
@@ -64,14 +64,12 @@ export class CreditManagerClient {
     helpfulnessRating?: number
   ): Promise<boolean> {
     try {
-      // Award partial credit for judgment
-      const { error: creditError } = await (this.supabase.rpc as any)('award_credits', {
+      // Award judgment points (3 points = 1 credit)
+      const { error: creditError } = await (this.supabase.rpc as any)('award_judgment_points', {
         target_user_id: judgeId,
-        credit_amount: Math.round(CREDIT_ECONOMY_CONFIG.CREDIT_VALUE_PER_JUDGMENT * 100) / 100, // 0.34 credits
-        transaction_type: 'earned',
-        transaction_source: 'judging',
+        points_amount: CREDIT_ECONOMY_CONFIG.CREDIT_VALUE_PER_JUDGMENT, // 1 point per judgment
         transaction_source_id: judgmentId,
-        transaction_description: `Earned ${CREDIT_ECONOMY_CONFIG.CREDIT_VALUE_PER_JUDGMENT} credits for judging`
+        transaction_description: `Earned ${CREDIT_ECONOMY_CONFIG.CREDIT_VALUE_PER_JUDGMENT} point for judging`
       });
 
       if (creditError) throw creditError;

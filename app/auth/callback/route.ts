@@ -47,9 +47,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL(safeRedirect, requestUrl.origin));
     }
 
-    // If it's a new user (no profile or onboarding not completed), show landing with signup prompt
+    // If it's a new user (no profile or onboarding not completed), redirect to create
     if (!profile || !(profile as any).onboarding_completed) {
-      return NextResponse.redirect(new URL('/?welcome=true', requestUrl.origin));
+      return NextResponse.redirect(new URL('/create?welcome=true', requestUrl.origin));
     }
 
     // For existing users, check if there's a stored redirect in session storage
