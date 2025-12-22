@@ -813,13 +813,13 @@ CREATE TABLE performance_metrics (
   metadata JSONB DEFAULT '{}',
   
   -- Timing
-  recorded_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  
-  -- Indexing for performance
-  INDEX(user_id, recorded_at),
-  INDEX(metric_type, recorded_at),
-  INDEX(metric_name, recorded_at)
+  recorded_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Performance indexes for performance_metrics table
+CREATE INDEX idx_performance_metrics_user_recorded ON performance_metrics(user_id, recorded_at);
+CREATE INDEX idx_performance_metrics_type_recorded ON performance_metrics(metric_type, recorded_at);
+CREATE INDEX idx_performance_metrics_name_recorded ON performance_metrics(metric_name, recorded_at);
 
 -- Session performance aggregates
 CREATE TABLE session_performance_aggregates (
@@ -1941,8 +1941,12 @@ CREATE POLICY "Service role manages credits" ON user_credits
 CREATE POLICY "Judges can view own reputation" ON judge_reputation
   FOR SELECT USING (auth.uid() = judge_id);
 
-CREATE POLICY "Public can view judge stats" ON judge_reputation
-  FOR SELECT USING (true);
+-- SECURITY FIX: Restrict judge stats to authorized users only  
+CREATE POLICY "Restricted judge stats view" ON judge_reputation
+  FOR SELECT USING (
+    auth.uid() = judge_id OR 
+    EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_admin = true)
+  );
 
 CREATE POLICY "Service role manages reputation" ON judge_reputation
   FOR ALL USING (auth.role() = 'service_role');

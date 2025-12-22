@@ -17,7 +17,9 @@ const requiredEnvVars = {
 } as const;
 
 const optionalEnvVars = {
-  NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+  NEXT_PUBLIC_APP_URL: process.env.NODE_ENV === 'development' 
+    ? (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000')
+    : (process.env.NEXT_PUBLIC_APP_URL || (() => { throw new Error('NEXT_PUBLIC_APP_URL required in production') })()),
   NEXT_PUBLIC_DEMO_MODE: process.env.NEXT_PUBLIC_DEMO_MODE || 'false',
 } as const;
 

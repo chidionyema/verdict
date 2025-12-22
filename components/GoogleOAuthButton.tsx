@@ -12,7 +12,7 @@ const getRedirectUrl = () => {
   if (typeof window !== 'undefined') {
     return `${window.location.origin}/auth/callback`;
   }
-  return 'http://localhost:3000/auth/callback'; // fallback for development
+  throw new Error('APP_URL not configured - required for OAuth callback in production');
 };
 
 interface GoogleOAuthButtonProps {

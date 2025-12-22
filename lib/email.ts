@@ -11,7 +11,9 @@ const getResendClient = () => {
 };
 
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'Verdict <noreply@verdict.app>';
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+const APP_URL = process.env.NODE_ENV === 'development' 
+  ? (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000')
+  : (process.env.NEXT_PUBLIC_APP_URL || (() => { throw new Error('APP_URL required for email links in production') })());
 
 export interface SendEmailParams {
   to: string;
