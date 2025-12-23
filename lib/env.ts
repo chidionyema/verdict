@@ -16,10 +16,19 @@ const requiredEnvVars = {
   STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
 } as const;
 
+const getAppUrl = () => {
+  if (process.env.NODE_ENV === 'development') {
+    return process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  }
+  
+  if (!process.env.NEXT_PUBLIC_APP_URL) {
+    throw new Error('NEXT_PUBLIC_APP_URL required in production');
+  }
+  
+  return process.env.NEXT_PUBLIC_APP_URL;
+};
+
 const optionalEnvVars = {
-  NEXT_PUBLIC_APP_URL: process.env.NODE_ENV === 'development' 
-    ? (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000')
-    : (process.env.NEXT_PUBLIC_APP_URL || (() => { throw new Error('NEXT_PUBLIC_APP_URL required in production') })()),
   NEXT_PUBLIC_DEMO_MODE: process.env.NEXT_PUBLIC_DEMO_MODE || 'false',
 } as const;
 
@@ -97,7 +106,7 @@ export const env = {
 
   // App
   app: {
-    url: optionalEnvVars.NEXT_PUBLIC_APP_URL,
+    get url() { return getAppUrl(); }, // Lazy evaluation
     env: process.env.NODE_ENV || 'development',
     isDev: process.env.NODE_ENV === 'development',
     isProd: process.env.NODE_ENV === 'production',

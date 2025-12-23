@@ -11,9 +11,19 @@ const getResendClient = () => {
 };
 
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'Verdict <noreply@verdict.app>';
-const APP_URL = process.env.NODE_ENV === 'development' 
-  ? (process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000')
-  : (process.env.NEXT_PUBLIC_APP_URL || (() => { throw new Error('APP_URL required for email links in production') })());
+
+// Lazy evaluation of APP_URL to avoid build-time errors
+const getAppUrl = () => {
+  if (process.env.NODE_ENV === 'development') {
+    return process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  }
+  
+  if (!process.env.NEXT_PUBLIC_APP_URL) {
+    throw new Error('APP_URL required for email links in production');
+  }
+  
+  return process.env.NEXT_PUBLIC_APP_URL;
+};
 
 export interface SendEmailParams {
   to: string;
@@ -70,7 +80,7 @@ export const emailTemplates = {
           <p>Thank you for joining Verdict! We're excited to have you as part of our community.</p>
           <p>Get started by submitting your first request for honest, anonymous feedback from real people.</p>
           <div style="text-align: center; margin: 32px 0;">
-            <a href="${APP_URL}/start-simple" style="display: inline-block; background: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500;">Submit Your First Request</a>
+            <a href="${getAppUrl()}/start-simple" style="display: inline-block; background: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500;">Submit Your First Request</a>
           </div>
           <p>If you have any questions, our support team is here to help.</p>
           <p style="color: #6B7280; font-size: 14px; margin-top: 32px;">— The Verdict Team</p>
@@ -143,7 +153,7 @@ export const emailTemplates = {
           <p>Great news! We've received your request${data.category ? ` in the <strong>${data.category}</strong> category` : ''} and matched it with our judges.</p>
           <p>You'll receive notifications as verdicts come in.</p>
           <div style="text-align: center; margin: 32px 0;">
-            <a href="${APP_URL}/requests/${data.requestId}" style="display: inline-block; background: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500;">View My Request</a>
+            <a href="${getAppUrl()}/requests/${data.requestId}" style="display: inline-block; background: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500;">View My Request</a>
           </div>
           <p style="color: #6B7280; font-size: 14px;">You can also find this under <strong>My Requests</strong> in the app.</p>
           <p style="color: #6B7280; font-size: 14px; margin-top: 32px;">— The Verdict Team</p>
@@ -168,7 +178,7 @@ export const emailTemplates = {
           <p>Your request${data.title ? ` "<strong>${data.title}</strong>"` : ''} now has <strong>${data.receivedCount} of ${data.targetCount}</strong> verdicts.</p>
           <p>You can start reading feedback now while the remaining verdicts arrive.</p>
           <div style="text-align: center; margin: 32px 0;">
-            <a href="${APP_URL}/requests/${data.requestId}" style="display: inline-block; background: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500;">View Verdicts</a>
+            <a href="${getAppUrl()}/requests/${data.requestId}" style="display: inline-block; background: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500;">View Verdicts</a>
           </div>
           <p style="color: #6B7280; font-size: 14px; margin-top: 32px;">— The Verdict Team</p>
         </body>
@@ -192,7 +202,7 @@ export const emailTemplates = {
           <p>Great news! Your request${data.title ? ` "<strong>${data.title}</strong>"` : ''} has received all <strong>${data.targetCount}</strong> verdicts.</p>
           <p>Your full results and summary are ready to view.</p>
           <div style="text-align: center; margin: 32px 0;">
-            <a href="${APP_URL}/requests/${data.requestId}" style="display: inline-block; background: #10B981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500;">View All Results</a>
+            <a href="${getAppUrl()}/requests/${data.requestId}" style="display: inline-block; background: #10B981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500;">View All Results</a>
           </div>
           <p style="color: #6B7280; font-size: 14px; margin-top: 32px;">— The Verdict Team</p>
         </body>
@@ -216,7 +226,7 @@ export const emailTemplates = {
           <p>Thank you for your payment of <strong>${data.amount}</strong>!</p>
           <p><strong>${data.credits} credits</strong> have been added to your account. You can now submit more requests for feedback.</p>
           <div style="text-align: center; margin: 32px 0;">
-            <a href="${APP_URL}/start-simple" style="display: inline-block; background: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500;">Submit a Request</a>
+            <a href="${getAppUrl()}/start-simple" style="display: inline-block; background: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500;">Submit a Request</a>
           </div>
           <p style="color: #6B7280; font-size: 14px; margin-top: 32px;">— The Verdict Team</p>
         </body>
