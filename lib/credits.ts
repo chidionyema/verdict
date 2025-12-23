@@ -1,9 +1,10 @@
 import { createClient } from '@/lib/supabase/client';
 import { reputationManager } from '@/lib/reputation';
-import type { Database } from '@/types/supabase';
+import { log } from '@/lib/logger';
+import type { Database } from './database.types';
 
 type CreditTransaction = Database['public']['Tables']['credit_transactions']['Row'];
-type UserCredits = Database['public']['Tables']['user_credits']['Row'];
+type UserCredits = Database['public']['Tables']['profiles']['Row'];
 type JudgeReputation = Database['public']['Tables']['judge_reputation']['Row'];
 
 export const CREDIT_ECONOMY_CONFIG = {
@@ -30,18 +31,18 @@ export const CREDIT_ECONOMY_CONFIG = {
 export class CreditManager {
   private supabase = createClient();
 
-  async getUserCredits(userId: string): Promise<UserCredits | null> {
+  async getUserCredits(userId: string): Promise<{ balance: number } | null> {
     const { data, error } = await this.supabase
-      .from('user_credits')
-      .select('*')
-      .eq('user_id', userId)
+      .from('profiles')
+      .select('credits')
+      .eq('id', userId)
       .single();
 
     if (error && error.code !== 'PGRST116') { // Not found is ok
       throw error;
     }
 
-    return data;
+    return data ? { balance: (data as any).credits || 0 } : null;
   }
 
   async getJudgeReputation(userId: string): Promise<JudgeReputation | null> {
@@ -99,8 +100,16 @@ export class CreditManager {
 
       return true;
     } catch (error) {
-      console.error('Error awarding credits for judging:', error);
-      return false;
+      log.error('CRITICAL: Credit award failed for judge', error, {
+        judgeId,
+        judgmentId,
+        consensusMatch,
+        helpfulnessRating,
+        creditAmount: CREDIT_ECONOMY_CONFIG.CREDIT_VALUE_PER_JUDGMENT
+      });
+      // This is a critical failure - judge loses earnings
+      // Consider implementing retry logic or manual review queue
+      throw new Error(`Credit award failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
@@ -117,8 +126,17 @@ export class CreditManager {
       const result = await safeDeductCredits(userId, creditsToSpend, submissionId);
       return result.success;
     } catch (error) {
-      console.error('Error spending credits:', error);
-      return false;
+      log.error('CRITICAL: Credit spending failed', error, {
+        userId,
+        submissionId,
+        creditsToSpend,
+        description
+      });
+      // Credit spending failure could indicate:
+      // 1. Insufficient funds (user should be notified)
+      // 2. Database error (system issue)
+      // 3. Race condition (retry might work)
+      throw new Error(`Credit spending failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 

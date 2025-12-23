@@ -234,9 +234,9 @@ export class ReputationManager {
     try {
       // Get current reputation data
       const { data: currentData, error: fetchError } = await (this.supabase
-        .from('user_credits') as any)
-        .select('*')
-        .eq('user_id', reviewerId)
+        .from('profiles') as any)
+        .select('reputation_score, reviewer_status, consensus_rate, total_reviews, last_calibration')
+        .eq('id', reviewerId)
         .single();
 
       if (fetchError) throw fetchError;
@@ -256,16 +256,16 @@ export class ReputationManager {
         .eq('verification_status', 'verified')
         .single();
 
-      // Update user_credits table
+      // Update profiles table
       const { error: updateError } = await (this.supabase
-        .from('user_credits') as any)
+        .from('profiles') as any)
         .update({
           reputation_score: newScore,
           reviewer_status: newStatus,
           consensus_rate: consensusRate,
           total_reviews: currentData.total_reviews || 0
         })
-        .eq('user_id', reviewerId);
+        .eq('id', reviewerId);
 
       if (updateError) throw updateError;
 
@@ -362,9 +362,9 @@ export class ReputationManager {
   async getReviewerReputation(reviewerId: string): Promise<ReviewerReputation | null> {
     try {
       const { data: userData, error } = await (this.supabase
-        .from('user_credits') as any)
-        .select('*')
-        .eq('user_id', reviewerId)
+        .from('profiles') as any)
+        .select('reputation_score, reviewer_status, total_reviews, consensus_rate, last_calibration')
+        .eq('id', reviewerId)
         .single();
 
       if (error || !userData) return null;
@@ -413,12 +413,12 @@ export class ReputationManager {
   async getUsersNeedingCalibration(): Promise<string[]> {
     try {
       const { data: users, error } = await (this.supabase
-        .from('user_credits') as any)
-        .select('user_id')
+        .from('profiles') as any)
+        .select('id')
         .eq('reviewer_status', 'calibration_required');
 
       if (error) throw error;
-      return users?.map((u: any) => u.user_id) || [];
+      return users?.map((u: any) => u.id) || [];
     } catch (error) {
       console.error('Error getting users needing calibration:', error);
       return [];

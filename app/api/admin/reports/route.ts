@@ -59,42 +59,61 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ reports: [] });
     }
 
-    // Enhance reports with content previews
-    const enhancedReports = await Promise.all(
-      reports.map(async (report) => {
-        let contentPreview = '';
-        
-        try {
-          if (report.content_type === 'verdict_request' || report.content_type === 'request') {
-            const { data: request } = await supabase
-              .from('verdict_requests')
-              .select('text_content, context')
-              .eq('id', report.content_id)
-              .single() as { data: { text_content?: string; context?: string } | null };
-
-            contentPreview = request?.text_content || request?.context || 'Image content';
-          } else {
-            const { data: response } = await supabase
-              .from('verdict_responses')
-              .select('feedback')
-              .eq('id', report.content_id)
-              .single() as { data: { feedback?: string } | null };
-
-            contentPreview = response?.feedback || '';
-          }
-        } catch (error) {
-          contentPreview = 'Content not found';
-        }
-
-        return {
-          ...report,
-          reporter_email: report.reporter?.email || 'Unknown',
-          content_preview: contentPreview.length > 200 
-            ? contentPreview.substring(0, 200) + '...'
-            : contentPreview,
-        };
-      })
-    );
+    // BULLETPROOF: Use bulk queries instead of N+1 pattern to prevent DoS
+    const requestIds = reports
+      .filter(r => r.content_type === 'verdict_request' || r.content_type === 'request')
+      .map(r => r.content_id);
+    
+    const responseIds = reports
+      .filter(r => r.content_type === 'verdict_response' || r.content_type === 'response')
+      .map(r => r.content_id);
+    
+    // Bulk fetch all request content
+    const requestsMap = new Map();
+    if (requestIds.length > 0) {
+      const { data: requests } = await supabase
+        .from('verdict_requests')
+        .select('id, text_content, context')
+        .in('id', requestIds);
+      
+      requests?.forEach((req: any) => {
+        requestsMap.set(req.id, req);
+      });
+    }
+    
+    // Bulk fetch all response content  
+    const responsesMap = new Map();
+    if (responseIds.length > 0) {
+      const { data: responses } = await supabase
+        .from('verdict_responses')
+        .select('id, feedback')
+        .in('id', responseIds);
+      
+      responses?.forEach((resp: any) => {
+        responsesMap.set(resp.id, resp);
+      });
+    }
+    
+    // Enhance reports with cached content
+    const enhancedReports = reports.map(report => {
+      let contentPreview = '';
+      
+      if (report.content_type === 'verdict_request' || report.content_type === 'request') {
+        const request = requestsMap.get(report.content_id);
+        contentPreview = request?.text_content || request?.context || 'Image content';
+      } else {
+        const response = responsesMap.get(report.content_id);
+        contentPreview = response?.feedback || 'Content not found';
+      }
+      
+      return {
+        ...report,
+        reporter_email: report.reporter?.email || 'Unknown',
+        content_preview: contentPreview.length > 200 
+          ? contentPreview.substring(0, 200) + '...'
+          : contentPreview,
+      };
+    });
 
     return NextResponse.json({ reports: enhancedReports });
 

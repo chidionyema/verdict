@@ -123,12 +123,12 @@ export async function POST(request: NextRequest) {
 
     // Check user credits
     const { data: userCredits } = await supabase
-      .from('user_credits')
-      .select('balance')
-      .eq('user_id', user.id)
+      .from('profiles')
+      .select('credits')
+      .eq('id', user.id)
       .single();
 
-    if (!userCredits || (userCredits as any)?.balance < creditsRequired) {
+    if (!userCredits || (userCredits as any)?.credits < creditsRequired) {
       return NextResponse.json(
         { error: `Insufficient credits. You need ${creditsRequired} credits for this tier.` },
         { status: 402 }

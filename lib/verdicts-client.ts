@@ -37,25 +37,63 @@ export async function submitRequest(input: SubmitRequestInput): Promise<SubmitRe
       return { success: false, error: 'You must be logged in to submit a request' };
     }
 
-    // Upload files if any
+    // Upload files with comprehensive validation and error handling
     let mediaUrls: string[] = [];
     if (input.files && input.files.length > 0) {
+      const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+      const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'video/mp4', 'video/webm'];
+      const UPLOAD_TIMEOUT = 30000; // 30 seconds
+      
       for (const file of input.files) {
-        const fileExt = file.name.split('.').pop();
-        const fileName = `${user.id}-${Date.now()}.${fileExt}`;
-        const { error: uploadError } = await supabase.storage
-          .from('verdict-media')
-          .upload(fileName, file);
-
-        if (uploadError) {
-          return { success: false, error: `Failed to upload file: ${uploadError.message}` };
+        // File validation
+        if (file.size > MAX_FILE_SIZE) {
+          return { success: false, error: `File "${file.name}" is too large. Maximum size is 10MB.` };
         }
+        
+        if (!ALLOWED_TYPES.includes(file.type)) {
+          return { success: false, error: `File "${file.name}" has unsupported type. Allowed: images and videos.` };
+        }
+        
+        // Sanitize filename to prevent path injection
+        const fileExt = file.name.split('.').pop()?.toLowerCase().replace(/[^a-z0-9]/g, '') || 'bin';
+        const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_').substring(0, 100);
+        const fileName = `${user.id}/${Date.now()}-${sanitizedName}.${fileExt}`;
+        
+        try {
+          // Upload with timeout protection
+          const uploadPromise = supabase.storage
+            .from('verdict-media')
+            .upload(fileName, file, {
+              cacheControl: '3600',
+              upsert: false
+            });
+            
+          const { error: uploadError } = await Promise.race([
+            uploadPromise,
+            new Promise<any>((_, reject) => 
+              setTimeout(() => reject(new Error('Upload timeout')), UPLOAD_TIMEOUT)
+            )
+          ]);
 
-        const { data: urlData } = supabase.storage
-          .from('verdict-media')
-          .getPublicUrl(fileName);
+          if (uploadError) {
+            if (uploadError.message === 'Upload timeout') {
+              return { success: false, error: `Upload timeout for "${file.name}". Please check your connection and try again.` };
+            }
+            return { success: false, error: `Failed to upload "${file.name}": ${uploadError.message}` };
+          }
 
-        mediaUrls.push(urlData.publicUrl);
+          const { data: urlData } = supabase.storage
+            .from('verdict-media')
+            .getPublicUrl(fileName);
+
+          mediaUrls.push(urlData.publicUrl);
+          
+        } catch (error) {
+          return { 
+            success: false, 
+            error: `Upload failed for "${file.name}": ${error instanceof Error ? error.message : 'Unknown error'}` 
+          };
+        }
       }
     }
 

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import Stripe from 'stripe';
 import { log } from '@/lib/logger';
+import Stripe from 'stripe';
 
 const getStripe = () => {
   if (!process.env.STRIPE_SECRET_KEY) {
@@ -87,8 +87,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get country from request body
-    const body = await request.json().catch(() => ({}));
+    // Get country from request body (SECURITY: Validate JSON parsing)
+    let body;
+    try {
+      body = await request.json();
+    } catch (error) {
+      log.error('Invalid JSON in judge connect request', error, { userId: user.id });
+      return NextResponse.json({ error: 'Invalid JSON payload' }, { status: 400 });
+    }
+    
+    if (!body || typeof body !== 'object') {
+      return NextResponse.json({ error: 'Request body must be a valid JSON object' }, { status: 400 });
+    }
+    
     const requestedCountry = body.country?.toUpperCase() || 'US';
 
     // Validate country

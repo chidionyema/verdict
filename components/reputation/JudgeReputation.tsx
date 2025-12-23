@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Star, Award, TrendingUp, Target, Flame, Crown, Shield } from 'lucide-react';
 import { creditManager, CREDIT_ECONOMY_CONFIG } from '@/lib/credits';
-import type { Database } from '@/types/supabase';
+import type { Database } from '@/lib/database.types';
 
 type JudgeReputationData = Database['public']['Tables']['judge_reputation']['Row'];
 

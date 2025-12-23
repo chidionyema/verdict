@@ -149,12 +149,12 @@ export function EnhancedComparisonModal({
       
       if (user) {
         const { data } = await supabase
-          .from('user_credits')
-          .select('balance')
-          .eq('user_id', user.id)
+          .from('profiles')
+          .select('credits')
+          .eq('id', user.id)
           .single();
         
-        setUserCredits((data as any)?.balance || 0);
+        setUserCredits((data as any)?.credits || 0);
       }
     } catch (error) {
       console.error('Failed to fetch user credits:', error);

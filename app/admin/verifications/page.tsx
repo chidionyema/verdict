@@ -33,8 +33,6 @@ interface VerificationRequest {
   profiles?: {
     email: string;
     display_name: string | null;
-  };
-  user_credits?: {
     reputation_score: number;
     total_reviews: number;
   };
@@ -60,8 +58,7 @@ export default function AdminVerificationsPage() {
         .from('expert_verifications')
         .select(`
           *,
-          profiles!inner(email, display_name),
-          user_credits!inner(reputation_score, total_reviews)
+          profiles!inner(email, display_name, reputation_score, total_reviews)
         `)
         .order('created_at', { ascending: false });
 
@@ -313,11 +310,11 @@ export default function AdminVerificationsPage() {
                       <div className="flex items-center gap-1">
                         <Shield className="h-4 w-4 text-purple-600" />
                         <span className="font-medium">
-                          {verification.user_credits?.reputation_score.toFixed(1) || 'N/A'}
+                          {verification.profiles?.reputation_score?.toFixed(1) || 'N/A'}
                         </span>
                       </div>
                       <div className="text-xs text-gray-500">
-                        {verification.user_credits?.total_reviews || 0} reviews
+                        {verification.profiles?.total_reviews || 0} reviews
                       </div>
                     </div>
                   </td>
@@ -449,8 +446,8 @@ export default function AdminVerificationsPage() {
                   <div>
                     <label className="text-sm font-medium text-gray-700">Reputation Score</label>
                     <p className="text-gray-900">
-                      {selectedVerification.user_credits?.reputation_score.toFixed(1)}/5.0
-                      ({selectedVerification.user_credits?.total_reviews || 0} reviews)
+                      {selectedVerification.profiles?.reputation_score?.toFixed(1) || 'N/A'}/5.0
+                      ({selectedVerification.profiles?.total_reviews || 0} reviews)
                     </p>
                   </div>
                 </div>

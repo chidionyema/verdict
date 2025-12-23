@@ -34,14 +34,14 @@ export class ExpertRoutingService {
   ): Promise<ExpertPool[]> {
     try {
       let query = (this.supabase
-        .from('user_credits') as any)
+        .from('profiles') as any)
         .select(`
-          user_id,
+          id,
           reputation_score,
           total_reviews,
           reviewer_status,
           last_active,
-          profiles!inner(is_judge),
+          is_judge,
           expert_verifications!inner(
             job_title,
             company,
@@ -49,7 +49,7 @@ export class ExpertRoutingService {
             verification_status
           )
         `)
-        .eq('profiles.is_judge', true)
+        .eq('is_judge', true)
         .eq('expert_verifications.verification_status', 'verified')
         .eq('reviewer_status', 'active')
         .gte('reputation_score', tier === 'pro' ? 8.0 : tier === 'standard' ? 6.5 : 5.0);
@@ -71,7 +71,7 @@ export class ExpertRoutingService {
 
       // Exclude specific users (e.g., request owner, already responded)
       if (excludeUserIds.length > 0) {
-        query = query.not('user_id', 'in', `(${excludeUserIds.join(',')})`);
+        query = query.not('id', 'in', `(${excludeUserIds.join(',')})`);
       }
 
       const { data: experts, error } = await query.limit(50);
@@ -99,7 +99,7 @@ export class ExpertRoutingService {
         if (daysSinceActive > 14) availabilityScore = 0.1;
 
         return {
-          user_id: expert.user_id,
+          user_id: expert.id,
           reputation_score: expert.reputation_score || 5.0,
           expert_title: `${expert.expert_verifications.job_title} at ${expert.expert_verifications.company}`,
           industry: expert.expert_verifications.industry,
@@ -377,11 +377,11 @@ export class ExpertRoutingService {
   async updateExpertAvailability(expertUserId: string): Promise<void> {
     try {
       await (this.supabase
-        .from('user_credits') as any)
+        .from('profiles') as any)
         .update({
           last_active: new Date().toISOString()
         })
-        .eq('user_id', expertUserId);
+        .eq('id', expertUserId);
 
       log.debug('Expert availability updated', { expertUserId });
 

@@ -6,7 +6,7 @@ import { Share2, Download, Copy, ExternalLink, Flame, Zap, TrendingUp } from 'lu
 import { ViralSharePopup } from '@/components/viral/ViralSharePopup';
 import { useViralSharing } from '@/hooks/useViralSharing';
 import { toast } from '@/components/ui/toast';
-import type { Database } from '@/types/supabase';
+import type { Database } from '@/lib/database.types';
 
 type FeedbackResponse = Database['public']['Tables']['feedback_responses']['Row'];
 type FeedbackRequest = Database['public']['Tables']['feedback_requests']['Row'] & {

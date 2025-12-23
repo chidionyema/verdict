@@ -4,6 +4,17 @@
 import { createClient } from '@/lib/supabase/server';
 import { log } from '@/lib/logger';
 
+// Hash function for generating consistent lock IDs
+function hashText(text: string): number {
+  let hash = 0;
+  for (let i = 0; i < text.length; i++) {
+    const char = text.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  return Math.abs(hash);
+}
+
 interface CreditOperation {
   userId: string;
   requestId: string;
@@ -11,9 +22,7 @@ interface CreditOperation {
   operation: 'deduct' | 'refund';
 }
 
-// In-memory operation tracking to prevent concurrent operations
-const activeOperations = new Map<string, Set<string>>();
-const operationTimeouts = new Map<string, NodeJS.Timeout>();
+// Database-level operation tracking for serverless safety
 
 /**
  * Safe credit deduction with multiple protection layers
@@ -25,35 +34,24 @@ export async function safeDeductCredits(userId: string, credits: number, request
 }> {
   const operationKey = `${userId}-${credits}-deduct`;
   
-  // Layer 1: Prevent concurrent operations for same user
-  if (activeOperations.has(userId)) {
-    const userOps = activeOperations.get(userId)!;
-    if (userOps.has(operationKey)) {
+  const supabase = await createClient();
+  
+  // Layer 1: Database-level operation locking (PostgreSQL advisory locks)  
+  const lockId = hashText(`${userId}-credit-deduct`);
+  
+  try {
+    // Acquire exclusive lock for this user's credit operations
+    const { data: lockAcquired } = await (supabase as any).rpc('try_advisory_lock', {
+      lock_id: lockId
+    });
+    
+    if (!lockAcquired) {
       return {
         success: false,
         newBalance: 0,
-        message: 'Operation already in progress'
+        message: 'Credit operation already in progress for this user'
       };
     }
-    userOps.add(operationKey);
-  } else {
-    activeOperations.set(userId, new Set([operationKey]));
-  }
-
-  // Set timeout to clean up stuck operations
-  const timeoutId = setTimeout(() => {
-    activeOperations.get(userId)?.delete(operationKey);
-    if (activeOperations.get(userId)?.size === 0) {
-      activeOperations.delete(userId);
-    }
-    operationTimeouts.delete(operationKey);
-  }, 30000); // 30 second timeout
-
-  operationTimeouts.set(operationKey, timeoutId);
-
-  try {
-    const supabase = await createClient();
-
     // Layer 2: Pre-flight balance check
     const { data: profile } = await supabase
       .from('profiles')
@@ -132,13 +130,12 @@ export async function safeDeductCredits(userId: string, credits: number, request
       message: 'System error during credit deduction'
     };
   } finally {
-    // Cleanup
-    clearTimeout(operationTimeouts.get(operationKey));
-    operationTimeouts.delete(operationKey);
-    activeOperations.get(userId)?.delete(operationKey);
-    if (activeOperations.get(userId)?.size === 0) {
-      activeOperations.delete(userId);
-    }
+    // Release the database lock
+    await (supabase as any).rpc('advisory_unlock', {
+      lock_id: lockId
+    }).catch((unlockError: any) => {
+      log.warn('Failed to release advisory lock', { lockId, error: unlockError });
+    });
   }
 }
 

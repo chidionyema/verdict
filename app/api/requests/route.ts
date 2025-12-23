@@ -356,6 +356,8 @@ const POST_Handler = async (request: NextRequest) => {
       requested_tone,
       roast_mode,
       visibility,
+      creditsToCharge,
+      targetVerdictCount,
     } = body;
 
     // Validate category
@@ -475,9 +477,9 @@ const POST_Handler = async (request: NextRequest) => {
           requestedTone: normalizedTone,
           roastMode: roast_mode || false,
           visibility: visibility || 'private',
-          // Use tier config
-          creditsToCharge: tierConfig.credits,
-          targetVerdictCount: tierConfig.verdicts,
+          // Use user-provided values or tier config as fallback
+          creditsToCharge: creditsToCharge || tierConfig.credits,
+          targetVerdictCount: targetVerdictCount || tierConfig.verdicts,
           requestTier: request_tier || 'community',
         }
       );

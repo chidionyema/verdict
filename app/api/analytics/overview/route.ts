@@ -262,37 +262,50 @@ async function getDailyActivity(userId: string, startDate: Date, supabase: any, 
     days.push(new Date(d));
   }
 
-  const dailyData = await Promise.all(
-    days.map(async (day) => {
-      const nextDay = new Date(day);
-      nextDay.setDate(nextDay.getDate() + 1);
-
-      let count = 0;
-
-      if (userType === 'requester') {
-        const { count: requestCount } = await supabase
-          .from('verdict_requests')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', userId)
-          .gte('created_at', day.toISOString())
-          .lt('created_at', nextDay.toISOString());
-        count = requestCount || 0;
-      } else {
-        const { count: responseCount } = await supabase
-          .from('verdict_responses')
-          .select('*', { count: 'exact', head: true })
-          .eq('judge_id', userId)
-          .gte('created_at', day.toISOString())
-          .lt('created_at', nextDay.toISOString());
-        count = responseCount || 0;
-      }
-
-      return {
-        date: day.toISOString().split('T')[0],
-        count,
-      };
-    })
-  );
+  // BULLETPROOF: Use single aggregated query instead of N+1 pattern (was creating 365 queries!)
+  let aggregatedData;
+  
+  if (userType === 'requester') {
+    const { data } = await supabase
+      .from('verdict_requests')
+      .select('created_at')
+      .eq('user_id', userId)
+      .gte('created_at', startDate.toISOString())
+      .lte('created_at', now.toISOString());
+      
+    aggregatedData = data || [];
+  } else {
+    const { data } = await supabase
+      .from('verdict_responses')
+      .select('created_at')
+      .eq('judge_id', userId)
+      .gte('created_at', startDate.toISOString())
+      .lte('created_at', now.toISOString());
+      
+    aggregatedData = data || [];
+  }
+  
+  // Count by day in JavaScript (single query + aggregation)
+  const dateCountMap = new Map<string, number>();
+  
+  // Initialize all days with 0
+  for (const day of days) {
+    const dateStr = day.toISOString().split('T')[0];
+    dateCountMap.set(dateStr, 0);
+  }
+  
+  // Count actual data
+  for (const item of aggregatedData) {
+    const dateStr = (item as any).created_at.split('T')[0];
+    const currentCount = dateCountMap.get(dateStr) || 0;
+    dateCountMap.set(dateStr, currentCount + 1);
+  }
+  
+  // Convert to desired format
+  const dailyData = days.map(day => ({
+    date: day.toISOString().split('T')[0],
+    count: dateCountMap.get(day.toISOString().split('T')[0]) || 0
+  }));
 
   return dailyData;
 }

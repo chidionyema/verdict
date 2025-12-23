@@ -15,20 +15,7 @@ const getStripe = () => {
 
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
-// Webhook replay protection - store processed event IDs
-const processedEvents = new Set<string>();
-const eventTimeouts = new Map<string, NodeJS.Timeout>();
-
-// Clean up old events every hour
-setInterval(() => {
-  const oneHourAgo = Date.now() - (60 * 60 * 1000);
-  for (const [eventId, timeout] of eventTimeouts.entries()) {
-    if (timeout && Date.now() > oneHourAgo) {
-      processedEvents.delete(eventId);
-      eventTimeouts.delete(eventId);
-    }
-  }
-}, 60 * 60 * 1000);
+// Database-level webhook replay protection (serverless-safe)
 
 export async function POST(request: NextRequest) {
   try {
@@ -57,18 +44,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
     }
 
-    // Prevent replay attacks
-    if (processedEvents.has(event.id)) {
+    const supabase = await createClient();
+
+    // Database-level replay protection (atomic operation)
+    const { data: isNewEvent } = await (supabase as any).rpc('process_webhook_event', {
+      p_event_id: event.id,
+      p_event_type: event.type
+    });
+
+    if (!isNewEvent) {
       log.warn('Webhook replay attack detected', { eventId: event.id, type: event.type });
       return NextResponse.json({ error: 'Event already processed' }, { status: 200 }); // Return 200 to prevent retries
     }
-
-    // Mark event as processed
-    processedEvents.add(event.id);
-    eventTimeouts.set(event.id, setTimeout(() => {
-      processedEvents.delete(event.id);
-      eventTimeouts.delete(event.id);
-    }, 60 * 60 * 1000)); // Clean up after 1 hour
 
     // Validate event timestamp (prevent old event replay)
     const eventTime = event.created * 1000; // Convert to milliseconds
@@ -80,23 +67,51 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Event too old' }, { status: 400 });
     }
 
-    const supabase = await createClient();
+    // Process webhook with timeout protection (prevent hanging operations)
+    const WEBHOOK_TIMEOUT = 25000; // 25 seconds (Vercel has 30s limit)
+    
+    try {
+      await Promise.race([
+        processWebhookEvent(event, supabase),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Webhook processing timeout')), WEBHOOK_TIMEOUT)
+        )
+      ]);
+    } catch (error) {
+      if (error instanceof Error && error.message === 'Webhook processing timeout') {
+        log.error('Webhook processing timeout', null, { 
+          eventId: event.id, 
+          eventType: event.type,
+          timeout: WEBHOOK_TIMEOUT 
+        });
+        return NextResponse.json({ error: 'Processing timeout' }, { status: 500 });
+      }
+      throw error;
+    }
 
-    switch (event.type) {
-      case 'checkout.session.completed':
-        await handleCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session, supabase);
-        break;
+    return NextResponse.json({ received: true });
+  } catch (error) {
+    log.error('Webhook processing failed', error, { eventId: (event as any)?.id });
+    return NextResponse.json({ error: 'Webhook processing failed' }, { status: 500 });
+  }
+}
 
-      case 'payment_intent.succeeded':
-        await handlePaymentIntentSucceeded(event.data.object as Stripe.PaymentIntent, supabase);
-        break;
+async function processWebhookEvent(event: any, supabase: any) {
+  switch (event.type) {
+    case 'checkout.session.completed':
+      await handleCheckoutSessionCompleted(event.data.object as Stripe.Checkout.Session, supabase);
+      break;
 
-      case 'payment_intent.payment_failed':
-        await handlePaymentIntentFailed(event.data.object as Stripe.PaymentIntent, supabase);
-        break;
+    case 'payment_intent.succeeded':
+      await handlePaymentIntentSucceeded(event.data.object as Stripe.PaymentIntent, supabase);
+      break;
 
-      case 'invoice.payment_succeeded':
-        await handleInvoicePaymentSucceeded(event.data.object as Stripe.Invoice, supabase);
+    case 'payment_intent.payment_failed':
+      await handlePaymentIntentFailed(event.data.object as Stripe.PaymentIntent, supabase);
+      break;
+
+    case 'invoice.payment_succeeded':
+      await handleInvoicePaymentSucceeded(event.data.object as Stripe.Invoice, supabase);
         break;
 
       case 'invoice.payment_failed':
@@ -130,14 +145,7 @@ export async function POST(request: NextRequest) {
       default:
         log.info('Unhandled webhook event type', { eventType: event.type });
     }
-
-    return NextResponse.json({ received: true });
-
-  } catch (error) {
-    log.error('Webhook processing error', error);
-    return NextResponse.json({ error: 'Webhook processing failed' }, { status: 500 });
   }
-}
 
 async function handleCheckoutSessionCompleted(
   session: Stripe.Checkout.Session,
@@ -179,17 +187,28 @@ async function handleCheckoutSessionCompleted(
       return;
     }
 
-    // Log transaction
-    await supabase.from('transactions').insert({
+    // Log transaction (CRITICAL: Must succeed for audit compliance)  
+    const { error: transactionError } = await supabase.from('transactions').insert({
       user_id: userId,
-      type: 'credit_purchase',
-      credits_delta: credits,
       amount_cents: session.amount_total,
+      currency: 'USD',
+      status: 'paid',
       stripe_session_id: session.id,
-      stripe_payment_intent_id: session.payment_intent,
-      status: 'completed',
-      completed_at: new Date().toISOString(),
+      stripe_payment_intent_id: session.payment_intent as string,
+      description: `Credit purchase: ${credits} credits`,
+      metadata: { credits_purchased: credits }
     });
+    
+    if (transactionError) {
+      log.error('CRITICAL: Transaction audit log failed after credit addition', transactionError, {
+        sessionId: session.id,
+        userId,
+        credits,
+        amount: session.amount_total
+      });
+      // This is a critical audit failure - consider alerting monitoring systems
+      throw new Error(`Transaction audit failed: ${transactionError.message}`);
+    }
 
   } else if (metadata.type === 'subscription') {
     // Subscription will be handled by subscription.created event
@@ -201,8 +220,8 @@ async function handlePaymentIntentSucceeded(
   paymentIntent: Stripe.PaymentIntent,
   supabase: any
 ) {
-  // Update transaction with successful payment
-  await supabase
+  // Update transaction with successful payment (CRITICAL: Must succeed for financial reconciliation)
+  const { error: updateError } = await supabase
     .from('transactions')
     .update({
       status: 'completed',
@@ -212,6 +231,15 @@ async function handlePaymentIntentSucceeded(
       completed_at: new Date().toISOString(),
     })
     .eq('stripe_payment_intent_id', paymentIntent.id);
+    
+  if (updateError) {
+    log.error('CRITICAL: Payment intent transaction update failed', updateError, {
+      paymentIntentId: paymentIntent.id,
+      amount: paymentIntent.amount_received
+    });
+    // This could lead to reconciliation issues - alert immediately
+    throw new Error(`Payment transaction update failed: ${updateError.message}`);
+  }
 }
 
 async function handlePaymentIntentFailed(

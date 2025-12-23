@@ -18,6 +18,210 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- ============================================================================
+-- SERVERLESS-SAFE ADVISORY LOCKING FUNCTIONS
+-- ============================================================================
+
+-- Function to try acquiring an advisory lock (non-blocking)
+CREATE OR REPLACE FUNCTION try_advisory_lock(lock_id BIGINT)
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN pg_try_advisory_lock(lock_id);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Function to release an advisory lock
+CREATE OR REPLACE FUNCTION advisory_unlock(lock_id BIGINT)
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN pg_advisory_unlock(lock_id);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- ============================================================================
+-- SERVERLESS-SAFE IDEMPOTENCY TABLE FOR WEBHOOKS
+-- ============================================================================
+
+-- Table to track processed webhook events (prevents replay attacks)
+CREATE TABLE IF NOT EXISTS webhook_events_processed (
+  event_id TEXT PRIMARY KEY,
+  event_type TEXT NOT NULL,
+  processed_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  expires_at TIMESTAMP WITH TIME ZONE DEFAULT (NOW() + INTERVAL '24 hours')
+);
+
+-- Index for cleanup operations
+CREATE INDEX IF NOT EXISTS idx_webhook_events_expires_at ON webhook_events_processed(expires_at);
+
+-- Function to check and mark webhook as processed (atomic operation)
+CREATE OR REPLACE FUNCTION process_webhook_event(
+  p_event_id TEXT,
+  p_event_type TEXT
+) RETURNS BOOLEAN AS $$
+DECLARE
+  already_processed BOOLEAN := FALSE;
+BEGIN
+  -- Clean up expired events first
+  DELETE FROM webhook_events_processed WHERE expires_at < NOW();
+  
+  -- Try to insert the event (will fail if already exists)
+  BEGIN
+    INSERT INTO webhook_events_processed (event_id, event_type)
+    VALUES (p_event_id, p_event_type);
+    RETURN TRUE; -- Successfully inserted, not a replay
+  EXCEPTION WHEN unique_violation THEN
+    RETURN FALSE; -- Already processed, this is a replay
+  END;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- ============================================================================  
+-- SERVERLESS-SAFE RATE LIMITING
+-- ============================================================================
+
+-- Table to track rate limits across serverless instances
+CREATE TABLE IF NOT EXISTS rate_limits (
+  key TEXT PRIMARY KEY,
+  count INTEGER NOT NULL DEFAULT 1,
+  window_start TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  expires_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT (NOW() + INTERVAL '1 hour')
+);
+
+-- Index for cleanup operations
+CREATE INDEX IF NOT EXISTS idx_rate_limits_expires_at ON rate_limits(expires_at);
+
+-- Function for atomic rate limit checking and incrementing
+CREATE OR REPLACE FUNCTION check_rate_limit(
+  p_key TEXT,
+  p_max_requests INTEGER,
+  p_window_seconds INTEGER
+) RETURNS JSON AS $$
+DECLARE
+  current_count INTEGER := 0;
+  window_start TIMESTAMP WITH TIME ZONE;
+  is_allowed BOOLEAN := TRUE;
+  reset_time TIMESTAMP WITH TIME ZONE;
+BEGIN
+  -- Clean up expired entries
+  DELETE FROM rate_limits WHERE expires_at < NOW();
+  
+  -- Get or create rate limit entry
+  SELECT count, window_start, expires_at 
+  INTO current_count, window_start, reset_time
+  FROM rate_limits WHERE key = p_key;
+  
+  IF NOT FOUND THEN
+    -- First request in window
+    INSERT INTO rate_limits (key, count, window_start, expires_at)
+    VALUES (p_key, 1, NOW(), NOW() + INTERVAL '1 second' * p_window_seconds);
+    
+    RETURN json_build_object(
+      'allowed', true,
+      'count', 1,
+      'remaining', p_max_requests - 1,
+      'resetTime', EXTRACT(epoch FROM NOW() + INTERVAL '1 second' * p_window_seconds)
+    );
+  END IF;
+  
+  -- Check if we're still within the window
+  IF NOW() > window_start + INTERVAL '1 second' * p_window_seconds THEN
+    -- Window expired, reset counter
+    UPDATE rate_limits 
+    SET count = 1, 
+        window_start = NOW(),
+        expires_at = NOW() + INTERVAL '1 second' * p_window_seconds
+    WHERE key = p_key;
+    
+    RETURN json_build_object(
+      'allowed', true,
+      'count', 1,
+      'remaining', p_max_requests - 1,
+      'resetTime', EXTRACT(epoch FROM NOW() + INTERVAL '1 second' * p_window_seconds)
+    );
+  END IF;
+  
+  -- Within window, check if limit exceeded
+  IF current_count >= p_max_requests THEN
+    RETURN json_build_object(
+      'allowed', false,
+      'count', current_count,
+      'remaining', 0,
+      'resetTime', EXTRACT(epoch FROM reset_time)
+    );
+  END IF;
+  
+  -- Increment counter
+  UPDATE rate_limits 
+  SET count = count + 1
+  WHERE key = p_key;
+  
+  RETURN json_build_object(
+    'allowed', true,
+    'count', current_count + 1,
+    'remaining', p_max_requests - (current_count + 1),
+    'resetTime', EXTRACT(epoch FROM reset_time)
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- ============================================================================
+-- STORAGE BUCKETS (CRITICAL: Code expects these to exist)
+-- ============================================================================
+
+-- Main bucket for verdict request uploads
+INSERT INTO storage.buckets (id, name, public) 
+VALUES ('verdict-media', 'verdict-media', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- General requests bucket  
+INSERT INTO storage.buckets (id, name, public) 
+VALUES ('requests', 'requests', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- Split test photos bucket
+INSERT INTO storage.buckets (id, name, public) 
+VALUES ('split-test-photos', 'split-test-photos', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- Comparison images bucket (already exists from migration)
+INSERT INTO storage.buckets (id, name, public) 
+VALUES ('comparison-images', 'comparison-images', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- Storage policies for file uploads
+CREATE POLICY "Anyone can view verdict media"
+    ON storage.objects FOR SELECT
+    USING (bucket_id = 'verdict-media');
+
+CREATE POLICY "Authenticated users can upload verdict media"
+    ON storage.objects FOR INSERT
+    WITH CHECK (
+        bucket_id = 'verdict-media' AND
+        auth.role() = 'authenticated'
+    );
+
+CREATE POLICY "Anyone can view requests"
+    ON storage.objects FOR SELECT
+    USING (bucket_id = 'requests');
+
+CREATE POLICY "Authenticated users can upload requests"
+    ON storage.objects FOR INSERT
+    WITH CHECK (
+        bucket_id = 'requests' AND
+        auth.role() = 'authenticated'
+    );
+
+CREATE POLICY "Anyone can view split test photos"
+    ON storage.objects FOR SELECT
+    USING (bucket_id = 'split-test-photos');
+
+CREATE POLICY "Authenticated users can upload split test photos"
+    ON storage.objects FOR INSERT
+    WITH CHECK (
+        bucket_id = 'split-test-photos' AND
+        auth.role() = 'authenticated'
+    );
+
+-- ============================================================================
 -- CUSTOM TYPES AND ENUMS
 -- ============================================================================
 
@@ -270,6 +474,27 @@ CREATE TABLE user_credits (
 -- ============================================================================
 -- JUDGE SYSTEM TABLES
 -- ============================================================================
+
+-- Judge earnings tracking (CRITICAL: Code expects this table)
+CREATE TABLE judge_earnings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  judge_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  verdict_response_id UUID REFERENCES verdict_responses(id) ON DELETE CASCADE,
+  comparison_verdict_id UUID REFERENCES comparison_verdicts(id) ON DELETE CASCADE,
+  split_test_verdict_id UUID REFERENCES split_test_verdicts(id) ON DELETE CASCADE,
+  amount DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  currency TEXT DEFAULT 'USD',
+  payout_status TEXT DEFAULT 'pending' CHECK (payout_status IN ('pending', 'processing', 'paid', 'cancelled')),
+  payout_date TIMESTAMP WITH TIME ZONE,
+  payout_reference TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Indexes for judge earnings
+CREATE INDEX idx_judge_earnings_judge_id ON judge_earnings(judge_id);
+CREATE INDEX idx_judge_earnings_payout_status ON judge_earnings(payout_status);
+CREATE INDEX idx_judge_earnings_created_at ON judge_earnings(created_at);
 
 -- Judge reputation and metrics
 CREATE TABLE judge_reputation (
@@ -986,6 +1211,44 @@ CREATE TABLE transactions (
 
 -- ============================================================================
 -- CONSTRAINTS AND INDEXES (PERFORMANCE CRITICAL)
+-- ============================================================================
+
+-- CRITICAL: High-performance indexes for load scenarios (100+ concurrent users)
+
+-- Verdict requests - most frequently queried table
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_verdict_requests_user_status ON verdict_requests(user_id, status);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_verdict_requests_status_created ON verdict_requests(status, created_at DESC);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_verdict_requests_category_status ON verdict_requests(category, status);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_verdict_requests_judge_pool ON verdict_requests(status) WHERE status = 'open';
+
+-- Verdict responses - judge performance critical
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_verdict_responses_judge_created ON verdict_responses(judge_id, created_at DESC);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_verdict_responses_request_judge ON verdict_responses(request_id, judge_id);
+
+-- Judge reputation - leaderboards and performance
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_judge_reputation_score ON judge_reputation(reputation_score DESC);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_judge_reputation_judgments ON judge_reputation(total_judgments DESC);
+
+-- Credit transactions - financial auditing
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_credit_transactions_user_created ON credit_transactions(user_id, created_at DESC);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_credit_transactions_type_created ON credit_transactions(transaction_type, created_at DESC);
+
+-- Judge earnings - payout processing
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_judge_earnings_status_created ON judge_earnings(payout_status, created_at);
+
+-- Profiles - user lookup optimization
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_profiles_judge_active ON profiles(is_judge) WHERE is_judge = true;
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_profiles_pricing_tier ON profiles(pricing_tier);
+
+-- Transactions - payment reconciliation
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_transactions_stripe_session ON transactions(stripe_session_id);
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_transactions_user_status ON transactions(user_id, status);
+
+-- Rate limits table (for performance under load)
+CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_rate_limits_expires ON rate_limits(expires_at);
+
+-- ============================================================================
+-- ORIGINAL CONSTRAINTS AND INDEXES
 -- ============================================================================
 
 -- Unique constraints

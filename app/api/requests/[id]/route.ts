@@ -147,32 +147,43 @@ export async function GET(
       });
     }
 
-    // For seekers, don't expose judge IDs (anonymize)
-    // But include reviewer reputation info
-    const anonymizedVerdicts = await Promise.all(
-      (verdicts || []).map(async (v: any, index: number) => {
-        // Get reviewer reputation and expert status
-        let reviewerInfo = null;
-        if (v.judge_id) {
-          const reputation = await reputationManager.getReviewerReputation(v.judge_id);
-          if (reputation) {
-            reviewerInfo = {
-              user_id: v.judge_id,
-              reputation_score: reputation.reputation_score,
-              is_expert: reputation.is_expert,
-              expert_title: reputation.expert_title
-            };
-          }
+    // BULLETPROOF: Bulk fetch reviewer reputations to prevent N+1 DoS
+    const judgeIds = (verdicts || []).map((v: any) => v.judge_id).filter(Boolean);
+    const reputationMap = new Map();
+    
+    if (judgeIds.length > 0) {
+      // Single query to get all reputations
+      const reputations = await Promise.all(
+        judgeIds.map(id => reputationManager.getReviewerReputation(id))
+      );
+      
+      judgeIds.forEach((id, index) => {
+        if (reputations[index]) {
+          reputationMap.set(id, reputations[index]);
         }
-        
-        return {
-          ...(v as any),
-          judge_id: undefined, // Still hide the actual ID
-          judge_number: index + 1,
-          reviewer_info: reviewerInfo
+      });
+    }
+    
+    // Anonymize verdicts using cached reputation data
+    const anonymizedVerdicts = (verdicts || []).map((v: any, index: number) => {
+      let reviewerInfo = null;
+      if (v.judge_id && reputationMap.has(v.judge_id)) {
+        const reputation = reputationMap.get(v.judge_id);
+        reviewerInfo = {
+          user_id: v.judge_id,
+          reputation_score: reputation.reputation_score,
+          is_expert: reputation.is_expert,
+          expert_title: reputation.expert_title
         };
-      })
-    );
+      }
+      
+      return {
+        ...(v as any),
+        judge_id: undefined, // Still hide the actual ID
+        judge_number: index + 1,
+        reviewer_info: reviewerInfo
+      };
+    });
 
     return NextResponse.json({
       request: verdictRequest,

@@ -121,17 +121,12 @@ export function SimplifiedStart() {
         // Fetch user credits and tier for affordability
         Promise.all([
           supabase
-            .from('user_credits')
-            .select('balance')
-            .eq('user_id', user.id)
-            .single(),
-          supabase
             .from('profiles')
-            .select('pricing_tier')
+            .select('credits, pricing_tier')
             .eq('id', user.id)
             .single()
-        ]).then(([creditsRes, profileRes]) => {
-          setUserCredits((creditsRes.data as any)?.balance || 0);
+        ]).then(([profileRes]) => {
+          setUserCredits((profileRes.data as any)?.credits || 0);
           setUserTier((profileRes.data as any)?.pricing_tier || 'community');
         });
       }
@@ -433,11 +428,11 @@ export function SimplifiedStart() {
     if (!user) return;
     const supabase = createClient();
     const { data } = await supabase
-      .from('user_credits')
-      .select('balance')
-      .eq('user_id', user.id)
+      .from('profiles')
+      .select('credits')
+      .eq('id', user.id)
       .single();
-    setUserCredits((data as any)?.balance || 0);
+    setUserCredits((data as any)?.credits || 0);
   };
 
   return (

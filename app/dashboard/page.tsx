@@ -391,11 +391,14 @@ export default function DashboardPage() {
       {/* Progressive Onboarding */}
       {showProgressiveOnboarding && user && (
         <div className="max-w-6xl mx-auto px-4 mb-6">
-          <ProgressiveOnboarding
+          {/* <ProgressiveOnboarding
             user={user}
             onDismiss={() => setShowProgressiveOnboarding(false)}
             context="dashboard"
-          />
+          /> */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <p className="text-blue-800">Welcome! Complete your profile to get started.</p>
+          </div>
         </div>
       )}
 

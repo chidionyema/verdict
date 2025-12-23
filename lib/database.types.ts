@@ -25,6 +25,15 @@ export interface Database {
           credits: number;
           onboarding_completed: boolean;
           judge_qualification_date: string | null;
+          earned_total: number;
+          spent_total: number;
+          reputation_score: number;
+          reviewer_status: 'active' | 'probation' | 'calibration_required';
+          last_calibration: string | null;
+          total_reviews: number;
+          consensus_rate: number;
+          last_active: string | null;
+          pricing_tier: 'community' | 'standard' | 'pro';
         };
         Insert: {
           id: string;
@@ -41,6 +50,15 @@ export interface Database {
           credits?: number;
           onboarding_completed?: boolean;
           judge_qualification_date?: string | null;
+          earned_total?: number;
+          spent_total?: number;
+          reputation_score?: number;
+          reviewer_status?: 'active' | 'probation' | 'calibration_required';
+          last_calibration?: string | null;
+          total_reviews?: number;
+          consensus_rate?: number;
+          last_active?: string | null;
+          pricing_tier?: 'community' | 'standard' | 'pro';
         };
         Update: {
           id?: string;
@@ -57,6 +75,15 @@ export interface Database {
           credits?: number;
           onboarding_completed?: boolean;
           judge_qualification_date?: string | null;
+          earned_total?: number;
+          spent_total?: number;
+          reputation_score?: number;
+          reviewer_status?: 'active' | 'probation' | 'calibration_required';
+          last_calibration?: string | null;
+          total_reviews?: number;
+          consensus_rate?: number;
+          last_active?: string | null;
+          pricing_tier?: 'community' | 'standard' | 'pro';
         };
       };
       feedback_requests: {
@@ -309,44 +336,6 @@ export interface Database {
           judge_id?: string;
           started_at?: string;
           ended_at?: string | null;
-        };
-      };
-      user_credits: {
-        Row: {
-          id: string;
-          user_id: string;
-          balance: number;
-          earned_total: number;
-          spent_total: number;
-          reputation_score: number;
-          reviewer_status: 'active' | 'probation' | 'calibration_required';
-          last_calibration: string | null;
-          total_reviews: number;
-          consensus_rate: number;
-        };
-        Insert: {
-          id?: string;
-          user_id: string;
-          balance?: number;
-          earned_total?: number;
-          spent_total?: number;
-          reputation_score?: number;
-          reviewer_status?: 'active' | 'probation' | 'calibration_required';
-          last_calibration?: string | null;
-          total_reviews?: number;
-          consensus_rate?: number;
-        };
-        Update: {
-          id?: string;
-          user_id?: string;
-          balance?: number;
-          earned_total?: number;
-          spent_total?: number;
-          reputation_score?: number;
-          reviewer_status?: 'active' | 'probation' | 'calibration_required';
-          last_calibration?: string | null;
-          total_reviews?: number;
-          consensus_rate?: number;
         };
       };
       judge_reputation: {

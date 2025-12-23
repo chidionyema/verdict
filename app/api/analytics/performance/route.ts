@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Record performance metric
-    const { error } = await supabase
+    const { error } = await (supabase as any)
       .from('performance_metrics')
       .insert({
         user_id: user.id,

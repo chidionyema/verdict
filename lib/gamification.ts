@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/client';
-import type { Database } from '@/types/supabase';
+import type { Database } from './database.types';
 
 type JudgeReputation = Database['public']['Tables']['judge_reputation']['Row'];
 
@@ -325,12 +325,12 @@ export class GamificationManager {
 
     // Check user has sufficient credits
     const { data: userCredits } = await this.supabase
-      .from('user_credits')
-      .select('balance')
-      .eq('user_id', userId)
+      .from('profiles')
+      .select('credits')
+      .eq('id', userId)
       .single();
 
-    if (!userCredits || (userCredits as any).balance < credits) {
+    if (!userCredits || (userCredits as any).credits < credits) {
       return {
         success: false,
         error: 'Insufficient credits',
