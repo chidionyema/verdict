@@ -36,7 +36,7 @@ export class UnifiedRouter {
     // Authenticated user routing
     if (!profile) {
       return {
-        destination: '/auth/setup',
+        destination: '/create?welcome=true',
         reason: 'Profile creation required',
         shouldRedirect: true
       };
