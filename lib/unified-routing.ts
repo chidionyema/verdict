@@ -51,6 +51,15 @@ export class UnifiedRouter {
       };
     }
     
+    // Allow dashboard access regardless of onboarding status
+    if (requestedPath === '/dashboard') {
+      return {
+        destination: '/dashboard',
+        reason: 'Dashboard always accessible to authenticated users',
+        shouldRedirect: false
+      };
+    }
+    
     // Onboarding flow
     if (!profile.onboarding_completed) {
       return this.handleOnboardingFlow(requestedPath);
