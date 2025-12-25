@@ -18,8 +18,11 @@ const PROTECTED_ROUTES = [
 // Routes that require admin access
 const ADMIN_ROUTES = ['/admin'];
 
-// Routes that require reviewer access
+// Routes that require reviewer access (excluding qualify which is for new judges)
 const JUDGE_ROUTES = ['/judge/dashboard', '/judge/feedback', '/judge/my-feedback', '/judge/performance'];
+
+// Routes that allow new judges to qualify
+const JUDGE_QUALIFICATION_ROUTES = ['/judge/qualify', '/judge/verify'];
 
 // Auth pages
 const AUTH_ROUTES = ['/auth/login', '/auth/signup'];
@@ -160,6 +163,7 @@ export async function proxy(request: NextRequest) {
   const isProtectedRoute = PROTECTED_ROUTES.some((route) => pathname.startsWith(route));
   const isAdminRoute = ADMIN_ROUTES.some((route) => pathname.startsWith(route));
   const isJudgeRoute = JUDGE_ROUTES.some((route) => pathname.startsWith(route));
+  const isJudgeQualificationRoute = JUDGE_QUALIFICATION_ROUTES.some((route) => pathname.startsWith(route));
   const isAuthRoute = AUTH_ROUTES.some((route) => pathname.startsWith(route));
 
   // Redirect unauthenticated users from protected routes
@@ -195,10 +199,13 @@ export async function proxy(request: NextRequest) {
 
     if (!profile?.is_judge) {
       const url = request.nextUrl.clone();
-      url.pathname = '/become-judge';
+      url.pathname = '/judge/qualify';
       return NextResponse.redirect(url);
     }
   }
+  
+  // Allow judge qualification routes for authenticated users (no judge check needed)
+  // These routes handle their own logic for qualification process
 
   // Redirect authenticated users away from auth pages
   if (isAuthRoute && user) {

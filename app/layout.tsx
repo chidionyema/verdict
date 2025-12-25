@@ -12,7 +12,7 @@ import { I18nProvider } from "@/components/i18n-provider";
 import { PageErrorBoundary, ComponentErrorBoundary } from "@/components/ui/error-boundary";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { AccessibilityWrapper } from "@/components/accessibility/AccessibilityWrapper";
-import { SmartEntryPoint } from "@/components/routing/SmartEntryPoint";
+// Removed SmartEntryPoint - pages handle their own auth
 import SafariViewportFix from "@/components/SafariViewportFix";
 import { isRTL, type Locale, locales } from "@/i18n.config";
 import { generateAlternateLinks } from "@/lib/i18n-metadata";
@@ -121,14 +121,12 @@ export default async function RootLayout({
               <SafariViewportFix />
               <AccessibilityWrapper>
                 <ComponentErrorBoundary>
-                  <SmartEntryPoint enableLogging={process.env.NODE_ENV === 'development'}>
-                    <UnifiedNavigation />
-                    <PageErrorBoundary>
-                      <main id="main-content" tabIndex={-1} className="focus:outline-none">
-                        {children}
-                      </main>
-                    </PageErrorBoundary>
-                  </SmartEntryPoint>
+                  <UnifiedNavigation />
+                  <PageErrorBoundary>
+                    <main id="main-content" tabIndex={-1} className="focus:outline-none">
+                      {children}
+                    </main>
+                  </PageErrorBoundary>
                 </ComponentErrorBoundary>
               </AccessibilityWrapper>
             </MonitoringProvider>

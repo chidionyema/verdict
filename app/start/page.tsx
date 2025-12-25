@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { TouchButton } from '@/components/ui/touch-button';
-import { updatePreferences } from '@/lib/routing';
+// Removed updatePreferences - handled inline
 import { createClient } from '@/lib/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { useLocalizedPricing } from '@/hooks/use-pricing';
@@ -42,29 +42,13 @@ export default function StartPage() {
   const supabase = createClient();
 
   const handleCommunityPath = async () => {
-    // Update user preference
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        await updatePreferences(user.id, { preferred_path: 'community' });
-      }
-    } catch (error) {
-      console.error('Error updating preferences:', error);
-    }
+    // Removed preference update - no longer needed with simplified routing
     
     router.push('/submit-unified?mode=community');
   };
 
   const handleExpressPath = async () => {
-    // Update user preference
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        await updatePreferences(user.id, { preferred_path: 'private' });
-      }
-    } catch (error) {
-      console.error('Error updating preferences:', error);
-    }
+    // Removed preference update - no longer needed with simplified routing
     
     router.push('/submit-unified?mode=private');
   };

@@ -33,29 +33,11 @@ export async function GET(request: NextRequest) {
       return errorRedirect(requestUrl, 'no_user');
     }
 
+    // Simple: redirect to where they wanted to go, or dashboard
     const safeRedirect = getSafeRedirect(redirectParam);
-
-    // Check if this is a new user by looking at their profile
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('onboarding_completed')
-      .eq('id', data.user.id)
-      .single();
+    const destination = safeRedirect || '/dashboard';
     
-    // If caller provided an explicit redirect (e.g. judge qualification), honor it
-    if (safeRedirect) {
-      return NextResponse.redirect(new URL(safeRedirect, requestUrl.origin));
-    }
-
-    // If it's a new user (no profile or onboarding not completed), redirect to create
-    if (!profile || !(profile as any).onboarding_completed) {
-      return NextResponse.redirect(new URL('/create?welcome=true', requestUrl.origin));
-    }
-
-    // For existing users, check if there's a stored redirect in session storage
-    // Since we can't access sessionStorage on server side, we'll redirect to dashboard
-    // and let the client handle the stored redirect
-    return NextResponse.redirect(new URL('/dashboard', requestUrl.origin));
+    return NextResponse.redirect(new URL(destination, requestUrl.origin));
     
   } catch (error) {
     console.error('Auth callback handler error:', error);

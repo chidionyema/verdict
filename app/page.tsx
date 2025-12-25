@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { SmartLink } from "@/components/routing/SmartEntryPoint";
+import Link from "next/link";
 import Script from "next/script";
 import { DynamicHero } from "@/components/personalization/DynamicHero";
 import { FeaturesComparison } from "@/components/landing/features-comparison";
@@ -112,12 +112,12 @@ export default function HomePage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <SmartLink
+                  <Link
                     href="/welcome"
                     className="bg-white/20 text-white px-4 py-2 rounded-lg font-medium hover:bg-white/30 transition-colors text-sm"
                   >
                     Complete Profile
-                  </SmartLink>
+                  </Link>
                   <button
                     onClick={() => setShowWelcomeBanner(false)}
                     className="text-green-100 hover:text-white p-1"
@@ -231,12 +231,12 @@ export default function HomePage() {
                 </div>
               </div>
               <div className="text-center">
-                <SmartLink
+                <Link
                   href="/become-a-judge"
                   className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
                 >
                   Join as a Judge →
-                </SmartLink>
+                </Link>
               </div>
             </div>
           </div>
@@ -410,7 +410,7 @@ export default function HomePage() {
               <div className="space-y-6">
                 {/* Single Primary CTA */}
                 <div className="max-w-md mx-auto">
-                  <SmartLink
+                  <Link
                     href={isAuthenticated ? "/create" : "/auth/signup"}
                     className="block w-full bg-white text-indigo-600 px-8 py-6 rounded-2xl text-xl font-bold hover:bg-gray-50 transition-all duration-300 shadow-xl hover:shadow-2xl transform hover:-translate-y-1 group"
                   >
@@ -423,7 +423,7 @@ export default function HomePage() {
                         Get 3 feedback reports • Takes 2 minutes
                       </span>
                     </div>
-                  </SmartLink>
+                  </Link>
                 </div>
                 
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-8 text-indigo-100 animate-fade-in-up">
@@ -462,14 +462,14 @@ export default function HomePage() {
 
       {/* Mobile sticky CTA */}
       <div className="fixed bottom-4 left-0 right-0 px-4 sm:hidden z-40">
-        <SmartLink
+        <Link
           href={isAuthenticated ? "/create" : "/auth/signup"}
           className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-4 rounded-xl shadow-xl font-semibold text-base flex items-center justify-center gap-2 min-h-[48px] backdrop-blur-sm border border-white/20 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-0.5"
         >
           <Sparkles className="h-5 w-5" />
           {isAuthenticated ? "Create Request" : "Start Free"}
           <span className="text-lg">→</span>
-        </SmartLink>
+        </Link>
       </div>
 
       {/* CSS Animations */}
