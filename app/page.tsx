@@ -2,14 +2,14 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
+import { SmartLink } from "@/components/routing/SmartEntryPoint";
 import Script from "next/script";
 import { DynamicHero } from "@/components/personalization/DynamicHero";
 import { FeaturesComparison } from "@/components/landing/features-comparison";
 import { SocialProofSection } from "@/components/landing/social-proof-section";
 import { InteractiveDemo } from "@/components/landing/interactive-demo";
 import { FeatureDiscoveryBanner } from "@/components/discovery/FeatureDiscoveryBanner";
-import { JudgeShowcase } from "@/components/landing/judge-showcase";
+import { EnhancedReviewerShowcase } from "@/components/landing/EnhancedReviewerShowcase";
 import { InteractiveFeedbackPreview } from "@/components/landing/InteractiveFeedbackPreview";
 import { PricingTableSection } from "@/components/landing/pricing-table";
 import { EconomyExplanationSection } from "@/components/landing/economy-explanation";
@@ -22,7 +22,7 @@ import { GuestBrowseSection } from "@/components/landing/GuestBrowseSection";
 import { getSchemaPrice } from "@/lib/localization";
 import { useLocalizedPricing } from "@/hooks/use-pricing";
 import { createClient } from "@/lib/supabase/client";
-import { Clock, Shield, CheckCircle, Eye, Star, Users, Lock, Sparkles } from "lucide-react";
+import { Clock, Shield, CheckCircle, Eye, Star, Users, Lock } from "lucide-react";
 
 export default function HomePage() {
   const router = useRouter();
@@ -112,12 +112,12 @@ export default function HomePage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <Link
+                  <SmartLink
                     href="/welcome"
                     className="bg-white/20 text-white px-4 py-2 rounded-lg font-medium hover:bg-white/30 transition-colors text-sm"
                   >
                     Complete Profile
-                  </Link>
+                  </SmartLink>
                   <button
                     onClick={() => setShowWelcomeBanner(false)}
                     className="text-green-100 hover:text-white p-1"
@@ -151,7 +151,7 @@ export default function HomePage() {
             <div className="bg-white rounded-xl p-6 shadow-lg border-2 border-green-200">
               <div className="text-2xl mb-3">🆓</div>
               <h3 className="text-lg font-bold text-green-900 mb-2">Free Path</h3>
-              <p className="text-gray-700 mb-4">Judge 3 requests → Earn 1 credit → Submit for free</p>
+              <p className="text-gray-700 mb-4">Judge 3 submissions → Earn 1 credit → Submit for free</p>
               <div className="text-sm text-green-800 bg-green-50 rounded-lg p-3">
                 Help others decide, get free feedback in return
               </div>
@@ -191,7 +191,7 @@ export default function HomePage() {
       
       
       {/* Reviewer showcase with quality indicators */}
-      <JudgeShowcase />
+      <EnhancedReviewerShowcase />
 
 
       {/* Pricing table */}
@@ -202,7 +202,7 @@ export default function HomePage() {
 
           {/* How Judging Works Section */}
           <div className="mt-20 max-w-4xl mx-auto">
-            <h2 className="text-3xl font-bold text-center mb-6 bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">Want to be a judge?</h2>
+            <h2 className="text-3xl font-bold text-center mb-6 bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">Want to be a reviewer?</h2>
             <p className="text-lg text-gray-600 text-center mb-8 max-w-2xl mx-auto">
               Help others make better decisions and earn rewards.
             </p>
@@ -212,7 +212,7 @@ export default function HomePage() {
                   <div className="bg-gradient-to-br from-indigo-100 to-purple-100 rounded-full w-12 h-12 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300">
                     <Users className="h-6 w-6 text-indigo-600" />
                   </div>
-                  <h4 className="font-semibold mb-2">Judge requests</h4>
+                  <h4 className="font-semibold mb-2">Review submissions</h4>
                   <p className="text-gray-600 text-sm">In your areas of interest</p>
                 </div>
                 <div className="text-center group">
@@ -231,12 +231,12 @@ export default function HomePage() {
                 </div>
               </div>
               <div className="text-center">
-                <Link
+                <SmartLink
                   href="/become-a-judge"
                   className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
                 >
                   Join as a Judge →
-                </Link>
+                </SmartLink>
               </div>
             </div>
           </div>
@@ -252,7 +252,7 @@ export default function HomePage() {
               
               <div className="bg-white/70 backdrop-blur-xl rounded-2xl p-6 shadow-xl border border-white/20 hover:shadow-2xl transition-all duration-500 group">
                 <h3 className="font-semibold text-lg mb-3 text-gray-900 group-hover:text-indigo-600 transition-colors duration-300">How anonymous?</h3>
-                <p className="text-gray-600">Completely anonymous. No profiles or names shared. Private requests never appear in public feed.</p>
+                <p className="text-gray-600">Completely anonymous. No profiles or names shared. Private submissions never appear in public feed.</p>
               </div>
               
               <div className="bg-white/70 backdrop-blur-xl rounded-2xl p-6 shadow-xl border border-white/20 hover:shadow-2xl transition-all duration-500 group">
@@ -277,8 +277,8 @@ export default function HomePage() {
                   <div className="flex items-start gap-4">
                     <div className="flex-shrink-0 w-10 h-10 bg-green-600 rounded-full flex items-center justify-center text-white font-bold">1</div>
                     <div>
-                      <h4 className="font-semibold text-gray-900 mb-1">Judge 3 requests</h4>
-                      <p className="text-gray-600 text-sm">Browse the feed and judge others' requests (~15 min)</p>
+                      <h4 className="font-semibold text-gray-900 mb-1">Review 3 submissions</h4>
+                      <p className="text-gray-600 text-sm">Browse the feed and review others' submissions (~15 min)</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-4">
@@ -392,7 +392,7 @@ export default function HomePage() {
               </div>
             </div>
           </div>
-          {/* Single Primary CTA */}
+          {/* Final Conversion CTA - Dual Path */}
           <div className="mt-20 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 rounded-3xl p-12 text-white text-center relative overflow-hidden shadow-2xl hover:shadow-3xl transition-all duration-500">
             <div className="absolute inset-0 bg-black/10 rounded-3xl"></div>
             {/* Floating orbs */}
@@ -401,35 +401,50 @@ export default function HomePage() {
             
             <div className="relative z-10">
               <h2 className="text-4xl font-bold mb-6 animate-fade-in">
-                Ready to Get Your First Feedback?
+                Ready to Get Started?
               </h2>
               <p className="text-xl mb-8 text-indigo-100 max-w-2xl mx-auto animate-fade-in-up">
-                Join thousands getting honest opinions from real people. Start with 3 free credits - no payment required.
+                {isAuthenticated ? (
+                  <>Choose your path: Review others to earn free credits, or pay {pricing.privatePrice} for instant private results. Both get you 3 honest feedback reports.</>
+                ) : (
+                  <>Sign up to get honest feedback from real people. Choose free community path or instant private results for {pricing.privatePrice}.</>
+                )}
               </p>
               
               <div className="space-y-6">
-                {/* Single Primary CTA */}
-                <div className="max-w-md mx-auto">
-                  <Link
-                    href={isAuthenticated ? "/create" : "/auth/signup"}
-                    className="block w-full bg-white text-indigo-600 px-8 py-6 rounded-2xl text-xl font-bold hover:bg-gray-50 transition-all duration-300 shadow-xl hover:shadow-2xl transform hover:-translate-y-1 group"
+                {/* Dual Path CTAs */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-3xl mx-auto">
+                  <SmartLink
+                    href="/start"
+                    className="bg-white text-indigo-600 px-8 py-5 rounded-2xl text-lg font-bold hover:bg-gray-50 transition-all duration-300 shadow-xl hover:shadow-2xl transform hover:-translate-y-1 group"
                   >
                     <div className="flex flex-col items-center">
                       <span className="flex items-center gap-2">
-                        <Sparkles className="h-6 w-6" />
-                        {isAuthenticated ? "Create Your Request" : "Start Free - No Card Required"}
+                        <Eye className="h-5 w-5" />
+                        Start Reviewing (Free)
                       </span>
-                      <span className="text-sm opacity-80 mt-1 text-indigo-500">
-                        Get 3 feedback reports • Takes 2 minutes
-                      </span>
+                      <span className="text-sm opacity-80 mt-1">Review 3 → Earn 1 credit</span>
                     </div>
-                  </Link>
+                  </SmartLink>
+                  
+                  <SmartLink
+                    href="/submit"
+                    className="bg-indigo-800 text-white border-2 border-white/30 px-8 py-5 rounded-2xl text-lg font-bold hover:bg-indigo-900 transition-all duration-300 shadow-xl hover:shadow-2xl transform hover:-translate-y-1 group"
+                  >
+                    <div className="flex flex-col items-center">
+                      <span className="flex items-center gap-2">
+                        <Lock className="h-5 w-5" />
+                        Submit Privately ({pricing.privatePrice})
+                      </span>
+                      <span className="text-sm opacity-90 mt-1">Skip judging → Instant</span>
+                    </div>
+                  </SmartLink>
                 </div>
                 
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-8 text-indigo-100 animate-fade-in-up">
                   <div className="flex items-center gap-2 group hover:text-white transition-colors">
                     <CheckCircle className="h-5 w-5 group-hover:scale-110 transition-transform" />
-                    <span>3 free credits included</span>
+                    <span>3 feedback reports guaranteed</span>
                   </div>
                   <div className="flex items-center gap-2 group hover:text-white transition-colors">
                     <Shield className="h-5 w-5 group-hover:scale-110 transition-transform" />
@@ -437,12 +452,12 @@ export default function HomePage() {
                   </div>
                   <div className="flex items-center gap-2 group hover:text-white transition-colors">
                     <Clock className="h-5 w-5 group-hover:scale-110 transition-transform" />
-                    <span>Results in 2 hours</span>
+                    <span>Results in hours, not days</span>
                   </div>
                 </div>
                 
                 <p className="text-sm text-indigo-200 mt-4 animate-fade-in">
-                  Want more feedback? Help others by reviewing to earn unlimited credits
+                  No credit card required for free path • Choose what works for you
                 </p>
               </div>
             </div>
@@ -462,14 +477,13 @@ export default function HomePage() {
 
       {/* Mobile sticky CTA */}
       <div className="fixed bottom-4 left-0 right-0 px-4 sm:hidden z-40">
-        <Link
-          href={isAuthenticated ? "/create" : "/auth/signup"}
+        <SmartLink
+          href="/start"
           className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-4 rounded-xl shadow-xl font-semibold text-base flex items-center justify-center gap-2 min-h-[48px] backdrop-blur-sm border border-white/20 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-0.5"
         >
-          <Sparkles className="h-5 w-5" />
-          {isAuthenticated ? "Create Request" : "Start Free"}
+          Start judging (free)
           <span className="text-lg">→</span>
-        </Link>
+        </SmartLink>
       </div>
 
       {/* CSS Animations */}

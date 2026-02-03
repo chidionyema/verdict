@@ -1,24 +1,24 @@
 'use client';
 
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
-import { Plus, Image, FileText, Clock, CheckCircle, XCircle, Search, Filter, SortAsc, SortDesc, Sparkles, TrendingUp, Activity, Users, Award, Target, BarChart3, Star, ArrowRight, Crown, Heart, MessageSquare, Eye } from 'lucide-react';
+import { Plus, Image, FileText, Clock, CheckCircle, XCircle, Search, Filter, SortAsc, SortDesc, Sparkles, TrendingUp, Activity, Users, Award, Target, BarChart3, Star, ArrowRight, Crown, Heart, MessageSquare, Eye, CreditCard, Coins } from 'lucide-react';
 import type { VerdictRequest, Profile } from '@/lib/database.types';
 import Breadcrumb from '@/components/Breadcrumb';
 import { FeatureDiscoveryBanner } from '@/components/discovery/FeatureDiscoveryBanner';
 import { RetentionDiscountBanner } from '@/components/retention/RetentionDiscountBanner';
 import { ReferralWidget } from '@/components/referrals/ReferralDashboard';
 import { JudgePerformanceDashboard } from '@/components/judge/JudgePerformanceDashboard';
-import { EmptyState } from '@/components/empty-states/EmptyState';
-import { SmartCreditSuggestions, useSmartCreditSuggestions } from '@/components/credits/SmartCreditSuggestions';
-import { SocialProofWidget, useSocialProof } from '@/components/social-proof/SocialProofWidget';
-import { RetentionHooks, useRetentionHooks } from '@/components/retention/RetentionHooks';
-// Removed ProgressiveOnboarding - component deleted in cleanup
-import { toast } from '@/components/ui/toast';
 
 type FilterStatus = 'all' | 'open' | 'in_progress' | 'closed' | 'cancelled';
 type SortBy = 'newest' | 'oldest' | 'status' | 'progress';
+
+const CREDIT_PACKAGES = {
+  starter: { credits: 5, price_cents: 1745, name: 'Starter', price: '£17.45' },
+  popular: { credits: 10, price_cents: 3490, name: 'Popular', price: '£34.90' },
+  value: { credits: 25, price_cents: 8725, name: 'Value', price: '£87.25' },
+};
 
 // Force dynamic rendering to avoid Supabase client issues during build
 export const dynamic = 'force-dynamic';
@@ -32,18 +32,8 @@ export default function DashboardPage() {
   const [sortBy, setSortBy] = useState<SortBy>('newest');
   const [showFilters, setShowFilters] = useState(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
-  const [showProgressiveOnboarding, setShowProgressiveOnboarding] = useState(false);
-  const [user, setUser] = useState<any>(null);
-  const previousCountsRef = useRef<Record<string, number>>({});
-  
-  // Smart credit suggestions
-  const shouldShowCreditSuggestions = useSmartCreditSuggestions(profile);
-  
-  // Social proof
-  const { shouldShow: shouldShowSocialProof, dismiss: dismissSocialProof } = useSocialProof();
-  
-  // Retention hooks
-  const { retentionData, updateRetentionData } = useRetentionHooks(profile?.id || '');
+  const [showCreditsModal, setShowCreditsModal] = useState(false);
+  const [purchasingPackage, setPurchasingPackage] = useState<string | null>(null);
 
   const fetchData = async () => {
     // Only run in browser
@@ -58,20 +48,12 @@ export default function DashboardPage() {
       // Fetch profile
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        setUser(user);
         const { data: profileData } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', user.id)
           .single();
         setProfile(profileData);
-        
-        // Show progressive onboarding for new users
-        if (profileData) {
-          const isNewUser = !(profileData as any).display_name || (profileData as any).total_submissions === 0;
-          const hasSeenWelcome = localStorage.getItem(`welcome-shown-${user.id}`);
-          setShowProgressiveOnboarding(isNewUser && !hasSeenWelcome);
-        }
       }
 
       // Fetch requests
@@ -130,84 +112,6 @@ export default function DashboardPage() {
       }
     }
   }, []);
-
-  // Real-time subscription for verdict updates
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    if (!user?.id) return;
-
-    try {
-      const supabase = createClient();
-      
-      const channel = supabase
-        .channel('dashboard-updates')
-        .on(
-          'postgres_changes',
-          {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'verdict_requests',
-            filter: `user_id=eq.${user.id}`,
-          },
-          (payload) => {
-            const updatedRequest = payload.new as any;
-            const oldRequest = payload.old as any;
-            
-            const oldCount = oldRequest?.received_verdict_count || previousCountsRef.current[updatedRequest.id] || 0;
-            const newCount = updatedRequest?.received_verdict_count || 0;
-            
-            if (newCount > oldCount) {
-              setRequests((prev) => {
-                const updated = prev.map((req) =>
-                  req.id === updatedRequest.id
-                    ? { ...req, ...updatedRequest }
-                    : req
-                );
-                
-                previousCountsRef.current[updatedRequest.id] = newCount;
-                return updated;
-              });
-
-              // Smart notification
-              const verdictsReceived = newCount - oldCount;
-              if (newCount >= updatedRequest.target_verdict_count) {
-                toast.success(
-                  `🎉 Request complete! All ${newCount} verdicts received.`
-                );
-              } else {
-                const remaining = updatedRequest.target_verdict_count - newCount;
-                toast.success(
-                  `📝 New verdict received! ${remaining} more to go.`
-                );
-              }
-            }
-          }
-        )
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'verdict_requests',
-            filter: `user_id=eq.${user.id}`,
-          },
-          (payload) => {
-            const newRequest = payload.new as any;
-            setRequests((prev) => [newRequest, ...prev]);
-            toast.success(
-              `✨ New request "${newRequest.context?.substring(0, 50) || 'created'}" is now live!`
-            );
-          }
-        )
-        .subscribe();
-
-      return () => {
-        channel.unsubscribe();
-      };
-    } catch (error) {
-      console.error('Error setting up real-time subscription:', error);
-    }
-  }, [user?.id]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -304,6 +208,45 @@ export default function DashboardPage() {
     return requests.filter(request => request.status === status).length;
   };
 
+  const handlePurchaseCredits = async (packageId: string) => {
+    setPurchasingPackage(packageId);
+    try {
+      const res = await fetch('/api/billing/create-checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ package_id: packageId }),
+      });
+
+      const data = await res.json();
+
+      if (data.demo) {
+        // Demo mode - credits added directly
+        setNotification({
+          type: 'success',
+          message: data.message || `Added ${data.credits_added} credits!`,
+        });
+        setShowCreditsModal(false);
+        // Refresh data
+        fetchData();
+      } else if (data.checkout_url) {
+        window.location.href = data.checkout_url;
+      } else {
+        setNotification({
+          type: 'error',
+          message: data.error || 'Failed to start checkout',
+        });
+      }
+    } catch (error) {
+      console.error('Purchase error:', error);
+      setNotification({
+        type: 'error',
+        message: 'Failed to purchase credits. Please try again.',
+      });
+    } finally {
+      setPurchasingPackage(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 py-12">
@@ -331,6 +274,86 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Credits Purchase Modal */}
+      {showCreditsModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-orange-500 rounded-xl flex items-center justify-center">
+                    <Coins className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900">Get Credits</h2>
+                    <p className="text-sm text-gray-600">Purchase credits to submit requests</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowCreditsModal(false)}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition"
+                >
+                  <XCircle className="h-6 w-6 text-gray-400" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
+                <p className="text-sm text-blue-800">
+                  <strong>Tip:</strong> You can also earn free credits by judging other submissions.
+                  Judge 3 submissions to earn 1 credit!
+                </p>
+              </div>
+
+              {Object.entries(CREDIT_PACKAGES).map(([id, pkg]) => (
+                <button
+                  key={id}
+                  onClick={() => handlePurchaseCredits(id)}
+                  disabled={purchasingPackage !== null}
+                  className={`w-full p-4 rounded-xl border-2 transition-all text-left flex items-center justify-between ${
+                    id === 'popular'
+                      ? 'border-indigo-500 bg-indigo-50'
+                      : 'border-gray-200 hover:border-gray-300 bg-white'
+                  } ${purchasingPackage === id ? 'opacity-70' : ''}`}
+                >
+                  <div className="flex items-center gap-4">
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                      id === 'popular' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600'
+                    }`}>
+                      <span className="font-bold">{pkg.credits}</span>
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-gray-900">{pkg.name}</span>
+                        {id === 'popular' && (
+                          <span className="px-2 py-0.5 bg-indigo-600 text-white text-xs rounded-full font-medium">
+                            Most Popular
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-sm text-gray-600">{pkg.credits} credits</span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="font-bold text-lg text-gray-900">{pkg.price}</span>
+                    {purchasingPackage === id && (
+                      <div className="text-sm text-indigo-600">Processing...</div>
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            <div className="p-6 border-t border-gray-200 bg-gray-50 rounded-b-2xl">
+              <p className="text-xs text-gray-500 text-center">
+                Secure payment powered by Stripe. Credits never expire.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Payment/Action Notification Banner */}
       {notification && (
         <div className={`px-4 py-3 ${
@@ -377,6 +400,37 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* Low Credits Alert */}
+      {profile && profile.credits === 0 && (
+        <div className="bg-gradient-to-r from-amber-50 to-orange-50 border-b border-amber-200 px-4 py-4">
+          <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center">
+                <Coins className="h-5 w-5 text-amber-600" />
+              </div>
+              <div>
+                <p className="font-semibold text-amber-900">You're out of credits!</p>
+                <p className="text-sm text-amber-700">Get credits to submit new requests, or earn them by judging.</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <Link
+                href="/feed"
+                className="px-4 py-2 bg-white border border-amber-300 text-amber-700 rounded-lg font-medium hover:bg-amber-50 transition text-sm"
+              >
+                Earn Free Credits
+              </Link>
+              <button
+                onClick={() => setShowCreditsModal(true)}
+                className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg font-medium hover:from-amber-600 hover:to-orange-600 transition text-sm"
+              >
+                Buy Credits
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Feature Discovery Banner */}
       <FeatureDiscoveryBanner />
 
@@ -386,20 +440,6 @@ export default function DashboardPage() {
           userId={profile.id}
           hasCompletedRequest={requests.some(r => r.status === 'closed')}
         />
-      )}
-
-      {/* Progressive Onboarding */}
-      {showProgressiveOnboarding && user && (
-        <div className="max-w-6xl mx-auto px-4 mb-6">
-          {/* <ProgressiveOnboarding
-            user={user}
-            onDismiss={() => setShowProgressiveOnboarding(false)}
-            context="dashboard"
-          /> */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <p className="text-blue-800">Welcome! Complete your profile to get started.</p>
-          </div>
-        </div>
       )}
 
       {/* Referral Program Widget */}
@@ -423,8 +463,6 @@ export default function DashboardPage() {
         <div className="max-w-6xl mx-auto px-4">
           {/* Breadcrumb */}
           <Breadcrumb className="mb-6" />
-
-          {/* TODO: Add smart credit suggestions after launch */}
         
         {/* Header */}
         <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center mb-8 gap-4">
@@ -462,6 +500,14 @@ export default function DashboardPage() {
               Filters
             </button>
             
+            <button
+              onClick={() => setShowCreditsModal(true)}
+              className="bg-gradient-to-r from-amber-500 to-orange-500 text-white px-6 py-3 rounded-xl font-semibold hover:from-amber-600 hover:to-orange-600 transition flex items-center justify-center min-h-[48px] whitespace-nowrap shadow-lg"
+            >
+              <Coins className="h-5 w-5 mr-2" />
+              Get Credits
+            </button>
+
             <Link
               href="/start"
               className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-indigo-700 transition flex items-center justify-center min-h-[48px] whitespace-nowrap"
@@ -471,34 +517,6 @@ export default function DashboardPage() {
             </Link>
           </div>
         </div>
-
-        {/* Smart Credit Suggestions */}
-        {shouldShowCreditSuggestions && profile && (
-          <SmartCreditSuggestions
-            userId={profile.id}
-            userProfile={{
-              credits: profile.credits || 0,
-              total_submissions: requests.length,
-              total_reviews: 0, // TODO: Add to profile schema
-              last_review_date: undefined,
-              signup_date: profile.created_at
-            }}
-            currentPage="dashboard"
-          />
-        )}
-
-        {/* Social Proof Widget */}
-        {shouldShowSocialProof && (
-          <div className="mb-6">
-            <SocialProofWidget 
-              variant="compact" 
-              placement="dashboard"
-              showUserActivity={false}
-              showStats={true}
-              showRecentActivity={true}
-            />
-          </div>
-        )}
 
         {/* Filter Panel */}
         {showFilters && (
@@ -600,15 +618,52 @@ export default function DashboardPage() {
 
         {/* Premium Requests Grid */}
         {requests.length === 0 ? (
-          <EmptyState 
-            type="dashboard" 
-            userProfile={{
-              credits: profile?.credits || 0,
-              total_submissions: requests.length || 0,
-              total_reviews: 0, // TODO: Add total_reviews to profile schema
-              name: profile?.display_name || undefined
-            }}
-          />
+          <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl border border-white/50 p-12 text-center relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 via-purple-500/5 to-pink-500/5" />
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-64 bg-gradient-to-br from-indigo-400 to-purple-400 rounded-full mix-blend-multiply filter blur-3xl opacity-20" />
+            
+            <div className="max-w-2xl mx-auto relative z-10">
+              <div className="w-32 h-32 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-8 shadow-2xl animate-pulse">
+                <Sparkles className="h-16 w-16 text-white" />
+              </div>
+              
+              <div className="mb-8">
+                <h3 className="text-4xl font-bold text-gray-900 mb-4">
+                  Ready for Your First Verdict?
+                </h3>
+                <p className="text-xl text-gray-600 leading-relaxed">
+                  Transform uncertainty into confidence. Upload content, ask questions, get expert feedback from real people in minutes.
+                </p>
+              </div>
+              
+              <Link
+                href="/start"
+                className="inline-flex items-center gap-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-10 py-5 rounded-2xl hover:shadow-2xl transition-all duration-300 font-bold text-lg hover:-translate-y-1 group mb-8"
+              >
+                <Sparkles className="h-6 w-6 animate-spin" />
+                Create Your First Request
+                <ArrowRight className="h-6 w-6 group-hover:translate-x-1 transition-transform" />
+              </Link>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-white/50 backdrop-blur rounded-2xl p-6 border border-white/50">
+                  <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center mb-4 mx-auto">
+                    <Crown className="h-6 w-6 text-white" />
+                  </div>
+                  <h4 className="font-bold text-gray-900 mb-2">3 Free Requests Included</h4>
+                  <p className="text-gray-600 text-sm">No upfront cost, start immediately</p>
+                </div>
+                
+                <div className="bg-white/50 backdrop-blur rounded-2xl p-6 border border-white/50">
+                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center mb-4 mx-auto">
+                    <Clock className="h-6 w-6 text-white" />
+                  </div>
+                  <h4 className="font-bold text-gray-900 mb-2">Results within 2 Hours</h4>
+                  <p className="text-gray-600 text-sm">Lightning-fast expert feedback</p>
+                </div>
+              </div>
+            </div>
+          </div>
         ) : filteredAndSortedRequests.length === 0 ? (
           <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl border border-white/50 p-12 text-center">
             <div className="w-20 h-20 bg-gradient-to-br from-gray-100 to-slate-100 rounded-full flex items-center justify-center mx-auto mb-6">

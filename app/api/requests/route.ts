@@ -192,7 +192,7 @@ async function fetchComparisonRequestsForUser(supabase: any, userId: string) {
         request_tier,
         target_verdict_count,
         received_verdict_count,
-        winning_option
+        winner_option
       `)
       .eq('user_id', userId);
 
@@ -208,15 +208,15 @@ async function fetchComparisonRequestsForUser(supabase: any, userId: string) {
     if (requestIds.length > 0) {
       const { data: verdicts } = await supabase
         .from('comparison_verdicts')
-        .select('comparison_request_id, confidence_score')
-        .in('comparison_request_id', requestIds);
+        .select('comparison_id, confidence_score')
+        .in('comparison_id', requestIds);
 
       if (verdicts) {
         verdicts.forEach((v: any) => {
-          if (!verdictsByRequest[v.comparison_request_id]) {
-            verdictsByRequest[v.comparison_request_id] = [];
+          if (!verdictsByRequest[v.comparison_id]) {
+            verdictsByRequest[v.comparison_id] = [];
           }
-          verdictsByRequest[v.comparison_request_id].push(v);
+          verdictsByRequest[v.comparison_id].push(v);
         });
       }
     }
@@ -249,7 +249,7 @@ async function fetchComparisonRequestsForUser(supabase: any, userId: string) {
           option_b_title: req.option_b_title,
           option_a_image_url: req.option_a_image_url,
           option_b_image_url: req.option_b_image_url,
-          winning_option: req.winning_option
+          winner_option: req.winner_option
         }
       };
     });
@@ -356,8 +356,6 @@ const POST_Handler = async (request: NextRequest) => {
       requested_tone,
       roast_mode,
       visibility,
-      creditsToCharge,
-      targetVerdictCount,
     } = body;
 
     // Validate category
@@ -477,9 +475,9 @@ const POST_Handler = async (request: NextRequest) => {
           requestedTone: normalizedTone,
           roastMode: roast_mode || false,
           visibility: visibility || 'private',
-          // Use user-provided values or tier config as fallback
-          creditsToCharge: creditsToCharge || tierConfig.credits,
-          targetVerdictCount: targetVerdictCount || tierConfig.verdicts,
+          // Use tier config
+          creditsToCharge: tierConfig.credits,
+          targetVerdictCount: tierConfig.verdicts,
           requestTier: request_tier || 'community',
         }
       );
@@ -497,19 +495,38 @@ const POST_Handler = async (request: NextRequest) => {
       // Trigger expert routing for appropriate tiers (async, don't block response)
       if (request_tier === 'pro' || request_tier === 'standard') {
         const expertRouting = new ExpertRoutingService(supabase as any);
-        
-        // Route asynchronously to avoid blocking the response
-        expertRouting.routeRequest(createdRequest.id).catch(error => {
-          log.error('Expert routing failed (non-blocking)', { 
-            requestId: createdRequest.id, 
-            tier: request_tier, 
-            error 
-          });
-        });
 
-        log.info('Expert routing initiated', { 
-          requestId: createdRequest.id, 
-          tier: request_tier 
+        // Route asynchronously to avoid blocking the response
+        // We check the result and log appropriately for visibility
+        expertRouting.routeRequest(createdRequest.id)
+          .then(result => {
+            if (!result.success) {
+              log.warn('Expert routing completed but unsuccessful', {
+                requestId: createdRequest.id,
+                tier: request_tier,
+                strategy: result.routingStrategy,
+                expertPoolSize: result.expertPool.length
+              });
+            } else {
+              log.info('Expert routing completed successfully', {
+                requestId: createdRequest.id,
+                tier: request_tier,
+                strategy: result.routingStrategy,
+                expertPoolSize: result.expertPool.length
+              });
+            }
+          })
+          .catch(error => {
+            log.error('Expert routing threw unexpected error', {
+              requestId: createdRequest.id,
+              tier: request_tier,
+              error: error instanceof Error ? error.message : String(error)
+            });
+          });
+
+        log.info('Expert routing initiated', {
+          requestId: createdRequest.id,
+          tier: request_tier
         });
       }
 
@@ -517,7 +534,10 @@ const POST_Handler = async (request: NextRequest) => {
     } catch (err: any) {
       if (err?.code === 'INSUFFICIENT_CREDITS') {
         return NextResponse.json(
-          { error: 'Insufficient credits. Please purchase more.' },
+          {
+            error: 'Insufficient credits. Please purchase more.',
+            required_credits: tierConfig.credits
+          },
           { status: 402 }
         );
       }

@@ -121,12 +121,17 @@ export function SimplifiedStart() {
         // Fetch user credits and tier for affordability
         Promise.all([
           supabase
+            .from('user_credits')
+            .select('balance')
+            .eq('user_id', user.id)
+            .single(),
+          supabase
             .from('profiles')
-            .select('credits, pricing_tier')
+            .select('pricing_tier')
             .eq('id', user.id)
             .single()
-        ]).then(([profileRes]) => {
-          setUserCredits((profileRes.data as any)?.credits || 0);
+        ]).then(([creditsRes, profileRes]) => {
+          setUserCredits((creditsRes.data as any)?.balance || 0);
           setUserTier((profileRes.data as any)?.pricing_tier || 'community');
         });
       }
@@ -315,13 +320,8 @@ export function SimplifiedStart() {
 
         // Handle insufficient credits specifically
         if (res.status === 402) {
-          // Extract required credits from response or calculate from tier
-          const tierCredits: Record<string, number> = {
-            'community': 1,
-            'standard': 3,
-            'pro': 5,
-          };
-          setRequiredCredits(data.required_credits || tierCredits[selectedTier] || 1);
+          // Use the required_credits from API response (comes from pricing_tiers table)
+          setRequiredCredits(data.required_credits || 1);
           setShowCreditsModal(true);
           setSubmitting(false);
           return;
@@ -428,11 +428,11 @@ export function SimplifiedStart() {
     if (!user) return;
     const supabase = createClient();
     const { data } = await supabase
-      .from('profiles')
-      .select('credits')
-      .eq('id', user.id)
+      .from('user_credits')
+      .select('balance')
+      .eq('user_id', user.id)
       .single();
-    setUserCredits((data as any)?.credits || 0);
+    setUserCredits((data as any)?.balance || 0);
   };
 
   return (
@@ -457,7 +457,7 @@ export function SimplifiedStart() {
               <div className="w-8 h-8 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg flex items-center justify-center">
                 <Sparkles className="w-4 h-4 text-white" />
               </div>
-              <span className="font-semibold text-gray-900">AskVerdict</span>
+              <span className="font-semibold text-gray-900">Verdict</span>
             </div>
             <div className="flex items-center gap-4">
               {socialProof.map((item, index) => (

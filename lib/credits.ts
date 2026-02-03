@@ -1,15 +1,14 @@
 import { createClient } from '@/lib/supabase/client';
 import { reputationManager } from '@/lib/reputation';
-import { log } from '@/lib/logger';
-import type { Database } from './database.types';
+import type { Database } from '@/lib/database.types';
 
 type CreditTransaction = Database['public']['Tables']['credit_transactions']['Row'];
-type UserCredits = Database['public']['Tables']['profiles']['Row'];
+type UserCredits = Database['public']['Tables']['user_credits']['Row'];
 type JudgeReputation = Database['public']['Tables']['judge_reputation']['Row'];
 
 export const CREDIT_ECONOMY_CONFIG = {
   JUDGMENTS_PER_CREDIT: 3, // Judge 3 submissions = earn 1 credit
-  CREDIT_VALUE_PER_JUDGMENT: 1, // 1 full point per judgment (3 points = 1 credit)
+  CREDIT_VALUE_PER_JUDGMENT: 0.34, // 1/3 = ~0.34 credits per judgment
   STREAK_BONUS_THRESHOLD: 7, // 7 days in a row
   STREAK_BONUS_CREDITS: 1, // Bonus credit for streak
   
@@ -31,18 +30,18 @@ export const CREDIT_ECONOMY_CONFIG = {
 export class CreditManager {
   private supabase = createClient();
 
-  async getUserCredits(userId: string): Promise<{ balance: number } | null> {
+  async getUserCredits(userId: string): Promise<UserCredits | null> {
     const { data, error } = await this.supabase
-      .from('profiles')
-      .select('credits')
-      .eq('id', userId)
+      .from('user_credits')
+      .select('*')
+      .eq('user_id', userId)
       .single();
 
     if (error && error.code !== 'PGRST116') { // Not found is ok
       throw error;
     }
 
-    return data ? { balance: (data as any).credits || 0 } : null;
+    return data;
   }
 
   async getJudgeReputation(userId: string): Promise<JudgeReputation | null> {
@@ -100,16 +99,8 @@ export class CreditManager {
 
       return true;
     } catch (error) {
-      log.error('CRITICAL: Credit award failed for judge', error, {
-        judgeId,
-        judgmentId,
-        consensusMatch,
-        helpfulnessRating,
-        creditAmount: CREDIT_ECONOMY_CONFIG.CREDIT_VALUE_PER_JUDGMENT
-      });
-      // This is a critical failure - judge loses earnings
-      // Consider implementing retry logic or manual review queue
-      throw new Error(`Credit award failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('Error awarding credits for judging:', error);
+      return false;
     }
   }
 
@@ -120,23 +111,18 @@ export class CreditManager {
     description: string
   ): Promise<boolean> {
     try {
-      // EMERGENCY FIX: Use safe credit deduction instead of legacy spend_credits
-      const { safeDeductCredits } = require('./credit-guard');
-      
-      const result = await safeDeductCredits(userId, creditsToSpend, submissionId);
-      return result.success;
-    } catch (error) {
-      log.error('CRITICAL: Credit spending failed', error, {
-        userId,
-        submissionId,
-        creditsToSpend,
-        description
+      const { data, error } = await (this.supabase.rpc as any)('spend_credits', {
+        target_user_id: userId,
+        credit_amount: creditsToSpend,
+        transaction_source: 'submission',
+        transaction_source_id: submissionId,
+        transaction_description: description
       });
-      // Credit spending failure could indicate:
-      // 1. Insufficient funds (user should be notified)
-      // 2. Database error (system issue)
-      // 3. Race condition (retry might work)
-      throw new Error(`Credit spending failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+
+      return !error && data === true;
+    } catch (error) {
+      console.error('Error spending credits:', error);
+      return false;
     }
   }
 

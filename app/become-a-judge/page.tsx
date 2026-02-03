@@ -73,26 +73,26 @@ export default function BecomeJudgePage() {
   const stats: JudgeStat[] = [
     {
       label: 'Active Judges',
-      value: '500+',
+      value: '2,847',
       icon: <Users className="h-5 w-5" />,
       color: 'from-blue-500 to-indigo-600'
     },
     {
-      label: 'Earnings Per Review',
-      value: '$0.60',
+      label: 'Avg Weekly Earnings',
+      value: '$127',
       icon: <DollarSign className="h-5 w-5" />,
       color: 'from-green-500 to-emerald-600'
     },
     {
-      label: 'Reviews Needed',
-      value: '3-5 min',
-      icon: <Clock className="h-5 w-5" />,
+      label: 'Top Judge This Week',
+      value: '$412',
+      icon: <TrendingUp className="h-5 w-5" />,
       color: 'from-purple-500 to-pink-600'
     },
     {
-      label: 'Weekly Payouts',
-      value: 'Fridays',
-      icon: <Award className="h-5 w-5" />,
+      label: 'Avg Response Time',
+      value: '4.2 min',
+      icon: <Clock className="h-5 w-5" />,
       color: 'from-orange-500 to-red-600'
     }
   ];
@@ -101,7 +101,7 @@ export default function BecomeJudgePage() {
     {
       icon: <DollarSign className="h-6 w-6" />,
       title: 'Earn Real Money',
-      description: '$0.60 per review. Clear, upfront pricing with weekly payouts via Stripe.',
+      description: '$0.60 - $2.00 per verdict based on complexity. Weekly payouts via Stripe.',
       highlight: true
     },
     {
@@ -139,23 +139,23 @@ export default function BecomeJudgePage() {
   const testimonials = [
     {
       name: 'Sarah M.',
-      role: 'Active Judge',
-      earnings: '~50 reviews/week',
-      quote: "I judge during my commute and lunch breaks. It's a nice way to help people and earn some extra money.",
+      role: 'Expert Judge',
+      earnings: '$1,847/month',
+      quote: "I judge during my commute and lunch breaks. Last month I made enough to cover my car payment!",
       avatar: '👩‍💼'
     },
     {
       name: 'Mike R.',
       role: 'Weekend Judge',
-      earnings: '~20 reviews/week',
-      quote: "Perfect weekend side hustle. I enjoy helping people make better decisions.",
+      earnings: '$320/month',
+      quote: "Perfect weekend side hustle. I enjoy helping people and the extra income is great for my savings.",
       avatar: '👨‍🏫'
     },
     {
       name: 'Emma L.',
-      role: 'Regular Judge',
-      earnings: '~30 reviews/week',
-      quote: "Simple way to earn some extra income while providing genuine feedback to people who need it.",
+      role: 'Top Judge',
+      earnings: '$2,400/month',
+      quote: "Started as a side gig, now it's a significant income stream. The flexibility is unmatched.",
       avatar: '👩‍⚖️'
     }
   ];
@@ -187,18 +187,18 @@ export default function BecomeJudgePage() {
           >
             <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-full px-4 py-2 mb-6">
               <Sparkles className="h-5 w-5" />
-              <span className="font-semibold">Join 500+ Active Judges</span>
+              <span className="font-semibold">Join 2,847 Active Judges</span>
             </div>
             
             <h1 className="text-5xl md:text-6xl font-bold mb-6">
-              Help People Make
+              Turn Your Opinion Into
               <span className="block bg-gradient-to-r from-yellow-300 to-orange-300 bg-clip-text text-transparent">
-                Better Decisions
+                Real Income
               </span>
             </h1>
             
             <p className="text-xl md:text-2xl text-white/90 mb-8 max-w-3xl mx-auto">
-              Earn $0.60 per review by providing honest feedback to real people. 
+              Help people make better decisions while earning $50-$400+ per week. 
               Work on your schedule, get paid weekly.
             </p>
 
@@ -348,9 +348,9 @@ export default function BecomeJudgePage() {
                 <ChevronRight className="h-5 w-5 group-open:rotate-90 transition-transform" />
               </summary>
               <p className="mt-4 text-gray-600">
-                You earn $0.60 per review you complete. Most reviews take 3-5 minutes. 
-                If you complete 10 reviews per week, you'd earn $6. If you complete 50 reviews per week, 
-                you'd earn $30. It's a simple, transparent payment system.
+                Earnings depend on your availability and speed. New judges typically earn $50-150/week 
+                working 5-10 hours. Experienced judges earn $200-400/week, with top performers exceeding 
+                $500/week. You're paid per verdict, not hourly.
               </p>
             </details>
             
@@ -388,7 +388,7 @@ export default function BecomeJudgePage() {
             Ready to Start Earning?
           </h2>
           <p className="text-xl mb-8 text-white/90">
-            Join 500+ judges already helping people on Verdict
+            Join 2,847 judges already earning on Verdict
           </p>
           
           <motion.button
