@@ -823,7 +823,28 @@ ON CONFLICT (id) DO NOTHING;
 -- PART 16: FUNCTIONS
 -- ============================================================================
 
--- Atomic credit operations
+-- ============================================================================
+-- ADVISORY LOCKING (for credit-guard.ts race condition prevention)
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION try_advisory_lock(lock_id BIGINT)
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN pg_try_advisory_lock(lock_id);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION advisory_unlock(lock_id BIGINT)
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN pg_advisory_unlock(lock_id);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- ============================================================================
+-- ATOMIC CREDIT OPERATIONS
+-- ============================================================================
+
 CREATE OR REPLACE FUNCTION add_credits(p_user_id UUID, p_credits INT)
 RETURNS TABLE(success BOOLEAN, new_balance INT, message TEXT) AS $$
 DECLARE
@@ -857,6 +878,138 @@ BEGIN
   END IF;
   UPDATE profiles SET credits = credits - p_credits, updated_at = NOW() WHERE id = p_user_id RETURNING credits INTO updated_balance;
   RETURN QUERY SELECT TRUE, updated_balance, 'Credits deducted successfully'::TEXT;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION refund_credits(p_user_id UUID, p_credits INT, p_reason TEXT DEFAULT NULL)
+RETURNS TABLE(success BOOLEAN, new_balance INT, message TEXT) AS $$
+DECLARE
+  updated_balance INT;
+BEGIN
+  UPDATE profiles SET credits = credits + p_credits, updated_at = NOW() WHERE id = p_user_id RETURNING credits INTO updated_balance;
+  IF NOT FOUND THEN
+    RETURN QUERY SELECT FALSE, 0, 'Profile not found'::TEXT;
+    RETURN;
+  END IF;
+  -- Log the refund
+  INSERT INTO credit_transactions (user_id, amount, type, description, source)
+  VALUES (p_user_id, p_credits, 'refund', COALESCE(p_reason, 'Credit refund'), 'refund');
+  RETURN QUERY SELECT TRUE, updated_balance, 'Credits refunded successfully'::TEXT;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION award_credits(
+  target_user_id UUID,
+  credit_amount DECIMAL,
+  transaction_type TEXT,
+  transaction_source TEXT,
+  transaction_source_id UUID DEFAULT NULL,
+  transaction_description TEXT DEFAULT 'Credits awarded'
+)
+RETURNS BOOLEAN AS $$
+DECLARE
+  rounded_amount INT;
+BEGIN
+  -- Round to nearest integer for storage
+  rounded_amount := ROUND(credit_amount);
+  IF rounded_amount < 1 THEN
+    rounded_amount := 0; -- Don't award partial credits
+  END IF;
+
+  -- Update balance
+  UPDATE profiles SET credits = credits + rounded_amount, updated_at = NOW() WHERE id = target_user_id;
+
+  -- Log transaction
+  INSERT INTO credit_transactions (user_id, amount, type, description, source, source_id)
+  VALUES (target_user_id, rounded_amount, transaction_type, transaction_description, transaction_source, transaction_source_id);
+
+  RETURN TRUE;
+EXCEPTION WHEN OTHERS THEN
+  RETURN FALSE;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ============================================================================
+-- JUDGE REPUTATION
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION update_judge_reputation(
+  p_judge_id UUID,
+  p_quality_delta INTEGER DEFAULT 0,
+  p_consensus_delta INTEGER DEFAULT 0
+)
+RETURNS VOID AS $$
+BEGIN
+  INSERT INTO judge_reputation (user_id, total_judgments, quality_score)
+  VALUES (p_judge_id, 1, p_quality_delta)
+  ON CONFLICT (user_id) DO UPDATE SET
+    total_judgments = judge_reputation.total_judgments + 1,
+    quality_score = LEAST(100, GREATEST(0, judge_reputation.quality_score + p_quality_delta)),
+    last_judgment_at = NOW(),
+    current_streak = CASE
+      WHEN judge_reputation.last_judgment_at > NOW() - INTERVAL '25 hours'
+      THEN judge_reputation.current_streak + 1
+      ELSE 1
+    END,
+    longest_streak = GREATEST(judge_reputation.longest_streak,
+      CASE
+        WHEN judge_reputation.last_judgment_at > NOW() - INTERVAL '25 hours'
+        THEN judge_reputation.current_streak + 1
+        ELSE 1
+      END),
+    updated_at = NOW();
+END;
+$$ LANGUAGE plpgsql;
+
+-- ============================================================================
+-- NOTIFICATIONS
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION create_notification(
+  p_user_id UUID,
+  p_type TEXT,
+  p_title TEXT,
+  p_message TEXT,
+  p_metadata JSONB DEFAULT '{}'
+)
+RETURNS UUID AS $$
+DECLARE
+  new_id UUID;
+BEGIN
+  INSERT INTO notifications (user_id, type, title, message, metadata)
+  VALUES (p_user_id, p_type, p_title, p_message, p_metadata)
+  RETURNING id INTO new_id;
+  RETURN new_id;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION mark_notification_read(notification_id UUID)
+RETURNS BOOLEAN AS $$
+BEGIN
+  UPDATE notifications SET read = TRUE, read_at = NOW() WHERE id = notification_id;
+  RETURN FOUND;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION mark_all_notifications_read(target_user_id UUID)
+RETURNS INTEGER AS $$
+DECLARE
+  updated_count INTEGER;
+BEGIN
+  UPDATE notifications SET read = TRUE, read_at = NOW()
+  WHERE user_id = target_user_id AND read = FALSE;
+  GET DIAGNOSTICS updated_count = ROW_COUNT;
+  RETURN updated_count;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION get_unread_notification_count(target_user_id UUID)
+RETURNS INTEGER AS $$
+DECLARE
+  count_val INTEGER;
+BEGIN
+  SELECT COUNT(*) INTO count_val FROM notifications WHERE user_id = target_user_id AND read = FALSE;
+  RETURN count_val;
 END;
 $$ LANGUAGE plpgsql;
 
