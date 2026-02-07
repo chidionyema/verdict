@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createServiceClient } from '@/lib/supabase/server';
 
 const INITIAL_FREE_CREDITS = 3;
 
@@ -43,8 +43,10 @@ export async function GET(request: NextRequest) {
       .single();
 
     if (!existingProfile) {
-      // Create profile with 3 free credits for new users
-      const { error: profileError } = await (supabase as any)
+      // Use service client to bypass RLS for profile creation
+      const serviceClient = createServiceClient();
+
+      const { error: profileError } = await (serviceClient as any)
         .from('profiles')
         .insert({
           id: data.user.id,
