@@ -34,11 +34,22 @@ export default function FeedPage() {
   const [creditsEarned, setCreditsEarned] = useState(0);
   const [showTraining, setShowTraining] = useState(false);
   const [trainingCompleted, setTrainingCompleted] = useState(false);
-  
+  const [earnMode, setEarnMode] = useState(false);
+  const [returnUrl, setReturnUrl] = useState<string | null>(null);
+
   // Progressive profiling
   const { shouldShow: showProgressiveProfile, triggerType, dismiss: dismissProgressiveProfile, checkTrigger } = useProgressiveProfile();
   const supabaseRef = useRef<ReturnType<typeof createClient> | null>(null);
   const router = useRouter();
+
+  // Check for earn mode from URL params
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      setEarnMode(params.get('earn') === 'true');
+      setReturnUrl(params.get('return'));
+    }
+  }, []);
 
   useEffect(() => {
     // Only initialize Supabase client in browser
@@ -212,9 +223,10 @@ export default function FeedPage() {
         if (earned) {
           // Show credit earning feedback
           const newTotal = judgeStats.today + 1;
-          const creditsEarned = Math.floor(newTotal / 3) - Math.floor(judgeStats.today / 3);
+          const newCreditsEarned = Math.floor(newTotal / 3) - Math.floor(judgeStats.today / 3);
 
-          if (creditsEarned > 0) {
+          if (newCreditsEarned > 0) {
+            setCreditsEarned(prev => prev + newCreditsEarned);
             toast.success('🎉 You earned 1 credit! Keep judging to earn more.');
           } else {
             const remaining = 3 - (newTotal % 3);
@@ -391,6 +403,31 @@ export default function FeedPage() {
       <div className="fixed top-4 right-4 z-20">
         <CreditBalance compact />
       </div>
+
+      {/* Earn Mode Banner */}
+      {earnMode && (
+        <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-4 py-3">
+          <div className="max-w-lg mx-auto">
+            <div className="flex items-center gap-3">
+              <Zap className="h-5 w-5 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="font-semibold">Earn Free Credits</p>
+                <p className="text-sm text-green-100">
+                  Judge 3 submissions to earn 1 credit. {returnUrl ? "We'll take you back when you're done!" : ""}
+                </p>
+              </div>
+              {returnUrl && creditsEarned > 0 && (
+                <button
+                  onClick={() => router.push(returnUrl)}
+                  className="bg-white text-green-600 px-3 py-1 rounded-lg text-sm font-medium hover:bg-green-50"
+                >
+                  Continue ({creditsEarned} earned)
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Judge Training Modal */}
       {showTraining && (
