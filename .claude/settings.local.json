@@ -34,7 +34,9 @@
       "Bash(npm audit:*)",
       "Bash(git add:*)",
       "Bash(curl:*)",
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "Bash(git commit:*)",
+      "Bash(git push)"
     ],
     "deny": [],
     "ask": []

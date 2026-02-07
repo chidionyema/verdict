@@ -105,6 +105,14 @@ export default function FeedPage() {
 
       if (requestsError) throw requestsError;
       
+      // Get the user's existing judgments to filter them out
+      const { data: userJudgments } = await supabase
+        .from('feedback_responses')
+        .select('request_id')
+        .eq('reviewer_id', user.id);
+
+      const judgedRequestIds = new Set((userJudgments || []).map((j: any) => j.request_id));
+
       // Get response counts for each request
       const itemsWithCounts = await Promise.all(
         (requestsData || []).map(async (item: any) => {
@@ -112,18 +120,23 @@ export default function FeedPage() {
             .from('feedback_responses')
             .select('*', { count: 'exact', head: true })
             .eq('request_id', item.id);
-          
+
           return {
             ...item,
             response_count: count || 0,
           };
         })
       );
-      
-      // Filter out items already judged by this user and that have < 3 responses
+
+      // Filter out items already judged by this user, their own requests, and completed ones
       const filteredItems = itemsWithCounts.filter((item: any) => {
-        // TODO: Add check if user has already judged this item
-        return (item.response_count || 0) < 3; // Still needs judgments
+        // Skip if user already judged this
+        if (judgedRequestIds.has(item.id)) return false;
+        // Skip if it's the user's own request
+        if (item.user_id === user.id) return false;
+        // Skip if request is completed (has 3+ responses)
+        if ((item.response_count || 0) >= 3) return false;
+        return true;
       });
 
       setFeedItems(filteredItems);
@@ -194,15 +207,30 @@ export default function FeedPage() {
 
       if (responseData && responseData.id) {
         // Award credits for judging
-        await creditManager.awardCreditsForJudging(user.id, responseData.id);
-        
+        const earned = await creditManager.awardCreditsForJudging(user.id, responseData.id);
+
+        if (earned) {
+          // Show credit earning feedback
+          const newTotal = judgeStats.today + 1;
+          const creditsEarned = Math.floor(newTotal / 3) - Math.floor(judgeStats.today / 3);
+
+          if (creditsEarned > 0) {
+            toast.success('🎉 You earned 1 credit! Keep judging to earn more.');
+          } else {
+            const remaining = 3 - (newTotal % 3);
+            if (remaining < 3 && remaining > 0) {
+              toast.success(`+0.34 credits! ${remaining} more judgment${remaining > 1 ? 's' : ''} to earn 1 full credit.`);
+            }
+          }
+        }
+
         // Check if we should show progressive profiling after earning credits
         checkTrigger('credits_earned');
       }
 
       // Update stats
-      setJudgeStats(prev => ({ 
-        ...prev, 
+      setJudgeStats(prev => ({
+        ...prev,
         today: prev.today + 1,
         totalJudgments: prev.totalJudgments + 1
       }));

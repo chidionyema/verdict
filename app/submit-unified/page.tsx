@@ -166,8 +166,44 @@ export default function UnifiedSubmitPage() {
 
   const submitCommunityRequest = async () => {
     setStep('processing');
-    // Submit community request logic here
-    setTimeout(() => setStep('success'), 2000); // Simulate processing
+
+    try {
+      const response = await fetch('/api/requests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          category: submissionData.category,
+          media_type: submissionData.mediaType,
+          media_url: submissionData.mediaUrl,
+          text_content: submissionData.question,
+          context: submissionData.context,
+          visibility: 'public', // Community = public visibility
+          request_tier: 'community', // Use community tier (costs 1 credit)
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (response.status === 402) {
+          // Insufficient credits
+          toast.error('Not enough credits. Earn credits by judging others!');
+          router.push('/feed?earn=true&return=/submit-unified');
+          return;
+        }
+        throw new Error(data.error || 'Failed to create request');
+      }
+
+      // Success!
+      setUserCredits(prev => Math.max(0, prev - 1)); // Update local credit count
+      toast.success('Your request has been submitted to the community!');
+      setStep('success');
+
+    } catch (error) {
+      console.error('Community submission error:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to submit. Please try again.');
+      setStep('mode'); // Go back to mode selection
+    }
   };
 
   const handlePaymentSuccess = async (paymentData: any) => {
