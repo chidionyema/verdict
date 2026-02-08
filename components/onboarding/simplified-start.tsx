@@ -26,8 +26,11 @@ import {
   Play,
 } from 'lucide-react';
 import { ModeIndicator } from '@/components/mode/ModeIndicator';
+import { Spinner } from '@/components/ui/Spinner';
+import { Tooltip } from '@/components/ui/Tooltip';
 import { PricingTiers, type RequestTier } from '@/components/pricing/PricingTiers';
 import { InsufficientCreditsModal } from '@/components/modals/InsufficientCreditsModal';
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import type { User } from '@supabase/supabase-js';
 import type { Mode } from '@/lib/mode-colors';
 
@@ -86,6 +89,7 @@ const subcategories: Record<string, string[]> = {
 export function SimplifiedStart() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const stepHeadingRef = useRef<HTMLHeadingElement>(null);
 
   const [user, setUser] = useState<User | null>(null);
   const [step, setStep] = useState(1);
@@ -109,6 +113,37 @@ export function SimplifiedStart() {
   const [userTier, setUserTier] = useState<'community' | 'standard' | 'pro'>('community');
   const [showCreditsModal, setShowCreditsModal] = useState(false);
   const [requiredCredits, setRequiredCredits] = useState(1);
+
+  // Track unsaved changes to warn user before leaving
+  const hasUnsavedData = Boolean(
+    textContent.trim() ||
+    category ||
+    context.trim() ||
+    previewUrl
+  );
+  useUnsavedChanges(hasUnsavedData && !showSuccess, {
+    message: 'You have unsaved content. Are you sure you want to leave?'
+  });
+
+  // Focus management: move focus to step heading when step changes
+  useEffect(() => {
+    // Small delay to allow DOM to update after step transition
+    const timer = setTimeout(() => {
+      if (stepHeadingRef.current) {
+        stepHeadingRef.current.focus();
+      }
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [step]);
+
+  // Cleanup object URL on unmount to prevent memory leak
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
 
   useEffect(() => {
     // Only initialize Supabase client in browser
@@ -223,6 +258,12 @@ export function SimplifiedStart() {
     }
 
     setError('');
+
+    // Revoke previous URL to prevent memory leak
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl);
+    }
+
     setPreviewUrl(URL.createObjectURL(file));
     (window as any).pendingFile = file;
 
@@ -405,18 +446,89 @@ export function SimplifiedStart() {
 
   if (showSuccess) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center">
-        <div className="text-center space-y-6 animate-in fade-in duration-1000">
-          <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-            <Check className="w-12 h-12 text-green-600 animate-pulse" />
+      <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 flex items-center justify-center p-4">
+        {/* Celebration particles */}
+        <div className="fixed inset-0 overflow-hidden pointer-events-none">
+          {[...Array(20)].map((_, i) => (
+            <div
+              key={i}
+              className="absolute w-3 h-3 rounded-full animate-ping opacity-60"
+              style={{
+                left: `${Math.random() * 100}%`,
+                top: `${Math.random() * 100}%`,
+                backgroundColor: ['#10b981', '#6366f1', '#f59e0b', '#ec4899'][i % 4],
+                animationDelay: `${Math.random() * 2}s`,
+                animationDuration: `${1.5 + Math.random()}s`,
+              }}
+            />
+          ))}
+        </div>
+
+        <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-500">
+          {/* Success Header */}
+          <div className="bg-gradient-to-r from-green-500 via-emerald-500 to-teal-500 p-8 text-white text-center">
+            <div className="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce">
+              <Check className="w-10 h-10 text-white" />
+            </div>
+            <h2 className="text-3xl font-bold mb-2">You're All Set!</h2>
+            <p className="text-white/90">Your request has been submitted successfully</p>
           </div>
-          <div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">Request submitted!</h2>
-            <p className="text-gray-600">You'll receive expert feedback within 30 minutes</p>
-          </div>
-          <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
-            <Clock className="w-4 h-4" />
-            <span>Redirecting to your dashboard...</span>
+
+          {/* Submission Summary */}
+          <div className="p-6">
+            <div className="bg-gray-50 rounded-xl p-4 mb-6">
+              <h3 className="text-sm font-semibold text-gray-500 mb-3">WHAT HAPPENS NEXT</h3>
+              <div className="space-y-3">
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <span className="text-xs font-bold text-green-600">1</span>
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">Judges are reviewing</p>
+                    <p className="text-sm text-gray-600">Real people are looking at your submission now</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <span className="text-xs font-bold text-blue-600">2</span>
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">Get 3+ expert verdicts</p>
+                    <p className="text-sm text-gray-600">Usually within 15-30 minutes</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3">
+                  <div className="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <span className="text-xs font-bold text-purple-600">3</span>
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">Make your decision</p>
+                    <p className="text-sm text-gray-600">Use the feedback to move forward with confidence</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Stats */}
+            <div className="grid grid-cols-3 gap-3 mb-6">
+              <div className="text-center p-3 bg-green-50 rounded-xl">
+                <p className="text-2xl font-bold text-green-600">3+</p>
+                <p className="text-xs text-green-700">Verdicts coming</p>
+              </div>
+              <div className="text-center p-3 bg-blue-50 rounded-xl">
+                <p className="text-2xl font-bold text-blue-600">~15</p>
+                <p className="text-xs text-blue-700">Minutes avg</p>
+              </div>
+              <div className="text-center p-3 bg-purple-50 rounded-xl">
+                <p className="text-2xl font-bold text-purple-600">100%</p>
+                <p className="text-xs text-purple-700">Guarantee</p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-center gap-2 text-sm text-gray-500 animate-pulse">
+              <Clock className="w-4 h-4" />
+              <span>Redirecting to your dashboard...</span>
+            </div>
           </div>
         </div>
       </div>
@@ -498,7 +610,11 @@ export function SimplifiedStart() {
               <ModeIndicator mode={submissionMode} />
             </div>
           )}
-          <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-gray-900 via-gray-900 to-gray-600 bg-clip-text text-transparent mb-4">
+          <h1
+            ref={stepHeadingRef}
+            tabIndex={-1}
+            className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-gray-900 via-gray-900 to-gray-600 bg-clip-text text-transparent mb-4 focus:outline-none"
+          >
             {getStepTitle()}
           </h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
@@ -696,18 +812,26 @@ export function SimplifiedStart() {
                     accept="image/*"
                     onChange={handleFileUpload}
                     className="hidden"
+                    aria-label="Upload image for feedback"
+                    id="photo-upload"
                   />
                 </div>
               ) : (
                 <div className="space-y-6">
                   <div className="relative">
+                    <label htmlFor="text-content" className="sr-only">
+                      Your text content for feedback
+                    </label>
                     <textarea
+                      id="text-content"
                       value={textContent}
                       onChange={(e) => setTextContent(e.target.value)}
                       onBlur={() => setTextContentTouched(true)}
                       placeholder="Paste your text here... (minimum 50 characters for quality feedback)"
                       className="w-full p-6 border-2 border-gray-300 rounded-2xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 transition-all text-lg resize-none"
                       rows={8}
+                      maxLength={2000}
+                      aria-describedby="text-content-count"
                     />
                     <div className="absolute bottom-4 right-4 flex items-center gap-2">
                       <span className={`text-sm font-medium ${
@@ -730,18 +854,24 @@ export function SimplifiedStart() {
                   )}
 
                   <div className="flex justify-end">
-                    <button
-                      onClick={handleTextSubmit}
-                      disabled={textContent.length < 50}
-                      className={`inline-flex items-center gap-2 px-8 py-4 rounded-xl font-semibold transition-all ${
-                        textContent.length < 50
-                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                          : 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:shadow-lg transform hover:scale-105'
-                      }`}
+                    <Tooltip
+                      content={textContent.length < 50 ? `Add ${50 - textContent.length} more characters` : ''}
+                      position="top"
+                      disabled={textContent.length >= 50}
                     >
-                      Continue
-                      <ArrowRight className="w-5 h-5" />
-                    </button>
+                      <button
+                        onClick={handleTextSubmit}
+                        disabled={textContent.length < 50}
+                        className={`inline-flex items-center gap-2 px-8 py-4 rounded-xl font-semibold transition-all ${
+                          textContent.length < 50
+                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                            : 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:shadow-lg transform hover:scale-105'
+                        }`}
+                      >
+                        Continue
+                        <ArrowRight className="w-5 h-5" />
+                      </button>
+                    </Tooltip>
                   </div>
                 </div>
               )}
@@ -915,20 +1045,22 @@ export function SimplifiedStart() {
               {/* Context Input */}
               <div className="space-y-6">
                 <div>
-                  <label className="block text-lg font-semibold text-gray-900 mb-4">
+                  <label htmlFor="context-input" className="block text-lg font-semibold text-gray-900 mb-4">
                     What's the context? <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
                     <textarea
+                      id="context-input"
                       value={context}
                       onChange={(e) => setContext(e.target.value)}
-                      placeholder={`e.g., "${category === 'appearance' ? 'Job interview at a tech startup next week - want to look professional but approachable' : 
+                      placeholder={`e.g., "${category === 'appearance' ? 'Job interview at a tech startup next week - want to look professional but approachable' :
                         category === 'profile' ? 'Updating LinkedIn for career change from finance to marketing - need to highlight transferable skills' :
                         category === 'writing' ? 'Follow-up email to potential client after great meeting - want to be enthusiastic but not pushy' :
                         'Choosing between two apartments - one in downtown (expensive, walkable) vs suburbs (affordable, need car)'
                       }"`}
                       className="w-full p-6 border-2 border-gray-300 rounded-2xl focus:ring-4 focus:ring-indigo-100 focus:border-indigo-500 transition-all text-lg resize-none"
                       rows={6}
+                      maxLength={500}
                     />
                     <div className="absolute bottom-4 right-4 flex items-center gap-2">
                       <span className={`text-sm font-medium ${
@@ -1096,32 +1228,38 @@ export function SimplifiedStart() {
 
               {/* Submit Button */}
               <div className="flex justify-center pt-8">
-                <button
-                  onClick={handleSubmit}
-                  disabled={submitting || context.length < 20}
-                  className={`relative px-12 py-4 rounded-2xl font-bold text-lg transition-all duration-300 ${
-                    submitting || context.length < 20
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      : 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:shadow-2xl transform hover:scale-105'
-                  }`}
+                <Tooltip
+                  content={context.length < 20 ? `Add ${20 - context.length} more characters to continue` : ''}
+                  position="top"
+                  disabled={context.length >= 20 || submitting}
                 >
-                  {submitting ? (
-                    <div className="flex items-center gap-3">
-                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      {uploading ? 'Uploading...' : 'Creating request...'}
-                    </div>
-                  ) : user ? (
-                    <div className="flex items-center gap-3">
-                      <span>Get Expert {category} Feedback</span>
-                      <ArrowRight className="w-5 h-5" />
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-3">
-                      <span>Sign up & Get Feedback</span>
-                      <ArrowRight className="w-5 h-5" />
-                    </div>
-                  )}
-                </button>
+                  <button
+                    onClick={handleSubmit}
+                    disabled={submitting || context.length < 20}
+                    className={`relative px-12 py-4 rounded-2xl font-bold text-lg transition-all duration-300 ${
+                      submitting || context.length < 20
+                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        : 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:shadow-2xl transform hover:scale-105'
+                    }`}
+                  >
+                    {submitting ? (
+                      <div className="flex items-center gap-3">
+                        <Spinner size="sm" variant="white" label={uploading ? 'Uploading' : 'Creating request'} />
+                        {uploading ? 'Uploading...' : 'Creating request...'}
+                      </div>
+                    ) : user ? (
+                      <div className="flex items-center gap-3">
+                        <span>Get Expert {category} Feedback</span>
+                        <ArrowRight className="w-5 h-5" />
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-3">
+                        <span>Sign up & Get Feedback</span>
+                        <ArrowRight className="w-5 h-5" />
+                      </div>
+                    )}
+                  </button>
+                </Tooltip>
               </div>
 
               {context.length >= 20 && !submitting && (

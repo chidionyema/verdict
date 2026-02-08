@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { log } from '@/lib/logger';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
 
 // GET /api/judge/my-responses - Get judge's submitted verdicts (with per-verdict earnings)
-export async function GET(request: NextRequest) {
+async function GET_Handler(request: NextRequest) {
   try {
     const supabase: any = await createClient();
 
@@ -17,8 +18,12 @@ export async function GET(request: NextRequest) {
     }
 
     const searchParams = request.nextUrl.searchParams;
-    const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 50);
-    const offset = parseInt(searchParams.get('offset') || '0');
+    const rawLimit = parseInt(searchParams.get('limit') || '20', 10);
+    const rawOffset = parseInt(searchParams.get('offset') || '0', 10);
+
+    // Validate and bound pagination params
+    const limit = Number.isNaN(rawLimit) || rawLimit < 1 ? 20 : Math.min(rawLimit, 50);
+    const offset = Number.isNaN(rawOffset) || rawOffset < 0 ? 0 : rawOffset;
 
     const { data: responses, error } = await supabase
       .from('verdict_responses')
@@ -69,3 +74,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+// Apply rate limiting to my-responses endpoint
+export const GET = withRateLimit(GET_Handler, rateLimitPresets.default);

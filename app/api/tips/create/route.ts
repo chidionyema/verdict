@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { paymentRateLimiter, checkRateLimit } from '@/lib/rate-limiter';
+import { log } from '@/lib/logger';
 import Stripe from 'stripe';
+
+// UUID validation regex
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isValidUUID(id: string): boolean {
+  return typeof id === 'string' && UUID_REGEX.test(id);
+}
 
 // Lazy initialization to avoid build-time errors when env vars aren't set
 function getStripeClient() {
@@ -50,6 +58,21 @@ export async function POST(request: NextRequest) {
     if (!reviewerId || !verdictResponseId || !amountCents) {
       return NextResponse.json(
         { error: 'Missing required fields' },
+        { status: 400 }
+      );
+    }
+
+    // Validate UUID formats
+    if (!isValidUUID(reviewerId)) {
+      return NextResponse.json(
+        { error: 'Invalid reviewer ID format' },
+        { status: 400 }
+      );
+    }
+
+    if (!isValidUUID(verdictResponseId)) {
+      return NextResponse.json(
+        { error: 'Invalid verdict response ID format' },
         { status: 400 }
       );
     }
@@ -185,9 +208,26 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Error creating tip:', error);
+    log.error('Error creating tip', error);
+
+    // Check for specific Stripe errors to provide better user feedback
+    if (error instanceof Stripe.errors.StripeError) {
+      if (error.type === 'StripeCardError') {
+        return NextResponse.json(
+          { error: 'Your card was declined. Please try a different payment method.' },
+          { status: 400 }
+        );
+      }
+      if (error.type === 'StripeInvalidRequestError') {
+        return NextResponse.json(
+          { error: 'Invalid payment request. Please try again.' },
+          { status: 400 }
+        );
+      }
+    }
+
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Failed to process tip. Please try again.' },
       { status: 500 }
     );
   }

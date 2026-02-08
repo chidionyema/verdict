@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { log } from '@/lib/logger';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
 
 // GET /api/discover - Get discovery content (trending, featured, popular)
-export async function GET(request: NextRequest) {
+async function GET_Handler(request: NextRequest) {
   try {
     const supabase: any = await createClient();
     const url = new URL(request.url);
@@ -11,7 +12,7 @@ export async function GET(request: NextRequest) {
 
     const results: Record<string, unknown> = {};
 
-    // Get featured content
+    // Get featured content - exclude sensitive user data
     if (section === 'featured' || section === 'all') {
       const { data: featured } = await supabase
         .from('verdict_requests')
@@ -27,7 +28,6 @@ export async function GET(request: NextRequest) {
           created_at,
           view_count,
           featured,
-          user_id,
           profiles!verdict_requests_user_id_fkey(full_name, avatar_url)
         `)
         .eq('is_public', true)
@@ -88,7 +88,6 @@ export async function GET(request: NextRequest) {
           status,
           created_at,
           view_count,
-          user_id,
           profiles!verdict_requests_user_id_fkey(full_name, avatar_url)
         `)
         .eq('is_public', true)
@@ -149,7 +148,6 @@ export async function GET(request: NextRequest) {
           media_type,
           created_at,
           view_count,
-          user_id,
           profiles!verdict_requests_user_id_fkey(full_name, avatar_url)
         `)
         .eq('is_public', true)
@@ -186,3 +184,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+// Apply rate limiting to prevent abuse/enumeration
+export const GET = withRateLimit(GET_Handler, rateLimitPresets.default);

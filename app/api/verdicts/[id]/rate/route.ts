@@ -1,14 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { log } from '@/lib/logger';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
+
+// UUID validation regex
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isValidUUID(id: string): boolean {
+  return typeof id === 'string' && UUID_REGEX.test(id);
+}
 
 // POST /api/verdicts/[id]/rate - Rate a verdict's quality
-export async function POST(
+async function POST_Handler(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
+
+    // Validate id as UUID
+    if (!isValidUUID(id)) {
+      return NextResponse.json({ error: 'Invalid verdict ID format' }, { status: 400 });
+    }
+
     const supabase = await createClient();
 
     const {
@@ -166,3 +180,6 @@ export async function POST(
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+// Apply rate limiting to verdict rating
+export const POST = withRateLimit(POST_Handler, rateLimitPresets.default);

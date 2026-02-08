@@ -59,7 +59,7 @@ export class CreditManager {
   }
 
   async awardCreditsForJudging(
-    judgeId: string, 
+    judgeId: string,
     judgmentId: string,
     consensusMatch?: boolean,
     helpfulnessRating?: number
@@ -67,14 +67,14 @@ export class CreditManager {
     try {
       // Check if reviewer can earn credits (reputation check)
       const canEarnCredits = await reputationManager.canEarnCredits(judgeId);
-      
+
       if (!canEarnCredits) {
         console.log(`Reviewer ${judgeId} cannot earn credits due to low reputation`);
         return false;
       }
 
       // Award partial credit for judgment
-      const { error: creditError } = await (this.supabase.rpc as any)('award_credits', {
+      const { data: creditData, error: creditError } = await (this.supabase.rpc as any)('award_credits', {
         target_user_id: judgeId,
         credit_amount: Math.round(CREDIT_ECONOMY_CONFIG.CREDIT_VALUE_PER_JUDGMENT * 100) / 100, // 0.2 credits
         transaction_type: 'earned',
@@ -85,14 +85,25 @@ export class CreditManager {
 
       if (creditError) throw creditError;
 
+      // Validate RPC returned expected success indicator
+      if (creditData === false) {
+        console.error('award_credits RPC returned false for judge:', judgeId);
+        return false;
+      }
+
       // Update reputation
-      const { error: repError } = await (this.supabase.rpc as any)('update_judge_reputation', {
+      const { data: repData, error: repError } = await (this.supabase.rpc as any)('update_judge_reputation', {
         target_user_id: judgeId,
         consensus_match: consensusMatch,
         helpfulness_rating: helpfulnessRating
       });
 
       if (repError) throw repError;
+
+      // Log if reputation update returned unexpected result
+      if (repData === false) {
+        console.warn('update_judge_reputation returned false for judge:', judgeId);
+      }
 
       // Check for streak bonus
       await this.checkStreakBonus(judgeId);
@@ -119,7 +130,18 @@ export class CreditManager {
         transaction_description: description
       });
 
-      return !error && data === true;
+      if (error) {
+        console.error('spend_credits RPC error:', error);
+        return false;
+      }
+
+      // Validate RPC returned boolean true (not just truthy)
+      if (data !== true) {
+        console.error('spend_credits RPC returned non-true value:', data, 'for user:', userId);
+        return false;
+      }
+
+      return true;
     } catch (error) {
       console.error('Error spending credits:', error);
       return false;
@@ -183,16 +205,22 @@ export class CreditManager {
     }
 
     // Award streak bonus
-    if (newStreak >= CREDIT_ECONOMY_CONFIG.STREAK_BONUS_THRESHOLD && 
+    if (newStreak >= CREDIT_ECONOMY_CONFIG.STREAK_BONUS_THRESHOLD &&
         newStreak % CREDIT_ECONOMY_CONFIG.STREAK_BONUS_THRESHOLD === 0) {
-      
-      await (this.supabase.rpc as any)('award_credits', {
+
+      const { data: bonusData, error: bonusError } = await (this.supabase.rpc as any)('award_credits', {
         target_user_id: judgeId,
         credit_amount: CREDIT_ECONOMY_CONFIG.STREAK_BONUS_CREDITS,
         transaction_type: 'bonus',
         transaction_source: 'streak_bonus',
         transaction_description: `${newStreak}-day judging streak bonus`
       });
+
+      if (bonusError) {
+        console.error('Failed to award streak bonus:', bonusError);
+      } else if (bonusData === false) {
+        console.warn('Streak bonus award returned false for judge:', judgeId);
+      }
     }
 
     // Update streak in reputation

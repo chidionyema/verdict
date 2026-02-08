@@ -2,6 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { log } from '@/lib/logger';
 import { z } from 'zod';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
+
+// UUID validation regex
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isValidUUID(id: string): boolean {
+  return typeof id === 'string' && UUID_REGEX.test(id);
+}
 
 const replySchema = z.object({
   message: z.string().min(1).max(2000),
@@ -12,7 +20,7 @@ const replySchema = z.object({
   })).optional(),
 });
 
-export async function GET(
+async function GET_Handler(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -25,6 +33,11 @@ export async function GET(
     }
 
     const { id: ticketId } = await params;
+
+    // Validate ticketId as UUID
+    if (!isValidUUID(ticketId)) {
+      return NextResponse.json({ error: 'Invalid ticket ID format' }, { status: 400 });
+    }
 
     // Get ticket details
     const { data: ticket, error: ticketError } = await supabase
@@ -67,7 +80,7 @@ export async function GET(
   }
 }
 
-export async function POST(
+async function POST_Handler(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -80,6 +93,12 @@ export async function POST(
     }
 
     const { id: ticketId } = await params;
+
+    // Validate ticketId as UUID
+    if (!isValidUUID(ticketId)) {
+      return NextResponse.json({ error: 'Invalid ticket ID format' }, { status: 400 });
+    }
+
     const body = await request.json();
     const validated = replySchema.parse(body);
 
@@ -145,7 +164,7 @@ export async function POST(
   }
 }
 
-export async function PATCH(
+async function PATCH_Handler(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -158,6 +177,12 @@ export async function PATCH(
     }
 
     const { id: ticketId } = await params;
+
+    // Validate ticketId as UUID
+    if (!isValidUUID(ticketId)) {
+      return NextResponse.json({ error: 'Invalid ticket ID format' }, { status: 400 });
+    }
+
     const body = await request.json();
     const { action } = body;
 
@@ -224,3 +249,8 @@ export async function PATCH(
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+// Apply rate limiting to ticket endpoints
+export const GET = withRateLimit(GET_Handler, rateLimitPresets.default);
+export const POST = withRateLimit(POST_Handler, rateLimitPresets.default);
+export const PATCH = withRateLimit(PATCH_Handler, rateLimitPresets.default);

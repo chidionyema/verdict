@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { log } from '@/lib/logger';
 import { z } from 'zod';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
 
 const slackConfigSchema = z.object({
   webhook_url: z.string().url(),
@@ -21,7 +22,7 @@ const slackNotificationSchema = z.object({
   }),
 });
 
-export async function GET(request: NextRequest) {
+async function GET_Handler(request: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -55,7 +56,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
+async function POST_Handler(request: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -124,10 +125,26 @@ export async function POST(request: NextRequest) {
 }
 
 // Send notification endpoint
-export async function PUT(request: NextRequest) {
+async function PUT_Handler(request: NextRequest) {
   try {
     const supabase = await createClient();
-    
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Check if user is admin
+    const { data: profile, error: profileError } = await (supabase as any)
+      .from('profiles')
+      .select('is_admin')
+      .eq('id', user.id)
+      .single();
+
+    if (profileError || !profile || !profile.is_admin) {
+      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    }
+
     const body = await request.json();
     const validated = slackNotificationSchema.parse(body);
 
@@ -266,3 +283,8 @@ function formatSlackMessage(type: string, data: any): string {
       return `📢 *Verdict Notification*\n${data.message || 'Event occurred'}`;
   }
 }
+
+// Apply rate limiting to Slack integration endpoints
+export const GET = withRateLimit(GET_Handler, rateLimitPresets.default);
+export const POST = withRateLimit(POST_Handler, rateLimitPresets.default);
+export const PUT = withRateLimit(PUT_Handler, rateLimitPresets.default);

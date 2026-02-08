@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { log } from '@/lib/logger';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
 
 // GET /api/folders - Get user's decision folders with stats
-export async function GET(request: NextRequest) {
+async function GET_Handler(request: NextRequest) {
   try {
     const supabase = await createClient();
 
@@ -78,7 +79,7 @@ export async function GET(request: NextRequest) {
 }
 
 // POST /api/folders - Create a new folder
-export async function POST(request: NextRequest) {
+async function POST_Handler(request: NextRequest) {
   try {
     const supabase = await createClient();
 
@@ -176,3 +177,7 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+// Apply rate limiting to folder endpoints
+export const GET = withRateLimit(GET_Handler, rateLimitPresets.default);
+export const POST = withRateLimit(POST_Handler, rateLimitPresets.default);

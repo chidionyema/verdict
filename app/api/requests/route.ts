@@ -95,10 +95,9 @@ const GET_Handler = async (request: NextRequest) => {
       const errorMessage = fetchError instanceof Error ? fetchError.message : 'Unknown error';
       const errorStack = fetchError instanceof Error ? fetchError.stack : undefined;
       log.error('Failed to fetch unified requests', { error: errorMessage, stack: errorStack });
-      console.error('Fetch error details:', fetchError);
+      // Don't expose internal error details to clients
       return NextResponse.json({
-        error: `Database error: ${errorMessage}`,
-        details: errorMessage
+        error: 'Failed to fetch requests. Please try again.'
       }, { status: 500 });
     }
 
@@ -254,7 +253,8 @@ async function fetchComparisonRequestsForUser(supabase: any, userId: string) {
       };
     });
   } catch (error) {
-    console.log('Error fetching comparison requests:', error);
+    log.error('Error fetching comparison requests', error, { userId });
+    // Return empty array but log for visibility - non-critical failure shouldn't block dashboard
     return [];
   }
 }
@@ -310,7 +310,8 @@ async function fetchSplitTestRequestsForUser(supabase: any, userId: string) {
       }
     }));
   } catch (error) {
-    console.log('Error fetching split test requests:', error);
+    log.error('Error fetching split test requests', error, { userId });
+    // Return empty array but log for visibility - non-critical failure shouldn't block dashboard
     return [];
   }
 }
@@ -357,6 +358,29 @@ const POST_Handler = async (request: NextRequest) => {
       roast_mode,
       visibility,
     } = body;
+
+    // Input size limits to prevent DoS and database abuse
+    const MAX_TEXT_CONTENT_LENGTH = 10000; // 10KB
+    const MAX_CONTEXT_LENGTH = 5000; // 5KB
+    const MAX_MEDIA_URL_LENGTH = 2000;
+
+    if (text_content && typeof text_content === 'string' && text_content.length > MAX_TEXT_CONTENT_LENGTH) {
+      return NextResponse.json({
+        error: `Text content must be ${MAX_TEXT_CONTENT_LENGTH} characters or less`
+      }, { status: 400 });
+    }
+
+    if (context && typeof context === 'string' && context.length > MAX_CONTEXT_LENGTH) {
+      return NextResponse.json({
+        error: `Context must be ${MAX_CONTEXT_LENGTH} characters or less`
+      }, { status: 400 });
+    }
+
+    if (media_url && typeof media_url === 'string' && media_url.length > MAX_MEDIA_URL_LENGTH) {
+      return NextResponse.json({
+        error: `Media URL must be ${MAX_MEDIA_URL_LENGTH} characters or less`
+      }, { status: 400 });
+    }
 
     // Validate category
     if (!validateCategory(category)) {
@@ -544,7 +568,7 @@ const POST_Handler = async (request: NextRequest) => {
 
       log.error('Failed to create verdict request', err);
       return NextResponse.json(
-        { error: 'Failed to create request', details: err?.message },
+        { error: 'Failed to create request. Please try again.' },
         { status: 500 }
       );
     }

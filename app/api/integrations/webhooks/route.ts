@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { log } from '@/lib/logger';
 import { z } from 'zod';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
 
 const webhookSchema = z.object({
   url: z.string().url(),
@@ -12,7 +13,7 @@ const webhookSchema = z.object({
   is_active: z.boolean().default(true),
 });
 
-export async function GET(request: NextRequest) {
+async function GET_Handler(request: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -50,7 +51,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
+async function POST_Handler(request: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -107,3 +108,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+// Apply rate limiting to webhook endpoints
+export const GET = withRateLimit(GET_Handler, rateLimitPresets.default);
+export const POST = withRateLimit(POST_Handler, rateLimitPresets.default);

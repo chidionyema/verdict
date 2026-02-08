@@ -129,19 +129,27 @@ const POST_Handler = async (request: NextRequest) => {
     );
     const baseEarning = tierConfig.judgePayout;
 
-    // Create earnings record for the judge
+    // Create earnings record for the judge - use upsert to prevent duplicate earnings
+    // The verdict_response_id should be unique, preventing race condition duplicates
     const { error: earningsError } = await (supabase as any)
       .from('judge_earnings')
-      .insert({
+      .upsert({
         judge_id: user.id,
         verdict_response_id: verdict.id,
         amount: baseEarning,
         payout_status: 'pending',
+      }, {
+        onConflict: 'verdict_response_id', // Prevent duplicate earnings for same verdict
+        ignoreDuplicates: true
       });
 
     if (earningsError) {
-      log.error('Error creating earnings record', earningsError);
-      // Don't fail the request if earnings creation fails, but log it
+      // Check if it's a duplicate - that's OK (idempotent)
+      if (!earningsError.message?.includes('duplicate') &&
+          earningsError.code !== '23505') {
+        log.error('Error creating earnings record', earningsError);
+      }
+      // Don't fail the request if earnings creation fails
     }
 
     // Update verdict response with earning amount

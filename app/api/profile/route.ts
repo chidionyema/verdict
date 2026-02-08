@@ -3,8 +3,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { log } from '@/lib/logger';
 import { AGE_RANGES, GENDERS } from '@/lib/validations';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
 
-export async function PATCH(request: NextRequest) {
+async function PATCH_Handler(request: NextRequest) {
   try {
     const supabase = await createClient();
 
@@ -40,7 +41,32 @@ export async function PATCH(request: NextRequest) {
           { status: 400 }
         );
       }
+
+      // If trying to become a judge, verify they have completed qualification
+      if (is_judge === true) {
+        const { data: currentProfile } = await supabase
+          .from('profiles')
+          .select('is_judge, judge_qualification_date')
+          .eq('id', user.id)
+          .single();
+
+        // Allow if already a judge OR if they have a qualification date in the request body
+        const hasQualificationDate = body.judge_qualification_date || (currentProfile as any)?.judge_qualification_date;
+
+        if (!(currentProfile as any)?.is_judge && !hasQualificationDate) {
+          return NextResponse.json(
+            { error: 'Must complete judge qualification first' },
+            { status: 403 }
+          );
+        }
+      }
+
       updateData.is_judge = is_judge;
+    }
+
+    // Handle judge_qualification_date (only set during qualification completion)
+    if (body.judge_qualification_date !== undefined) {
+      updateData.judge_qualification_date = body.judge_qualification_date;
     }
 
     if (country !== undefined) {
@@ -92,3 +118,6 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+// Apply rate limiting to profile endpoint
+export const PATCH = withRateLimit(PATCH_Handler, rateLimitPresets.default);

@@ -22,7 +22,7 @@ import { TouchButton } from '@/components/ui/touch-button';
 import { useLocalizedPricing } from '@/hooks/use-pricing';
 
 interface EmptyStateProps {
-  variant: 'no-requests' | 'no-results' | 'no-feedback' | 'no-credits' | 'first-time' | 'error' | 'loading';
+  variant: 'no-requests' | 'no-results' | 'no-feedback' | 'no-credits' | 'first-time' | 'error' | 'loading' | 'judge-queue-empty';
   title?: string;
   description?: string;
   actions?: Array<{
@@ -162,6 +162,28 @@ export function EmptyState({
           ]
         };
 
+      case 'judge-queue-empty':
+        return {
+          icon: Users,
+          title: title || 'No requests available right now',
+          description: description || 'The queue is temporarily empty. This usually means you\'ve reviewed everything available for your profile!',
+          illustration: '🎉',
+          defaultActions: [
+            {
+              label: 'Refresh Queue',
+              action: () => window.location.reload(),
+              variant: 'primary' as const,
+              icon: Eye
+            },
+            {
+              label: 'Browse Community Feed',
+              action: () => router.push('/feed'),
+              variant: 'secondary' as const,
+              icon: Heart
+            }
+          ]
+        };
+
       case 'error':
         return {
           icon: AlertTriangle,
@@ -256,6 +278,35 @@ export function EmptyState({
               <p className="text-blue-800 text-xs mt-1">
                 Reviewing takes ~5 minutes per request. You'll learn a lot by seeing what others submit!
               </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {variant === 'judge-queue-empty' && (
+        <div className="mt-8 max-w-md mx-auto space-y-3">
+          <div className="p-4 bg-amber-50 rounded-xl border border-amber-200">
+            <div className="flex items-start gap-3">
+              <Clock className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+              <div className="text-left">
+                <h3 className="font-semibold text-amber-900 text-sm">Why is the queue empty?</h3>
+                <ul className="text-amber-800 text-xs mt-1 space-y-1">
+                  <li>• You've reviewed all available requests</li>
+                  <li>• New submissions are being processed</li>
+                  <li>• Most activity happens 9am-9pm in your timezone</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <div className="p-4 bg-green-50 rounded-xl border border-green-200">
+            <div className="flex items-start gap-3">
+              <Sparkles className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+              <div className="text-left">
+                <h3 className="font-semibold text-green-900 text-sm">While you wait</h3>
+                <p className="text-green-800 text-xs mt-1">
+                  Complete your profile to unlock more request types and increase your earning potential!
+                </p>
+              </div>
             </div>
           </div>
         </div>

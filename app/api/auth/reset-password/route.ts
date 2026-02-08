@@ -41,7 +41,11 @@ const POST_Handler = async (request: NextRequest) => {
 
     // Send password reset email if token was created
     if (token && token !== 'token_sent' && !rpcError) {
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+      if (!appUrl) {
+        log.error('NEXT_PUBLIC_APP_URL not configured for password reset', null, { email });
+        return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+      }
       const resetLink = `${appUrl}/auth/reset-password?token=${token}`;
 
       const emailResult = await sendPasswordResetEmail(email, resetLink);

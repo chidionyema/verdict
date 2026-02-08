@@ -158,8 +158,8 @@ export function EconomyHeroSection() {
                     <Zap className="h-8 w-8" />
                   </div>
                   <div className="text-left">
-                    <h3 className="text-2xl font-bold text-gray-900">Instant Path</h3>
-                    <p className="text-purple-600 font-semibold">Pay {privatePrice} → Skip the queue</p>
+                    <h3 className="text-2xl font-bold text-gray-900">Private Path</h3>
+                    <p className="text-purple-600 font-semibold">Pay {privatePrice} → Fast & confidential</p>
                   </div>
                 </div>
 

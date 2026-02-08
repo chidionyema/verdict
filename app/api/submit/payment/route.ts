@@ -3,9 +3,10 @@ import { createClient } from '@/lib/supabase/server';
 import { stripe, isDemoMode } from '@/lib/stripe';
 import { getPricingConfig } from '@/lib/pricing-config';
 import { log } from '@/lib/logger';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
 
 // POST /api/submit/payment - Create Stripe checkout for direct submission payment
-export async function POST(request: NextRequest) {
+async function POST_Handler(request: NextRequest) {
   const operationId = Math.random().toString(36).substring(2, 15);
   const startTime = Date.now();
   
@@ -70,7 +71,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Payment system not configured' }, { status: 500 });
     }
 
-    const origin = request.headers.get('origin') || 'http://localhost:3000';
+    const origin = request.headers.get('origin') || process.env.NEXT_PUBLIC_APP_URL;
+    if (!origin) {
+      log.error('No origin header and NEXT_PUBLIC_APP_URL not configured', null, {
+        operationId,
+        severity: 'high'
+      });
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
 
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
@@ -140,3 +148,6 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+// Apply rate limiting to payment endpoint
+export const POST = withRateLimit(POST_Handler, rateLimitPresets.strict);

@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { SplitTestButton } from '@/components/features/SplitTestButton';
 import { ComparisonButton } from '@/components/comparison/ComparisonButton';
+import { LoadingOverlay } from '@/components/ui/LoadingOverlay';
 
 interface SubmissionStep {
   step: 'details' | 'mode' | 'payment' | 'processing' | 'success';
@@ -49,6 +50,7 @@ export default function UnifiedSubmitPage() {
     context: '',
     mediaType: 'text'
   });
+  const [isProcessingPaymentReturn, setIsProcessingPaymentReturn] = useState(false);
 
   // Check user credits and handle payment returns on load
   useEffect(() => {
@@ -59,6 +61,7 @@ export default function UnifiedSubmitPage() {
       
       // Handle successful payment return
       if (success === 'true' && sessionId) {
+        setIsProcessingPaymentReturn(true);
         setStep('processing');
         setSubmissionData({ ...submissionData, mode: 'private' });
         
@@ -69,34 +72,59 @@ export default function UnifiedSubmitPage() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ session_id: sessionId })
           });
-          
-          if (response.ok) {
-            const data = await response.json();
-            if (data.success) {
-              setStep('success');
-            } else {
-              // Payment succeeded but submission failed - need manual intervention
-              toast.error('Payment received but submission failed. Please contact support with session ID: ' + sessionId);
-              setStep('details'); // Return to form to retry
+
+          const data = await response.json().catch(() => ({ error: 'Unknown error' }));
+
+          if (response.ok && data.success) {
+            // Success - either new submission or idempotent return
+            setIsProcessingPaymentReturn(false);
+            if (data.idempotent) {
+              toast.success('Your submission was already created!');
             }
+            setStep('success');
+          } else if (data.refunded) {
+            // Submission failed but payment was automatically refunded
+            setIsProcessingPaymentReturn(false);
+            toast.error('Submission failed. Your payment has been refunded automatically.');
+            setStep('mode'); // Return to mode selection
           } else {
-            const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-            console.error('Failed to process submission after payment:', errorData);
-            
-            // Payment succeeded but submission processing failed - critical issue
-            toast.error('Payment received but submission failed. Please contact support immediately with session ID: ' + sessionId);
-            
-            // Don't show success - show error state or return to form
-            setStep('details'); // Allow retry or contact support
+            // Submission failed without automatic refund
+            setIsProcessingPaymentReturn(false);
+            console.error('Failed to process submission after payment:', data);
+            const supportId = data.support_id ? ` (Support ID: ${data.support_id})` : '';
+            toast.error(`Submission failed. Please contact support.${supportId}`);
+            setStep('details'); // Return to form
           }
         } catch (error) {
           console.error('Error processing submission:', error);
-          
-          // Payment succeeded but we can't verify submission - critical issue
-          toast.error('Payment received but unable to verify submission. Please contact support with session ID: ' + sessionId);
-          
-          // Don't show success - show error state
-          setStep('details'); // Return to form, don't proceed to success
+
+          // Network error - submission might have succeeded, try again
+          toast.error('Connection issue. Retrying...');
+
+          // Retry once after a delay
+          await new Promise(resolve => setTimeout(resolve, 2000));
+
+          try {
+            const retryResponse = await fetch('/api/submit/process-payment', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ session_id: sessionId })
+            });
+            const retryData = await retryResponse.json().catch(() => ({ error: 'Unknown error' }));
+
+            if (retryResponse.ok && retryData.success) {
+              setIsProcessingPaymentReturn(false);
+              setStep('success');
+            } else {
+              setIsProcessingPaymentReturn(false);
+              toast.error('Please contact support with session ID: ' + sessionId);
+              setStep('details');
+            }
+          } catch (retryError) {
+            setIsProcessingPaymentReturn(false);
+            toast.error('Please contact support with session ID: ' + sessionId);
+            setStep('details');
+          }
         }
         return;
       }
@@ -244,6 +272,13 @@ export default function UnifiedSubmitPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 py-12">
+      {/* Full-screen loading overlay for payment return processing */}
+      <LoadingOverlay
+        isVisible={isProcessingPaymentReturn}
+        title="Completing Your Payment..."
+        description="Your payment was successful! We're creating your request now."
+      />
+
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Progress Indicator */}
@@ -433,26 +468,62 @@ function DetailsStep({ submissionData, setSubmissionData, onNext }: any) {
 
       {/* Question */}
       <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700 mb-2">Your Question</label>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Your Question *</label>
         <input
           type="text"
           value={submissionData.question}
           onChange={(e) => setSubmissionData({ ...submissionData, question: e.target.value })}
           placeholder="What specific question do you want answered?"
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-600 focus:border-transparent"
+          className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-600 focus:border-transparent ${
+            submissionData.question && submissionData.question.trim().length < 10
+              ? 'border-amber-300 bg-amber-50'
+              : 'border-gray-300'
+          }`}
         />
+        <div className="flex justify-between mt-1">
+          <span className={`text-xs ${
+            submissionData.question && submissionData.question.trim().length < 10
+              ? 'text-amber-600'
+              : 'text-gray-500'
+          }`}>
+            {submissionData.question.trim().length < 10
+              ? `${10 - submissionData.question.trim().length} more characters needed`
+              : '✓ Good length'}
+          </span>
+          <span className="text-xs text-gray-400">
+            {submissionData.question.length}/200
+          </span>
+        </div>
       </div>
 
       {/* Context */}
       <div className="mb-8">
-        <label className="block text-sm font-medium text-gray-700 mb-2">Additional Context</label>
+        <label className="block text-sm font-medium text-gray-700 mb-2">Additional Context *</label>
         <textarea
           value={submissionData.context}
           onChange={(e) => setSubmissionData({ ...submissionData, context: e.target.value })}
           placeholder="Provide any relevant background information..."
           rows={4}
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-600 focus:border-transparent"
+          className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-600 focus:border-transparent ${
+            submissionData.context && submissionData.context.trim().length < 20
+              ? 'border-amber-300 bg-amber-50'
+              : 'border-gray-300'
+          }`}
         />
+        <div className="flex justify-between mt-1">
+          <span className={`text-xs ${
+            submissionData.context && submissionData.context.trim().length < 20
+              ? 'text-amber-600'
+              : 'text-gray-500'
+          }`}>
+            {submissionData.context.trim().length < 20
+              ? `${20 - submissionData.context.trim().length} more characters needed`
+              : '✓ Good length'}
+          </span>
+          <span className="text-xs text-gray-400">
+            {submissionData.context.length}/1000
+          </span>
+        </div>
       </div>
 
       {/* Media Type */}
@@ -525,20 +596,34 @@ function DetailsStep({ submissionData, setSubmissionData, onNext }: any) {
       </div>
 
       {submissionData.mediaType === 'comparison' ? (
-        <ComparisonButton 
+        <ComparisonButton
           category={submissionData.category}
           variant="default"
           className="w-full py-4 text-lg"
         />
       ) : (
-        <button
-          onClick={onNext}
-          disabled={!submissionData.category || !submissionData.question || !submissionData.context}
-          className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-4 rounded-xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg transition-all flex items-center justify-center gap-2"
-        >
-          Continue
-          <ArrowRight className="h-5 w-5" />
-        </button>
+        <div className="space-y-2">
+          <button
+            onClick={onNext}
+            disabled={!submissionData.category || !submissionData.question.trim() || submissionData.question.trim().length < 10 || !submissionData.context.trim() || submissionData.context.trim().length < 20}
+            className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-4 rounded-xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg transition-all flex items-center justify-center gap-2"
+          >
+            Continue
+            <ArrowRight className="h-5 w-5" />
+          </button>
+          {/* Show what's missing */}
+          {(!submissionData.category || !submissionData.question.trim() || submissionData.question.trim().length < 10 || !submissionData.context.trim() || submissionData.context.trim().length < 20) && (
+            <p className="text-xs text-amber-600 text-center">
+              {!submissionData.category
+                ? 'Select a category above to continue'
+                : submissionData.question.trim().length < 10
+                ? 'Your question needs at least 10 characters'
+                : submissionData.context.trim().length < 20
+                ? 'Please add more context (at least 20 characters)'
+                : ''}
+            </p>
+          )}
+        </div>
       )}
     </div>
   );
@@ -660,6 +745,22 @@ function PaymentStep({ privatePrice, submissionData, onPaymentSuccess }: any) {
         </div>
       </div>
 
+      {/* Quality Guarantee */}
+      <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-6">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+            <CheckCircle className="h-5 w-5 text-green-600" />
+          </div>
+          <div>
+            <h4 className="font-semibold text-green-900">100% Satisfaction Guarantee</h4>
+            <p className="text-sm text-green-700 mt-1">
+              Get 3 quality feedback reports within 24 hours or receive a <strong>full refund</strong>.
+              Most requests complete in under 2 hours.
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* Embedded Stripe Payment */}
       <EmbeddedStripePayment
         amount={Math.round(parseFloat(privatePrice.replace(/[£$]/g, '')) * 100)}
@@ -676,18 +777,49 @@ function PaymentStep({ privatePrice, submissionData, onPaymentSuccess }: any) {
 function ProcessingStep({ mode }: any) {
   return (
     <div className="p-8 text-center">
-      <div className="w-16 h-16 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-6">
+      <div className="w-16 h-16 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-6 relative">
         <Zap className="h-8 w-8 text-white animate-pulse" />
+        {/* Spinning ring */}
+        <div className="absolute inset-0 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
       </div>
       <h2 className="text-3xl font-bold text-gray-900 mb-4">
         {mode === 'community' ? 'Submitting to Community...' : 'Processing Payment...'}
       </h2>
-      <p className="text-gray-600">
-        {mode === 'community' 
+      <p className="text-gray-600 mb-4">
+        {mode === 'community'
           ? 'Your submission is being added to the community feed for review.'
-          : 'Your payment is being processed and reviewers are being notified.'
+          : 'Your payment is being securely processed. This takes 5-10 seconds.'
         }
       </p>
+
+      {/* Progress indicators */}
+      <div className="max-w-xs mx-auto space-y-3 text-left">
+        <div className="flex items-center gap-3 text-sm">
+          <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+            <CheckCircle className="h-3 w-3 text-white" />
+          </div>
+          <span className="text-gray-700">
+            {mode === 'community' ? 'Credit verified' : 'Payment authorized'}
+          </span>
+        </div>
+        <div className="flex items-center gap-3 text-sm">
+          <div className="w-5 h-5 bg-indigo-500 rounded-full flex items-center justify-center animate-pulse">
+            <div className="w-2 h-2 bg-white rounded-full" />
+          </div>
+          <span className="text-gray-700">Creating your request...</span>
+        </div>
+        <div className="flex items-center gap-3 text-sm text-gray-400">
+          <div className="w-5 h-5 bg-gray-200 rounded-full" />
+          <span>Notifying reviewers</span>
+        </div>
+      </div>
+
+      {/* Warning to not close */}
+      <div className="mt-6 bg-amber-50 border border-amber-200 rounded-lg p-3">
+        <p className="text-sm text-amber-800 font-medium">
+          Please do not close this window
+        </p>
+      </div>
     </div>
   );
 }

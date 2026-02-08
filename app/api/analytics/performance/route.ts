@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
 
-export async function GET(request: NextRequest) {
+async function GET_Handler(request: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -36,7 +37,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
+async function POST_Handler(request: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -72,15 +73,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to record metric' }, { status: 500 });
     }
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
       message: 'Metric recorded successfully'
     });
 
   } catch (error) {
     console.error('Performance API error:', error);
-    return NextResponse.json({ 
-      error: 'Internal server error' 
+    return NextResponse.json({
+      error: 'Internal server error'
     }, { status: 500 });
   }
 }
+
+// Apply rate limiting to performance analytics endpoints
+export const GET = withRateLimit(GET_Handler, rateLimitPresets.default);
+export const POST = withRateLimit(POST_Handler, rateLimitPresets.default);

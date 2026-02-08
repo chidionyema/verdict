@@ -40,6 +40,7 @@ export default function FolderManager({
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState('');
+  const [editingFolder, setEditingFolder] = useState<Folder | null>(null);
 
   useEffect(() => {
     fetchFolders();
@@ -130,7 +131,43 @@ export default function FolderManager({
   };
 
   const handleEditFolder = (folderId: string) => {
-    // TODO: Implement edit modal
+    const folder = folders.find(f => f.id === folderId);
+    if (folder) {
+      setEditingFolder(folder);
+      setShowCreateModal(true);
+    }
+  };
+
+  const handleUpdateFolder = async (folderData: {
+    name: string;
+    description?: string;
+    color: string;
+    icon: string;
+  }) => {
+    if (!editingFolder) return;
+
+    setIsCreating(true);
+    try {
+      const response = await fetch(`/api/folders/${editingFolder.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(folderData),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to update folder');
+      }
+
+      toast.success('Folder updated successfully');
+      setShowCreateModal(false);
+      setEditingFolder(null);
+      fetchFolders();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update folder');
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   const filteredFolders = folders
@@ -310,9 +347,13 @@ export default function FolderManager({
       {/* Create Folder Modal */}
       <CreateFolderModal
         isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        onCreate={handleCreateFolder}
+        onClose={() => {
+          setShowCreateModal(false);
+          setEditingFolder(null);
+        }}
+        onCreate={editingFolder ? handleUpdateFolder : handleCreateFolder}
         isLoading={isCreating}
+        editingFolder={editingFolder}
       />
     </div>
   );

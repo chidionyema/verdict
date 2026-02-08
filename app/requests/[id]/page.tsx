@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect, useRef, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -36,6 +36,7 @@ import { isExperimentEnabled } from '@/lib/experiments';
 import { ReviewerDisplay } from '@/components/experts/ExpertBadge';
 import { HelpfulnessRating } from '@/components/reputation/HelpfulnessRating';
 import { JudgeFeedbackRating } from '@/components/feedback/JudgeFeedbackRating';
+import { JudgeCredibilityBadge } from '@/components/reputation/JudgeCredibilityBadge';
 import ConsensusAnalysis from '@/components/consensus/ConsensusAnalysis';
 
 interface VerdictWithNumber extends VerdictResponse {
@@ -68,6 +69,7 @@ export default function RequestDetailPage({
   const [verdicts, setVerdicts] = useState<VerdictWithNumber[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [verdictMismatch, setVerdictMismatch] = useState(false);
   const [userContext, setUserContext] = useState<UserContext>({
     isSeeker: false,
     isJudge: false,
@@ -101,13 +103,21 @@ export default function RequestDetailPage({
     generateShareableData 
   } = useShareableVerdict();
 
+  // Track poll count to prevent infinite polling
+  const pollCountRef = useRef(0);
+  const maxPollCount = 60; // Stop after 5 minutes (60 polls * 5 seconds)
+
   useEffect(() => {
     fetchRequest();
+    pollCountRef.current = 0; // Reset on mount or status change
 
-    // Poll for new verdicts if still in progress
+    // Poll for new verdicts if still in progress (with max limit)
     const interval = setInterval(() => {
-      if (request?.status === 'in_progress' || request?.status === 'open') {
+      if ((request?.status === 'in_progress' || request?.status === 'open') && pollCountRef.current < maxPollCount) {
+        pollCountRef.current += 1;
         fetchRequest();
+      } else if (pollCountRef.current >= maxPollCount) {
+        clearInterval(interval); // Stop polling after max attempts
       }
     }, 5000);
 
@@ -196,16 +206,20 @@ export default function RequestDetailPage({
       setRequest(data.request);
       const fetchedVerdicts = data.verdicts || [];
       setVerdicts(fetchedVerdicts);
-      
-      // Log mismatch for debugging
+
+      // Handle verdict count mismatch - verdicts exist but weren't returned
       if (data.request?.received_verdict_count > 0 && fetchedVerdicts.length === 0) {
         console.warn('Verdict count mismatch:', {
           request_id: id,
           received_count: data.request.received_verdict_count,
           verdicts_returned: fetchedVerdicts.length,
         });
+        // Set a specific error state so UI can show appropriate message
+        setVerdictMismatch(true);
+      } else {
+        setVerdictMismatch(false);
       }
-      
+
       setLoading(false);
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') {
@@ -582,7 +596,7 @@ export default function RequestDetailPage({
         {/* Progress / State */}
         {(request.status === 'in_progress' || request.status === 'open') && (
           <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
-            <div className="flex justify-between items-center mb-2">
+            <div className="flex justify-between items-center mb-4">
               <div>
                 <p className="text-xs uppercase tracking-wide text-gray-500 mb-1">
                   Verdict progress
@@ -591,19 +605,75 @@ export default function RequestDetailPage({
                   {request.received_verdict_count}/{request.target_verdict_count} verdicts
                 </p>
               </div>
-              <span className="text-sm text-gray-600">{Math.round(progress)}%</span>
+              <div className="flex items-center gap-3">
+                {/* Live Activity Indicator */}
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 border border-green-200 rounded-full">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                  </span>
+                  <span className="text-xs font-medium text-green-700">
+                    {Math.max(1, request.target_verdict_count - request.received_verdict_count)} judge{request.target_verdict_count - request.received_verdict_count !== 1 ? 's' : ''} reviewing
+                  </span>
+                </div>
+                <span className="text-sm font-medium text-gray-600">{Math.round(progress)}%</span>
+              </div>
             </div>
-            <div className="w-full bg-gray-200 rounded-full h-3">
+            <div className="w-full bg-gray-200 rounded-full h-3 mb-4">
               <div
                 className="bg-indigo-600 h-3 rounded-full transition-all duration-500"
                 style={{ width: `${progress}%` }}
               />
             </div>
-            <p className="text-sm text-gray-500 mt-2">
-              {request.received_verdict_count === 0
-                ? 'Judges are reviewing your submission. New verdicts will appear here automatically.'
-                : "You're now seeing real feedback from our judges. We'll add more verdicts here as they come in."}
-            </p>
+
+            {/* Status Timeline */}
+            <div className="flex items-center justify-between text-xs">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center">
+                  <CheckCircle className="h-4 w-4 text-white" />
+                </div>
+                <div>
+                  <p className="font-medium text-gray-900">Submitted</p>
+                  <p className="text-gray-500">{new Date(request.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                </div>
+              </div>
+              <div className="flex-1 h-0.5 bg-gray-200 mx-3">
+                <div className={`h-0.5 ${request.received_verdict_count > 0 ? 'bg-green-500' : 'bg-gray-200'}`} style={{ width: request.received_verdict_count > 0 ? '100%' : '0%' }} />
+              </div>
+              <div className="flex items-center gap-2">
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center ${request.received_verdict_count > 0 ? 'bg-green-500' : 'bg-gray-300'}`}>
+                  {request.received_verdict_count > 0 ? <CheckCircle className="h-4 w-4 text-white" /> : <span className="text-white text-xs">2</span>}
+                </div>
+                <div>
+                  <p className="font-medium text-gray-900">First Verdict</p>
+                  <p className="text-gray-500">{request.received_verdict_count > 0 ? 'Received' : 'Pending'}</p>
+                </div>
+              </div>
+              <div className="flex-1 h-0.5 bg-gray-200 mx-3">
+                <div className={`h-0.5 ${request.received_verdict_count >= request.target_verdict_count ? 'bg-green-500' : 'bg-gray-200'}`} />
+              </div>
+              <div className="flex items-center gap-2">
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center ${request.received_verdict_count >= request.target_verdict_count ? 'bg-green-500' : 'bg-gray-300'}`}>
+                  <span className="text-white text-xs">3</span>
+                </div>
+                <div>
+                  <p className="font-medium text-gray-900">Complete</p>
+                  <p className="text-gray-500">{request.received_verdict_count >= request.target_verdict_count ? 'Done!' : `${request.target_verdict_count - request.received_verdict_count} more`}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Expected Time */}
+            <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
+              <p className="text-sm text-gray-500">
+                {request.received_verdict_count === 0
+                  ? 'Judges are reviewing your submission. New verdicts will appear here automatically.'
+                  : "You're now seeing real feedback from our judges. We'll add more verdicts here as they come in."}
+              </p>
+              <span className="text-xs font-medium text-indigo-600 bg-indigo-50 px-2 py-1 rounded-full">
+                ~{request.received_verdict_count > 0 ? '30 min' : '1-2 hrs'} remaining
+              </span>
+            </div>
           </div>
         )}
 
@@ -735,6 +805,126 @@ export default function RequestDetailPage({
               <div>
                 <p className="text-2xl font-bold text-gray-900 capitalize">{request.category}</p>
                 <p className="text-sm text-gray-500">Category</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Smart Next Steps - Based on Rating */}
+        {request.status === 'closed' && verdicts.length > 0 && userContext.isSeeker && (
+          <div className={`rounded-xl shadow-sm p-6 mb-8 ${
+            averageRating >= 8
+              ? 'bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200'
+              : averageRating >= 6
+              ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200'
+              : 'bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200'
+          }`}>
+            <div className="flex items-start gap-4">
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${
+                averageRating >= 8
+                  ? 'bg-green-100'
+                  : averageRating >= 6
+                  ? 'bg-blue-100'
+                  : 'bg-amber-100'
+              }`}>
+                {averageRating >= 8 ? (
+                  <span className="text-2xl">🎉</span>
+                ) : averageRating >= 6 ? (
+                  <span className="text-2xl">💡</span>
+                ) : (
+                  <span className="text-2xl">🔄</span>
+                )}
+              </div>
+              <div className="flex-1">
+                <h3 className={`font-bold text-lg ${
+                  averageRating >= 8
+                    ? 'text-green-900'
+                    : averageRating >= 6
+                    ? 'text-blue-900'
+                    : 'text-amber-900'
+                }`}>
+                  {averageRating >= 8
+                    ? 'Great feedback! You crushed it.'
+                    : averageRating >= 6
+                    ? 'Mixed feedback with good insights.'
+                    : 'Time to iterate and improve.'}
+                </h3>
+                <p className={`text-sm mt-1 ${
+                  averageRating >= 8
+                    ? 'text-green-700'
+                    : averageRating >= 6
+                    ? 'text-blue-700'
+                    : 'text-amber-700'
+                }`}>
+                  {averageRating >= 8
+                    ? 'Judges love it! Share your results with confidence or submit another question.'
+                    : averageRating >= 6
+                    ? 'Good foundation with room to improve. Consider testing a revised version.'
+                    : 'The feedback suggests significant changes. Use the insights to create a stronger version.'}
+                </p>
+                <div className="flex flex-wrap gap-3 mt-4">
+                  {averageRating >= 8 ? (
+                    <>
+                      <button
+                        onClick={() => {
+                          const shareData = generateShareableData(
+                            request.id,
+                            request.context || 'My feedback request',
+                            request.category,
+                            verdicts,
+                            false
+                          );
+                          openShareModal(shareData);
+                        }}
+                        className="px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition text-sm min-h-[44px]"
+                      >
+                        Share Results
+                      </button>
+                      <Link
+                        href="/start"
+                        className="px-4 py-2 bg-white text-green-700 border border-green-300 rounded-lg font-medium hover:bg-green-50 transition text-sm min-h-[44px] flex items-center"
+                      >
+                        Ask Another Question
+                      </Link>
+                    </>
+                  ) : averageRating >= 6 ? (
+                    <>
+                      <Link
+                        href={`/start?category=${request.category}&followup=true`}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition text-sm min-h-[44px]"
+                      >
+                        Test a New Version
+                      </Link>
+                      <button
+                        onClick={() => {
+                          const el = document.getElementById('verdicts-section');
+                          if (el) el.scrollIntoView({ behavior: 'smooth' });
+                        }}
+                        className="px-4 py-2 bg-white text-blue-700 border border-blue-300 rounded-lg font-medium hover:bg-blue-50 transition text-sm min-h-[44px]"
+                      >
+                        Review Feedback
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <Link
+                        href={`/start?category=${request.category}&followup=true`}
+                        className="px-4 py-2 bg-amber-600 text-white rounded-lg font-medium hover:bg-amber-700 transition text-sm min-h-[44px]"
+                      >
+                        Create Improved Version
+                      </Link>
+                      <button
+                        onClick={() => {
+                          const el = document.getElementById('verdicts-section');
+                          if (el) el.scrollIntoView({ behavior: 'smooth' });
+                        }}
+                        className="px-4 py-2 bg-white text-amber-700 border border-amber-300 rounded-lg font-medium hover:bg-amber-50 transition text-sm min-h-[44px]"
+                      >
+                        See What to Change
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -933,13 +1123,18 @@ export default function RequestDetailPage({
                       🔄 Checking for updates every 5 seconds
                     </div>
                   )}
-                  {request.received_verdict_count > 0 && verdicts.length === 0 && (
-                    <button
-                      onClick={fetchRequest}
-                      className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition text-sm font-medium"
-                    >
-                      Refresh to load verdicts
-                    </button>
+                  {verdictMismatch && (
+                    <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                      <p className="text-sm text-amber-800 mb-2">
+                        <strong>Sync issue:</strong> {request.received_verdict_count} verdict{request.received_verdict_count > 1 ? 's' : ''} recorded but not displaying.
+                      </p>
+                      <button
+                        onClick={fetchRequest}
+                        className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition text-sm font-medium"
+                      >
+                        Retry Loading Verdicts
+                      </button>
+                    </div>
                   )}
                   {userContext.isJudge && request.status !== 'closed' && (
                     <Link
@@ -980,18 +1175,22 @@ export default function RequestDetailPage({
                         <User className="h-6 w-6 text-gray-600" />
                       </div>
                       <div>
+                        <p className="font-semibold text-gray-900 mb-1">
+                          {verdict.reviewer_info?.expert_title || `Judge #${verdict.judge_number}`}
+                        </p>
                         {verdict.reviewer_info ? (
-                          <ReviewerDisplay 
-                            reviewer={verdict.reviewer_info} 
-                            showReputation={true}
-                            size="md"
+                          <JudgeCredibilityBadge
+                            reputationScore={verdict.reviewer_info.reputation_score}
+                            isExpert={verdict.reviewer_info.is_expert}
+                            size="sm"
                           />
                         ) : (
-                          <p className="font-semibold">
-                            Anonymous Judge #{verdict.judge_number}
-                          </p>
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-xs">
+                            <User className="h-3 w-3" />
+                            Community Judge
+                          </span>
                         )}
-                        <p className="text-sm text-gray-500 mt-1">
+                        <p className="text-xs text-gray-500 mt-1">
                           {new Date(verdict.created_at).toLocaleString()}
                         </p>
                       </div>
@@ -1098,6 +1297,7 @@ export default function RequestDetailPage({
                             ? 'bg-yellow-100 text-yellow-700 border border-yellow-200'
                             : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200'
                         }`}
+                        aria-label={verdictInteractions[verdict.id]?.bookmarked ? 'Remove bookmark' : 'Bookmark this verdict'}
                       >
                         <Heart className={`h-4 w-4 ${verdictInteractions[verdict.id]?.bookmarked ? 'fill-current' : ''}`} />
                       </button>

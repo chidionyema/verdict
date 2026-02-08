@@ -5,6 +5,7 @@ import Script from 'next/script';
 import { Heart, Camera, Shield, Clock, CheckCircle, Star, ArrowRight } from 'lucide-react';
 import { PricingTableSection } from '@/components/landing/pricing-table';
 import { SampleVerdictCard } from '@/components/landing/sample-verdict-card';
+import { BackButton } from '@/components/ui/BackButton';
 import Link from 'next/link';
 
 export default function DatingLandingPage() {
@@ -53,12 +54,7 @@ export default function DatingLandingPage() {
               Get Dating Profile Feedback
               <ArrowRight className="w-5 h-5" />
             </button>
-            <Link
-              href="/"
-              className="text-gray-600 hover:text-gray-900 underline text-sm"
-            >
-              ← Back to home
-            </Link>
+            <BackButton href="/" label="Back to home" />
           </div>
 
           {/* Trust Indicators */}

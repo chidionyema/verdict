@@ -141,12 +141,12 @@ export function EconomyExplanationSection() {
             </p>
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Free Path */}
+            {/* Community Path */}
             <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-8 border-2 border-green-200">
               <div className="flex items-center gap-3 mb-4">
                 <Eye className="h-6 w-6 text-green-600" />
-                <h4 className="text-2xl font-bold text-gray-900">Free Path</h4>
-                <span className="ml-auto bg-green-600 text-white text-xs font-bold px-3 py-1 rounded-full">Community Mode</span>
+                <h4 className="text-2xl font-bold text-gray-900">Community Path</h4>
+                <span className="ml-auto bg-green-600 text-white text-xs font-bold px-3 py-1 rounded-full">Free</span>
               </div>
               <p className="text-gray-700 mb-6">
                 Review 3 submissions to earn 1 credit. Use your credit to get feedback on your own request. Perfect if you have time.

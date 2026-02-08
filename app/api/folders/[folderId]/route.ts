@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { log } from '@/lib/logger';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
+
+// UUID validation regex
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isValidUUID(id: string): boolean {
+  return typeof id === 'string' && UUID_REGEX.test(id);
+}
 
 interface RouteParams {
   params: {
@@ -9,7 +17,7 @@ interface RouteParams {
 }
 
 // PUT /api/folders/[folderId] - Update folder
-export async function PUT(request: NextRequest, { params }: RouteParams) {
+async function PUT_Handler(request: NextRequest, { params }: RouteParams) {
   try {
     const supabase = await createClient();
 
@@ -23,6 +31,11 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 
     const { folderId } = params;
+
+    // Validate UUID format
+    if (!isValidUUID(folderId)) {
+      return NextResponse.json({ error: 'Invalid folder ID format' }, { status: 400 });
+    }
     const body = await request.json();
     const { name, description, color, icon, sort_order } = body;
 
@@ -128,7 +141,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 }
 
 // DELETE /api/folders/[folderId] - Delete folder
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
+async function DELETE_Handler(request: NextRequest, { params }: RouteParams) {
   try {
     const supabase = await createClient();
 
@@ -142,6 +155,11 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     const { folderId } = params;
+
+    // Validate UUID format
+    if (!isValidUUID(folderId)) {
+      return NextResponse.json({ error: 'Invalid folder ID format' }, { status: 400 });
+    }
 
     // Check folder ownership
     const { data: existingFolder } = await (supabase as any)
@@ -204,3 +222,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     );
   }
 }
+
+// Apply rate limiting to folder endpoints
+export const PUT = withRateLimit(PUT_Handler, rateLimitPresets.default);
+export const DELETE = withRateLimit(DELETE_Handler, rateLimitPresets.default);

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { log } from '@/lib/logger';
 import Stripe from 'stripe';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
 
 const getStripe = () => {
   if (!process.env.STRIPE_SECRET_KEY) {
@@ -12,7 +13,7 @@ const getStripe = () => {
   });
 };
 
-export async function GET(request: NextRequest) {
+async function GET_Handler(request: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -78,7 +79,7 @@ const SUPPORTED_COUNTRIES = [
   'EE', 'GR', 'HU', 'LV', 'LT', 'LU', 'MT', 'SK', 'SI',
 ] as const;
 
-export async function POST(request: NextRequest) {
+async function POST_Handler(request: NextRequest) {
   try {
     const supabase: any = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -210,7 +211,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function PATCH(request: NextRequest) {
+async function PATCH_Handler(request: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -284,3 +285,8 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+// Apply rate limiting to connect endpoints (strict for account creation)
+export const GET = withRateLimit(GET_Handler, rateLimitPresets.default);
+export const POST = withRateLimit(POST_Handler, rateLimitPresets.strict);
+export const PATCH = withRateLimit(PATCH_Handler, rateLimitPresets.default);

@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { sendVerificationEmail } from '@/lib/email';
 import { log } from '@/lib/logger';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
 
 // POST /api/auth/send-verification - Send email verification
-export async function POST(request: NextRequest) {
+async function POST_Handler(request: NextRequest) {
   try {
     const supabase: any = await createClient();
 
@@ -66,3 +67,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+// Apply strict rate limiting to prevent email spam
+export const POST = withRateLimit(POST_Handler, rateLimitPresets.strict);

@@ -94,28 +94,40 @@ export async function createVerdictRequest(
     throw new Error(`Failed to fetch profile: ${profileError.message}`);
   }
 
-  // Create profile with starter credits if it doesn't exist
+  // Create profile with starter credits if it doesn't exist (fallback - primary is auth callback)
   if (!profile) {
     // Use service role client to bypass RLS for profile creation
     const serviceClient = createServiceClient();
+    // Use upsert to avoid race condition with auth callback
     const { data: newProfile, error: createError } = await (serviceClient as any)
       .from('profiles')
-      .insert({
+      .upsert({
         id: userId,
         email,
         display_name: email?.split('@')[0] || 'User',
         credits: 3,
         is_judge: false,
         is_admin: false,
-      })
+      }, { onConflict: 'id', ignoreDuplicates: true })
       .select('id, credits')
       .single();
 
-    if (createError || !newProfile) {
-      throw new Error(`Failed to create user profile: ${createError?.message}`);
-    }
+    if (createError) {
+      // If upsert failed, try to fetch existing profile
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('id, credits')
+        .eq('id', userId)
+        .single();
 
-    profile = newProfile;
+      if (existingProfile) {
+        profile = existingProfile;
+      } else {
+        throw new Error(`Failed to create user profile: ${createError?.message}`);
+      }
+    } else {
+      profile = newProfile;
+    }
   }
 
   // Use protected credit deduction to prevent race conditions and double spending
@@ -224,22 +236,8 @@ export async function addJudgeVerdict(
     throw err;
   }
 
-  // Prevent double response by same judge
-  const { data: existingResponse } = await (supabase as any)
-    .from('verdict_responses')
-    .select('id')
-    .eq('request_id', requestId)
-    .eq('judge_id', judgeId)
-    .single();
-
-  if (existingResponse) {
-    const err = new Error('Judge has already responded to this request');
-    // @ts-expect-error augment error
-    err.code = 'ALREADY_RESPONDED';
-    throw err;
-  }
-
-  // Insert verdict
+  // Insert verdict - use database unique constraint for atomic duplicate prevention
+  // This is safer than SELECT-then-INSERT which has a race condition window
   const { data: verdict, error: createError } = await (supabase as any)
     .from('verdict_responses')
     .insert({
@@ -253,8 +251,22 @@ export async function addJudgeVerdict(
     .select()
     .single();
 
-  if (createError || !verdict) {
+  if (createError) {
+    // Check for unique constraint violation (duplicate response)
+    // PostgreSQL error code 23505 = unique_violation
+    if (createError.code === '23505' ||
+        createError.message?.includes('duplicate') ||
+        createError.message?.includes('unique constraint')) {
+      const err = new Error('Judge has already responded to this request');
+      // @ts-expect-error augment error
+      err.code = 'ALREADY_RESPONDED';
+      throw err;
+    }
     throw new Error(`Failed to create verdict: ${createError?.message}`);
+  }
+
+  if (!verdict) {
+    throw new Error('Failed to create verdict: No data returned');
   }
 
   // Increment count and possibly close, atomically at the DB level

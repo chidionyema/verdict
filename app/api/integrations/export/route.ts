@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
 import { log } from '@/lib/logger';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
+
+// Maximum records per export to prevent memory exhaustion
+const MAX_EXPORT_RECORDS = 10000;
 
 const exportSchema = z.object({
   format: z.enum(['json', 'csv', 'xlsx']),
@@ -14,9 +18,10 @@ const exportSchema = z.object({
     user_id: z.string().optional(),
   }).optional(),
   include_fields: z.array(z.string()).optional(),
+  limit: z.number().min(1).max(MAX_EXPORT_RECORDS).optional(),
 });
 
-export async function POST(request: NextRequest) {
+async function POST_Handler(request: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -42,27 +47,30 @@ export async function POST(request: NextRequest) {
     let data: any[] = [];
     let filename = '';
 
+    // Use provided limit or default to MAX_EXPORT_RECORDS
+    const recordLimit = validated.limit || MAX_EXPORT_RECORDS;
+
     switch (validated.data_type) {
       case 'requests':
-    const { data: requests } = await exportRequests(supabase as any, validated.filters);
+        const { data: requests } = await exportRequests(supabase as any, validated.filters, recordLimit);
         data = requests || [];
         filename = `verdict_requests_${new Date().toISOString().split('T')[0]}`;
         break;
 
       case 'responses':
-        const { data: responses } = await exportResponses(supabase as any, validated.filters);
+        const { data: responses } = await exportResponses(supabase as any, validated.filters, recordLimit);
         data = responses || [];
         filename = `verdict_responses_${new Date().toISOString().split('T')[0]}`;
         break;
 
       case 'users':
-        const { data: users } = await exportUsers(supabase as any, validated.filters);
+        const { data: users } = await exportUsers(supabase as any, validated.filters, recordLimit);
         data = users || [];
         filename = `users_${new Date().toISOString().split('T')[0]}`;
         break;
 
       case 'analytics':
-        const { data: analytics } = await exportAnalytics(supabase as any, validated.filters);
+        const { data: analytics } = await exportAnalytics(supabase as any, validated.filters, recordLimit);
         data = analytics || [];
         filename = `analytics_${new Date().toISOString().split('T')[0]}`;
         break;
@@ -143,7 +151,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function exportRequests(supabase: any, filters: any = {}) {
+async function exportRequests(supabase: any, filters: any = {}, limit: number = MAX_EXPORT_RECORDS) {
   let query = supabase
     .from('verdict_requests')
     .select(`
@@ -158,7 +166,8 @@ async function exportRequests(supabase: any, filters: any = {}) {
       created_at,
       updated_at,
       profiles!user_id(email, full_name)
-    `);
+    `)
+    .limit(limit);
 
   if (filters.start_date) {
     query = query.gte('created_at', filters.start_date);
@@ -179,7 +188,7 @@ async function exportRequests(supabase: any, filters: any = {}) {
   return query;
 }
 
-async function exportResponses(supabase: any, filters: any = {}) {
+async function exportResponses(supabase: any, filters: any = {}, limit: number = MAX_EXPORT_RECORDS) {
   let query = supabase
     .from('verdict_responses')
     .select(`
@@ -191,7 +200,8 @@ async function exportResponses(supabase: any, filters: any = {}) {
       created_at,
       profiles!judge_id(email, full_name),
       verdict_requests!verdict_request_id(category, status)
-    `);
+    `)
+    .limit(limit);
 
   if (filters.start_date) {
     query = query.gte('created_at', filters.start_date);
@@ -203,7 +213,7 @@ async function exportResponses(supabase: any, filters: any = {}) {
   return query;
 }
 
-async function exportUsers(supabase: any, filters: any = {}) {
+async function exportUsers(supabase: any, filters: any = {}, limit: number = MAX_EXPORT_RECORDS) {
   let query = supabase
     .from('profiles')
     .select(`
@@ -215,7 +225,8 @@ async function exportUsers(supabase: any, filters: any = {}) {
       is_admin,
       created_at,
       last_sign_in_at
-    `);
+    `)
+    .limit(limit);
 
   if (filters.start_date) {
     query = query.gte('created_at', filters.start_date);
@@ -227,19 +238,21 @@ async function exportUsers(supabase: any, filters: any = {}) {
   return query;
 }
 
-async function exportAnalytics(supabase: any, filters: any = {}) {
+async function exportAnalytics(supabase: any, filters: any = {}, limit: number = MAX_EXPORT_RECORDS) {
   // This would aggregate various metrics
   const { data: requestStats } = await supabase
     .from('verdict_requests')
     .select('category, status, created_at')
     .gte('created_at', filters.start_date || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
-    .lte('created_at', filters.end_date || new Date().toISOString());
+    .lte('created_at', filters.end_date || new Date().toISOString())
+    .limit(limit);
 
   const { data: responseStats } = await supabase
     .from('verdict_responses')
     .select('rating, created_at')
     .gte('created_at', filters.start_date || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
-    .lte('created_at', filters.end_date || new Date().toISOString());
+    .lte('created_at', filters.end_date || new Date().toISOString())
+    .limit(limit);
 
   // Aggregate the data
   const analytics = {
@@ -258,6 +271,9 @@ async function exportAnalytics(supabase: any, filters: any = {}) {
 
   return { data: [analytics] };
 }
+
+// Apply rate limiting to export endpoint (strict due to resource intensity)
+export const POST = withRateLimit(POST_Handler, rateLimitPresets.strict);
 
 function convertToCSV(data: any[]): string {
   if (!data || data.length === 0) {

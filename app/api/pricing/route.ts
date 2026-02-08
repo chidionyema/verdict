@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getPricingConfig } from '@/lib/pricing-config';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
 
 /**
  * API endpoint for fetching current pricing
@@ -11,7 +12,7 @@ import { getPricingConfig } from '@/lib/pricing-config';
  * - Apply user-specific pricing
  * - Handle promotional codes
  */
-export async function GET(request: NextRequest) {
+async function GET_Handler(request: NextRequest) {
   try {
     // Get user's preferred currency from headers or query params
     const currency = request.headers.get('X-Currency') || 
@@ -53,3 +54,6 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+// Apply rate limiting to pricing endpoint
+export const GET = withRateLimit(GET_Handler, rateLimitPresets.default);

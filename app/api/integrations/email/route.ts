@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
 import { sendEmail } from '@/lib/email';
 import { log } from '@/lib/logger';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
 
 const sendEmailSchema = z.object({
   to: z.string().email(),
@@ -12,7 +13,7 @@ const sendEmailSchema = z.object({
 });
 
 // GET /api/integrations/email - Check email configuration status
-export async function GET() {
+async function GET_Handler() {
   try {
     const supabase: any = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -46,7 +47,7 @@ export async function GET() {
 }
 
 // POST /api/integrations/email - Send an email (admin only)
-export async function POST(request: NextRequest) {
+async function POST_Handler(request: NextRequest) {
   try {
     const supabase: any = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -98,8 +99,27 @@ export async function POST(request: NextRequest) {
 }
 
 // PUT /api/integrations/email - Send email (for internal use by notifications)
-export async function PUT(request: NextRequest) {
+// SECURITY: This endpoint requires admin authentication to prevent unauthorized email sending
+async function PUT_Handler(request: NextRequest) {
   try {
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Check if user is admin
+    const { data: profile } = await (supabase as any)
+      .from('profiles')
+      .select('is_admin')
+      .eq('id', user.id)
+      .single();
+
+    if (!profile?.is_admin) {
+      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    }
+
     const body = await request.json();
 
     // Handle custom template format from legacy notifications
@@ -144,3 +164,8 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+// Apply rate limiting to email endpoints
+export const GET = withRateLimit(GET_Handler, rateLimitPresets.default);
+export const POST = withRateLimit(POST_Handler, rateLimitPresets.strict);
+export const PUT = withRateLimit(PUT_Handler, rateLimitPresets.strict);

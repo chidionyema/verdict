@@ -4,6 +4,7 @@ import { z } from 'zod';
 import Stripe from 'stripe';
 import { log } from '@/lib/logger';
 import { MIN_PAYOUT_CENTS } from '@/lib/validations';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
 
 const getStripe = () => {
   if (!process.env.STRIPE_SECRET_KEY) {
@@ -19,7 +20,7 @@ const createPayoutSchema = z.object({
   payout_method: z.enum(['stripe_express', 'bank_transfer', 'paypal']).default('stripe_express'),
 });
 
-export async function GET(request: NextRequest) {
+async function GET_Handler(request: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -40,8 +41,12 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '20');
+    const rawPage = parseInt(searchParams.get('page') || '1', 10);
+    const rawLimit = parseInt(searchParams.get('limit') || '20', 10);
+
+    // Validate and bound pagination params
+    const page = Number.isNaN(rawPage) || rawPage < 1 ? 1 : rawPage;
+    const limit = Number.isNaN(rawLimit) || rawLimit < 1 ? 20 : Math.min(rawLimit, 100);
 
     // Get payouts
     const from = (page - 1) * limit;
@@ -90,7 +95,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
+async function POST_Handler(request: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -249,3 +254,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+// Apply rate limiting - strict for financial payout operations
+export const GET = withRateLimit(GET_Handler, rateLimitPresets.default);
+export const POST = withRateLimit(POST_Handler, rateLimitPresets.strict);

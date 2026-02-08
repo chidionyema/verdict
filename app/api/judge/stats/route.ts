@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { log } from '@/lib/logger';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
 
 // GET /api/judge/stats - Get judge statistics
-export async function GET(request: NextRequest) {
+async function GET_Handler(request: NextRequest) {
   try {
     const supabase = await createClient();
 
@@ -52,7 +53,10 @@ export async function GET(request: NextRequest) {
 
     const totalEarnings =
       earningsData?.reduce(
-        (sum: number, e: any) => sum + parseFloat(e.amount || '0'),
+        (sum: number, e: any) => {
+          const amount = parseFloat(e.amount || '0');
+          return sum + (Number.isNaN(amount) ? 0 : amount);
+        },
         0
       ) || 0;
 
@@ -69,7 +73,10 @@ export async function GET(request: NextRequest) {
 
     const availableForPayout =
       pendingEarnings?.reduce(
-        (sum: number, e: any) => sum + parseFloat(e.amount || '0'),
+        (sum: number, e: any) => {
+          const amount = parseFloat(e.amount || '0');
+          return sum + (Number.isNaN(amount) ? 0 : amount);
+        },
         0
       ) || 0;
 
@@ -85,8 +92,10 @@ export async function GET(request: NextRequest) {
     }
 
     const qualityScores =
-      qualityData?.map((v: any) => parseFloat(v.quality_score || '0')).filter((s: number) => s > 0) ||
-      [];
+      qualityData?.map((v: any) => {
+        const score = parseFloat(v.quality_score || '0');
+        return Number.isNaN(score) ? 0 : score;
+      }).filter((s: number) => s > 0) || [];
     const averageQuality =
       qualityScores.length > 0
         ? qualityScores.reduce(
@@ -122,3 +131,5 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// Apply rate limiting to stats endpoint
+export const GET = withRateLimit(GET_Handler, rateLimitPresets.default);

@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { log } from '@/lib/logger';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
 
-export async function GET(request: NextRequest) {
+async function GET_Handler(request: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -443,3 +444,6 @@ async function getJudgeInsights(judgeId: string, supabase: any) {
     throw error;
   }
 }
+
+// Apply rate limiting to expensive analytics queries
+export const GET = withRateLimit(GET_Handler, rateLimitPresets.default);

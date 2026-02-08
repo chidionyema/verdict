@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
 import type { Database } from '@/lib/database.types';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
 
 const verificationSchema = z.object({
   userId: z.string().uuid(),
@@ -11,7 +12,7 @@ const verificationSchema = z.object({
   ),
 });
 
-export async function POST(request: NextRequest) {
+async function POST_Handler(request: NextRequest) {
   try {
     const body = await request.json();
     const { userId, linkedinUrl } = verificationSchema.parse(body);
@@ -144,3 +145,6 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+// Apply strict rate limiting to verification endpoint
+export const POST = withRateLimit(POST_Handler, rateLimitPresets.strict);

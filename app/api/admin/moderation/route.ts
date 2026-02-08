@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { log } from '@/lib/logger';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
+
+// UUID validation regex
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isValidUUID(id: string): boolean {
+  return typeof id === 'string' && UUID_REGEX.test(id);
+}
 
 // Check if user has admin privileges using is_admin field
 async function isAdmin(supabase: any, userId: string): Promise<boolean> {
@@ -16,7 +24,7 @@ async function isAdmin(supabase: any, userId: string): Promise<boolean> {
 }
 
 // GET /api/admin/moderation - Get pending moderation items
-export async function GET(request: NextRequest) {
+async function GET_Handler(request: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -31,7 +39,8 @@ export async function GET(request: NextRequest) {
 
     const searchParams = request.nextUrl.searchParams;
     const type = searchParams.get('type') || 'all'; // 'reports', 'stuck', 'all'
-    const limit = parseInt(searchParams.get('limit') || '50');
+    const rawLimit = parseInt(searchParams.get('limit') || '50', 10);
+    const limit = Number.isNaN(rawLimit) || rawLimit < 1 ? 50 : Math.min(rawLimit, 100);
 
     const results: any = {};
 
@@ -107,7 +116,7 @@ export async function GET(request: NextRequest) {
 }
 
 // POST /api/admin/moderation - Take moderation action
-export async function POST(request: NextRequest) {
+async function POST_Handler(request: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -127,6 +136,11 @@ export async function POST(request: NextRequest) {
         { error: 'Action, type, and id are required' },
         { status: 400 }
       );
+    }
+
+    // Validate id as UUID
+    if (!isValidUUID(id)) {
+      return NextResponse.json({ error: 'Invalid ID format' }, { status: 400 });
     }
 
     const results: any = {};
@@ -261,3 +275,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+// Apply rate limiting to admin moderation endpoints
+export const GET = withRateLimit(GET_Handler, rateLimitPresets.default);
+export const POST = withRateLimit(POST_Handler, rateLimitPresets.default);

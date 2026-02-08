@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
 
-export async function POST(request: NextRequest) {
+// UUID validation regex
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isValidUUID(id: string): boolean {
+  return typeof id === 'string' && UUID_REGEX.test(id);
+}
+
+async function POST_Handler(request: NextRequest) {
   try {
     const supabase = await createClient();
 
@@ -15,6 +23,11 @@ export async function POST(request: NextRequest) {
 
     if (!requestId) {
       return NextResponse.json({ error: 'Request ID is required' }, { status: 400 });
+    }
+
+    // Validate UUID format
+    if (!isValidUUID(requestId)) {
+      return NextResponse.json({ error: 'Invalid request ID format' }, { status: 400 });
     }
 
     // Verify the user owns this request
@@ -65,3 +78,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to send thanks' }, { status: 500 });
   }
 }
+
+// Apply rate limiting to thank-judges endpoint
+export const POST = withRateLimit(POST_Handler, rateLimitPresets.default);

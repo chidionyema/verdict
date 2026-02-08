@@ -262,22 +262,29 @@ export function JudgeTraining({ onComplete, onSkip, className = '' }: JudgeTrain
 
         {/* Footer with progress and skip option */}
         <div className="bg-gray-50 px-6 py-4 border-t flex-shrink-0">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2 text-xs text-gray-500">
               <MessageSquare className="h-3 w-3" />
               <span>
                 {completedCards.size} of {TRAINING_CARDS.length} examples completed
               </span>
             </div>
-            {onSkip && (
+          </div>
+
+          {/* Skip option with soft warning */}
+          {onSkip && (
+            <div className="border-t border-gray-200 pt-3">
               <button
                 onClick={onSkip}
-                className="text-sm text-gray-600 hover:text-gray-800 font-medium"
+                className="w-full py-2.5 px-4 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition text-sm font-medium min-h-[44px]"
               >
-                Skip Training
+                Skip for now
               </button>
-            )}
-          </div>
+              <p className="text-xs text-gray-400 text-center mt-1.5">
+                Training helps you earn higher reputation and give better feedback
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>

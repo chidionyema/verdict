@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { supabaseServiceClient } from '@/lib/supabase/service-client';
 import { uploadRateLimiter, checkRateLimit } from '@/lib/rate-limiter';
+import { safeDeductCredits, safeRefundCredits } from '@/lib/credit-guard';
+import { log } from '@/lib/logger';
 
 interface CreateSplitTestRequest {
   category: string;
@@ -107,23 +109,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check user credits (split tests cost 1 credit)
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('credits')
-      .eq('id', user.id)
-      .single() as { data: any; error: any };
+    // Generate split test ID early for credit deduction tracking
+    const splitTestId = crypto.randomUUID();
 
-    if (!profile || (profile as any)?.credits < 1) {
+    // ATOMIC CREDIT DEDUCTION FIRST (split tests cost 1 credit)
+    const creditResult = await safeDeductCredits(user.id, 1, splitTestId);
+
+    if (!creditResult.success) {
       return NextResponse.json(
-        { error: 'Insufficient credits. You need 1 credit to create a split test.' },
-        { status: 402 }
+        { error: creditResult.message || 'Insufficient credits. You need 1 credit to create a split test.' },
+        { status: creditResult.message.includes('Insufficient') ? 402 : 400 }
       );
     }
 
+    log.info('Credits deducted atomically for split test', {
+      userId: user.id,
+      splitTestId,
+      credits: 1,
+      newBalance: creditResult.newBalance
+    });
+
     // Upload photos to Supabase Storage
     const serviceSupabase = supabaseServiceClient();
-    const splitTestId = crypto.randomUUID();
     
     // Generate unique file paths
     const photoAPath = `split-tests/${splitTestId}/photo-a-${Date.now()}.${photoAFile.type.split('/')[1]}`;
@@ -142,7 +149,9 @@ export async function POST(request: NextRequest) {
       });
 
     if (photoAError) {
-      console.error('Error uploading photo A:', photoAError);
+      // Refund credits since upload failed
+      await safeRefundCredits(user.id, 1, `Split test ${splitTestId} photo A upload failed`);
+      log.error('Error uploading photo A:', photoAError);
       return NextResponse.json(
         { error: 'Failed to upload photo A' },
         { status: 500 }
@@ -158,12 +167,13 @@ export async function POST(request: NextRequest) {
       });
 
     if (photoBError) {
-      // Clean up photo A if photo B fails
+      // Clean up photo A and refund credits if photo B fails
       await serviceSupabase.storage
         .from('split-test-photos')
         .remove([photoAPath]);
-      
-      console.error('Error uploading photo B:', photoBError);
+      await safeRefundCredits(user.id, 1, `Split test ${splitTestId} photo B upload failed`);
+
+      log.error('Error uploading photo B:', photoBError);
       return NextResponse.json(
         { error: 'Failed to upload photo B' },
         { status: 500 }
@@ -201,53 +211,32 @@ export async function POST(request: NextRequest) {
     }
 
     if (dbError) {
-      // Clean up uploaded photos if database operation fails
+      // CRITICAL: Refund credits since request creation failed
+      log.error('Error creating split test, initiating refund:', dbError);
+
+      const refundResult = await safeRefundCredits(
+        user.id,
+        1,
+        `Split test ${splitTestId} creation failed: ${dbError}`
+      );
+
+      if (!refundResult.success) {
+        log.error('CRITICAL: Credit refund failed after split test creation error', {
+          userId: user.id,
+          splitTestId,
+          refundError: refundResult.message
+        });
+      }
+
+      // Clean up uploaded photos
       await Promise.all([
         serviceSupabase.storage.from('split-test-photos').remove([photoAPath]),
         serviceSupabase.storage.from('split-test-photos').remove([photoBPath]),
       ]);
 
-      console.error('Error creating split test:', dbError);
       return NextResponse.json(
         { error: 'Failed to create split test' },
         { status: 500 }
-      );
-    }
-
-    // Deduct credit from user using unified credit system
-    const { data: deductResult, error: creditError } = await (supabase as any).rpc('deduct_credits', {
-      p_user_id: user.id,
-      p_credits: 1
-    });
-
-    if (creditError) {
-      // Clean up on credit deduction failure
-      await Promise.all([
-        serviceSupabase.storage.from('split-test-photos').remove([photoAPath]),
-        serviceSupabase.storage.from('split-test-photos').remove([photoBPath]),
-        supabase.from('split_test_requests').delete().eq('id', splitTest),
-      ]);
-
-      console.error('Error deducting credits:', creditError);
-      return NextResponse.json(
-        { error: `Failed to deduct credits: ${creditError.message}` },
-        { status: 500 }
-      );
-    }
-
-    // Check if deduction was successful
-    const result = deductResult?.[0];
-    if (!result || !result.success) {
-      // Clean up on insufficient credits
-      await Promise.all([
-        serviceSupabase.storage.from('split-test-photos').remove([photoAPath]),
-        serviceSupabase.storage.from('split-test-photos').remove([photoBPath]),
-        supabase.from('split_test_requests').delete().eq('id', splitTest),
-      ]);
-
-      return NextResponse.json(
-        { error: result?.message || 'Insufficient credits' },
-        { status: 400 }
       );
     }
 

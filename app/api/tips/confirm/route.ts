@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import Stripe from 'stripe';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
 
 // Lazy initialization to avoid build-time errors when env vars aren't set
 function getStripeClient() {
@@ -16,7 +17,7 @@ interface ConfirmTipRequest {
   paymentIntentId: string;
 }
 
-export async function POST(request: NextRequest) {
+async function POST_Handler(request: NextRequest) {
   try {
     const { paymentIntentId }: ConfirmTipRequest = await request.json();
 
@@ -130,3 +131,6 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+// Apply rate limiting to tip confirmation
+export const POST = withRateLimit(POST_Handler, rateLimitPresets.default);

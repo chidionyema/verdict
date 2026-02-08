@@ -168,21 +168,31 @@ export function useFormAutoSave<T extends Record<string, any>>(
     onRestore
   });
 
-  // Check for saved data on mount
+  // Check for saved data on mount - use ref to avoid stale closure
+  const autoSaveRef = useRef(autoSave);
+  const onRestoreRef = useRef(onRestore);
+
+  // Keep refs updated
   useEffect(() => {
-    const savedData = autoSave.restoreData();
-    if (savedData && onRestore) {
+    autoSaveRef.current = autoSave;
+    onRestoreRef.current = onRestore;
+  });
+
+  // Check for saved data on mount only
+  useEffect(() => {
+    const savedData = autoSaveRef.current.restoreData();
+    if (savedData && onRestoreRef.current) {
       // Show restore prompt
       const shouldRestore = window.confirm(
         'We found a saved draft of this form. Would you like to restore it?'
       );
       if (shouldRestore) {
-        onRestore(savedData);
+        onRestoreRef.current(savedData);
       } else {
-        autoSave.clearSaved();
+        autoSaveRef.current.clearSaved();
       }
     }
-  }, []);
+  }, [formKey]); // Only re-run if formKey changes
 
   return {
     ...autoSave,

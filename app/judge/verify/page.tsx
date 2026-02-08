@@ -4,8 +4,9 @@ import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { StreamlinedLinkedInVerification } from '@/components/verification/StreamlinedLinkedInVerification';
 import { VerifiedBadge } from '@/components/verification/VerifiedBadge';
-import { Shield, ArrowLeft, CheckCircle, Star, TrendingUp, Users, Award } from 'lucide-react';
+import { Shield, CheckCircle, Star, TrendingUp, Users, Award } from 'lucide-react';
 import { TouchButton } from '@/components/ui/touch-button';
+import { BackButton } from '@/components/ui/BackButton';
 import { useRouter } from 'next/navigation';
 
 interface VerificationStatus {
@@ -81,14 +82,7 @@ export default function JudgeVerifyPage() {
       <div className="max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
-          <TouchButton
-            onClick={() => router.push('/judge')}
-            className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-4"
-            variant="ghost"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Dashboard
-          </TouchButton>
+          <BackButton href="/judge" label="Back to Dashboard" className="mb-4" />
           
           <div className="flex items-center gap-4 mb-4">
             <div className="bg-indigo-600 text-white rounded-full p-3">

@@ -1,9 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { log } from '@/lib/logger';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
+
+// UUID validation regex
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isValidUUID(id: string): boolean {
+  return typeof id === 'string' && UUID_REGEX.test(id);
+}
 
 // POST /api/reports - Create a content report
-export async function POST(request: NextRequest) {
+async function POST_Handler(request: NextRequest) {
   try {
     const supabase: any = await createClient();
 
@@ -36,7 +44,15 @@ export async function POST(request: NextRequest) {
     const validContentTypes = ['verdict_request', 'verdict_response'];
     if (!validContentTypes.includes(content_type)) {
       return NextResponse.json(
-        { error: 'Invalid content_type. Must be verdict_request or verdict_response' }, 
+        { error: 'Invalid content_type. Must be verdict_request or verdict_response' },
+        { status: 400 }
+      );
+    }
+
+    // Validate content_id as UUID
+    if (!isValidUUID(content_id)) {
+      return NextResponse.json(
+        { error: 'Invalid content_id format' },
         { status: 400 }
       );
     }
@@ -142,7 +158,7 @@ export async function POST(request: NextRequest) {
 }
 
 // GET /api/reports - Get user's reports
-export async function GET(request: NextRequest) {
+async function GET_Handler(request: NextRequest) {
   try {
     const supabase: any = await createClient();
 
@@ -184,3 +200,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+// Apply rate limiting to report endpoints
+export const POST = withRateLimit(POST_Handler, rateLimitPresets.default);
+export const GET = withRateLimit(GET_Handler, rateLimitPresets.default);

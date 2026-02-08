@@ -97,9 +97,12 @@ export default function MyRequestsPage() {
     if (typeof window === 'undefined') return;
     if (!user?.id) return;
 
+    let pollInterval: NodeJS.Timeout | null = null;
+    let isSubscribed = false;
+
     try {
       const supabase = createClient();
-      
+
       const channel = supabase
         .channel('my-requests-updates')
         .on(
@@ -113,11 +116,11 @@ export default function MyRequestsPage() {
           (payload) => {
             const updatedRequest = payload.new as any;
             const oldRequest = payload.old as any;
-            
+
             // Check if verdict count increased
             const oldCount = oldRequest?.received_verdict_count || previousCountsRef.current[updatedRequest.id] || 0;
             const newCount = updatedRequest?.received_verdict_count || 0;
-            
+
             if (newCount > oldCount) {
               // Update the request in state
               setRequests((prev) => {
@@ -126,10 +129,10 @@ export default function MyRequestsPage() {
                     ? { ...req, ...updatedRequest }
                     : req
                 );
-                
+
                 // Update previous counts
                 previousCountsRef.current[updatedRequest.id] = newCount;
-                
+
                 return updated;
               });
 
@@ -149,19 +152,51 @@ export default function MyRequestsPage() {
             }
           }
         )
-        .subscribe();
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            isSubscribed = true;
+            // Clear polling if it was started as fallback
+            if (pollInterval) {
+              clearInterval(pollInterval);
+              pollInterval = null;
+            }
+          } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+            isSubscribed = false;
+            // Start polling as fallback when subscription fails
+            if (!pollInterval) {
+              pollInterval = setInterval(() => {
+                fetchData();
+              }, 30000);
+            }
+          }
+        });
 
-      // Polling fallback - refresh every 30 seconds to catch any missed updates
-      const pollInterval = setInterval(() => {
-        fetchData();
+      // Start polling initially as a safety net, will be cleared once subscription is confirmed
+      pollInterval = setInterval(() => {
+        // Only poll if subscription is not active
+        if (!isSubscribed) {
+          fetchData();
+        }
       }, 30000);
 
       return () => {
         supabase.removeChannel(channel);
-        clearInterval(pollInterval);
+        if (pollInterval) {
+          clearInterval(pollInterval);
+        }
       };
     } catch (error) {
       console.error('Error setting up real-time subscription:', error);
+      // Fallback to polling if subscription setup fails entirely
+      pollInterval = setInterval(() => {
+        fetchData();
+      }, 30000);
+
+      return () => {
+        if (pollInterval) {
+          clearInterval(pollInterval);
+        }
+      };
     }
   }, [user?.id]);
 
@@ -519,7 +554,7 @@ export default function MyRequestsPage() {
                   <button
                     key={filterOption}
                     onClick={() => setFilter(filterOption as any)}
-                    className={`px-4 py-3 rounded-xl font-medium transition capitalize ${
+                    className={`px-4 py-3 rounded-xl font-medium transition capitalize min-h-[44px] ${
                       filter === filterOption
                         ? 'bg-indigo-100 text-indigo-700 border-2 border-indigo-200'
                         : 'bg-white text-gray-700 border-2 border-gray-200 hover:bg-gray-50'
@@ -580,8 +615,9 @@ export default function MyRequestsPage() {
                           const viewUrl = request.view_url || `/requests/${request.id}`;
                           window.location.href = viewUrl;
                         }}
-                        className="text-gray-400 hover:text-gray-600 cursor-pointer"
+                        className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg cursor-pointer min-w-[44px] min-h-[44px] flex items-center justify-center"
                         title="View details"
+                        aria-label="View request details"
                       >
                         <MoreHorizontal className="h-5 w-5" />
                       </button>
@@ -616,13 +652,43 @@ export default function MyRequestsPage() {
                         <Calendar className="h-3 w-3" />
                         {new Date(request.created_at).toLocaleDateString()}
                       </span>
-                      {request.status === 'closed' && (
+                      {request.status === 'closed' ? (
                         <span className="flex items-center gap-1 text-green-600">
                           <Star className="h-3 w-3 fill-current" />
                           {request.avg_rating || '8.2'}/10
                         </span>
+                      ) : (request.status === 'open' || request.status === 'in_progress') && (
+                        <span className="flex items-center gap-1 text-indigo-600">
+                          <Clock className="h-3 w-3" />
+                          {(() => {
+                            const created = new Date(request.created_at);
+                            const now = new Date();
+                            const hoursElapsed = (now.getTime() - created.getTime()) / (1000 * 60 * 60);
+                            const remaining = request.received_verdict_count;
+                            const target = request.target_verdict_count;
+
+                            if (remaining >= target) return 'Completing...';
+                            if (hoursElapsed < 1) return '~1-2 hrs left';
+                            if (hoursElapsed < 2 && remaining > 0) return '~30 min left';
+                            if (remaining === 0) return '~2 hrs expected';
+                            return `~${Math.max(1, Math.ceil((target - remaining) * 0.5))} hr${Math.ceil((target - remaining) * 0.5) > 1 ? 's' : ''} left`;
+                          })()}
+                        </span>
                       )}
                     </div>
+
+                    {/* First Verdict Notification */}
+                    {request.received_verdict_count === 1 && request.status !== 'closed' && (
+                      <div className="flex items-center gap-2 mb-3 px-3 py-2 bg-green-50 border border-green-200 rounded-lg">
+                        <span className="relative flex h-2 w-2">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                        </span>
+                        <span className="text-sm font-medium text-green-700">
+                          First verdict is in! Tap to see it.
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Actions */}
@@ -683,10 +749,40 @@ export default function MyRequestsPage() {
             </div>
 
             {filteredRequests.length === 0 && (
-              <EmptyState 
-                variant="no-results"
-                context={{ searchTerm: searchTerm }}
-              />
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 text-center">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Search className="h-8 w-8 text-gray-400" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">No results found</h3>
+                <p className="text-gray-600 mb-4">
+                  {searchTerm && filter !== 'all'
+                    ? `No ${filter} requests matching "${searchTerm}"`
+                    : searchTerm
+                    ? `No requests matching "${searchTerm}"`
+                    : filter !== 'all'
+                    ? `No ${filter} requests found`
+                    : 'No requests found'}
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                  {(searchTerm || filter !== 'all') && (
+                    <button
+                      onClick={() => {
+                        setSearchTerm('');
+                        setFilter('all');
+                      }}
+                      className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition min-h-[48px]"
+                    >
+                      Clear Filters
+                    </button>
+                  )}
+                  <button
+                    onClick={() => router.push('/start')}
+                    className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition min-h-[48px]"
+                  >
+                    Create New Request
+                  </button>
+                </div>
+              </div>
             )}
           </>
         )}

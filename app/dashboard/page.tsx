@@ -1,15 +1,18 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { Plus, Image, FileText, Clock, CheckCircle, XCircle, Search, Filter, SortAsc, SortDesc, Sparkles, TrendingUp, Activity, Users, Award, Target, BarChart3, Star, ArrowRight, Crown, Heart, MessageSquare, Eye, CreditCard, Coins } from 'lucide-react';
 import type { VerdictRequest, Profile } from '@/lib/database.types';
 import Breadcrumb from '@/components/Breadcrumb';
+import { RetryButton } from '@/components/ui/RetryButton';
+import { LoadingOverlay } from '@/components/ui/LoadingOverlay';
 import { FeatureDiscoveryBanner } from '@/components/discovery/FeatureDiscoveryBanner';
 import { RetentionDiscountBanner } from '@/components/retention/RetentionDiscountBanner';
 import { ReferralWidget } from '@/components/referrals/ReferralDashboard';
 import { JudgePerformanceDashboard } from '@/components/judge/JudgePerformanceDashboard';
+import { CrossRolePrompt } from '@/components/ui/CrossRolePrompt';
 
 type FilterStatus = 'all' | 'open' | 'in_progress' | 'closed' | 'cancelled';
 type SortBy = 'newest' | 'oldest' | 'status' | 'progress';
@@ -27,6 +30,7 @@ export default function DashboardPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [requests, setRequests] = useState<VerdictRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<FilterStatus>('all');
   const [sortBy, setSortBy] = useState<SortBy>('newest');
@@ -34,6 +38,8 @@ export default function DashboardPage() {
   const [notification, setNotification] = useState<{ type: 'success' | 'error' | 'info'; message: string } | null>(null);
   const [showCreditsModal, setShowCreditsModal] = useState(false);
   const [purchasingPackage, setPurchasingPackage] = useState<string | null>(null);
+  const [isRedirectingToCheckout, setIsRedirectingToCheckout] = useState(false);
+  const [purchaseError, setPurchaseError] = useState<string | null>(null);
 
   const fetchData = async () => {
     // Only run in browser
@@ -42,31 +48,54 @@ export default function DashboardPage() {
       return;
     }
 
+    // Reset error state on retry
+    setError(null);
+
     try {
       const supabase = createClient();
-      
+
       // Fetch profile
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-        setProfile(profileData);
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+      if (authError) {
+        console.error('Auth error:', authError);
+        setError('Please log in to view your dashboard.');
+        setLoading(false);
+        return;
       }
+
+      if (!user) {
+        setError('Please log in to view your dashboard.');
+        setLoading(false);
+        return;
+      }
+
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError && profileError.code !== 'PGRST116') {
+        console.error('Profile fetch error:', profileError);
+      }
+      setProfile(profileData);
 
       // Fetch requests
       const res = await fetch('/api/requests');
       if (res.ok) {
         const { requests: requestsData } = await res.json();
         setRequests(requestsData || []);
+      } else if (res.status === 401) {
+        setError('Session expired. Please log in again.');
       } else {
-        const errorData = await res.json();
+        const errorData = await res.json().catch(() => ({}));
         console.error('Failed to fetch requests:', res.status, errorData);
+        setError('Failed to load your requests. Please try again.');
       }
     } catch (error) {
       console.error('Error fetching data:', error);
+      setError('Something went wrong. Please check your connection and try again.');
     } finally {
       setLoading(false);
     }
@@ -84,10 +113,30 @@ export default function DashboardPage() {
         return;
       }
 
-      // Check for payment status in URL
+      // Check for URL params (payment status, welcome, profile setup)
       const params = new URLSearchParams(window.location.search);
       const purchaseStatus = params.get('purchase');
       const creditsAdded = params.get('credits');
+      const isWelcome = params.get('welcome');
+      const profileSetup = params.get('profile_setup');
+
+      // Handle welcome message for new users
+      if (isWelcome === 'true') {
+        setNotification({
+          type: 'success',
+          message: 'Welcome! You have 3 free credits to get started. Create your first request!',
+        });
+        window.history.replaceState({}, '', '/dashboard');
+      }
+
+      // Handle profile setup warning
+      if (profileSetup === 'pending') {
+        setNotification({
+          type: 'info',
+          message: 'Your account setup is still in progress. Some features may be limited until setup completes.',
+        });
+        window.history.replaceState({}, '', '/dashboard');
+      }
 
       if (purchaseStatus === 'success') {
         setNotification({
@@ -112,6 +161,17 @@ export default function DashboardPage() {
       }
     }
   }, []);
+
+  // Escape key to close modals (WCAG accessibility)
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && showCreditsModal) {
+        setShowCreditsModal(false);
+      }
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [showCreditsModal]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -210,6 +270,7 @@ export default function DashboardPage() {
 
   const handlePurchaseCredits = async (packageId: string) => {
     setPurchasingPackage(packageId);
+    setPurchaseError(null); // Clear previous errors
     try {
       const res = await fetch('/api/billing/create-checkout-session', {
         method: 'POST',
@@ -226,22 +287,20 @@ export default function DashboardPage() {
           message: data.message || `Added ${data.credits_added} credits!`,
         });
         setShowCreditsModal(false);
+        setPurchaseError(null);
         // Refresh data
         fetchData();
       } else if (data.checkout_url) {
+        // Show full-screen loading overlay during redirect
+        setIsRedirectingToCheckout(true);
         window.location.href = data.checkout_url;
       } else {
-        setNotification({
-          type: 'error',
-          message: data.error || 'Failed to start checkout',
-        });
+        const errorMessage = data.error || 'Failed to start checkout. Please try again.';
+        setPurchaseError(errorMessage);
       }
     } catch (error) {
       console.error('Purchase error:', error);
-      setNotification({
-        type: 'error',
-        message: 'Failed to purchase credits. Please try again.',
-      });
+      setPurchaseError('Connection error. Please check your internet and try again.');
     } finally {
       setPurchasingPackage(null);
     }
@@ -272,8 +331,49 @@ export default function DashboardPage() {
     );
   }
 
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-12">
+        <div className="max-w-6xl mx-auto px-4">
+          <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <XCircle className="h-8 w-8 text-red-600" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-3">Unable to Load Dashboard</h2>
+            <p className="text-gray-600 mb-8">{error}</p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              <RetryButton
+                onRetry={async () => {
+                  setLoading(true);
+                  await fetchData();
+                  if (error) throw new Error(error);
+                }}
+                maxRetries={3}
+                label="Try Again"
+                retryingLabel="Loading..."
+              />
+              <Link
+                href="/auth/login"
+                className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition min-h-[44px] flex items-center"
+              >
+                Log In
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Full-screen loading overlay for payment redirect */}
+      <LoadingOverlay
+        isVisible={isRedirectingToCheckout}
+        title="Redirecting to Payment..."
+        description="You're being securely redirected to Stripe to complete your purchase."
+      />
+
       {/* Credits Purchase Modal */}
       {showCreditsModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
@@ -285,13 +385,14 @@ export default function DashboardPage() {
                     <Coins className="h-6 w-6 text-white" />
                   </div>
                   <div>
-                    <h2 className="text-xl font-bold text-gray-900">Get Credits</h2>
-                    <p className="text-sm text-gray-600">Purchase credits to submit requests</p>
+                    <h2 className="text-xl font-bold text-gray-900">Buy Credits</h2>
+                    <p className="text-sm text-gray-600">One-time purchase, no subscription</p>
                   </div>
                 </div>
                 <button
                   onClick={() => setShowCreditsModal(false)}
                   className="p-2 hover:bg-gray-100 rounded-lg transition"
+                  aria-label="Close credits modal"
                 >
                   <XCircle className="h-6 w-6 text-gray-400" />
                 </button>
@@ -299,12 +400,42 @@ export default function DashboardPage() {
             </div>
 
             <div className="p-6 space-y-4">
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
-                <p className="text-sm text-blue-800">
-                  <strong>Tip:</strong> You can also earn free credits by judging other submissions.
-                  Judge 3 submissions to earn 1 credit!
-                </p>
+              <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-green-800 font-medium">Prefer to earn free credits?</p>
+                    <p className="text-xs text-green-700 mt-1">Judge 3 submissions to earn 1 credit</p>
+                  </div>
+                  <Link
+                    href="/feed?earn=true"
+                    onClick={() => setShowCreditsModal(false)}
+                    className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition"
+                  >
+                    Start Earning
+                  </Link>
+                </div>
               </div>
+
+              {/* Purchase Error Display */}
+              {purchaseError && (
+                <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+                      <XCircle className="h-5 w-5 text-red-600" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-red-800">Payment Failed</p>
+                      <p className="text-sm text-red-700 mt-1">{purchaseError}</p>
+                      <button
+                        onClick={() => setPurchaseError(null)}
+                        className="text-sm text-red-600 hover:text-red-800 underline mt-2"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {Object.entries(CREDIT_PACKAGES).map(([id, pkg]) => (
                 <button
@@ -393,6 +524,7 @@ export default function DashboardPage() {
                 notification.type === 'error' ? 'text-red-600' :
                 'text-blue-600'
               }`}
+              aria-label="Dismiss notification"
             >
               <XCircle className="h-5 w-5" />
             </button>
@@ -440,6 +572,17 @@ export default function DashboardPage() {
           userId={profile.id}
           hasCompletedRequest={requests.some(r => r.status === 'closed')}
         />
+      )}
+
+      {/* Cross-Role Discovery - Encourage seekers to try judging */}
+      {profile && (
+        <div className="max-w-6xl mx-auto px-4 mb-6">
+          <CrossRolePrompt
+            currentRole="seeker"
+            userId={profile.id}
+            variant="banner"
+          />
+        </div>
       )}
 
       {/* Referral Program Widget */}
@@ -500,12 +643,20 @@ export default function DashboardPage() {
               Filters
             </button>
             
+            <Link
+              href="/feed?earn=true"
+              className="bg-green-600 text-white px-5 py-3 rounded-xl font-semibold hover:bg-green-700 transition flex items-center justify-center min-h-[48px] whitespace-nowrap"
+            >
+              <Users className="h-5 w-5 mr-2" />
+              Earn Credits
+            </Link>
+
             <button
               onClick={() => setShowCreditsModal(true)}
-              className="bg-gradient-to-r from-amber-500 to-orange-500 text-white px-6 py-3 rounded-xl font-semibold hover:from-amber-600 hover:to-orange-600 transition flex items-center justify-center min-h-[48px] whitespace-nowrap shadow-lg"
+              className="bg-gradient-to-r from-amber-500 to-orange-500 text-white px-5 py-3 rounded-xl font-semibold hover:from-amber-600 hover:to-orange-600 transition flex items-center justify-center min-h-[48px] whitespace-nowrap shadow-lg"
             >
               <Coins className="h-5 w-5 mr-2" />
-              Get Credits
+              Buy Credits
             </button>
 
             <Link
@@ -650,7 +801,7 @@ export default function DashboardPage() {
                   <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center mb-4 mx-auto">
                     <Crown className="h-6 w-6 text-white" />
                   </div>
-                  <h4 className="font-bold text-gray-900 mb-2">3 Free Requests Included</h4>
+                  <h4 className="font-bold text-gray-900 mb-2">3 Free Credits Included</h4>
                   <p className="text-gray-600 text-sm">No upfront cost, start immediately</p>
                 </div>
                 
@@ -832,13 +983,52 @@ export default function DashboardPage() {
                           Complete!
                         </span>
                       )}
-                      {request.status === 'in_progress' && (
+                      {(request.status === 'in_progress' || request.status === 'open') && (
                         <span className="text-xs font-bold text-blue-600 flex items-center gap-1">
                           <Activity className="h-3 w-3 animate-pulse" />
-                          Active
+                          {(() => {
+                            const created = new Date(request.created_at);
+                            const now = new Date();
+                            const hoursElapsed = (now.getTime() - created.getTime()) / (1000 * 60 * 60);
+                            if (request.received_verdict_count >= request.target_verdict_count) return 'Completing...';
+                            if (hoursElapsed < 1) return '~1-2 hrs';
+                            if (request.received_verdict_count > 0) return '~30 min';
+                            return '~2 hrs';
+                          })()}
                         </span>
                       )}
                     </div>
+
+                    {/* First Verdict Notification & View Results Quick-Link */}
+                    {request.received_verdict_count > 0 && (
+                      <div className="mt-4 pt-4 border-t border-gray-100">
+                        {request.received_verdict_count === 1 && request.status !== 'closed' && (
+                          <div className="flex items-center gap-2 mb-3 px-3 py-2 bg-green-50 border border-green-200 rounded-lg">
+                            <span className="relative flex h-2 w-2">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                            </span>
+                            <span className="text-sm font-medium text-green-700">
+                              First verdict received!
+                            </span>
+                          </div>
+                        )}
+                        <div
+                          className={`flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg font-medium text-sm transition ${
+                            request.status === 'closed'
+                              ? 'bg-green-600 text-white hover:bg-green-700'
+                              : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'
+                          }`}
+                        >
+                          <Eye className="h-4 w-4" />
+                          {request.status === 'closed'
+                            ? `View All ${request.received_verdict_count} Results`
+                            : `See ${request.received_verdict_count} Verdict${request.received_verdict_count > 1 ? 's' : ''} So Far`
+                          }
+                          <ArrowRight className="h-4 w-4" />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </Link>

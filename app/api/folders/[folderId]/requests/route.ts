@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { log } from '@/lib/logger';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
+
+// UUID validation regex
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isValidUUID(id: string): boolean {
+  return typeof id === 'string' && UUID_REGEX.test(id);
+}
 
 interface RouteParams {
   params: {
@@ -9,7 +17,7 @@ interface RouteParams {
 }
 
 // GET /api/folders/[folderId]/requests - Get requests in folder
-export async function GET(request: NextRequest, { params }: RouteParams) {
+async function GET_Handler(request: NextRequest, { params }: RouteParams) {
   try {
     const supabase = await createClient();
 
@@ -23,9 +31,19 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
 
     const { folderId } = params;
+
+    // Validate UUID format
+    if (!isValidUUID(folderId)) {
+      return NextResponse.json({ error: 'Invalid folder ID format' }, { status: 400 });
+    }
+
     const { searchParams } = new URL(request.url);
-    const limit = parseInt(searchParams.get('limit') || '20');
-    const offset = parseInt(searchParams.get('offset') || '0');
+    const rawLimit = parseInt(searchParams.get('limit') || '20', 10);
+    const rawOffset = parseInt(searchParams.get('offset') || '0', 10);
+
+    // Validate and bound pagination params
+    const limit = Number.isNaN(rawLimit) || rawLimit < 1 ? 20 : Math.min(rawLimit, 100);
+    const offset = Number.isNaN(rawOffset) || rawOffset < 0 ? 0 : rawOffset;
 
     // Check folder ownership
     const { data: folder } = await supabase
@@ -120,7 +138,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 }
 
 // POST /api/folders/[folderId]/requests - Move requests to folder
-export async function POST(request: NextRequest, { params }: RouteParams) {
+async function POST_Handler(request: NextRequest, { params }: RouteParams) {
   try {
     const supabase = await createClient();
 
@@ -134,12 +152,27 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     const { folderId } = params;
+
+    // Validate UUID format
+    if (!isValidUUID(folderId)) {
+      return NextResponse.json({ error: 'Invalid folder ID format' }, { status: 400 });
+    }
+
     const body = await request.json();
     const { request_ids } = body;
 
     if (!Array.isArray(request_ids) || request_ids.length === 0) {
       return NextResponse.json(
         { error: 'request_ids must be a non-empty array' },
+        { status: 400 }
+      );
+    }
+
+    // Validate all request IDs are valid UUIDs
+    const invalidIds = request_ids.filter((id: any) => !isValidUUID(id));
+    if (invalidIds.length > 0) {
+      return NextResponse.json(
+        { error: 'Invalid request ID format in request_ids array' },
         { status: 400 }
       );
     }
@@ -204,3 +237,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     );
   }
 }
+
+// Apply rate limiting to folder requests endpoints
+export const GET = withRateLimit(GET_Handler, rateLimitPresets.default);
+export const POST = withRateLimit(POST_Handler, rateLimitPresets.default);

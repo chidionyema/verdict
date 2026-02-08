@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
 import { log } from '@/lib/logger';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
 
 const analyticsConfigSchema = z.object({
   provider: z.enum(['mixpanel', 'amplitude', 'segment']),
@@ -30,7 +31,7 @@ const trackEventSchema = z.object({
   timestamp: z.string().optional(),
 });
 
-export async function GET(request: NextRequest) {
+async function GET_Handler(request: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -74,7 +75,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
+async function POST_Handler(request: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -144,11 +145,18 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Track event endpoint
-export async function PUT(request: NextRequest) {
+// Track event endpoint - REQUIRES AUTH
+async function PUT_Handler(request: NextRequest) {
   try {
     const supabase = await createClient();
-    
+
+    // SECURITY: Require authentication for event tracking
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await request.json();
     const validated = trackEventSchema.parse(body);
 
@@ -430,3 +438,8 @@ async function trackWithSegment(config: any, eventData: any): Promise<{ success:
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 }
+
+// Apply rate limiting to analytics endpoints
+export const GET = withRateLimit(GET_Handler, rateLimitPresets.default);
+export const POST = withRateLimit(POST_Handler, rateLimitPresets.default);
+export const PUT = withRateLimit(PUT_Handler, rateLimitPresets.default);

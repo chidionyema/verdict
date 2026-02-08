@@ -118,6 +118,21 @@ const POST_Handler = async (request: NextRequest) => {
 async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
   const supabase = createServiceClient();
 
+  // Idempotency check: Has this checkout session already been processed?
+  const { data: existingTransaction } = await supabase
+    .from('transactions')
+    .select('id, status')
+    .eq('stripe_session_id', session.id)
+    .single();
+
+  if (existingTransaction?.status === 'completed') {
+    log.info('Checkout session already processed, skipping', {
+      sessionId: session.id,
+      transactionId: existingTransaction.id
+    });
+    return; // Already processed successfully
+  }
+
   const userId = session.metadata?.user_id;
   const isLegacyPackage = session.metadata?.is_legacy_package === 'true';
   const credits = parseInt(session.metadata?.credits || '0');
@@ -202,20 +217,30 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
 
     const result = (creditResult as any)?.[0];
     if (creditError || !result?.success) {
-      log.error('Failed to add credits atomically', creditError || result?.message, { 
-        userId, 
-        credits, 
+      // CRITICAL: Payment received but credits not added - this MUST be retried
+      log.error('CRITICAL: Failed to add credits after payment', creditError || result?.message, {
+        userId,
+        credits,
         sessionId: session.id,
         paymentAmount: session.amount_total,
         severity: 'critical',
         actionRequired: 'Manual credit reconciliation needed'
       });
-      // Don't throw here - we want to continue processing other webhooks
+
+      trackCriticalPaymentError('credit_addition_failed', creditError || new Error(result?.message), {
+        userId,
+        credits,
+        sessionId: session.id,
+        paymentAmount: session.amount_total
+      });
+
+      // Throw to signal Stripe to retry this webhook
+      throw new Error(`Credit addition failed for session ${session.id}: ${creditError?.message || result?.message}`);
     } else {
-      log.info('Credits added successfully', { 
-        userId, 
-        credits, 
-        newBalance: result.new_balance, 
+      log.info('Credits added successfully', {
+        userId,
+        credits,
+        newBalance: result.new_balance,
         sessionId: session.id,
         paymentAmount: session.amount_total
       });

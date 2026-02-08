@@ -14,13 +14,24 @@ export function ExitIntentModal({ className = '' }: ExitIntentModalProps) {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const alreadyShown = window.localStorage.getItem(STORAGE_KEY);
-    if (alreadyShown) return;
+
+    // Check if already shown - wrapped in try-catch for localStorage errors
+    try {
+      const alreadyShown = window.localStorage.getItem(STORAGE_KEY);
+      if (alreadyShown) return;
+    } catch {
+      // localStorage unavailable (private browsing, disabled, etc.) - show modal anyway
+    }
 
     const handleMouseLeave = (e: MouseEvent) => {
       if (e.clientY <= 0) {
         setOpen(true);
-        window.localStorage.setItem(STORAGE_KEY, '1');
+        // Mark as shown - silently fail if localStorage unavailable
+        try {
+          window.localStorage.setItem(STORAGE_KEY, '1');
+        } catch {
+          // Ignore - modal will show again on next visit, not critical
+        }
       }
     };
 
@@ -30,6 +41,17 @@ export function ExitIntentModal({ className = '' }: ExitIntentModalProps) {
       document.removeEventListener('mouseleave', handleMouseLeave);
     };
   }, []);
+
+  // Escape key to close modal (WCAG accessibility)
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && open) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [open]);
 
   if (!open) return null;
 

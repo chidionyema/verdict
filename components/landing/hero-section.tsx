@@ -98,7 +98,7 @@ export function HeroSection() {
             >
               <span className="absolute inset-0 bg-white opacity-0 group-hover:opacity-10 transition-opacity rounded-2xl" />
               <span className="relative flex items-center gap-3">
-                Get 3 Free Responses
+                Start Free with 3 Credits
                 <ArrowRight className="h-6 w-6" />
               </span>
             </TouchButton>

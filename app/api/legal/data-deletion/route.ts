@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
 import { log } from '@/lib/logger';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
 
 const deletionSchema = z.object({
   reason: z.enum(['privacy_concerns', 'no_longer_needed', 'switching_services', 'other']),
@@ -9,7 +10,7 @@ const deletionSchema = z.object({
   confirm_deletion: z.boolean(),
 });
 
-export async function POST(request: NextRequest) {
+async function POST_Handler(request: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -149,7 +150,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET(request: NextRequest) {
+async function GET_Handler(request: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -178,7 +179,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function DELETE(request: NextRequest) {
+async function DELETE_Handler(request: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -236,3 +237,8 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+// Apply strict rate limiting to sensitive deletion operations
+export const POST = withRateLimit(POST_Handler, rateLimitPresets.strict);
+export const GET = withRateLimit(GET_Handler, rateLimitPresets.default);
+export const DELETE = withRateLimit(DELETE_Handler, rateLimitPresets.strict);

@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { log } from '@/lib/logger';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
 
-export async function GET() {
+async function GET_Handler() {
   try {
     const supabase = await createClient();
 
@@ -15,9 +16,24 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Select only necessary fields - avoid exposing internal/sensitive data
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('*')
+      .select(`
+        id,
+        email,
+        full_name,
+        display_name,
+        avatar_url,
+        credits,
+        is_judge,
+        is_expert,
+        pricing_tier,
+        created_at,
+        updated_at,
+        onboarding_completed,
+        notification_preferences
+      `)
       .eq('id', user.id)
       .single();
 
@@ -37,3 +53,6 @@ export async function GET() {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+// Apply rate limiting to user info endpoint
+export const GET = withRateLimit(GET_Handler, rateLimitPresets.default);

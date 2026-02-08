@@ -1,9 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { log } from '@/lib/logger';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
+
+// UUID validation regex
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isValidUUID(id: string): boolean {
+  return typeof id === 'string' && UUID_REGEX.test(id);
+}
 
 // POST /api/moderation/report - Report inappropriate content
-export async function POST(request: NextRequest) {
+async function POST_Handler(request: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -26,6 +34,14 @@ export async function POST(request: NextRequest) {
     if (!validContentTypes.includes(contentType)) {
       return NextResponse.json(
         { error: 'Invalid content type' },
+        { status: 400 }
+      );
+    }
+
+    // Validate contentId as UUID to prevent injection
+    if (!isValidUUID(contentId)) {
+      return NextResponse.json(
+        { error: 'Invalid content ID format' },
         { status: 400 }
       );
     }
@@ -109,7 +125,7 @@ export async function POST(request: NextRequest) {
 }
 
 // GET /api/moderation/report - Get user's reports (for their own reference)
-export async function GET(request: NextRequest) {
+async function GET_Handler(request: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -153,3 +169,7 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+// Apply rate limiting to prevent report spam
+export const POST = withRateLimit(POST_Handler, rateLimitPresets.default);
+export const GET = withRateLimit(GET_Handler, rateLimitPresets.default);

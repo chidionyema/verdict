@@ -387,7 +387,7 @@ export function SplitTestModal({ isOpen, onClose, category }: SplitTestModalProp
               <TouchButton
                 onClick={handleSubmit}
                 disabled={!images.A || !images.B || !question.trim() || isSubmitting}
-                className="w-full bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white disabled:opacity-50 py-4"
+                className="w-full bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white disabled:opacity-50 disabled:cursor-not-allowed py-4"
               >
                 {isSubmitting ? (
                   <>

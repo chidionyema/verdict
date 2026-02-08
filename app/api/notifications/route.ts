@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { log } from '@/lib/logger';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
 
 // GET /api/notifications - Get user's notifications
-export async function GET(request: NextRequest) {
+async function GET_Handler(request: NextRequest) {
   try {
     const supabase: any = await createClient();
 
@@ -17,8 +18,14 @@ export async function GET(request: NextRequest) {
     }
 
     const url = new URL(request.url);
-    const limit = parseInt(url.searchParams.get('limit') || '20');
-    const offset = parseInt(url.searchParams.get('offset') || '0');
+    const rawLimit = parseInt(url.searchParams.get('limit') || '20', 10);
+    const rawOffset = parseInt(url.searchParams.get('offset') || '0', 10);
+
+    // Validate and bound limit (1-100, default 20 if invalid)
+    const limit = Number.isNaN(rawLimit) || rawLimit < 1 ? 20 : Math.min(rawLimit, 100);
+    // Validate offset (must be non-negative, default 0 if invalid)
+    const offset = Number.isNaN(rawOffset) || rawOffset < 0 ? 0 : rawOffset;
+
     const unread_only = url.searchParams.get('unread_only') === 'true';
 
     // Build query
@@ -58,7 +65,7 @@ export async function GET(request: NextRequest) {
 }
 
 // PATCH /api/notifications - Mark all notifications as read
-export async function PATCH(request: NextRequest) {
+async function PATCH_Handler(request: NextRequest) {
   try {
     const supabase: any = await createClient();
 
@@ -90,3 +97,7 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+// Apply rate limiting to notifications endpoints
+export const GET = withRateLimit(GET_Handler, rateLimitPresets.default);
+export const PATCH = withRateLimit(PATCH_Handler, rateLimitPresets.default);

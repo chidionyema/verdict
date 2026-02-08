@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { log } from '@/lib/logger';
 import { z } from 'zod';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
 
 const consentSchema = z.object({
   consent_type: z.enum(['terms', 'privacy', 'cookies', 'marketing', 'data_processing']),
@@ -11,7 +12,7 @@ const consentSchema = z.object({
   user_agent: z.string().optional(),
 });
 
-export async function POST(request: NextRequest) {
+async function POST_Handler(request: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -67,7 +68,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET(request: NextRequest) {
+async function GET_Handler(request: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -103,3 +104,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+// Apply rate limiting to consent endpoints
+export const POST = withRateLimit(POST_Handler, rateLimitPresets.default);
+export const GET = withRateLimit(GET_Handler, rateLimitPresets.default);

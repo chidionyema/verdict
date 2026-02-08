@@ -1,20 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { log } from '@/lib/logger';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
+
+// Escape special characters for LIKE/ILIKE patterns
+function escapeLikePattern(input: string): string {
+  return input
+    .replace(/\\/g, '\\\\')  // Escape backslashes first
+    .replace(/%/g, '\\%')     // Escape percent
+    .replace(/_/g, '\\_');    // Escape underscore
+}
 
 // GET /api/search/suggestions - Get search suggestions and popular searches
-export async function GET(request: NextRequest) {
+async function GET_Handler(request: NextRequest) {
   try {
     const supabase: any = await createClient();
     const url = new URL(request.url);
     const query = url.searchParams.get('q') || '';
-    const limit = Math.min(parseInt(url.searchParams.get('limit') || '10'), 20);
+    const rawLimit = parseInt(url.searchParams.get('limit') || '10', 10);
+    const limit = Number.isNaN(rawLimit) || rawLimit < 1 ? 10 : Math.min(rawLimit, 20);
+
+    // Escape query for LIKE pattern matching
+    const escapedQuery = escapeLikePattern(query);
 
     // Get popular searches that match the query
     const { data: popularSearches, error: popularError } = await supabase
       .from('popular_searches')
       .select('search_query, search_count')
-      .ilike('search_query', `%${query}%`)
+      .ilike('search_query', `%${escapedQuery}%`)
       .order('search_count', { ascending: false })
       .limit(limit) as { data: any[] | null; error: any };
 
@@ -26,7 +39,7 @@ export async function GET(request: NextRequest) {
     const { data: trendingTags, error: tagsError } = await supabase
       .from('content_tags')
       .select('name, usage_count, category')
-      .ilike('name', `%${query}%`)
+      .ilike('name', `%${escapedQuery}%`)
       .order('usage_count', { ascending: false })
       .limit(limit) as { data: any[] | null; error: any };
 
@@ -94,3 +107,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+// Apply rate limiting to search suggestions
+export const GET = withRateLimit(GET_Handler, rateLimitPresets.search);

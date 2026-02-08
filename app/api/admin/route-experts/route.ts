@@ -2,9 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { ExpertRoutingService } from '@/lib/expert-routing';
 import { log } from '@/lib/logger';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
+
+// UUID validation regex
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isValidUUID(id: string): boolean {
+  return typeof id === 'string' && UUID_REGEX.test(id);
+}
 
 // POST /api/admin/route-experts - Manually trigger expert routing for Pro/Standard requests
-export async function POST(request: NextRequest) {
+async function POST_Handler(request: NextRequest) {
   try {
     const supabase = await createClient();
 
@@ -33,6 +41,17 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const { requestIds, tier } = body; // Optional: specific request IDs or tier filter
+
+    // Validate requestIds if provided
+    if (requestIds && Array.isArray(requestIds)) {
+      const invalidIds = requestIds.filter((id: any) => !isValidUUID(id));
+      if (invalidIds.length > 0) {
+        return NextResponse.json(
+          { error: 'Invalid request ID format in requestIds array' },
+          { status: 400 }
+        );
+      }
+    }
 
     const expertRouting = new ExpertRoutingService(supabase as any);
     const results = [];
@@ -134,7 +153,7 @@ export async function POST(request: NextRequest) {
 }
 
 // GET /api/admin/route-experts - Get routing statistics
-export async function GET(request: NextRequest) {
+async function GET_Handler(request: NextRequest) {
   try {
     const supabase = await createClient();
 
@@ -212,3 +231,7 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+// Apply rate limiting to admin routing endpoints
+export const POST = withRateLimit(POST_Handler, rateLimitPresets.default);
+export const GET = withRateLimit(GET_Handler, rateLimitPresets.default);

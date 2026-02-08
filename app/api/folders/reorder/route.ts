@@ -1,9 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { log } from '@/lib/logger';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
+
+// UUID validation regex
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isValidUUID(id: string): boolean {
+  return typeof id === 'string' && UUID_REGEX.test(id);
+}
 
 // POST /api/folders/reorder - Reorder folders
-export async function POST(request: NextRequest) {
+async function POST_Handler(request: NextRequest) {
   try {
     const supabase = await createClient();
 
@@ -26,11 +34,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate folder_orders structure
+    // Validate folder_orders structure and UUID format
     for (const order of folder_orders) {
       if (!order.id || typeof order.sort_order !== 'number') {
         return NextResponse.json(
           { error: 'Each folder order must have id and sort_order' },
+          { status: 400 }
+        );
+      }
+      if (!isValidUUID(order.id)) {
+        return NextResponse.json(
+          { error: 'Invalid folder ID format' },
           { status: 400 }
         );
       }
@@ -83,3 +97,6 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+// Apply rate limiting to reorder endpoint
+export const POST = withRateLimit(POST_Handler, rateLimitPresets.default);

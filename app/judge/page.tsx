@@ -41,6 +41,7 @@ import {
 import type { Profile } from '@/lib/database.types';
 import JudgeProgression from '@/components/judge/JudgeProgression';
 import { EmptyState } from '@/components/ui/EmptyStates';
+import { CrossRolePrompt } from '@/components/ui/CrossRolePrompt';
 
 interface QueueRequest {
   id: string;
@@ -125,6 +126,8 @@ export default function JudgeDashboardPage() {
   const [showAchievements, setShowAchievements] = useState(false);
   const [selectedTimeframe, setSelectedTimeframe] = useState<'daily' | 'weekly' | 'monthly'>('weekly');
   const [earningsData, setEarningsData] = useState<Array<{ date: string; amount: number }>>([]);
+  const [queueLoading, setQueueLoading] = useState(false);
+  const [queueError, setQueueError] = useState<string | null>(null);
 
   // Filter and sort queue
   const filteredQueue = queue
@@ -183,8 +186,10 @@ export default function JudgeDashboardPage() {
 
         // Only fetch queue and stats if judge
         if (profileData?.is_judge) {
+          setQueueLoading(true);
+          setQueueError(null);
           try {
-            const res = await fetch('/api/judge/queue', { 
+            const res = await fetch('/api/judge/queue', {
               signal: AbortSignal.timeout(10000) // 10 second timeout
             });
             if (res.ok) {
@@ -195,9 +200,13 @@ export default function JudgeDashboardPage() {
               setQueueType(queueTypeResponse || 'community');
             } else {
               console.error('Queue fetch failed:', res.status, res.statusText);
+              setQueueError(res.status === 401 ? 'auth' : 'failed');
             }
-          } catch (queueError) {
-            console.error('Queue fetch error:', queueError);
+          } catch (queueErr) {
+            console.error('Queue fetch error:', queueErr);
+            setQueueError(queueErr instanceof Error && queueErr.name === 'AbortError' ? 'timeout' : 'network');
+          } finally {
+            setQueueLoading(false);
           }
 
           try {
@@ -226,61 +235,11 @@ export default function JudgeDashboardPage() {
     fetchData();
   }, []);
 
-  // Temporarily disabled SSE to debug loading issues
-  /*
-  useEffect(() => {
-    // Set up SSE for real-time updates
-    if (typeof window !== 'undefined' && profile?.is_judge) {
-      let eventSource: EventSource;
-      
-      try {
-        eventSource = new EventSource('/api/judge/queue/stream');
-        
-        eventSource.onmessage = (event) => {
-          try {
-            const data = JSON.parse(event.data);
-            
-            if (data.type === 'requests') {
-              setQueue(data.requests || []);
-              // Update expert info if available in stream
-              if (data.isExpert !== undefined) {
-                setIsExpert(data.isExpert);
-                setExpertInfo(data.expertInfo || null);
-                setQueueType(data.queueType || 'community');
-              }
-            } else if (data.type === 'connected') {
-              console.log('SSE connected:', data.message);
-            } else if (data.type === 'heartbeat') {
-              // Connection is alive
-            } else if (data.type === 'reconnect') {
-              console.log('SSE reconnect requested:', data.message);
-              eventSource.close();
-              // Trigger a manual refetch
-              fetchData();
-            }
-          } catch (error) {
-            console.error('Error parsing SSE data:', error);
-          }
-        };
-
-        eventSource.onerror = (error) => {
-          console.error('SSE error:', error);
-          if (eventSource) {
-            eventSource.close();
-          }
-        };
-
-        return () => {
-          if (eventSource) {
-            eventSource.close();
-          }
-        };
-      } catch (error) {
-        console.error('Error creating SSE connection:', error);
-      }
-    }
-  }, [profile?.is_judge]);
-  */
+  // NOTE: SSE real-time updates disabled for MVP stability.
+  // The EventSource connection was causing loading issues in some browsers.
+  // Current solution: Polling every 30 seconds (see useEffect below).
+  // TODO (post-MVP): Investigate SSE issues and potentially re-enable for
+  // true real-time queue updates. The SSE endpoint exists at /api/judge/queue/stream.
 
   useEffect(() => {
     // Set up auto-refresh every 30 seconds (less aggressive)
@@ -1124,54 +1083,126 @@ export default function JudgeDashboardPage() {
                 </div>
               )}
 
-              {/* Regular Request Cards */}
-              {queue.length === 0 ? (
+              {/* Queue Loading State */}
+              {queueLoading && (
                 <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl border border-white/50 p-12 text-center">
-                  <div className="w-24 h-24 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse">
+                  <div className="w-24 h-24 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-3">
+                    Loading your queue...
+                  </h3>
+                  <p className="text-gray-600">
+                    Finding requests that match your expertise
+                  </p>
+                </div>
+              )}
+
+              {/* Queue Error State */}
+              {queueError && !queueLoading && (
+                <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl border border-white/50 p-12 text-center">
+                  <div className="w-24 h-24 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <XCircle className="h-12 w-12 text-red-600" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-3">
+                    {queueError === 'timeout' ? 'Request Timed Out' :
+                     queueError === 'network' ? 'Connection Problem' :
+                     queueError === 'auth' ? 'Session Expired' :
+                     'Failed to Load Queue'}
+                  </h3>
+                  <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                    {queueError === 'timeout' ? 'The server took too long to respond. This might be due to high traffic.' :
+                     queueError === 'network' ? 'Please check your internet connection and try again.' :
+                     queueError === 'auth' ? 'Your session has expired. Please log in again.' :
+                     'Something went wrong while loading your queue.'}
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                    {queueError === 'auth' ? (
+                      <button
+                        onClick={() => router.push('/auth/login')}
+                        className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition min-h-[48px]"
+                      >
+                        Log In Again
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          setQueueError(null);
+                          fetchData();
+                        }}
+                        className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition min-h-[48px]"
+                      >
+                        Try Again
+                      </button>
+                    )}
+                    <button
+                      onClick={() => router.push('/feed')}
+                      className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition min-h-[48px]"
+                    >
+                      Browse Community Feed
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Regular Request Cards */}
+              {!queueLoading && !queueError && queue.length === 0 ? (
+                <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl border border-white/50 p-12 text-center">
+                  <div className="w-24 h-24 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-6">
                     <Clock className="h-12 w-12 text-indigo-600" />
                   </div>
                   <h3 className="text-2xl font-bold text-gray-900 mb-3">
-                    Waiting for new requests...
+                    No requests available right now
                   </h3>
                   <p className="text-gray-600 mb-6 max-w-md mx-auto">
-                    Keep this tab open — new requests will appear automatically with a notification.
+                    New requests are added frequently. You can refresh to check, or browse the community feed.
                   </p>
-                  <div className="flex items-center justify-center gap-6 text-sm">
-                    <div className="flex items-center gap-2 text-gray-600">
-                      <AlertCircle className="h-4 w-4 text-blue-600" />
-                      <span>Auto-refresh enabled</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-gray-600">
+                  <div className="flex flex-col sm:flex-row gap-3 justify-center mb-6">
+                    <button
+                      onClick={() => fetchData()}
+                      className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition min-h-[48px]"
+                    >
+                      Refresh Queue
+                    </button>
+                    <button
+                      onClick={() => router.push('/feed')}
+                      className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition min-h-[48px]"
+                    >
+                      Browse Community Feed
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-center gap-6 text-sm text-gray-500">
+                    <div className="flex items-center gap-2">
                       <Timer className="h-4 w-4 text-green-600" />
-                      <span>Usually within 2-5 min</span>
+                      <span>New requests added every few minutes</span>
                     </div>
                   </div>
                 </div>
-              ) : filteredQueue.length === 0 ? (
+              ) : !queueLoading && !queueError && filteredQueue.length === 0 ? (
                 <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl border border-white/50 p-12">
-                  <EmptyState 
+                  <EmptyState
                     variant="no-requests"
-                    title={queue.length === 0 ? "No requests available" : "No matching requests"}
-                    description={queue.length === 0 
-                      ? "Your queue is empty. Check back soon for new requests, or browse the community feed!"
-                      : "Try adjusting your filters or search to see more requests."}
+                    title="No matching requests"
+                    description="Try adjusting your filters or search to see more requests."
                     actions={[
+                      {
+                        label: 'Clear Filters',
+                        action: () => {
+                          setQueueFilter('all');
+                          setSearchQuery('');
+                        },
+                        variant: 'secondary' as const
+                      },
                       {
                         label: 'Browse Community Feed',
                         action: () => router.push('/feed'),
                         variant: 'primary' as const,
                         icon: Users
-                      },
-                      {
-                        label: 'Submit Your Own',
-                        action: () => router.push('/start'),
-                        variant: 'secondary' as const,
-                        icon: Plus
                       }
                     ]}
                   />
                 </div>
-              ) : (
+              ) : !queueLoading && !queueError && (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   {filteredQueue.slice(filteredQueue.length > 0 ? 1 : 0).map((request) => {
                     const getRequestTypeConfig = (request: QueueRequest) => {
@@ -1372,11 +1403,20 @@ export default function JudgeDashboardPage() {
                 
                 <div className="mt-4 bg-white/10 backdrop-blur-sm rounded-xl p-3">
                   <p className="text-xs text-white/80">
-                    💡 High-quality verdicts unlock premium requests with higher pay!
+                    High-quality verdicts unlock premium requests with higher pay!
                   </p>
                 </div>
               </div>
             </div>
+
+            {/* Cross-Role Discovery - Encourage judges to try getting feedback */}
+            {profile && (
+              <CrossRolePrompt
+                currentRole="judge"
+                userId={profile.id}
+                variant="card"
+              />
+            )}
           </div>
         )}
       </div>

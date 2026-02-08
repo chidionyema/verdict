@@ -187,7 +187,7 @@ export function PayoutRequestModal({ isOpen, onClose, userId, availableCredits, 
               <TouchButton
                 onClick={() => setStep('payment')}
                 disabled={!canProceed}
-                className="w-full bg-green-600 hover:bg-green-700 text-white disabled:opacity-50"
+                className="w-full bg-green-600 hover:bg-green-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Continue to Payment Details
               </TouchButton>
@@ -268,7 +268,7 @@ export function PayoutRequestModal({ isOpen, onClose, userId, availableCredits, 
                 <TouchButton
                   onClick={() => setStep('confirmation')}
                   disabled={!paymentEmail.trim()}
-                  className="flex-1 bg-green-600 hover:bg-green-700 text-white disabled:opacity-50"
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Review Request
                 </TouchButton>
@@ -335,7 +335,7 @@ export function PayoutRequestModal({ isOpen, onClose, userId, availableCredits, 
                 <TouchButton
                   onClick={handleSubmitPayout}
                   disabled={isSubmitting}
-                  className="flex-1 bg-green-600 hover:bg-green-700 text-white disabled:opacity-50"
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isSubmitting ? (
                     <>

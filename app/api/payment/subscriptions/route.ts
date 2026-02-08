@@ -3,6 +3,14 @@ import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
 import Stripe from 'stripe';
 import { log } from '@/lib/logger';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
+
+// UUID validation regex
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isValidUUID(id: string): boolean {
+  return typeof id === 'string' && UUID_REGEX.test(id);
+}
 
 const getStripe = () => {
   if (!process.env.STRIPE_SECRET_KEY) {
@@ -18,7 +26,7 @@ const cancelSubscriptionSchema = z.object({
   cancel_immediately: z.boolean().optional(),
 });
 
-export async function GET(request: NextRequest) {
+async function GET_Handler(request: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -83,7 +91,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function DELETE(request: NextRequest) {
+async function DELETE_Handler(request: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -94,6 +102,11 @@ export async function DELETE(request: NextRequest) {
 
     const body = await request.json();
     const validated = cancelSubscriptionSchema.parse(body);
+
+    // Validate subscription_id as UUID (already validated by zod, but double-check)
+    if (!isValidUUID(validated.subscription_id)) {
+      return NextResponse.json({ error: 'Invalid subscription ID format' }, { status: 400 });
+    }
 
     // Get subscription details
     const { data: subscription, error: subError } = await (supabase as any)
@@ -158,7 +171,7 @@ export async function DELETE(request: NextRequest) {
   }
 }
 
-export async function PATCH(request: NextRequest) {
+async function PATCH_Handler(request: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -172,6 +185,11 @@ export async function PATCH(request: NextRequest) {
 
     if (!subscription_id || !action) {
       return NextResponse.json({ error: 'Subscription ID and action required' }, { status: 400 });
+    }
+
+    // Validate subscription_id as UUID
+    if (!isValidUUID(subscription_id)) {
+      return NextResponse.json({ error: 'Invalid subscription ID format' }, { status: 400 });
     }
 
     // Get subscription details
@@ -229,3 +247,8 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+// Apply rate limiting to subscription endpoints
+export const GET = withRateLimit(GET_Handler, rateLimitPresets.default);
+export const DELETE = withRateLimit(DELETE_Handler, rateLimitPresets.strict);
+export const PATCH = withRateLimit(PATCH_Handler, rateLimitPresets.default);

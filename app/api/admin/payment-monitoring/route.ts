@@ -3,9 +3,10 @@ import { createClient } from '@/lib/supabase/server';
 import { getPaymentSystemHealth } from '@/lib/monitoring';
 import { reconciliationManager } from '@/lib/payment-reconciliation';
 import { log } from '@/lib/logger';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
 
 // GET /api/admin/payment-monitoring - Get payment system monitoring data
-export async function GET(request: NextRequest) {
+async function GET_Handler(request: NextRequest) {
   try {
     const supabase = await createClient();
     
@@ -82,7 +83,7 @@ export async function GET(request: NextRequest) {
 }
 
 // POST /api/admin/payment-monitoring/run-analysis - Manually trigger analysis
-export async function POST(request: NextRequest) {
+async function POST_Handler(request: NextRequest) {
   try {
     const supabase = await createClient();
     
@@ -150,3 +151,7 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+// Apply rate limiting to payment monitoring endpoints
+export const GET = withRateLimit(GET_Handler, rateLimitPresets.default);
+export const POST = withRateLimit(POST_Handler, rateLimitPresets.default);

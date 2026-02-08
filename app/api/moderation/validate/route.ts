@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { moderateText, moderateImage, moderateRequest } from '@/lib/moderation-free';
 import { createClient } from '@/lib/supabase/server';
 import { log } from '@/lib/logger';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
 
 // POST /api/moderation/validate - Validate content before submission
-export async function POST(request: NextRequest) {
+async function POST_Handler(request: NextRequest) {
   try {
     const { content, mediaType, filename, fileSize } = await request.json();
 
@@ -71,3 +72,6 @@ function getSuggestion(reason: string): string {
 
   return suggestions[reason] || 'Please review your content and make it more appropriate.';
 }
+
+// Apply rate limiting to moderation validation endpoint
+export const POST = withRateLimit(POST_Handler, rateLimitPresets.default);

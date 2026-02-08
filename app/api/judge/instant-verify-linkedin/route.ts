@@ -1,5 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
+
+// UUID validation regex
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isValidUUID(id: string): boolean {
+  return typeof id === 'string' && UUID_REGEX.test(id);
+}
 
 // Simple LinkedIn profile validation patterns
 const EXPERTISE_PATTERNS = [
@@ -55,10 +63,10 @@ async function simulateProfileScraping(url: string): Promise<{ valid: boolean; e
   return { valid, expertise };
 }
 
-export async function POST(request: NextRequest) {
+async function POST_Handler(request: NextRequest) {
   try {
     const supabase = await createClient();
-    
+
     const {
       data: { user },
       error: authError,
@@ -71,9 +79,14 @@ export async function POST(request: NextRequest) {
     const { userId, linkedinUrl } = await request.json();
 
     if (!userId || !linkedinUrl) {
-      return NextResponse.json({ 
-        error: 'Missing required fields: userId, linkedinUrl' 
+      return NextResponse.json({
+        error: 'Missing required fields: userId, linkedinUrl'
       }, { status: 400 });
+    }
+
+    // Validate UUID format
+    if (!isValidUUID(userId)) {
+      return NextResponse.json({ error: 'Invalid userId format' }, { status: 400 });
     }
 
     if (userId !== user.id) {
@@ -136,3 +149,6 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+// Apply strict rate limiting to instant verification endpoint
+export const POST = withRateLimit(POST_Handler, rateLimitPresets.strict);

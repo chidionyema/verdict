@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
 
-export async function POST(request: NextRequest) {
+// UUID validation regex
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isValidUUID(id: string): boolean {
+  return typeof id === 'string' && UUID_REGEX.test(id);
+}
+
+async function POST_Handler(request: NextRequest) {
   try {
     const supabase = await createClient();
     
@@ -17,9 +25,14 @@ export async function POST(request: NextRequest) {
     const { feedbackId, rating, comment } = await request.json();
 
     if (!feedbackId || !rating || rating < 1 || rating > 5) {
-      return NextResponse.json({ 
-        error: 'Invalid request. feedbackId and rating (1-5) are required.' 
+      return NextResponse.json({
+        error: 'Invalid request. feedbackId and rating (1-5) are required.'
       }, { status: 400 });
+    }
+
+    // Validate feedbackId as UUID
+    if (!isValidUUID(feedbackId)) {
+      return NextResponse.json({ error: 'Invalid feedback ID format' }, { status: 400 });
     }
 
     // Verify the feedback exists and user is the requester
@@ -184,3 +197,6 @@ async function awardJudgeBonus(judgeId: string, rating: number, supabase: any) {
     console.error('Error awarding judge bonus:', error);
   }
 }
+
+// Apply rate limiting to judge rating endpoint
+export const POST = withRateLimit(POST_Handler, rateLimitPresets.default);

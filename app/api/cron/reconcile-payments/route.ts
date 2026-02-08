@@ -3,10 +3,11 @@ import { createClient } from '@/lib/supabase/server';
 import { stripe, isDemoMode } from '@/lib/stripe';
 import { log } from '@/lib/logger';
 import { trackPaymentReconciliation } from '@/lib/monitoring';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
 
 // POST /api/cron/reconcile-payments - Automated payment reconciliation
 // Should be called by cron job every 30 minutes
-export async function POST(request: NextRequest) {
+async function POST_Handler(request: NextRequest) {
   try {
     // Verify cron job authorization
     const authHeader = request.headers.get('authorization');
@@ -236,10 +237,14 @@ export async function POST(request: NextRequest) {
 }
 
 // GET /api/cron/reconcile-payments - Health check for cron job
-export async function GET() {
+async function GET_Handler() {
   return NextResponse.json({
     service: 'payment-reconciliation-cron',
     status: 'healthy',
     timestamp: new Date().toISOString()
   });
 }
+
+// Apply rate limiting to cron reconcile endpoints (strict to prevent abuse)
+export const GET = withRateLimit(GET_Handler, rateLimitPresets.default);
+export const POST = withRateLimit(POST_Handler, rateLimitPresets.strict);

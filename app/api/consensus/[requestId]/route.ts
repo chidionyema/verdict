@@ -2,14 +2,40 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { ConsensusEngine } from '@/lib/consensus';
 import { log } from '@/lib/logger';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
+
+// UUID validation regex
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isValidUUID(id: string): boolean {
+  return typeof id === 'string' && UUID_REGEX.test(id);
+}
 
 // POST /api/consensus/[requestId] - Generate consensus analysis for Pro tier request
-export async function POST(
+async function POST_Handler(
   request: NextRequest,
   { params }: { params: Promise<{ requestId: string }> }
 ) {
   try {
     const { requestId } = await params;
+
+    // Validate requestId as UUID
+    if (!isValidUUID(requestId)) {
+      return NextResponse.json({ error: 'Invalid request ID format' }, { status: 400 });
+    }
+
+    // Use regular client for auth check
+    const authClient = await createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await authClient.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Use service client for data operations (bypasses RLS for admin operations)
     const supabase = await createServiceClient();
 
     // Fetch the request and verify it's eligible for consensus
@@ -21,6 +47,11 @@ export async function POST(
 
     if (requestError || !verdictRequest) {
       return NextResponse.json({ error: 'Request not found' }, { status: 404 });
+    }
+
+    // Verify user owns this request
+    if (verdictRequest.user_id !== user.id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     // Verify this is a Pro tier request with enough verdicts
@@ -181,12 +212,18 @@ export async function POST(
 }
 
 // GET /api/consensus/[requestId] - Get consensus analysis
-export async function GET(
+async function GET_Handler(
   request: NextRequest,
   { params }: { params: Promise<{ requestId: string }> }
 ) {
   try {
     const { requestId } = await params;
+
+    // Validate requestId as UUID
+    if (!isValidUUID(requestId)) {
+      return NextResponse.json({ error: 'Invalid request ID format' }, { status: 400 });
+    }
+
     const supabase = await createClient();
 
     const {
@@ -241,3 +278,7 @@ export async function GET(
     );
   }
 }
+
+// Apply rate limiting to consensus endpoints
+export const POST = withRateLimit(POST_Handler, rateLimitPresets.default);
+export const GET = withRateLimit(GET_Handler, rateLimitPresets.default);

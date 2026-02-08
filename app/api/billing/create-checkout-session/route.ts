@@ -5,6 +5,7 @@ import { stripe, isDemoMode } from '@/lib/stripe';
 import { CREDIT_PACKAGES, isValidPackageId } from '@/lib/validations';
 import { TIER_CONFIGURATIONS, getTierConfig, calculateTierPrice } from '@/lib/pricing/dynamic-pricing';
 import { log } from '@/lib/logger';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
 
 // DEPRECATED: Use dynamic-pricing.ts instead
 // Keeping for backward compatibility during migration
@@ -54,7 +55,7 @@ function getTierPricing(tierId: string, judgeCount: number = 3) {
 }
 
 // POST /api/billing/create-checkout-session
-export async function POST(request: NextRequest) {
+async function POST_Handler(request: NextRequest) {
   try {
     const supabase = await createClient();
 
@@ -152,7 +153,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Payment system not configured' }, { status: 500 });
     }
 
-    const origin = request.headers.get('origin') || 'http://localhost:3000';
+    const origin = request.headers.get('origin') || process.env.NEXT_PUBLIC_APP_URL;
+    if (!origin) {
+      return NextResponse.json({ error: 'Server configuration error: missing app URL' }, { status: 500 });
+    }
 
     // Create Stripe session based on purchase type
     const sessionData: any = {
@@ -239,3 +243,6 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+// Apply strict rate limiting to checkout session creation
+export const POST = withRateLimit(POST_Handler, rateLimitPresets.strict);

@@ -129,9 +129,9 @@ export function FeedCard({ item, onJudge, onSkip, judging }: FeedCardProps) {
             <button
               onClick={() => handleQuickJudge('dislike')}
               disabled={judging}
-              className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2 text-white disabled:bg-gray-300 ${
-                item.roast_mode 
-                  ? 'bg-red-600 hover:bg-red-700' 
+              className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2 text-white disabled:bg-gray-300 min-h-[48px] ${
+                item.roast_mode
+                  ? 'bg-red-600 hover:bg-red-700'
                   : 'bg-red-500 hover:bg-red-600'
               }`}
             >
@@ -141,9 +141,9 @@ export function FeedCard({ item, onJudge, onSkip, judging }: FeedCardProps) {
             <button
               onClick={() => handleQuickJudge('like')}
               disabled={judging}
-              className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2 text-white disabled:bg-gray-300 ${
-                item.roast_mode 
-                  ? 'bg-orange-500 hover:bg-orange-600' 
+              className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2 text-white disabled:bg-gray-300 min-h-[48px] ${
+                item.roast_mode
+                  ? 'bg-orange-500 hover:bg-orange-600'
                   : 'bg-green-500 hover:bg-green-600'
               }`}
             >
@@ -181,40 +181,69 @@ export function FeedCard({ item, onJudge, onSkip, judging }: FeedCardProps) {
       ) : (
         <div className="p-4 bg-gray-50 space-y-3">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Detailed Feedback (optional)
+            <label htmlFor="detailed-feedback" className="block text-sm font-medium text-gray-700 mb-1">
+              Detailed Feedback
             </label>
+            <p id="feedback-hint" className="text-xs text-gray-500 mb-2">
+              Write at least 10 characters to submit your feedback
+            </p>
             <textarea
+              id="detailed-feedback"
               value={detailedFeedback}
               onChange={(e) => setDetailedFeedback(e.target.value)}
-              placeholder={item.roast_mode 
-                ? "Let them have it! Be brutal, be honest, be savage... 🔥" 
+              placeholder={item.roast_mode
+                ? "Let them have it! Be brutal, be honest, be savage... 🔥"
                 : "Share specific thoughts, suggestions, or observations..."}
               className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none ${
                 item.roast_mode ? 'border-red-300 bg-red-50' : 'border-gray-300'
               }`}
               rows={3}
+              maxLength={500}
+              aria-label="Write detailed feedback"
+              aria-describedby="feedback-hint feedback-counter"
             />
+            <div className="flex justify-between items-center mt-1">
+              <span className={`text-xs ${detailedFeedback.trim().length < 10 && detailedFeedback.length > 0 ? 'text-amber-600' : 'text-gray-500'}`}>
+                {detailedFeedback.trim().length < 10 && detailedFeedback.length > 0
+                  ? `${10 - detailedFeedback.trim().length} more characters needed`
+                  : detailedFeedback.trim().length >= 10
+                  ? '✓ Ready to submit'
+                  : ''}
+              </span>
+              <span
+                id="feedback-counter"
+                className="text-xs text-gray-400"
+                aria-live="polite"
+                aria-atomic="true"
+              >
+                {detailedFeedback.length}/500
+              </span>
+            </div>
           </div>
           
           <div className="flex gap-3">
             <button
               onClick={() => handleDetailedJudge('dislike')}
-              disabled={judging || !detailedFeedback.trim()}
-              className="flex-1 bg-red-500 hover:bg-red-600 disabled:bg-gray-300 text-white py-3 px-4 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2"
+              disabled={judging || detailedFeedback.trim().length < 10}
+              className="flex-1 bg-red-500 hover:bg-red-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white py-3 px-4 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2 min-h-[48px]"
             >
               <X className="h-5 w-5" />
               Not Good
             </button>
             <button
               onClick={() => handleDetailedJudge('like')}
-              disabled={judging || !detailedFeedback.trim()}
-              className="flex-1 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 text-white py-3 px-4 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2"
+              disabled={judging || detailedFeedback.trim().length < 10}
+              className="flex-1 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white py-3 px-4 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2 min-h-[48px]"
             >
               <Heart className="h-5 w-5" />
               Looks Good
             </button>
           </div>
+          {detailedFeedback.trim().length > 0 && detailedFeedback.trim().length < 10 && (
+            <p className="text-xs text-amber-600 text-center" role="alert">
+              Add {10 - detailedFeedback.trim().length} more characters to submit
+            </p>
+          )}
           
           <button
             onClick={() => setShowDetailedFeedback(false)}

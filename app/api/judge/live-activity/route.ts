@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
 
 interface JudgeActivity {
   judge: string;
@@ -9,7 +10,7 @@ interface JudgeActivity {
   timestamp: string;
 }
 
-export async function GET() {
+async function GET_Handler() {
   try {
     const supabase = await createClient();
 
@@ -120,3 +121,6 @@ export async function GET() {
     });
   }
 }
+
+// Apply rate limiting to live activity endpoint
+export const GET = withRateLimit(GET_Handler, rateLimitPresets.default);

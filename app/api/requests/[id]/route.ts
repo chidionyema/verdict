@@ -2,14 +2,28 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { log } from '@/lib/logger';
 import { reputationManager } from '@/lib/reputation';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
+
+// UUID validation regex
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isValidUUID(id: string): boolean {
+  return typeof id === 'string' && UUID_REGEX.test(id);
+}
 
 // GET /api/requests/[id] - Get request with verdicts
-export async function GET(
+async function GET_Handler(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
+
+    // Validate id as UUID
+    if (!isValidUUID(id)) {
+      return NextResponse.json({ error: 'Invalid request ID format' }, { status: 400 });
+    }
+
     const supabase = await createClient();
 
     const {
@@ -196,12 +210,18 @@ export async function GET(
 }
 
 // PATCH /api/requests/[id] - Update request (flag, cancel)
-export async function PATCH(
+async function PATCH_Handler(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await params;
+
+    // Validate id as UUID
+    if (!isValidUUID(id)) {
+      return NextResponse.json({ error: 'Invalid request ID format' }, { status: 400 });
+    }
+
     const supabase = await createClient();
 
     const {
@@ -273,3 +293,7 @@ export async function PATCH(
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+// Apply rate limiting to request endpoints
+export const GET = withRateLimit(GET_Handler, rateLimitPresets.default);
+export const PATCH = withRateLimit(PATCH_Handler, rateLimitPresets.default);

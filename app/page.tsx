@@ -147,23 +147,23 @@ export default function HomePage() {
             Two Simple Ways to Get Feedback
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-3xl mx-auto">
-            {/* Free Path */}
+            {/* Community Path */}
             <div className="bg-white rounded-xl p-6 shadow-lg border-2 border-green-200">
-              <div className="text-2xl mb-3">🆓</div>
-              <h3 className="text-lg font-bold text-green-900 mb-2">Free Path</h3>
+              <div className="text-2xl mb-3">🤝</div>
+              <h3 className="text-lg font-bold text-green-900 mb-2">Community Path</h3>
               <p className="text-gray-700 mb-4">Judge 3 submissions → Earn 1 credit → Submit for free</p>
               <div className="text-sm text-green-800 bg-green-50 rounded-lg p-3">
-                Help others decide, get free feedback in return
+                Help others, get free feedback in return
               </div>
             </div>
-            
-            {/* Paid Path */}
+
+            {/* Private Path */}
             <div className="bg-white rounded-xl p-6 shadow-lg border-2 border-purple-200">
-              <div className="text-2xl mb-3">⚡</div>
-              <h3 className="text-lg font-bold text-purple-900 mb-2">Instant Path</h3>
+              <div className="text-2xl mb-3">🔒</div>
+              <h3 className="text-lg font-bold text-purple-900 mb-2">Private Path</h3>
               <p className="text-gray-700 mb-4">Pay {pricing.privatePrice} → Skip judging → Get private results</p>
               <div className="text-sm text-purple-800 bg-purple-50 rounded-lg p-3">
-                Perfect when you're in a hurry
+                Fast and confidential
               </div>
             </div>
           </div>
@@ -267,7 +267,7 @@ export default function HomePage() {
             <p className="text-center text-gray-600 mb-12 max-w-2xl mx-auto">Two paths to get feedback. Choose what fits your needs.</p>
             
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* Free Path */}
+              {/* Community Path */}
               <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-3xl shadow-xl p-8 border-2 border-green-200">
                 <div className="flex items-center gap-3 mb-6">
                   <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center text-white font-bold text-lg">Free</div>
@@ -457,7 +457,7 @@ export default function HomePage() {
                 </div>
                 
                 <p className="text-sm text-indigo-200 mt-4 animate-fade-in">
-                  No credit card required for free path • Choose what works for you
+                  No credit card required for Community Path • Choose what works for you
                 </p>
               </div>
             </div>

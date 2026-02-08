@@ -2,6 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
 import { log } from '@/lib/logger';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
+
+// Escape special characters for LIKE/ILIKE patterns
+function escapeLikePattern(input: string): string {
+  return input
+    .replace(/\\/g, '\\\\')  // Escape backslashes first
+    .replace(/%/g, '\\%')     // Escape percent
+    .replace(/_/g, '\\_');    // Escape underscore
+}
 
 const createArticleSchema = z.object({
   title: z.string().min(1).max(200),
@@ -19,7 +28,7 @@ const searchSchema = z.object({
   limit: z.coerce.number().min(1).max(50).default(20),
 });
 
-export async function GET(request: NextRequest) {
+async function GET_Handler(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const { q, category, page, limit } = searchSchema.parse({
@@ -50,9 +59,10 @@ export async function GET(request: NextRequest) {
       .order('is_featured', { ascending: false })
       .order('created_at', { ascending: false });
 
-    // Apply filters
+    // Apply filters with sanitized search query
     if (q) {
-      query = query.or(`title.ilike.%${q}%, content.ilike.%${q}%, tags.cs.{${q}}`);
+      const sanitizedQ = escapeLikePattern(q);
+      query = query.or(`title.ilike.%${sanitizedQ}%,content.ilike.%${sanitizedQ}%,tags.cs.{${q}}`);
     }
 
     if (category) {
@@ -106,7 +116,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
+async function POST_Handler(request: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -163,3 +173,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+// Apply rate limiting to help article endpoints
+export const GET = withRateLimit(GET_Handler, rateLimitPresets.default);
+export const POST = withRateLimit(POST_Handler, rateLimitPresets.default);

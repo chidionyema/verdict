@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { 
@@ -39,10 +39,21 @@ export function OnboardingFlow({ user, onComplete, allowSkip = false }: Onboardi
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [isCompleting, setIsCompleting] = useState(false);
+  const stepHeadingRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
     loadOnboardingState();
   }, [user.id]);
+
+  // Focus management: move focus to step heading when step changes
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (stepHeadingRef.current) {
+        stepHeadingRef.current.focus();
+      }
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [currentStepIndex]);
 
   const loadOnboardingState = async () => {
     setLoading(true);
@@ -205,7 +216,7 @@ export function OnboardingFlow({ user, onComplete, allowSkip = false }: Onboardi
                 <div className="flex items-center gap-4">
                   <div className="text-3xl">{currentStep.icon}</div>
                   <div className="flex-1">
-                    <h2 className="text-2xl font-bold">{currentStep.title}</h2>
+                    <h2 ref={stepHeadingRef} tabIndex={-1} className="text-2xl font-bold focus:outline-none">{currentStep.title}</h2>
                     <p className="text-indigo-100 mt-1">{currentStep.description}</p>
                     <div className="flex items-center gap-4 mt-2 text-sm text-indigo-200">
                       <div className="flex items-center gap-1">

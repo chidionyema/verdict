@@ -2,9 +2,21 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { log } from '@/lib/logger';
 import { ExpertRoutingService } from '@/lib/expert-routing';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
+
+// UUID validation regex to prevent SQL injection
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isValidUUID(id: string): boolean {
+  return typeof id === 'string' && UUID_REGEX.test(id);
+}
+
+function sanitizeUUIDs(ids: string[]): string[] {
+  return ids.filter(isValidUUID);
+}
 
 // GET /api/judge/queue - Get open requests for judges
-export async function GET(request: NextRequest) {
+async function GET_Handler(request: NextRequest) {
   try {
     const supabase = await createClient();
 
@@ -94,26 +106,38 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// Apply rate limiting to judge queue endpoint
+export const GET = withRateLimit(GET_Handler, rateLimitPresets.default);
+
 // Helper function for standard community queue with unified request types
 async function getStandardQueue(supabase: any, userId: string, limit: number) {
   try {
-    // Get all types of requests the judge hasn't responded to yet
+    // Get recent requests the judge has responded to (limit to prevent memory exhaustion)
+    // We only need to exclude recent responses; older requests are likely already closed
+    const MAX_EXCLUSION_IDS = 1000;
+
     const [verdictResponses, comparisonResponses, splitTestResponses] = await Promise.all([
       supabase
         .from('verdict_responses')
         .select('request_id')
-        .eq('judge_id', userId),
+        .eq('judge_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(MAX_EXCLUSION_IDS),
       // Gracefully handle missing tables
       supabase
         .from('comparison_responses')
         .select('comparison_id')
         .eq('judge_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(MAX_EXCLUSION_IDS)
         .then((res: any) => ({ data: res.data?.map((r: any) => ({ request_id: r.comparison_id })) || [] }))
         .catch(() => ({ data: [] })),
       supabase
         .from('split_test_verdicts')
         .select('split_test_id')
         .eq('judge_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(MAX_EXCLUSION_IDS)
         .then((res: any) => ({ data: res.data?.map((r: any) => ({ request_id: r.split_test_id })) || [] }))
         .catch(() => ({ data: [] }))
     ]);
@@ -181,8 +205,10 @@ async function getVerdictRequests(supabase: any, userId: string, excludeIds: str
     .is('deleted_at', null)
     .limit(limit);
 
-  if (excludeIds.length > 0) {
-    query = query.not('id', 'in', `(${excludeIds.join(',')})`);
+  // Sanitize IDs to prevent SQL injection
+  const safeExcludeIds = sanitizeUUIDs(excludeIds);
+  if (safeExcludeIds.length > 0) {
+    query = query.not('id', 'in', `(${safeExcludeIds.join(',')})`);
   }
 
   const { data, error } = await query;
@@ -215,8 +241,10 @@ async function getComparisonRequests(supabase: any, userId: string, excludeIds: 
       .neq('user_id', userId)
       .limit(limit);
 
-    if (excludeIds.length > 0) {
-      query = query.not('id', 'in', `(${excludeIds.join(',')})`);
+    // Sanitize IDs to prevent SQL injection
+    const safeExcludeIds = sanitizeUUIDs(excludeIds);
+    if (safeExcludeIds.length > 0) {
+      query = query.not('id', 'in', `(${safeExcludeIds.join(',')})`);
     }
 
     const { data, error } = await query;
@@ -275,8 +303,10 @@ async function getSplitTestRequests(supabase: any, userId: string, excludeIds: s
       .neq('user_id', userId)
       .limit(limit);
 
-    if (excludeIds.length > 0) {
-      query = query.not('id', 'in', `(${excludeIds.join(',')})`);
+    // Sanitize IDs to prevent SQL injection
+    const safeExcludeIds = sanitizeUUIDs(excludeIds);
+    if (safeExcludeIds.length > 0) {
+      query = query.not('id', 'in', `(${safeExcludeIds.join(',')})`);
     }
 
     const { data, error } = await query;

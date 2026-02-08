@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from '@/components/ui/toast';
@@ -13,12 +13,12 @@ import {
   Clock,
   Shield,
   Users,
-  Star, 
+  Star,
   ArrowRight,
-  ChevronLeft,
   Lightbulb
 } from 'lucide-react';
 import Breadcrumb from '@/components/Breadcrumb';
+import { BackButton } from '@/components/ui/BackButton';
 import { DemographicCollection } from '@/components/judge/demographic-collection';
 
 interface QualificationStep {
@@ -94,6 +94,7 @@ export default function JudgeQualificationPage() {
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const [currentStep, setCurrentStep] = useState(0);
+  const stepHeadingRef = useRef<HTMLHeadingElement>(null);
   const [quizAnswers, setQuizAnswers] = useState<{[key: string]: number}>({});
   const [showResults, setShowResults] = useState(false);
   const [qualificationScore, setQualificationScore] = useState(0);
@@ -149,6 +150,16 @@ export default function JudgeQualificationPage() {
 
     getUser();
   }, [router]);
+
+  // Focus management: move focus to step heading when step changes
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (stepHeadingRef.current) {
+        stepHeadingRef.current.focus();
+      }
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [currentStep]);
 
   const handleQuizAnswer = (questionId: string, answerIndex: number) => {
     setQuizAnswers(prev => ({
@@ -518,13 +529,7 @@ export default function JudgeQualificationPage() {
         {/* Progress Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
-            <button
-              onClick={() => router.back()}
-              className="flex items-center text-gray-600 hover:text-gray-800"
-            >
-              <ChevronLeft className="h-5 w-5 mr-1" />
-              Back
-            </button>
+            <BackButton useHistory label="Back" />
             <div className="text-sm text-gray-500">
               Step {currentStep + 1} of {qualificationSteps.length}
             </div>
@@ -545,6 +550,14 @@ export default function JudgeQualificationPage() {
         {/* Content */}
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
           <div className="p-8">
+            {/* Screen reader announcement for step changes */}
+            <h2
+              ref={stepHeadingRef}
+              tabIndex={-1}
+              className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:bg-white focus:p-2 focus:rounded focus:shadow-lg focus:z-50"
+            >
+              {showDemographics ? 'Complete Your Judge Profile' : qualificationSteps[currentStep]?.title}
+            </h2>
             {showDemographics ? (
               demographicsCompleted ? (
                 <div className="text-center space-y-6">

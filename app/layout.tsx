@@ -12,6 +12,7 @@ import { I18nProvider } from "@/components/i18n-provider";
 import { PageErrorBoundary, ComponentErrorBoundary } from "@/components/ui/error-boundary";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { AccessibilityWrapper } from "@/components/accessibility/AccessibilityWrapper";
+import { SkipLink } from "@/components/accessibility/SkipLink";
 // Removed SmartEntryPoint - pages handle their own auth
 import SafariViewportFix from "@/components/SafariViewportFix";
 import { isRTL, type Locale, locales } from "@/i18n.config";
@@ -119,11 +120,12 @@ export default async function RootLayout({
           <ComponentErrorBoundary>
             <MonitoringProvider>
               <SafariViewportFix />
+              <SkipLink />
               <AccessibilityWrapper>
                 <ComponentErrorBoundary>
                   <UnifiedNavigation />
                   <PageErrorBoundary>
-                    <main id="main-content" tabIndex={-1} className="focus:outline-none">
+                    <main id="main-content" tabIndex={-1} className="focus:outline-none pb-20 md:pb-0">
                       {children}
                     </main>
                   </PageErrorBoundary>

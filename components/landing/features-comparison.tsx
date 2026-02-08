@@ -332,7 +332,7 @@ export function FeaturesComparison() {
                 onClick={() => (window.location.href = '/start-simple')}
                 className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-8 py-4 text-lg font-semibold"
               >
-                Get 3 free requests
+                Start Free with 3 Credits
               </TouchButton>
               
               <div className="flex items-center gap-4 text-sm text-gray-600">

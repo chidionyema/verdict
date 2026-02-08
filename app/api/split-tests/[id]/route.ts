@@ -1,5 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
+
+// UUID validation regex
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isValidUUID(id: string): boolean {
+  return typeof id === 'string' && UUID_REGEX.test(id);
+}
 
 interface SplitTestData {
   id: string;
@@ -19,7 +27,7 @@ interface SplitTestData {
   received_verdict_count: number;
 }
 
-export async function GET(
+async function GET_Handler(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -31,6 +39,11 @@ export async function GET(
         { error: 'Split test ID is required' },
         { status: 400 }
       );
+    }
+
+    // Validate splitTestId as UUID
+    if (!isValidUUID(splitTestId)) {
+      return NextResponse.json({ error: 'Invalid split test ID format' }, { status: 400 });
     }
 
     // Get authenticated user
@@ -157,3 +170,6 @@ export async function GET(
     );
   }
 }
+
+// Apply rate limiting to split test endpoint
+export const GET = withRateLimit(GET_Handler, rateLimitPresets.default);

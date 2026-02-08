@@ -154,7 +154,7 @@ export function ExitIntentModal({ isOpen, onClose, source = 'landing' }: ExitInt
             
             <button
               onClick={onClose}
-              className="w-full text-gray-600 hover:text-gray-800 py-2 font-medium"
+              className="w-full text-gray-600 hover:text-gray-800 py-3 font-medium min-h-[44px]"
             >
               Maybe later
             </button>

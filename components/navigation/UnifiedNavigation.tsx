@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 interface NavigationItem {
   href: string;
@@ -50,6 +50,8 @@ export function UnifiedNavigation() {
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+  const userMenuButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     initializeUser();
@@ -139,13 +141,54 @@ export function UnifiedNavigation() {
   };
 
   // Handle keyboard navigation for dropdowns
-  const handleUserMenuKeyDown = (e: React.KeyboardEvent) => {
+  const handleUserMenuKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
       setUserMenuOpen(false);
-    } else if (e.key === 'ArrowDown' && !userMenuOpen) {
-      setUserMenuOpen(true);
+      userMenuButtonRef.current?.focus();
+      return;
     }
-  };
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (!userMenuOpen) {
+        setUserMenuOpen(true);
+        // Focus first menu item after menu opens
+        setTimeout(() => {
+          const firstItem = userMenuRef.current?.querySelector<HTMLElement>('[role="menuitem"]');
+          firstItem?.focus();
+        }, 50);
+      } else {
+        // Move to next menu item
+        const items = userMenuRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]');
+        if (items) {
+          const currentIndex = Array.from(items).findIndex(item => item === document.activeElement);
+          const nextIndex = currentIndex < items.length - 1 ? currentIndex + 1 : 0;
+          items[nextIndex]?.focus();
+        }
+      }
+      return;
+    }
+
+    if (e.key === 'ArrowUp' && userMenuOpen) {
+      e.preventDefault();
+      const items = userMenuRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]');
+      if (items) {
+        const currentIndex = Array.from(items).findIndex(item => item === document.activeElement);
+        const prevIndex = currentIndex > 0 ? currentIndex - 1 : items.length - 1;
+        items[prevIndex]?.focus();
+      }
+      return;
+    }
+
+    if ((e.key === 'Enter' || e.key === ' ') && !userMenuOpen) {
+      e.preventDefault();
+      setUserMenuOpen(true);
+      setTimeout(() => {
+        const firstItem = userMenuRef.current?.querySelector<HTMLElement>('[role="menuitem"]');
+        firstItem?.focus();
+      }, 50);
+    }
+  }, [userMenuOpen]);
 
   // Close menus when clicking outside
   useEffect(() => {
@@ -245,13 +288,15 @@ export function UnifiedNavigation() {
 
                 {/* User Menu */}
                 <div className="relative" data-user-menu>
-                  <button 
+                  <button
+                    ref={userMenuButtonRef}
                     onClick={() => setUserMenuOpen(!userMenuOpen)}
                     onKeyDown={handleUserMenuKeyDown}
                     className="flex items-center space-x-2 text-gray-700 hover:bg-gray-100 px-3 py-2 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
                     aria-haspopup="menu"
                     aria-expanded={userMenuOpen}
                     aria-label="User account menu"
+                    id="user-menu-button"
                   >
                     <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center">
                       <User className="h-4 w-4 text-indigo-600" aria-hidden="true" />
@@ -260,10 +305,12 @@ export function UnifiedNavigation() {
                   
                   {/* Dropdown */}
                   {userMenuOpen && (
-                    <div 
+                    <div
+                      ref={userMenuRef}
                       className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-50"
                       role="menu"
                       aria-labelledby="user-menu-button"
+                      onKeyDown={handleUserMenuKeyDown}
                     >
                       <div className="px-4 py-2 border-b border-gray-100">
                         <p className="font-medium text-gray-900">{profile?.display_name || 'Account'}</p>
@@ -378,6 +425,99 @@ export function UnifiedNavigation() {
           </div>
         </div>
       )}
+
+      {/* Mobile Bottom Navigation */}
+      {user && (
+        <MobileBottomNav pathname={pathname} />
+      )}
     </nav>
+  );
+}
+
+// Inline Mobile Bottom Navigation component for consistency
+function MobileBottomNav({ pathname }: { pathname: string | null }) {
+  const navItems = [
+    {
+      href: '/dashboard',
+      label: 'Home',
+      icon: Grid,
+      active: pathname === '/dashboard' || pathname === '/workspace',
+    },
+    {
+      href: '/feed',
+      label: 'Earn',
+      icon: Users,
+      active: pathname === '/feed',
+    },
+    {
+      href: '/start',
+      label: 'Create',
+      icon: Plus,
+      active: pathname?.startsWith('/start') || pathname?.startsWith('/submit'),
+      primary: true,
+    },
+    {
+      href: '/my-requests',
+      label: 'Requests',
+      icon: MessageSquare,
+      active: pathname === '/my-requests',
+    },
+    {
+      href: '/account',
+      label: 'Profile',
+      icon: User,
+      active: pathname === '/account',
+    },
+  ];
+
+  // Hide on auth and detail pages
+  const hiddenPaths = ['/auth', '/onboarding', '/judge/requests/', '/requests/'];
+  const shouldHide = hiddenPaths.some(path => pathname?.startsWith(path));
+  if (shouldHide) return null;
+
+  return (
+    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40 md:hidden pb-safe">
+      <div className="flex items-center justify-around h-16 px-2">
+        {navItems.map((item) => {
+          const Icon = item.icon;
+
+          if (item.primary) {
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className="flex flex-col items-center justify-center -mt-4"
+              >
+                <div className="w-14 h-14 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-full flex items-center justify-center shadow-lg">
+                  <Icon className="h-6 w-6 text-white" />
+                </div>
+              </Link>
+            );
+          }
+
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`flex flex-col items-center justify-center flex-1 py-2 min-h-[56px] transition-colors ${
+                item.active
+                  ? 'text-indigo-600'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <Icon className={`h-5 w-5 ${item.active ? 'stroke-[2.5]' : ''}`} />
+              <span className={`text-xs mt-1 ${item.active ? 'font-medium' : ''}`}>
+                {item.label}
+              </span>
+            </Link>
+          );
+        })}
+      </div>
+      <style jsx>{`
+        .pb-safe {
+          padding-bottom: env(safe-area-inset-bottom, 0);
+        }
+      `}</style>
+    </div>
   );
 }

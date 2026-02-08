@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Star, X, ThumbsUp, Target, MessageCircle, Award } from 'lucide-react';
 
 interface VerdictRatingModalProps {
@@ -27,6 +27,17 @@ export default function VerdictRatingModal({
   const [isFeatured, setIsFeatured] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  // Escape key to close modal (WCAG accessibility)
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [isOpen, onClose]);
 
   const StarRating = ({ 
     value, 

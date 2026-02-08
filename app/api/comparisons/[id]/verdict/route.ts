@@ -1,5 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { log } from '@/lib/logger';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
+
+// UUID validation regex
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isValidUUID(id: string): boolean {
+  return typeof id === 'string' && UUID_REGEX.test(id);
+}
 
 interface SubmitComparisonVerdictRequest {
   chosenOption: 'A' | 'B';
@@ -19,12 +28,18 @@ interface SubmitComparisonVerdictRequest {
   decisionScores?: Record<string, { option_a: number; option_b: number }>;
 }
 
-export async function POST(
+async function POST_Handler(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id: comparisonId } = await params;
+
+    // Validate comparisonId as UUID
+    if (!isValidUUID(comparisonId)) {
+      return NextResponse.json({ error: 'Invalid comparison ID format' }, { status: 400 });
+    }
+
     const {
       chosenOption,
       confidenceScore,
@@ -227,7 +242,7 @@ export async function POST(
       });
     } catch (error) {
       // Reputation update is non-critical, just log
-      console.error('update_judge_reputation failed:', error);
+      log.warn('update_judge_reputation failed', { error, userId: user.id });
     }
 
     // Log the judgment action (skip if table doesn't exist yet)
@@ -277,3 +292,6 @@ export async function POST(
     );
   }
 }
+
+// Apply rate limiting to comparison verdict endpoint
+export const POST = withRateLimit(POST_Handler, rateLimitPresets.default);

@@ -480,14 +480,14 @@ export default function AdminVerificationsPage() {
                   </button>
                   <button
                     onClick={() => handleReject(selectedVerification)}
-                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition disabled:bg-gray-300"
+                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed"
                     disabled={processing || !rejectionReason.trim()}
                   >
                     {processing ? 'Processing...' : 'Reject'}
                   </button>
                   <button
                     onClick={() => handleApprove(selectedVerification)}
-                    className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:bg-gray-300"
+                    className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed"
                     disabled={processing}
                   >
                     {processing ? 'Processing...' : 'Approve'}

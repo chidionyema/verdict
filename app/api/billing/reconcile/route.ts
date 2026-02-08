@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { stripe, isDemoMode } from '@/lib/stripe';
 import { log } from '@/lib/logger';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
 
 // POST /api/billing/reconcile - Reconcile payments between Stripe and our database
-export async function POST(request: NextRequest) {
+async function POST_Handler(request: NextRequest) {
   try {
     // Only allow admin users to trigger reconciliation
     const supabase = await createClient();
@@ -168,7 +169,7 @@ export async function POST(request: NextRequest) {
 }
 
 // GET /api/billing/reconcile - Get reconciliation status and stats
-export async function GET(request: NextRequest) {
+async function GET_Handler(request: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -221,3 +222,7 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+// Apply rate limiting to reconcile endpoints (strict for POST)
+export const GET = withRateLimit(GET_Handler, rateLimitPresets.default);
+export const POST = withRateLimit(POST_Handler, rateLimitPresets.strict);

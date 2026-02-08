@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Heart, DollarSign, Star, Coffee, Sparkles } from 'lucide-react';
 import { TouchButton } from '@/components/ui/touch-button';
 import { VerifiedBadge } from '@/components/verification/VerifiedBadge';
@@ -100,6 +100,17 @@ export function TipReviewerModal({ isOpen, onClose, reviewer, onTipSubmit }: Tip
     onClose();
   };
 
+  // Escape key to close modal (WCAG accessibility)
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen && !isSubmitting) {
+        resetModal();
+      }
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [isOpen, isSubmitting]);
+
   if (!isOpen) return null;
 
   return (
@@ -116,6 +127,7 @@ export function TipReviewerModal({ isOpen, onClose, reviewer, onTipSubmit }: Tip
             <button
               onClick={resetModal}
               className="text-white/80 hover:text-white transition-colors"
+              aria-label="Close tip modal"
             >
               <X className="h-6 w-6" />
             </button>

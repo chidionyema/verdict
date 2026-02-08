@@ -272,7 +272,7 @@ export default function AdminModerationPage() {
                         <button
                           onClick={() => takeAction('approve_report', report.content_type, report.id)}
                           disabled={actionLoading === report.id}
-                          className="flex items-center px-3 py-1.5 bg-green-600 text-white text-sm rounded hover:bg-green-700 disabled:opacity-50"
+                          className="flex items-center px-3 py-1.5 bg-green-600 text-white text-sm rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <CheckCircle className="h-4 w-4 mr-1" />
                           Dismiss Report
@@ -280,7 +280,7 @@ export default function AdminModerationPage() {
                         <button
                           onClick={() => takeAction('ban_content', report.content_type, report.content_id, 'Policy violation')}
                           disabled={actionLoading === report.id}
-                          className="flex items-center px-3 py-1.5 bg-red-600 text-white text-sm rounded hover:bg-red-700 disabled:opacity-50"
+                          className="flex items-center px-3 py-1.5 bg-red-600 text-white text-sm rounded hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <XCircle className="h-4 w-4 mr-1" />
                           Ban Content
@@ -343,7 +343,7 @@ export default function AdminModerationPage() {
                         <button
                           onClick={() => takeAction('refund_stuck', 'request', request.id, 'Insufficient judge availability')}
                           disabled={actionLoading === request.id}
-                          className="flex items-center px-3 py-1.5 bg-green-600 text-white text-sm rounded hover:bg-green-700 disabled:opacity-50"
+                          className="flex items-center px-3 py-1.5 bg-green-600 text-white text-sm rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <DollarSign className="h-4 w-4 mr-1" />
                           Refund & Cancel

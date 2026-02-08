@@ -9,12 +9,60 @@ import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB limit
 const ALLOWED_MIME_TYPES = [
   'image/jpeg',
-  'image/jpg', 
+  'image/jpg',
   'image/png',
   'image/webp',
   'image/heic'
 ];
 const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.heic'];
+
+// Magic byte signatures for file type validation (prevents spoofing)
+const FILE_SIGNATURES: Record<string, number[][]> = {
+  'image/jpeg': [[0xFF, 0xD8, 0xFF]],
+  'image/jpg': [[0xFF, 0xD8, 0xFF]],
+  'image/png': [[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]],
+  'image/webp': [[0x52, 0x49, 0x46, 0x46]], // RIFF header, followed by WEBP at bytes 8-11
+  'image/heic': [[0x00, 0x00, 0x00], [0x66, 0x74, 0x79, 0x70]], // ftyp at offset 4
+  'audio/webm': [[0x1A, 0x45, 0xDF, 0xA3]],
+  'audio/mpeg': [[0xFF, 0xFB], [0xFF, 0xFA], [0xFF, 0xF3], [0x49, 0x44, 0x33]], // MP3 various formats + ID3
+  'audio/mp4': [[0x00, 0x00, 0x00]], // ftyp at offset 4
+  'audio/ogg': [[0x4F, 0x67, 0x67, 0x53]], // OggS
+};
+
+function validateMagicBytes(buffer: Uint8Array, mimeType: string): boolean {
+  const signatures = FILE_SIGNATURES[mimeType];
+  if (!signatures) {
+    return false; // Unknown type - reject by default
+  }
+
+  // Check if any of the signatures match
+  for (const signature of signatures) {
+    let matches = true;
+    for (let i = 0; i < signature.length && i < buffer.length; i++) {
+      if (buffer[i] !== signature[i]) {
+        matches = false;
+        break;
+      }
+    }
+    if (matches) return true;
+  }
+
+  // Special handling for HEIC/HEIF (ftyp at offset 4)
+  if (mimeType === 'image/heic' && buffer.length > 11) {
+    const ftypCheck = buffer[4] === 0x66 && buffer[5] === 0x74 &&
+                      buffer[6] === 0x79 && buffer[7] === 0x70;
+    if (ftypCheck) return true;
+  }
+
+  // Special handling for WebP (WEBP at offset 8)
+  if (mimeType === 'image/webp' && buffer.length > 11) {
+    const webpCheck = buffer[8] === 0x57 && buffer[9] === 0x45 &&
+                      buffer[10] === 0x42 && buffer[11] === 0x50;
+    if (webpCheck) return true;
+  }
+
+  return false;
+}
 
 // POST /api/upload - Upload image to Supabase Storage
 const POST_Handler = async (request: NextRequest) => {
@@ -116,6 +164,19 @@ const POST_Handler = async (request: NextRequest) => {
     // Convert file to buffer
     const arrayBuffer = await file.arrayBuffer();
     const buffer = new Uint8Array(arrayBuffer);
+
+    // Security Layer 5: Magic byte validation (prevents file type spoofing)
+    if (!validateMagicBytes(buffer, file.type)) {
+      log.warn('File magic bytes mismatch - potential spoofing attempt', {
+        userId: user.id,
+        fileName: file.name,
+        claimedType: file.type,
+        firstBytes: Array.from(buffer.slice(0, 16)).map(b => b.toString(16).padStart(2, '0')).join(' ')
+      });
+      return NextResponse.json({
+        error: 'File content does not match declared type'
+      }, { status: 400 });
+    }
 
     // Upload to Supabase Storage
     const { data, error: uploadError } = await supabase.storage

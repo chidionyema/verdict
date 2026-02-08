@@ -11,21 +11,35 @@ const MAX_CONNECTION_DURATION = 5 * 60 * 1000; // 5 minutes
 
 // GET /api/judge/queue/stream - Server-Sent Events stream for real-time request updates
 export async function GET(request: NextRequest) {
-  // Pre-auth rate limiting check (before expensive stream creation)
-  const supabasePreCheck = await createClient();
-  const { data: { user: preCheckUser }, error: preAuthError } = await supabasePreCheck.auth.getUser();
+  // Auth check BEFORE creating stream - prevents unauthorized connections
+  const supabase = await createClient();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
 
-  if (!preAuthError && preCheckUser) {
-    const rateLimitCheck = await checkRateLimit(sseConnectionRateLimiter, preCheckUser.id);
-    if (!rateLimitCheck.allowed) {
-      return NextResponse.json(
-        { error: rateLimitCheck.error },
-        {
-          status: 429,
-          headers: { 'Retry-After': rateLimitCheck.retryAfter?.toString() || '60' }
-        }
-      );
-    }
+  if (authError || !user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  // Rate limiting check
+  const rateLimitCheck = await checkRateLimit(sseConnectionRateLimiter, user.id);
+  if (!rateLimitCheck.allowed) {
+    return NextResponse.json(
+      { error: rateLimitCheck.error },
+      {
+        status: 429,
+        headers: { 'Retry-After': rateLimitCheck.retryAfter?.toString() || '60' }
+      }
+    );
+  }
+
+  // Check if user is a judge before creating stream
+  const { data: profile } = await (supabase as any)
+    .from('profiles')
+    .select('is_judge')
+    .eq('id', user.id)
+    .single();
+
+  if (!profile?.is_judge) {
+    return NextResponse.json({ error: 'Must be a judge to view requests' }, { status: 403 });
   }
 
   const encoder = new TextEncoder();
@@ -72,34 +86,7 @@ export async function GET(request: NextRequest) {
       };
 
       try {
-        const supabase = await createClient();
-
-        const {
-          data: { user },
-          error: authError,
-        } = await supabase.auth.getUser();
-
-        if (authError || !user) {
-          sendError('Unauthorized');
-          cleanup();
-          controller.close();
-          return;
-        }
-
-        // Check if user is a judge
-        const { data: profile } = await (supabase as any)
-          .from('profiles')
-          .select('is_judge')
-          .eq('id', user.id)
-          .single();
-
-        if (!profile?.is_judge) {
-          sendError('Must be a judge to view requests');
-          cleanup();
-          controller.close();
-          return;
-        }
-
+        // User and judge status already verified before stream creation
         userId = user.id;
 
         // Check if user already has an active connection - close the old one

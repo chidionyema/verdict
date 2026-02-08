@@ -13,10 +13,14 @@ const GET_Handler = async (request: NextRequest) => {
     const query = url.searchParams.get('q') || '';
     const category = url.searchParams.get('category') || null;
     const status = url.searchParams.get('status') || null;
-    const sortBy = url.searchParams.get('sort') || 'relevance';
     const page = parseInt(url.searchParams.get('page') || '1');
     const limit = Math.min(parseInt(url.searchParams.get('limit') || '20'), 50);
     const offset = (page - 1) * limit;
+
+    // Validate sortBy to prevent SQL injection
+    const ALLOWED_SORT_OPTIONS = ['relevance', 'created_at', 'view_count', 'rating'];
+    const rawSortBy = url.searchParams.get('sort') || 'relevance';
+    const sortBy = ALLOWED_SORT_OPTIONS.includes(rawSortBy) ? rawSortBy : 'relevance';
 
     // Get user info for analytics
     const { data: { user } } = await supabase.auth.getUser();

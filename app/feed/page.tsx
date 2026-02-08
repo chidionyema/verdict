@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Heart, X, MessageSquare, Clock, Eye, Users, Zap } from 'lucide-react';
 import { CreditBalance } from '@/components/credits/CreditBalance';
@@ -15,9 +15,10 @@ import { useProgressiveProfile } from '@/hooks/useProgressiveProfile';
 import { createClient } from '@/lib/supabase/client';
 import { creditManager, CREDIT_ECONOMY_CONFIG } from '@/lib/credits';
 import { toast } from '@/components/ui/toast';
+import { useFocusTrap } from '@/hooks/useFocusTrap';
 import type { Database } from '@/lib/database.types';
 
-type FeedRequest = Database['public']['Tables']['feedback_requests']['Row'] & {
+type FeedRequest = Database['public']['Tables']['verdict_requests']['Row'] & {
   response_count?: number;
   user_has_judged?: boolean;
 };
@@ -28,6 +29,7 @@ export default function FeedPage() {
   const [user, setUser] = useState<any>(null);
   const [feedItems, setFeedItems] = useState<FeedRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  const [feedError, setFeedError] = useState<string | null>(null);
   const [judging, setJudging] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [judgeStats, setJudgeStats] = useState({ today: 0, streak: 0, totalJudgments: 0 });
@@ -42,6 +44,10 @@ export default function FeedPage() {
   const supabaseRef = useRef<ReturnType<typeof createClient> | null>(null);
   const router = useRouter();
 
+  // Focus traps for modals (WCAG accessibility)
+  const trainingModalRef = useFocusTrap<HTMLDivElement>(showTraining);
+  const progressiveProfileRef = useFocusTrap<HTMLDivElement>(showProgressiveProfile && !showTraining);
+
   // Check for earn mode from URL params
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -50,6 +56,17 @@ export default function FeedPage() {
       setReturnUrl(params.get('return'));
     }
   }, []);
+
+  // Escape key to close Progressive Profile modal (WCAG accessibility)
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && showProgressiveProfile && !showTraining) {
+        dismissProgressiveProfile();
+      }
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [showProgressiveProfile, showTraining, dismissProgressiveProfile]);
 
   useEffect(() => {
     // Only initialize Supabase client in browser
@@ -80,7 +97,14 @@ export default function FeedPage() {
             .eq('id', user.id)
             .single();
 
-          const needsTraining = !(profile as any)?.judge_training_completed;
+          // Get total judgment count to allow experienced judges to skip
+          const { count: totalJudgments } = await supabase
+            .from('verdict_responses')
+            .select('*', { count: 'exact', head: true })
+            .eq('judge_id', user.id);
+
+          // Training is required only if not completed AND user has < 3 judgments
+          const needsTraining = !(profile as any)?.judge_training_completed && (totalJudgments || 0) < 3;
           setShowTraining(needsTraining);
         } else {
           // Redirect to login
@@ -103,11 +127,12 @@ export default function FeedPage() {
         setTimeout(() => reject(new Error('Request timeout')), 10000)
       );
       
-      // Fetch public submissions that haven't been judged by current user
+      // Fetch public verdict requests that haven't been judged by current user
       const fetchPromise = supabase
-        .from('feedback_requests')
+        .from('verdict_requests')
         .select('*')
         .eq('visibility', 'public')
+        .eq('status', 'in_progress')
         .order('created_at', { ascending: false })
         .limit(50);
 
@@ -115,29 +140,20 @@ export default function FeedPage() {
       const { data: requestsData, error: requestsError } = result;
 
       if (requestsError) throw requestsError;
-      
+
       // Get the user's existing judgments to filter them out
       const { data: userJudgments } = await supabase
-        .from('feedback_responses')
+        .from('verdict_responses')
         .select('request_id')
-        .eq('reviewer_id', user.id);
+        .eq('judge_id', user.id);
 
       const judgedRequestIds = new Set((userJudgments || []).map((j: any) => j.request_id));
 
-      // Get response counts for each request
-      const itemsWithCounts = await Promise.all(
-        (requestsData || []).map(async (item: any) => {
-          const { count } = await supabase
-            .from('feedback_responses')
-            .select('*', { count: 'exact', head: true })
-            .eq('request_id', item.id);
-
-          return {
-            ...item,
-            response_count: count || 0,
-          };
-        })
-      );
+      // Use the received_verdict_count from the request instead of separate query
+      const itemsWithCounts = (requestsData || []).map((item: any) => ({
+        ...item,
+        response_count: item.received_verdict_count || 0,
+      }));
 
       // Filter out items already judged by this user, their own requests, and completed ones
       const filteredItems = itemsWithCounts.filter((item: any) => {
@@ -151,8 +167,27 @@ export default function FeedPage() {
       });
 
       setFeedItems(filteredItems);
+      setFeedError(null); // Clear any previous error
     } catch (error) {
       console.error('Error loading feed:', error);
+      let errorMessage = 'Failed to load feed.';
+      let errorType = 'generic';
+
+      if (error instanceof Error) {
+        if (error.message === 'Request timeout') {
+          errorMessage = 'timeout';
+          errorType = 'timeout';
+        } else if (error.message.includes('network') || error.message.includes('fetch')) {
+          errorMessage = 'network';
+          errorType = 'network';
+        } else if (error.message.includes('401') || error.message.includes('auth')) {
+          errorMessage = 'auth';
+          errorType = 'auth';
+        }
+      }
+
+      setFeedError(errorType);
+      setFeedItems([]); // Clear items on error
     } finally {
       setLoading(false);
     }
@@ -168,9 +203,9 @@ export default function FeedPage() {
       today.setHours(0, 0, 0, 0);
       
       const { count } = await supabase
-        .from('feedback_responses')
+        .from('verdict_responses')
         .select('*', { count: 'exact', head: true })
-        .eq('reviewer_id', userId)
+        .eq('judge_id', userId)
         .gte('created_at', today.toISOString());
       
       const totalJudgments = reputation?.total_judgments || 0;
@@ -196,49 +231,58 @@ export default function FeedPage() {
   async function handleJudgment(verdict: 'like' | 'dislike', feedback?: string) {
     if (!user || judging || currentIndex >= feedItems.length || !supabaseRef.current) return;
 
+    // Prevent judging without completing training
+    if (showTraining) {
+      toast.error('Please complete the training first.');
+      return;
+    }
+
     setJudging(true);
     try {
       const currentItem = feedItems[currentIndex];
-      const supabase = supabaseRef.current;
-      
-      // Submit judgment
-      const { data: responseData, error: responseError } = await (supabase
-        .from('feedback_responses') as any)
-        .insert({
+
+      // Submit judgment via API (handles verdict_responses, credit earning, notifications)
+      const response = await fetch('/api/judge/respond', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           request_id: currentItem.id,
-          reviewer_id: user.id,
           feedback: feedback || (verdict === 'like' ? '👍 Looks good' : '👎 Not quite right'),
           rating: verdict === 'like' ? 7 : 4,
           tone: 'honest'
         })
-        .select()
-        .single();
+      });
 
-      if (responseError) throw responseError;
+      const data = await response.json();
 
-      if (responseData && responseData.id) {
-        // Award credits for judging
-        const earned = await creditManager.awardCreditsForJudging(user.id, responseData.id);
-
-        if (earned) {
-          // Show credit earning feedback
-          const newTotal = judgeStats.today + 1;
-          const newCreditsEarned = Math.floor(newTotal / 3) - Math.floor(judgeStats.today / 3);
-
-          if (newCreditsEarned > 0) {
-            setCreditsEarned(prev => prev + newCreditsEarned);
-            toast.success('🎉 You earned 1 credit! Keep judging to earn more.');
-          } else {
-            const remaining = 3 - (newTotal % 3);
-            if (remaining < 3 && remaining > 0) {
-              toast.success(`+0.34 credits! ${remaining} more judgment${remaining > 1 ? 's' : ''} to earn 1 full credit.`);
-            }
-          }
+      if (!response.ok) {
+        // Handle specific error cases
+        if (response.status === 400 && data.error?.includes('already')) {
+          toast.error('You have already judged this request.');
+          setCurrentIndex(prev => prev + 1); // Skip to next
+          return;
         }
-
-        // Check if we should show progressive profiling after earning credits
-        checkTrigger('credits_earned');
+        throw new Error(data.error || 'Failed to submit judgment');
       }
+
+      // Show credit earning feedback
+      const newTotal = judgeStats.today + 1;
+      const newCreditsEarned = Math.floor(newTotal / 3) - Math.floor(judgeStats.today / 3);
+
+      if (newCreditsEarned > 0) {
+        setCreditsEarned(prev => prev + newCreditsEarned);
+        toast.success('🎉 You earned 1 credit! Keep judging to earn more.');
+      } else {
+        const remaining = 3 - (newTotal % 3);
+        if (remaining < 3 && remaining > 0) {
+          toast.success(`Judgment submitted! ${remaining} more to earn 1 credit.`);
+        } else {
+          toast.success('Judgment submitted!');
+        }
+      }
+
+      // Check if we should show progressive profiling after earning credits
+      checkTrigger('credits_earned');
 
       // Update stats
       setJudgeStats(prev => ({
@@ -252,7 +296,7 @@ export default function FeedPage() {
 
     } catch (error) {
       console.error('Error submitting judgment:', error);
-      toast.error('Failed to submit judgment. Please try again.');
+      toast.error(error instanceof Error ? error.message : 'Failed to submit judgment. Please try again.');
     } finally {
       setJudging(false);
     }
@@ -280,9 +324,32 @@ export default function FeedPage() {
     }
   }
 
-  function handleTrainingSkip() {
-    setShowTraining(false);
-    toast.error('Training is required to start judging. You can access it later from your profile.');
+  async function handleTrainingSkip() {
+    if (!user || !supabaseRef.current) {
+      toast.error('Training is required before you can start judging.');
+      router.push('/dashboard');
+      return;
+    }
+
+    // Check if user has enough experience to skip
+    const { count: totalJudgments } = await supabaseRef.current
+      .from('verdict_responses')
+      .select('*', { count: 'exact', head: true })
+      .eq('judge_id', user.id);
+
+    if ((totalJudgments || 0) >= 3) {
+      // Experienced user - allow skip and mark training as completed
+      await (supabaseRef.current
+        .from('profiles')
+        .update as any)({ judge_training_completed: true })
+        .eq('id', user.id);
+
+      setShowTraining(false);
+      toast.success('Welcome back! You can start judging.');
+    } else {
+      // New user - training is required
+      toast.error('Training is required for new judges. Complete the quick tutorial to continue.');
+    }
   }
 
   if (loading) {
@@ -413,15 +480,16 @@ export default function FeedPage() {
               <div className="flex-1">
                 <p className="font-semibold">Earn Free Credits</p>
                 <p className="text-sm text-green-100">
-                  Judge 3 submissions to earn 1 credit. {returnUrl ? "We'll take you back when you're done!" : ""}
+                  Judge 3 submissions to earn 1 credit.
+                  {judgeStats.today > 0 && ` (${judgeStats.today % 3}/3 towards next credit)`}
                 </p>
               </div>
-              {returnUrl && creditsEarned > 0 && (
+              {returnUrl && (
                 <button
                   onClick={() => router.push(returnUrl)}
                   className="bg-white text-green-600 px-3 py-1 rounded-lg text-sm font-medium hover:bg-green-50"
                 >
-                  Continue ({creditsEarned} earned)
+                  {creditsEarned > 0 ? `Continue (${creditsEarned} earned)` : 'Go Back'}
                 </button>
               )}
             </div>
@@ -429,14 +497,16 @@ export default function FeedPage() {
         </div>
       )}
 
-      {/* Judge Training Modal */}
+      {/* Judge Training Modal - Non-dismissible, training is required */}
       {showTraining && (
-        <div 
+        <div
           className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
-          onClick={handleTrainingSkip}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="training-modal-title"
         >
-          <div onClick={(e) => e.stopPropagation()}>
-            <JudgeTraining 
+          <div ref={trainingModalRef} onClick={(e) => e.stopPropagation()}>
+            <JudgeTraining
               onComplete={handleTrainingComplete}
               onSkip={handleTrainingSkip}
               className="w-full max-w-md"
@@ -447,23 +517,122 @@ export default function FeedPage() {
 
       {/* Progressive Profile Modal */}
       {showProgressiveProfile && user && !showTraining && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <ProgressiveProfile
-            user={user}
-            trigger={triggerType}
-            onComplete={dismissProgressiveProfile}
-          />
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="progressive-profile-title"
+        >
+          <div ref={progressiveProfileRef}>
+            <ProgressiveProfile
+              user={user}
+              trigger={triggerType}
+              onComplete={dismissProgressiveProfile}
+            />
+          </div>
         </div>
       )}
 
       {/* Main Feed */}
       <div className="max-w-lg mx-auto">
-        {!hasMoreItems ? (
+        {feedError ? (
           <div className="px-4 py-12">
-            <EmptyState 
+            <div className="bg-white rounded-2xl shadow-lg p-8 text-center">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <X className="h-8 w-8 text-red-600" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">
+                {feedError === 'timeout' ? 'Loading Took Too Long' :
+                 feedError === 'network' ? 'Connection Problem' :
+                 feedError === 'auth' ? 'Session Expired' :
+                 'Unable to Load Feed'}
+              </h3>
+              <p className="text-gray-600 mb-4">
+                {feedError === 'timeout' ? 'The server is taking longer than usual to respond.' :
+                 feedError === 'network' ? 'Please check your internet connection.' :
+                 feedError === 'auth' ? 'Your session has expired. Please log in again.' :
+                 'Something went wrong while loading the feed.'}
+              </p>
+              <div className="bg-gray-50 rounded-lg p-4 mb-6 text-left">
+                <p className="text-sm font-medium text-gray-700 mb-2">Try these steps:</p>
+                <ul className="text-sm text-gray-600 space-y-1">
+                  {feedError === 'timeout' ? (
+                    <>
+                      <li>• Wait a moment and try again</li>
+                      <li>• Refresh the page</li>
+                      <li>• Check if other websites load normally</li>
+                    </>
+                  ) : feedError === 'network' ? (
+                    <>
+                      <li>• Check your Wi-Fi or mobile data</li>
+                      <li>• Try turning airplane mode on and off</li>
+                      <li>• Move to an area with better signal</li>
+                    </>
+                  ) : feedError === 'auth' ? (
+                    <>
+                      <li>• Click "Log In Again" below</li>
+                      <li>• Clear your browser cookies if issues persist</li>
+                    </>
+                  ) : (
+                    <>
+                      <li>• Refresh the page</li>
+                      <li>• Try again in a few minutes</li>
+                      <li>• Contact support if the issue persists</li>
+                    </>
+                  )}
+                </ul>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                {feedError === 'auth' ? (
+                  <button
+                    onClick={() => router.push('/auth/login')}
+                    className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition min-h-[48px]"
+                  >
+                    Log In Again
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setLoading(true);
+                      setFeedError(null);
+                      if (supabaseRef.current) {
+                        loadFeedItems(supabaseRef.current);
+                      }
+                    }}
+                    className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition min-h-[48px]"
+                  >
+                    Try Again
+                  </button>
+                )}
+                <button
+                  onClick={() => router.push('/dashboard')}
+                  className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition min-h-[48px]"
+                >
+                  Go to Dashboard
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : !hasMoreItems ? (
+          <div className="px-4 py-12">
+            <EmptyState
               variant="no-requests"
               title="All caught up!"
               description="You've seen all available submissions. Check back later for more, or submit your own for feedback!"
+              actions={[
+                {
+                  label: 'Submit Your Own Request',
+                  action: () => router.push('/start'),
+                  variant: 'primary',
+                  icon: Plus
+                },
+                {
+                  label: 'Return to Dashboard',
+                  action: () => router.push('/dashboard'),
+                  variant: 'secondary',
+                  icon: Users
+                }
+              ]}
             />
           </div>
         ) : (

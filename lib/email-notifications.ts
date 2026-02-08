@@ -4,6 +4,30 @@
  */
 
 import { APP_CONFIG } from './app-config';
+import { sendEmail as sendEmailViaResend } from './email';
+import { generateUnsubscribeToken } from '@/app/api/email/unsubscribe/route';
+
+// CAN-SPAM compliant email footer
+function getEmailFooter(userId?: string, email?: string): { text: string; html: string } {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://verdict.app';
+  const unsubscribeUrl = userId && email
+    ? `${appUrl}/api/email/unsubscribe?token=${generateUnsubscribeToken(userId, email)}`
+    : `${appUrl}/settings/notifications`;
+
+  return {
+    text: `\n\n---\nVerdict Inc.\nTo manage your email preferences or unsubscribe, visit: ${unsubscribeUrl}`,
+    html: `
+      <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e7eb; font-size: 12px; color: #9ca3af; text-align: center;">
+        <p style="margin: 0 0 8px 0;">Verdict Inc.</p>
+        <p style="margin: 0;">
+          <a href="${unsubscribeUrl}" style="color: #6b7280; text-decoration: underline;">Unsubscribe</a>
+          &nbsp;|&nbsp;
+          <a href="${appUrl}/settings/notifications" style="color: #6b7280; text-decoration: underline;">Manage Preferences</a>
+        </p>
+      </div>
+    `
+  };
+}
 
 export type EmailTemplate = 
   | 'submission_received'
@@ -19,6 +43,7 @@ interface EmailData {
   feedbackCount?: number;
   creditsEarned?: number;
   customData?: Record<string, any>;
+  userId?: string; // For generating unsubscribe links
 }
 
 interface EmailContent {
@@ -165,24 +190,32 @@ export class EmailService {
   async sendEmail(template: EmailTemplate, data: EmailData): Promise<boolean> {
     try {
       const content = EMAIL_TEMPLATES[template](data);
-      
+
+      // Add CAN-SPAM compliant footer to all emails
+      const footer = getEmailFooter(data.userId, data.to);
+      const contentWithFooter: EmailContent = {
+        subject: content.subject,
+        text: content.text + footer.text,
+        html: content.html.replace('</div>', `${footer.html}</div>`)
+      };
+
       if (!this.isProduction) {
         // Development mode - just log the email
         console.log('📧 EMAIL NOTIFICATION (Dev Mode)');
         console.log('To:', data.to);
-        console.log('Subject:', content.subject);
-        console.log('Text:', content.text);
+        console.log('Subject:', contentWithFooter.subject);
+        console.log('Text:', contentWithFooter.text);
         return true;
       }
 
       // Production mode - integrate with actual service
       switch (this.emailProvider) {
         case 'sendgrid':
-          return await this.sendWithSendGrid(content, data);
+          return await this.sendWithSendGrid(contentWithFooter, data);
         case 'mailgun':
-          return await this.sendWithMailgun(content, data);
+          return await this.sendWithMailgun(contentWithFooter, data);
         case 'resend':
-          return await this.sendWithResend(content, data);
+          return await this.sendWithResend(contentWithFooter, data);
         default:
           console.warn('No email provider configured');
           return false;
@@ -194,56 +227,129 @@ export class EmailService {
   }
 
   private async sendWithSendGrid(content: EmailContent, data: EmailData): Promise<boolean> {
-    // Implement SendGrid integration
-    console.log('Sending via SendGrid...');
-    return true;
+    // SendGrid not implemented - use Resend instead
+    console.error('SendGrid email provider not implemented. Set EMAIL_PROVIDER=resend');
+    return false;
   }
 
   private async sendWithMailgun(content: EmailContent, data: EmailData): Promise<boolean> {
-    // Implement Mailgun integration  
-    console.log('Sending via Mailgun...');
-    return true;
+    // Mailgun not implemented - use Resend instead
+    console.error('Mailgun email provider not implemented. Set EMAIL_PROVIDER=resend');
+    return false;
   }
 
   private async sendWithResend(content: EmailContent, data: EmailData): Promise<boolean> {
-    // Implement Resend integration
-    console.log('Sending via Resend...');
-    return true;
+    try {
+      const result = await sendEmailViaResend({
+        to: data.to,
+        subject: content.subject,
+        html: content.html,
+        text: content.text,
+      });
+
+      if (!result.success) {
+        console.error('Resend email failed:', result.error);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Resend email error:', error);
+      return false;
+    }
   }
 }
 
 // Export singleton instance
 export const emailService = new EmailService();
 
-// Utility functions for common notification patterns
-export async function notifySubmissionReceived(email: string, name: string, submissionId: string) {
-  return emailService.sendEmail('submission_received', {
-    to: email,
-    name,
-    submissionId
-  });
-}
+// Import smart notification manager for rate limiting
+import { shouldNotify, smartNotificationManager, NotificationContext } from './notifications/smart-notifications';
 
-export async function notifyFeedbackReady(email: string, name: string, submissionId: string, feedbackCount: number) {
-  return emailService.sendEmail('feedback_ready', {
+// Utility functions for common notification patterns with smart rate limiting
+export async function notifySubmissionReceived(email: string, name: string, submissionId: string, userId?: string) {
+  // Submission received is high priority - always send
+  const sent = await emailService.sendEmail('submission_received', {
     to: email,
     name,
     submissionId,
-    feedbackCount
+    userId // For unsubscribe link
   });
+
+  if (sent && userId) {
+    await smartNotificationManager.recordNotificationSent(userId);
+  }
+  return sent;
 }
 
-export async function notifyCreditEarned(email: string, name: string) {
-  return emailService.sendEmail('credit_earned', {
-    to: email,
-    name
-  });
-}
+export async function notifyFeedbackReady(email: string, name: string, submissionId: string, feedbackCount: number, userId?: string) {
+  // Check smart notification limits
+  if (userId) {
+    const context: NotificationContext = {
+      type: 'new_response',
+      priority: 'medium',
+      userId,
+      requestId: submissionId
+    };
 
-export async function notifySubmissionComplete(email: string, name: string, submissionId: string) {
-  return emailService.sendEmail('submission_complete', {
+    if (!(await shouldNotify(context))) {
+      console.log(`Skipping notification for ${userId} due to rate limiting`);
+      return false;
+    }
+  }
+
+  const sent = await emailService.sendEmail('feedback_ready', {
     to: email,
     name,
-    submissionId
+    submissionId,
+    feedbackCount,
+    userId // For unsubscribe link
   });
+
+  if (sent && userId) {
+    await smartNotificationManager.recordNotificationSent(userId);
+  }
+  return sent;
+}
+
+export async function notifyCreditEarned(email: string, name: string, userId?: string) {
+  // Check smart notification limits
+  if (userId) {
+    const context: NotificationContext = {
+      type: 'credits_earned',
+      priority: 'low',
+      userId
+    };
+
+    if (!(await shouldNotify(context))) {
+      console.log(`Skipping credit notification for ${userId} due to rate limiting`);
+      return false;
+    }
+  }
+
+  const sent = await emailService.sendEmail('credit_earned', {
+    to: email,
+    name,
+    userId // For unsubscribe link
+  });
+
+  if (sent && userId) {
+    await smartNotificationManager.recordNotificationSent(userId);
+  }
+  return sent;
+}
+
+export async function notifySubmissionComplete(email: string, name: string, submissionId: string, userId?: string) {
+  // Submission complete is high priority - always send
+  const sent = await emailService.sendEmail('submission_complete', {
+    to: email,
+    name,
+    submissionId,
+    userId // For unsubscribe link
+  });
+
+  if (sent && userId) {
+    await smartNotificationManager.recordNotificationSent(userId);
+  }
+  return sent;
 }

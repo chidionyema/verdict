@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
 
-export async function GET(request: NextRequest) {
+// UUID validation regex
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isValidUUID(id: string): boolean {
+  return typeof id === 'string' && UUID_REGEX.test(id);
+}
+
+async function GET_Handler(request: NextRequest) {
   try {
     const supabase = await createClient();
     
@@ -18,8 +26,13 @@ export async function GET(request: NextRequest) {
     const judgeId = url.searchParams.get('judgeId');
     const timeframe = url.searchParams.get('timeframe') || 'month';
 
+    // Validate judgeId format
+    if (!judgeId || !isValidUUID(judgeId)) {
+      return NextResponse.json({ error: 'Invalid judge ID format' }, { status: 400 });
+    }
+
     // Users can only view their own performance data
-    if (!judgeId || judgeId !== user.id) {
+    if (judgeId !== user.id) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -139,3 +152,6 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
+// Apply rate limiting to performance endpoint
+export const GET = withRateLimit(GET_Handler, rateLimitPresets.default);

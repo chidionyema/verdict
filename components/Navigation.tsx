@@ -67,6 +67,7 @@ export default function Navigation() {
     judgeEarnings: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showSubmitDropdown, setShowSubmitDropdown] = useState(false);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
@@ -86,16 +87,17 @@ export default function Navigation() {
   const fetchUserData = async (userId: string) => {
     try {
       if (typeof window === 'undefined') return;
-      
+
+      setFetchError(false);
       const supabase = createClient();
-      
+
       // Fetch enhanced profile
       const { data: profile } = await supabase
         .from('profiles')
         .select('credits, is_judge, display_name, avatar_url')
         .eq('id', userId)
         .single();
-      
+
       if (profile) {
         setUserProfile(profile);
       }
@@ -111,12 +113,12 @@ export default function Navigation() {
           .select('*', { count: 'exact', head: true })
           .eq('user_id', userId)
           .in('status', ['open', 'in_progress']),
-        
+
         supabase
           .from('feedback_responses')
           .select('*', { count: 'exact', head: true })
           .eq('judge_id', userId),
-        
+
         supabase
           .from('verdict_requests')
           .select('*', { count: 'exact', head: true })
@@ -131,6 +133,7 @@ export default function Navigation() {
       });
     } catch (error) {
       console.error('Error fetching user data:', error);
+      setFetchError(true);
     }
   };
 
@@ -415,6 +418,16 @@ export default function Navigation() {
                   <span className="text-sm font-medium text-gray-700">
                     {userProfile?.credits || 0}
                   </span>
+                  {fetchError && (
+                    <button
+                      onClick={() => user && fetchUserData(user.id)}
+                      className="text-red-500 hover:text-red-700 ml-1"
+                      title="Failed to load data. Click to retry."
+                      aria-label="Retry loading user data"
+                    >
+                      <RotateCcw className="h-3 w-3" />
+                    </button>
+                  )}
                 </div>
 
                 {/* Notifications */}

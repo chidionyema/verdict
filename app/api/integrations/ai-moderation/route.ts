@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
 import { log } from '@/lib/logger';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
 
 const moderationConfigSchema = z.object({
   provider: z.enum(['openai', 'perspective', 'aws-comprehend']),
@@ -25,7 +26,7 @@ const moderateContentSchema = z.object({
   user_id: z.string().optional(),
 });
 
-export async function GET(request: NextRequest) {
+async function GET_Handler(request: NextRequest) {
   try {
     const supabase: any = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -70,7 +71,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
+async function POST_Handler(request: NextRequest) {
   try {
     const supabase: any = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -139,11 +140,29 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Moderate content endpoint
-export async function PUT(request: NextRequest) {
+// Moderate content endpoint - REQUIRES AUTH
+async function PUT_Handler(request: NextRequest) {
   try {
     const supabase: any = await createClient();
-    
+
+    // SECURITY: Require authentication for content moderation
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Check if user is admin
+    const { data: profile } = await (supabase as any)
+      .from('profiles')
+      .select('is_admin')
+      .eq('id', user.id)
+      .single();
+
+    if (!profile?.is_admin) {
+      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    }
+
     const body = await request.json();
     const validated = moderateContentSchema.parse(body);
 
@@ -459,3 +478,8 @@ async function moderateWithAWSComprehend(config: Record<string, unknown>, conten
   // AWS Comprehend implementation would require AWS SDK
   return { success: false, error: 'AWS Comprehend integration not implemented' };
 }
+
+// Apply rate limiting to AI moderation endpoints
+export const GET = withRateLimit(GET_Handler, rateLimitPresets.default);
+export const POST = withRateLimit(POST_Handler, rateLimitPresets.default);
+export const PUT = withRateLimit(PUT_Handler, rateLimitPresets.strict);

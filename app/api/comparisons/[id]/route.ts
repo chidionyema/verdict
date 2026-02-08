@@ -1,8 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
+
+// UUID validation regex
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isValidUUID(id: string): boolean {
+  return typeof id === 'string' && UUID_REGEX.test(id);
+}
 
 // GET /api/comparisons/[id] - Get a single comparison by ID
-export async function GET(
+async function GET_Handler(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -14,6 +22,11 @@ export async function GET(
         { error: 'Comparison ID is required' },
         { status: 400 }
       );
+    }
+
+    // Validate comparisonId as UUID
+    if (!isValidUUID(comparisonId)) {
+      return NextResponse.json({ error: 'Invalid comparison ID format' }, { status: 400 });
     }
 
     const supabase = await createClient();
@@ -118,3 +131,6 @@ async function checkIfJudge(supabase: any, userId: string): Promise<boolean> {
     return false;
   }
 }
+
+// Apply rate limiting to comparisons endpoint
+export const GET = withRateLimit(GET_Handler, rateLimitPresets.default);

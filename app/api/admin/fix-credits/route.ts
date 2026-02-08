@@ -1,21 +1,57 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { verifyAdminAccess, auditAdminAction } from '@/lib/admin-guard';
+import { log } from '@/lib/logger';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
 
-export async function POST(request: NextRequest) {
+// UUID validation for security
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+async function POST_Handler(request: NextRequest) {
   try {
     // Verify admin access
     const adminAuth = await verifyAdminAccess(request);
-    
+
     if (!adminAuth.authorized) {
       return NextResponse.json({ error: adminAuth.error || 'Admin access required' }, { status: 403 });
     }
 
     const supabase = await createClient();
 
-    // Parse request body for target user
+    // Parse request body with strict validation
     const body = await request.json().catch(() => ({}));
-    const targetUserId = body.user_id || adminAuth.user!.id; // Default to admin's own account
+
+    // Validate target user ID - must be explicitly provided and valid UUID
+    const targetUserId = body.user_id;
+    if (!targetUserId || typeof targetUserId !== 'string' || !UUID_REGEX.test(targetUserId)) {
+      return NextResponse.json({
+        error: 'Valid user_id (UUID) is required for credit adjustment'
+      }, { status: 400 });
+    }
+
+    // Validate credit amount - must be within reasonable bounds
+    const targetCredits = typeof body.credits === 'number' ? body.credits : null;
+    if (targetCredits === null || targetCredits < 0 || targetCredits > 1000) {
+      return NextResponse.json({
+        error: 'credits must be a number between 0 and 1000'
+      }, { status: 400 });
+    }
+
+    // Require explicit reason for audit trail
+    const reason = body.reason;
+    if (!reason || typeof reason !== 'string' || reason.length < 10) {
+      return NextResponse.json({
+        error: 'A reason (at least 10 characters) is required for credit adjustments'
+      }, { status: 400 });
+    }
+
+    // Log the admin action attempt
+    log.info('Admin credit adjustment initiated', {
+      adminId: adminAuth.user!.id,
+      targetUserId,
+      targetCredits,
+      reason
+    });
 
     // Get current profile
     const { data: profile, error: profileError } = await supabase
@@ -28,18 +64,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Profile not found' }, { status: 404 });
     }
 
-    // EMERGENCY FIX: Use safe credit operations instead of direct database manipulation
-    // Import the safe credit functions
+    // Use safe credit operations instead of direct database manipulation
     const { safeRefundCredits, safeDeductCredits } = require('@/lib/credit-guard');
-    
+
     const currentCredits = (profile as any).credits || 0;
-    const targetCredits = body.credits || 5; // Allow custom credit amount from request body
-    
+
     let result;
     if (targetCredits > currentCredits) {
       // Need to add credits - use refund function
       const creditsToAdd = targetCredits - currentCredits;
-      result = await safeRefundCredits(targetUserId, creditsToAdd, `Admin credit adjustment by ${adminAuth.user!.id}`);
+      result = await safeRefundCredits(
+        targetUserId,
+        creditsToAdd,
+        `Admin adjustment by ${adminAuth.user!.id}: ${reason}`
+      );
     } else if (targetCredits < currentCredits) {
       // Need to deduct credits
       const creditsToRemove = currentCredits - targetCredits;
@@ -54,12 +92,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `Failed to adjust credits: ${result.message}` }, { status: 500 });
     }
 
-    // Audit the action
+    // Audit the action with full context
     await auditAdminAction(adminAuth.user!, 'fix_credits', {
       target_user_id: targetUserId,
       target_email: (profile as any).email,
       old_credits: currentCredits,
-      new_credits: result.newBalance
+      new_credits: result.newBalance,
+      reason: reason,
+      admin_id: adminAuth.user!.id
     });
 
     return NextResponse.json({ 
@@ -74,6 +114,10 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET() {
+async function GET_Handler() {
   return NextResponse.json({ message: 'Use POST to fix credits' });
 }
+
+// Apply strict rate limiting to credit manipulation endpoints
+export const POST = withRateLimit(POST_Handler, rateLimitPresets.strict);
+export const GET = withRateLimit(GET_Handler, rateLimitPresets.default);

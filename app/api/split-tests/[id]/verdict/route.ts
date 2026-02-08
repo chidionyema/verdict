@@ -1,5 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
+
+// UUID validation regex
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isValidUUID(id: string): boolean {
+  return typeof id === 'string' && UUID_REGEX.test(id);
+}
 
 interface SubmitSplitTestVerdictRequest {
   chosenPhoto: 'A' | 'B';
@@ -17,12 +25,18 @@ interface SubmitSplitTestVerdictRequest {
   judgeExpertise: string[];
 }
 
-export async function POST(
+async function POST_Handler(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id: splitTestId } = await params;
+
+    // Validate splitTestId as UUID
+    if (!isValidUUID(splitTestId)) {
+      return NextResponse.json({ error: 'Invalid split test ID format' }, { status: 400 });
+    }
+
     const {
       chosenPhoto,
       confidenceScore,
@@ -271,3 +285,6 @@ export async function POST(
     );
   }
 }
+
+// Apply rate limiting to split test verdict endpoint
+export const POST = withRateLimit(POST_Handler, rateLimitPresets.default);

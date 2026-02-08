@@ -74,7 +74,12 @@ export async function GET(request: NextRequest) {
 
       if (insertError) {
         console.error('[Auth Callback] Profile creation failed:', insertError.message, insertError.code, insertError.details);
-        // Don't block login - user can still access the app, profile will be created on first action
+        // Still redirect but with a warning flag so the app can show appropriate messaging
+        const destination = getSafeRedirect(redirectParam);
+        const redirectUrl = new URL(destination, requestUrl.origin);
+        redirectUrl.searchParams.set('profile_setup', 'pending');
+        console.log(`[Auth Callback] Redirecting with pending profile: ${redirectUrl.pathname}`);
+        return NextResponse.redirect(redirectUrl);
       } else {
         console.log(`[Auth Callback] Profile created successfully for ${user.id} with ${INITIAL_FREE_CREDITS} credits`);
       }
@@ -82,11 +87,15 @@ export async function GET(request: NextRequest) {
       console.log(`[Auth Callback] Existing profile found: ${(existingProfile as any).id} with ${(existingProfile as any).credits} credits`);
     }
 
-    // Step 4: Redirect to destination
+    // Step 4: Redirect to destination with success indicator for new users
     const destination = getSafeRedirect(redirectParam);
-    console.log(`[Auth Callback] Redirecting to: ${destination}`);
+    const redirectUrl = new URL(destination, requestUrl.origin);
+    if (!existingProfile) {
+      redirectUrl.searchParams.set('welcome', 'true');
+    }
+    console.log(`[Auth Callback] Redirecting to: ${redirectUrl.pathname}`);
 
-    return NextResponse.redirect(new URL(destination, requestUrl.origin));
+    return NextResponse.redirect(redirectUrl);
 
   } catch (error) {
     console.error('[Auth Callback] Unexpected error:', error);

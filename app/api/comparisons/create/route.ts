@@ -4,6 +4,7 @@ import { supabaseServiceClient } from '@/lib/supabase/service-client';
 import { uploadRateLimiter, checkRateLimit } from '@/lib/rate-limiter';
 import { log } from '@/lib/logger';
 import { ExpertRoutingService } from '@/lib/expert-routing';
+import { safeDeductCredits, safeRefundCredits } from '@/lib/credit-guard';
 
 interface ComparisonOption {
   title: string;
@@ -121,23 +122,28 @@ export async function POST(request: NextRequest) {
     const creditsRequired = (pricingTier as any).credits_required;
     const verdictCount = (pricingTier as any).verdict_count;
 
-    // Check user credits
-    const { data: userCredits } = await supabase
-      .from('profiles')
-      .select('credits')
-      .eq('id', user.id)
-      .single();
+    // Generate comparison ID early for credit deduction tracking
+    const comparisonId = crypto.randomUUID();
 
-    if (!userCredits || (userCredits as any)?.credits < creditsRequired) {
+    // ATOMIC CREDIT DEDUCTION FIRST (prevents race conditions and double-spending)
+    const creditResult = await safeDeductCredits(user.id, creditsRequired, comparisonId);
+
+    if (!creditResult.success) {
       return NextResponse.json(
-        { error: `Insufficient credits. You need ${creditsRequired} credits for this tier.` },
-        { status: 402 }
+        { error: creditResult.message || `Insufficient credits. You need ${creditsRequired} credits for this tier.` },
+        { status: creditResult.message.includes('Insufficient') ? 402 : 400 }
       );
     }
 
+    log.info('Credits deducted atomically', {
+      userId: user.id,
+      comparisonId,
+      credits: creditsRequired,
+      newBalance: creditResult.newBalance
+    });
+
     // Handle image uploads if present
     const serviceSupabase = supabaseServiceClient();
-    const comparisonId = crypto.randomUUID();
     let imageUrls: { optionA?: string; optionB?: string } = {};
 
     const uploadImage = async (option: ComparisonOption, optionKey: 'A' | 'B') => {
@@ -231,7 +237,25 @@ export async function POST(request: NextRequest) {
     }
 
     if (dbError) {
-      // Clean up uploaded images if database operation fails
+      // CRITICAL: Refund credits since request creation failed
+      log.error('Error creating comparison request, initiating refund:', dbError);
+
+      const refundResult = await safeRefundCredits(
+        user.id,
+        creditsRequired,
+        `Comparison request ${comparisonId} creation failed: ${dbError}`
+      );
+
+      if (!refundResult.success) {
+        log.error('CRITICAL: Credit refund failed after comparison creation error', {
+          userId: user.id,
+          comparisonId,
+          credits: creditsRequired,
+          refundError: refundResult.message
+        });
+      }
+
+      // Clean up uploaded images
       const cleanupTasks = [];
       if (imageUrls.optionA) {
         const pathA = imageUrls.optionA.split('/').slice(-2).join('/');
@@ -243,52 +267,9 @@ export async function POST(request: NextRequest) {
       }
       await Promise.all(cleanupTasks);
 
-      log.error('Error creating comparison request:', dbError);
       return NextResponse.json(
         { error: 'Failed to create comparison request' },
         { status: 500 }
-      );
-    }
-
-    // Deduct credits from user using unified credit system
-    const { data: deductResult, error: creditError } = await (supabase as any).rpc('deduct_credits', {
-      p_user_id: user.id,
-      p_credits: creditsRequired
-    });
-
-    if (creditError) {
-      // Clean up on credit deduction failure
-      const cleanupTasks: Promise<any>[] = [
-        (supabase as any).from('comparison_requests').delete().eq('id', comparisonId)
-      ];
-
-      log.error('Error deducting credits:', creditError);
-      return NextResponse.json(
-        { error: `Failed to deduct credits: ${creditError.message}` },
-        { status: 500 }
-      );
-    }
-
-    // Check if deduction was successful
-    const result = deductResult?.[0];
-    if (!result || !result.success) {
-      // Clean up on insufficient credits
-      const cleanupTasks: Promise<any>[] = [
-        (supabase as any).from('comparison_requests').delete().eq('id', comparisonId)
-      ];
-      if (imageUrls.optionA) {
-        const pathA = imageUrls.optionA.split('/').slice(-2).join('/');
-        cleanupTasks.push(serviceSupabase.storage.from('comparison-images').remove([pathA]));
-      }
-      if (imageUrls.optionB) {
-        const pathB = imageUrls.optionB.split('/').slice(-2).join('/');
-        cleanupTasks.push(serviceSupabase.storage.from('comparison-images').remove([pathB]));
-      }
-      await Promise.all(cleanupTasks);
-
-      return NextResponse.json(
-        { error: result?.message || 'Insufficient credits' },
-        { status: 400 }
       );
     }
 

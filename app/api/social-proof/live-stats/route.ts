@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { log } from '@/lib/logger';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
 
 // GET /api/social-proof/live-stats - Real social proof data without fabrication
-export async function GET(request: NextRequest) {
+async function GET_Handler(request: NextRequest) {
   try {
     const supabase = await createClient();
 
@@ -170,3 +171,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(fallbackData);
   }
 }
+
+// Apply rate limiting to social proof endpoint
+export const GET = withRateLimit(GET_Handler, rateLimitPresets.default);

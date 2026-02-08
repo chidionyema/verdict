@@ -3,6 +3,14 @@ import { createClient } from '@/lib/supabase/server';
 import { log } from '@/lib/logger';
 import { z } from 'zod';
 import Stripe from 'stripe';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
+
+// UUID validation regex
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isValidUUID(id: string): boolean {
+  return typeof id === 'string' && UUID_REGEX.test(id);
+}
 
 const getStripe = () => {
   if (!process.env.STRIPE_SECRET_KEY) {
@@ -29,7 +37,7 @@ const createPaymentMethodSchema = z.object({
   }).optional(),
 });
 
-export async function GET(request: NextRequest) {
+async function GET_Handler(request: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -58,7 +66,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: NextRequest) {
+async function POST_Handler(request: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -130,7 +138,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function DELETE(request: NextRequest) {
+async function DELETE_Handler(request: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -144,6 +152,11 @@ export async function DELETE(request: NextRequest) {
 
     if (!paymentMethodId) {
       return NextResponse.json({ error: 'Payment method ID required' }, { status: 400 });
+    }
+
+    // Validate paymentMethodId as UUID
+    if (!isValidUUID(paymentMethodId)) {
+      return NextResponse.json({ error: 'Invalid payment method ID format' }, { status: 400 });
     }
 
     // Verify ownership and get payment method
@@ -183,3 +196,8 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
+
+// Apply rate limiting to payment method operations
+export const GET = withRateLimit(GET_Handler, rateLimitPresets.default);
+export const POST = withRateLimit(POST_Handler, rateLimitPresets.default);
+export const DELETE = withRateLimit(DELETE_Handler, rateLimitPresets.default);

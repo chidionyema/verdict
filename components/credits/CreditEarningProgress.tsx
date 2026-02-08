@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Zap, TrendingUp, Sparkles } from 'lucide-react';
+import Link from 'next/link';
+import { Zap, TrendingUp, Sparkles, Clock, ArrowRight, Gift } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { CREDIT_ECONOMY_CONFIG } from '@/lib/credits';
 
@@ -9,16 +10,30 @@ interface CreditEarningProgressProps {
   userId: string;
   judgmentsToday?: number;
   onCreditEarned?: () => void;
+  showUseCreditsPrompt?: boolean;
+  returnUrl?: string | null;
 }
 
-export function CreditEarningProgress({ userId, judgmentsToday = 0, onCreditEarned }: CreditEarningProgressProps) {
+export function CreditEarningProgress({
+  userId,
+  judgmentsToday = 0,
+  onCreditEarned,
+  showUseCreditsPrompt = true,
+  returnUrl
+}: CreditEarningProgressProps) {
   const [showCelebration, setShowCelebration] = useState(false);
   const [currentCredits, setCurrentCredits] = useState(0);
   const [judgmentsCount, setJudgmentsCount] = useState(judgmentsToday);
+  const [avgTimePerJudgment, setAvgTimePerJudgment] = useState(2); // minutes
+
+  // Load credits on mount
+  useEffect(() => {
+    loadCredits();
+  }, [userId]);
 
   useEffect(() => {
     setJudgmentsCount(judgmentsToday);
-    
+
     // Check if user just earned a credit
     if (judgmentsToday > 0 && judgmentsToday % CREDIT_ECONOMY_CONFIG.JUDGMENTS_PER_CREDIT === 0) {
       setShowCelebration(true);
@@ -27,8 +42,7 @@ export function CreditEarningProgress({ userId, judgmentsToday = 0, onCreditEarn
       if (onCreditEarned) {
         onCreditEarned();
       }
-      // Hide celebration after 5 seconds
-      setTimeout(() => setShowCelebration(false), 5000);
+      // Don't auto-hide - let user choose action
     }
   }, [judgmentsToday, onCreditEarned]);
 
@@ -78,12 +92,23 @@ export function CreditEarningProgress({ userId, judgmentsToday = 0, onCreditEarn
                 </div>
                 <p className="text-sm text-amber-700">Total available</p>
               </div>
-              <button
-                onClick={() => setShowCelebration(false)}
-                className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-3 rounded-xl font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all"
-              >
-                Continue Judging
-              </button>
+              <div className="space-y-3">
+                <Link
+                  href={returnUrl || '/start'}
+                  className="block w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 rounded-xl font-semibold hover:from-green-700 hover:to-emerald-700 transition-all text-center"
+                >
+                  <span className="flex items-center justify-center gap-2">
+                    <Gift className="h-5 w-5" />
+                    Use Your Credit Now
+                  </span>
+                </Link>
+                <button
+                  onClick={() => setShowCelebration(false)}
+                  className="w-full bg-gray-100 text-gray-700 px-6 py-3 rounded-xl font-semibold hover:bg-gray-200 transition-all"
+                >
+                  Keep Earning
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -124,12 +149,36 @@ export function CreditEarningProgress({ userId, judgmentsToday = 0, onCreditEarn
               {partialCredits.toFixed(1)} credits earned so far
             </span>
           </div>
-          {judgmentsRemaining < judgmentsNeeded && (
+          {judgmentsRemaining < judgmentsNeeded && judgmentsRemaining > 0 && (
             <span className="font-medium text-amber-700">
               {judgmentsRemaining} more → +1 credit
             </span>
           )}
         </div>
+
+        {/* ETA Display */}
+        {judgmentsRemaining > 0 && judgmentsRemaining < judgmentsNeeded && (
+          <div className="flex items-center gap-2 text-xs text-gray-500 mt-2">
+            <Clock className="h-3 w-3" />
+            <span>~{judgmentsRemaining * avgTimePerJudgment} min to earn your next credit</span>
+          </div>
+        )}
+
+        {/* Use Credit Prompt */}
+        {showUseCreditsPrompt && currentCredits > 0 && (
+          <div className="mt-3 pt-3 border-t border-indigo-200">
+            <Link
+              href={returnUrl || '/start'}
+              className="flex items-center justify-between p-2 bg-green-50 hover:bg-green-100 rounded-lg transition group"
+            >
+              <div className="flex items-center gap-2 text-green-700">
+                <Gift className="h-4 w-4" />
+                <span className="font-medium">You have {currentCredits} credit{currentCredits !== 1 ? 's' : ''} to use!</span>
+              </div>
+              <ArrowRight className="h-4 w-4 text-green-600 group-hover:translate-x-1 transition-transform" />
+            </Link>
+          </div>
+        )}
 
         {/* Total Credits Earned Today */}
         {creditsEarned > 0 && (

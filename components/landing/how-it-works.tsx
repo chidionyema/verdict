@@ -199,7 +199,7 @@ export function HowItWorks({ showCTA = true, compact = false }: HowItWorksProps)
               size="lg"
               className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl"
             >
-              Get 3 free requests now
+              Start Free with 3 Credits
               <ArrowRight className="ml-2 w-5 h-5" />
             </TouchButton>
             

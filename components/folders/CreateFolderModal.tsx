@@ -1,7 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Folder, Briefcase, Heart, Calendar, Star, Target, Trophy } from 'lucide-react';
+
+interface EditingFolder {
+  id: string;
+  name: string;
+  description?: string;
+  color: string;
+  icon: string;
+}
 
 interface CreateFolderModalProps {
   isOpen: boolean;
@@ -13,6 +21,7 @@ interface CreateFolderModalProps {
     icon: string;
   }) => Promise<void>;
   isLoading?: boolean;
+  editingFolder?: EditingFolder | null;
 }
 
 const PRESET_COLORS = [
@@ -69,13 +78,28 @@ export default function CreateFolderModal({
   isOpen,
   onClose,
   onCreate,
-  isLoading = false
+  isLoading = false,
+  editingFolder = null
 }: CreateFolderModalProps) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [selectedColor, setSelectedColor] = useState(PRESET_COLORS[0]);
   const [selectedIcon, setSelectedIcon] = useState('folder');
   const [error, setError] = useState('');
+
+  const isEditMode = !!editingFolder;
+
+  // Initialize form with editing folder data
+  useEffect(() => {
+    if (editingFolder) {
+      setName(editingFolder.name);
+      setDescription(editingFolder.description || '');
+      setSelectedColor(editingFolder.color);
+      setSelectedIcon(editingFolder.icon);
+    } else {
+      resetForm();
+    }
+  }, [editingFolder]);
 
   const resetForm = () => {
     setName('');
@@ -91,6 +115,17 @@ export default function CreateFolderModal({
       onClose();
     }
   };
+
+  // Escape key to close modal (WCAG accessibility)
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen && !isLoading) {
+        handleClose();
+      }
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [isOpen, isLoading]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -141,11 +176,12 @@ export default function CreateFolderModal({
       <div className="bg-white rounded-lg max-w-lg w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">Create New Folder</h2>
+          <h2 className="text-lg font-semibold text-gray-900">{isEditMode ? 'Edit Folder' : 'Create New Folder'}</h2>
           <button
             onClick={handleClose}
             disabled={isLoading}
             className="p-1 rounded-md hover:bg-gray-100 text-gray-400 hover:text-gray-600 disabled:opacity-50"
+            aria-label="Close modal"
           >
             <X className="w-5 h-5" />
           </button>
@@ -341,7 +377,7 @@ export default function CreateFolderModal({
               {isLoading && (
                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
               )}
-              <span>{isLoading ? 'Creating...' : 'Create Folder'}</span>
+              <span>{isLoading ? (isEditMode ? 'Saving...' : 'Creating...') : (isEditMode ? 'Save Changes' : 'Create Folder')}</span>
             </button>
           </div>
         </form>

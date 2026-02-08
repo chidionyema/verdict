@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { stripe, isDemoMode } from '@/lib/stripe';
+import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
 
-export async function POST(request: NextRequest) {
+async function POST_Handler(request: NextRequest) {
   try {
     // Demo mode - just return a fake client secret
     if (isDemoMode() || !stripe) {
@@ -25,15 +26,41 @@ export async function POST(request: NextRequest) {
     const { amount, currency, description } = await request.json();
 
     if (!amount || !currency || !description) {
-      return NextResponse.json({ 
-        error: 'Missing required fields: amount, currency, description' 
+      return NextResponse.json({
+        error: 'Missing required fields: amount, currency, description'
       }, { status: 400 });
     }
 
-    // Create payment intent
+    // Validate amount - must be positive integer within reasonable bounds
+    // Minimum: $0.50 (50 cents) - Stripe minimum
+    // Maximum: $10,000 (1,000,000 cents) - reasonable app limit
+    const amountCents = Math.round(amount);
+    if (typeof amount !== 'number' || amountCents < 50 || amountCents > 1000000) {
+      return NextResponse.json({
+        error: 'Amount must be between $0.50 and $10,000'
+      }, { status: 400 });
+    }
+
+    // Validate currency - whitelist supported currencies
+    const SUPPORTED_CURRENCIES = ['usd', 'eur', 'gbp', 'cad', 'aud'];
+    const normalizedCurrency = currency.toLowerCase();
+    if (!SUPPORTED_CURRENCIES.includes(normalizedCurrency)) {
+      return NextResponse.json({
+        error: `Unsupported currency. Supported: ${SUPPORTED_CURRENCIES.join(', ')}`
+      }, { status: 400 });
+    }
+
+    // Validate description length
+    if (typeof description !== 'string' || description.length > 500) {
+      return NextResponse.json({
+        error: 'Description must be a string of 500 characters or less'
+      }, { status: 400 });
+    }
+
+    // Create payment intent with validated values
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(amount), // Ensure integer
-      currency: currency.toLowerCase(),
+      amount: amountCents,
+      currency: normalizedCurrency,
       description,
       metadata: {
         user_id: user.id,
@@ -55,3 +82,6 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+// Apply strict rate limiting to payment intent creation
+export const POST = withRateLimit(POST_Handler, rateLimitPresets.strict);
