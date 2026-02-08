@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Heart, X, MessageSquare, Clock, Eye, Users, Zap } from 'lucide-react';
+import { Heart, X, MessageSquare, Clock, Eye, Users, Zap, Plus } from 'lucide-react';
 import { CreditBalance } from '@/components/credits/CreditBalance';
 import { JudgeReputation } from '@/components/reputation/JudgeReputation';
 import { CreditEarningProgress } from '@/components/credits/CreditEarningProgress';
@@ -18,10 +18,24 @@ import { toast } from '@/components/ui/toast';
 import { useFocusTrap } from '@/hooks/useFocusTrap';
 import type { Database } from '@/lib/database.types';
 
-type FeedRequest = Database['public']['Tables']['verdict_requests']['Row'] & {
+// Use a flexible type compatible with FeedCard component
+interface FeedRequest {
+  id: string;
+  user_id: string;
+  category: string;
+  question?: string;
+  text_content?: string | null;
+  context?: string | null;
+  media_type?: 'photo' | 'text' | 'audio' | null;
+  media_url?: string | null;
+  roast_mode?: boolean | null;
+  requested_tone?: 'encouraging' | 'honest' | 'brutally_honest' | null;
+  visibility?: 'public' | 'private' | null;
+  created_at: string;
   response_count?: number;
+  received_verdict_count?: number;
   user_has_judged?: boolean;
-};
+}
 
 // Client component - no dynamic export needed
 

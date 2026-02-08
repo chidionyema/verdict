@@ -2,11 +2,25 @@
 
 import { useState } from 'react';
 import { Heart, X, MessageSquare, Clock, Eye, Camera, FileText, Zap, SkipForward } from 'lucide-react';
-import type { Database } from '@/lib/database.types';
 
-type FeedRequest = Database['public']['Tables']['feedback_requests']['Row'] & {
+// Flexible type that works with both feedback_requests and verdict_requests
+interface FeedRequest {
+  id: string;
+  user_id: string;
+  category: string;
+  question?: string;
+  text_content?: string | null;
+  context?: string | null;
+  media_type?: 'photo' | 'text' | 'audio' | null;
+  media_url?: string | null;
+  roast_mode?: boolean | null;
+  requested_tone?: 'encouraging' | 'honest' | 'brutally_honest' | null;
+  visibility?: 'public' | 'private' | null;
+  created_at: string;
   response_count?: number;
-};
+  received_verdict_count?: number;
+  user_has_judged?: boolean;
+}
 
 interface FeedCardProps {
   item: FeedRequest;
@@ -18,6 +32,12 @@ interface FeedCardProps {
 export function FeedCard({ item, onJudge, onSkip, judging }: FeedCardProps) {
   const [showDetailedFeedback, setShowDetailedFeedback] = useState(false);
   const [detailedFeedback, setDetailedFeedback] = useState('');
+
+  // Handle both feedback_requests (question) and verdict_requests (text_content)
+  const displayQuestion = item.question || item.text_content || '';
+  const displayContext = item.context || '';
+  const isRoastMode = item.roast_mode || item.requested_tone === 'brutally_honest';
+  const responseCount = item.response_count ?? item.received_verdict_count ?? 0;
 
   const getCategoryIcon = () => {
     switch (item.category) {
@@ -50,7 +70,7 @@ export function FeedCard({ item, onJudge, onSkip, judging }: FeedCardProps) {
   async function handleQuickJudge(verdict: 'like' | 'dislike') {
     if (judging) return;
     // For roast mode, provide harsher feedback templates
-    const roastFeedback = item.roast_mode ? 
+    const roastFeedback = isRoastMode ? 
       (verdict === 'like' ? '🔥 This is actually decent' : '💀 This ain\'t it chief') :
       (verdict === 'like' ? '👍 Looks good' : '👎 Could be better');
     
@@ -74,7 +94,7 @@ export function FeedCard({ item, onJudge, onSkip, judging }: FeedCardProps) {
               {getCategoryIcon()}
               <span className="capitalize">{item.category}</span>
             </div>
-            {item.roast_mode && (
+            {isRoastMode && (
               <div className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-bold">
                 🔥 ROAST MODE
               </div>
@@ -91,9 +111,9 @@ export function FeedCard({ item, onJudge, onSkip, judging }: FeedCardProps) {
       <div className="p-4 space-y-4">
         {/* Question */}
         <div>
-          <h3 className="font-semibold text-gray-900 mb-2">{item.question}</h3>
-          {item.context && (
-            <p className="text-gray-600 text-sm leading-relaxed">{item.context}</p>
+          <h3 className="font-semibold text-gray-900 mb-2">{displayQuestion}</h3>
+          {displayContext && (
+            <p className="text-gray-600 text-sm leading-relaxed">{displayContext}</p>
           )}
         </div>
 
@@ -111,11 +131,11 @@ export function FeedCard({ item, onJudge, onSkip, judging }: FeedCardProps) {
         {/* Progress indicator */}
         <div className="flex items-center gap-2 text-sm text-gray-500">
           <Eye className="h-4 w-4" />
-          <span>{item.response_count || 0}/3 judgments</span>
+          <span>{responseCount}/3 judgments</span>
           <div className="flex-1 bg-gray-200 rounded-full h-2 ml-2">
             <div 
               className="bg-indigo-600 h-2 rounded-full transition-all duration-300"
-              style={{ width: `${((item.response_count || 0) / 3) * 100}%` }}
+              style={{ width: `${((responseCount) / 3) * 100}%` }}
             ></div>
           </div>
         </div>
@@ -123,32 +143,32 @@ export function FeedCard({ item, onJudge, onSkip, judging }: FeedCardProps) {
 
       {/* Action buttons */}
       {!showDetailedFeedback ? (
-        <div className={`p-4 space-y-3 ${item.roast_mode ? 'bg-red-50' : 'bg-gray-50'}`}>
+        <div className={`p-4 space-y-3 ${isRoastMode ? 'bg-red-50' : 'bg-gray-50'}`}>
           {/* Quick judgment */}
           <div className="flex gap-3">
             <button
               onClick={() => handleQuickJudge('dislike')}
               disabled={judging}
               className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2 text-white disabled:bg-gray-300 min-h-[48px] ${
-                item.roast_mode
+                isRoastMode
                   ? 'bg-red-600 hover:bg-red-700'
                   : 'bg-red-500 hover:bg-red-600'
               }`}
             >
               <X className="h-5 w-5" />
-              {judging ? 'Judging...' : item.roast_mode ? '💀 Destroy' : 'Not Good'}
+              {judging ? 'Judging...' : isRoastMode ? '💀 Destroy' : 'Not Good'}
             </button>
             <button
               onClick={() => handleQuickJudge('like')}
               disabled={judging}
               className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2 text-white disabled:bg-gray-300 min-h-[48px] ${
-                item.roast_mode
+                isRoastMode
                   ? 'bg-orange-500 hover:bg-orange-600'
                   : 'bg-green-500 hover:bg-green-600'
               }`}
             >
               <Heart className="h-5 w-5" />
-              {judging ? 'Judging...' : item.roast_mode ? '🔥 Fire' : 'Looks Good'}
+              {judging ? 'Judging...' : isRoastMode ? '🔥 Fire' : 'Looks Good'}
             </button>
           </div>
 
@@ -191,11 +211,11 @@ export function FeedCard({ item, onJudge, onSkip, judging }: FeedCardProps) {
               id="detailed-feedback"
               value={detailedFeedback}
               onChange={(e) => setDetailedFeedback(e.target.value)}
-              placeholder={item.roast_mode
+              placeholder={isRoastMode
                 ? "Let them have it! Be brutal, be honest, be savage... 🔥"
                 : "Share specific thoughts, suggestions, or observations..."}
               className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none ${
-                item.roast_mode ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                isRoastMode ? 'border-red-300 bg-red-50' : 'border-gray-300'
               }`}
               rows={3}
               maxLength={500}

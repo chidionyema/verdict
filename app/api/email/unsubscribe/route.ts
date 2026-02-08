@@ -66,19 +66,19 @@ async function GET_Handler(request: NextRequest) {
     // Update notification preferences
     if (category) {
       // Unsubscribe from specific category
-      const { data: prefs } = await supabase
-        .from('notification_preferences')
+      const { data: prefs } = await (supabase
+        .from('notification_preferences') as any)
         .select('categories')
         .eq('user_id', userId)
         .single();
 
       const updatedCategories = {
-        ...(prefs?.categories || {}),
+        ...((prefs as any)?.categories || {}),
         [category]: false
       };
 
-      await supabase
-        .from('notification_preferences')
+      await (supabase
+        .from('notification_preferences') as any)
         .upsert({
           user_id: userId,
           categories: updatedCategories,
@@ -88,8 +88,8 @@ async function GET_Handler(request: NextRequest) {
       log.info('User unsubscribed from category', { userId, category });
     } else {
       // Unsubscribe from all emails
-      await supabase
-        .from('notification_preferences')
+      await (supabase
+        .from('notification_preferences') as any)
         .upsert({
           user_id: userId,
           email_enabled: false,
@@ -129,8 +129,8 @@ async function POST_Handler(request: NextRequest) {
 
     if (resubscribe) {
       // Re-subscribe to emails
-      await supabase
-        .from('notification_preferences')
+      await (supabase
+        .from('notification_preferences') as any)
         .upsert({
           user_id: userId,
           email_enabled: true,
@@ -142,27 +142,27 @@ async function POST_Handler(request: NextRequest) {
     }
 
     if (category) {
-      const { data: prefs } = await supabase
-        .from('notification_preferences')
+      const { data: prefs } = await (supabase
+        .from('notification_preferences') as any)
         .select('categories')
         .eq('user_id', userId)
         .single();
 
       const updatedCategories = {
-        ...(prefs?.categories || {}),
+        ...((prefs as any)?.categories || {}),
         [category]: false
       };
 
-      await supabase
-        .from('notification_preferences')
+      await (supabase
+        .from('notification_preferences') as any)
         .upsert({
           user_id: userId,
           categories: updatedCategories,
           updated_at: new Date().toISOString()
         }, { onConflict: 'user_id' });
     } else {
-      await supabase
-        .from('notification_preferences')
+      await (supabase
+        .from('notification_preferences') as any)
         .upsert({
           user_id: userId,
           email_enabled: false,

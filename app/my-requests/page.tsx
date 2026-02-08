@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 import { toast } from '@/components/ui/toast';
@@ -30,6 +31,7 @@ import { EmptyState } from '@/components/ui/EmptyStates';
 export const dynamic = 'force-dynamic';
 
 export default function MyRequestsPage() {
+  const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [requests, setRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);

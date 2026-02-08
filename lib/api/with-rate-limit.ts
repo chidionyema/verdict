@@ -18,7 +18,7 @@ type RateLimitOptions = {
 type RouteHandler = (
   request: NextRequest,
   params?: any
-) => Promise<NextResponse> | NextResponse;
+) => Promise<NextResponse | Response> | NextResponse | Response;
 
 /**
  * Wraps an API route handler with rate limiting
@@ -127,6 +127,12 @@ export const rateLimitPresets = {
   judge: {
     cost: 1,
     skipBurst: true,
+  },
+
+  // Default - alias for standard
+  default: {
+    cost: 1,
+    skipBurst: false,
   },
 };
 
