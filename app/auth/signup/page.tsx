@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client';
 import GoogleOAuthButton from '@/components/GoogleOAuthButton';
 import { ReferralSignupFlow } from '@/components/referrals/ReferralSignupFlow';
 import { toast } from '@/components/ui/toast';
-import { DollarSign, Star, Users, MessageSquare, Clock, Shield } from 'lucide-react';
+import { DollarSign, Star, Users, MessageSquare, Clock, Shield, Mail, RefreshCw } from 'lucide-react';
 
 type SignupIntent = 'judge' | 'seeker' | 'general';
 
@@ -200,10 +200,37 @@ function SignupContent() {
               </button>
             </div>
 
-            {/* Simple note about email */}
-            <p className="text-xs text-gray-500 mt-6">
-              We sent a confirmation email to <strong>{email}</strong> for account security
-            </p>
+            {/* Email Verification Notice */}
+            <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-start gap-3">
+                <Mail className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                <div className="text-left">
+                  <p className="text-sm font-medium text-blue-900">
+                    Verify your email
+                  </p>
+                  <p className="text-xs text-blue-700 mt-1">
+                    We sent a confirmation link to <strong>{email}</strong>
+                  </p>
+                  <p className="text-xs text-blue-600 mt-2">
+                    Can't find it? Check your spam folder or{' '}
+                    <button
+                      onClick={handleResendEmail}
+                      disabled={loading}
+                      className="text-blue-800 underline hover:text-blue-900 font-medium inline-flex items-center gap-1"
+                    >
+                      {loading ? (
+                        <>
+                          <RefreshCw className="h-3 w-3 animate-spin" />
+                          Sending...
+                        </>
+                      ) : (
+                        'resend email'
+                      )}
+                    </button>
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>

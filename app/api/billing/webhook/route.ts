@@ -209,16 +209,19 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
   }
 
   if (isLegacyPackage) {
-    // Handle legacy credit package purchase using atomic function
-    const { data: creditResult, error: creditError } = await (supabase.rpc as any)('add_credits', {
+    // Handle legacy credit package purchase using atomic function with full idempotency
+    const { data: purchaseResult, error: purchaseError } = await (supabase.rpc as any)('process_credit_purchase', {
       p_user_id: userId,
-      p_credits: credits
+      p_credits: credits,
+      p_stripe_session_id: session.id,
+      p_amount_cents: session.amount_total || 0,
+      p_description: `Credit purchase: ${credits} credits`
     });
 
-    const result = (creditResult as any)?.[0];
-    if (creditError || !result?.success) {
+    const result = (purchaseResult as any)?.[0];
+    if (purchaseError || !result?.success) {
       // CRITICAL: Payment received but credits not added - this MUST be retried
-      log.error('CRITICAL: Failed to add credits after payment', creditError || result?.message, {
+      log.error('CRITICAL: Failed to add credits after payment', purchaseError || result?.message, {
         userId,
         credits,
         sessionId: session.id,
@@ -227,7 +230,7 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
         actionRequired: 'Manual credit reconciliation needed'
       });
 
-      trackCriticalPaymentError('credit_addition_failed', creditError || new Error(result?.message), {
+      trackCriticalPaymentError('credit_addition_failed', purchaseError || new Error(result?.message), {
         userId,
         credits,
         sessionId: session.id,
@@ -235,7 +238,14 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
       });
 
       // Throw to signal Stripe to retry this webhook
-      throw new Error(`Credit addition failed for session ${session.id}: ${creditError?.message || result?.message}`);
+      throw new Error(`Credit addition failed for session ${session.id}: ${purchaseError?.message || result?.message}`);
+    } else if (result?.already_processed) {
+      log.info('Credits already processed (idempotent)', {
+        userId,
+        credits,
+        currentBalance: result.new_balance,
+        sessionId: session.id
+      });
     } else {
       log.info('Credits added successfully', {
         userId,
@@ -244,6 +254,23 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
         sessionId: session.id,
         paymentAmount: session.amount_total
       });
+
+      // Create notification for user
+      try {
+        await (supabase.rpc as any)('create_notification', {
+          p_user_id: userId,
+          p_type: 'credit_purchase',
+          p_title: 'Credits Added!',
+          p_message: `${credits} credits have been added to your account.`,
+          p_metadata: JSON.stringify({
+            credits,
+            new_balance: result.new_balance,
+            stripe_session_id: session.id
+          })
+        });
+      } catch (notifError) {
+        log.warn('Failed to create credit purchase notification', { error: notifError, userId });
+      }
     }
   } else if (submissionType === 'private') {
     // Handle private submission payment - no tier upgrade needed

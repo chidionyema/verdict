@@ -48,7 +48,15 @@ function getSupabaseAnonKey(): string {
 }
 
 function getSupabaseServiceKey(): string {
-  return process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder-service-key';
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!key) {
+    console.warn('[Supabase] SUPABASE_SERVICE_ROLE_KEY not set - service client will not work');
+  }
+  return key || '';
+}
+
+export function hasServiceKey(): boolean {
+  return !!process.env.SUPABASE_SERVICE_ROLE_KEY;
 }
 
 export async function createClient(): Promise<SupabaseClient<Database>> {

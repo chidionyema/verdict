@@ -149,6 +149,7 @@ export default function JudgeProgression({ userId, currentStats }: JudgeProgress
   });
   const [showDetails, setShowDetails] = useState(false);
   const [selectedTab, setSelectedTab] = useState<'progress' | 'achievements' | 'leaderboard'>('progress');
+  const [showInfoTooltip, setShowInfoTooltip] = useState(false);
 
   useEffect(() => {
     calculateProgression();
@@ -407,13 +408,43 @@ export default function JudgeProgression({ userId, currentStats }: JudgeProgress
               <span className="text-xl">{currentTier.badge}</span>
             </div>
             <div>
-              <h3 className="font-bold text-gray-900">{currentTier.name}</h3>
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-gray-900">{currentTier.name}</h3>
+                {/* Info button for level explanation */}
+                <div className="relative">
+                  <button
+                    onClick={() => setShowInfoTooltip(!showInfoTooltip)}
+                    className="p-1 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+                    aria-label="Learn about judge levels"
+                  >
+                    <Info className="h-4 w-4" />
+                  </button>
+
+                  {/* Tooltip */}
+                  {showInfoTooltip && (
+                    <div className="absolute left-0 top-full mt-2 w-72 bg-gray-900 text-white text-xs rounded-lg p-3 shadow-xl z-50">
+                      <div className="mb-2 font-semibold">How Judge Levels Work</div>
+                      <ul className="space-y-1 text-gray-200">
+                        <li>• Complete verdicts to level up</li>
+                        <li>• Higher tiers unlock bonus credits</li>
+                        <li>• Maintain quality for premium requests</li>
+                        <li>• Streaks multiply your earnings</li>
+                      </ul>
+                      <div className="mt-2 pt-2 border-t border-gray-700 text-gray-300">
+                        Tap "View Details" for full progression info
+                      </div>
+                      {/* Arrow */}
+                      <div className="absolute -top-1 left-6 w-2 h-2 bg-gray-900 rotate-45" />
+                    </div>
+                  )}
+                </div>
+              </div>
               <p className="text-sm text-gray-600">
                 {currentStats.totalVerdicts} verdicts • {nextTier ? `${nextTier.minVerdicts - currentStats.totalVerdicts} to ${nextTier.name}` : 'Max tier reached!'}
               </p>
             </div>
           </div>
-          
+
           <button
             onClick={() => setShowDetails(!showDetails)}
             className="text-indigo-600 hover:text-indigo-700 font-medium text-sm flex items-center gap-1 group"

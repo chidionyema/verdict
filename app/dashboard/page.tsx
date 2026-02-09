@@ -40,6 +40,27 @@ export default function DashboardPage() {
   const [purchasingPackage, setPurchasingPackage] = useState<string | null>(null);
   const [isRedirectingToCheckout, setIsRedirectingToCheckout] = useState(false);
   const [purchaseError, setPurchaseError] = useState<string | null>(null);
+  const [showWelcomeBack, setShowWelcomeBack] = useState(false);
+  const [daysSinceLastVisit, setDaysSinceLastVisit] = useState(0);
+
+  // Check for returning users
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const lastVisit = localStorage.getItem('verdict_last_dashboard_visit');
+      const now = Date.now();
+
+      if (lastVisit) {
+        const daysSince = Math.floor((now - parseInt(lastVisit)) / (1000 * 60 * 60 * 24));
+        if (daysSince >= 3) { // Show welcome back if away 3+ days
+          setDaysSinceLastVisit(daysSince);
+          setShowWelcomeBack(true);
+        }
+      }
+
+      // Update last visit
+      localStorage.setItem('verdict_last_dashboard_visit', now.toString());
+    }
+  }, []);
 
   const fetchData = async () => {
     // Only run in browser
@@ -528,6 +549,46 @@ export default function DashboardPage() {
             >
               <XCircle className="h-5 w-5" />
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Welcome Back Banner for Returning Users */}
+      {showWelcomeBack && (
+        <div className="bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 border-b border-indigo-200 px-4 py-4">
+          <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full flex items-center justify-center">
+                <Sparkles className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <p className="font-semibold text-indigo-900">
+                  Welcome back! {daysSinceLastVisit >= 7 ? "We've missed you" : "Good to see you again"}
+                </p>
+                <p className="text-sm text-indigo-700">
+                  {requests.filter(r => r.status === 'closed').length > 0
+                    ? `You have ${requests.filter(r => r.status === 'open' || r.status === 'in_progress').length} active requests`
+                    : "Ready to get feedback on something new?"
+                  }
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <Link
+                href="/start"
+                className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-medium hover:from-indigo-700 hover:to-purple-700 transition text-sm flex items-center gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                New Request
+              </Link>
+              <button
+                onClick={() => setShowWelcomeBack(false)}
+                className="p-2 text-indigo-400 hover:text-indigo-600 hover:bg-indigo-100 rounded-lg transition"
+                aria-label="Dismiss welcome back banner"
+              >
+                <XCircle className="h-5 w-5" />
+              </button>
+            </div>
           </div>
         </div>
       )}

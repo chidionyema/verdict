@@ -9,9 +9,10 @@
 --   - For NEW deployments: Run this entire script on a fresh Supabase project
 --   - For EXISTING databases: Use individual migrations in supabase/migrations/
 --
--- Last consolidated: 2026-02-03
--- Includes all migrations through 20250226_add_stripe_idempotency_constraints.sql
+-- Last consolidated: 2026-02-09
+-- Includes all migrations through 001_fix_core_monetization.sql
 -- Plus: Judge verification, onboarding fields, LinkedIn verification, ratings
+-- Plus: Payout infrastructure, credit purchase idempotency, status transitions
 --
 -- WARNING: Running on existing database will DROP and recreate tables!
 -- ============================================================================
@@ -158,6 +159,8 @@ CREATE TABLE IF NOT EXISTS verdict_requests (
   -- Pricing and tier
   request_tier request_tier DEFAULT 'community',
   credits_cost INTEGER DEFAULT 1,
+  credits_charged INTEGER DEFAULT 0,
+  credits_refunded INTEGER DEFAULT 0,
 
   -- Status tracking
   status request_status DEFAULT 'open',
@@ -406,6 +409,52 @@ CREATE TABLE IF NOT EXISTS transactions (
 -- PART 6: JUDGE SYSTEM TABLES
 -- ============================================================================
 
+-- Judge payout accounts (Stripe Connect)
+CREATE TABLE IF NOT EXISTS judge_payout_accounts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  judge_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  stripe_account_id TEXT NOT NULL,
+  account_type TEXT DEFAULT 'express' CHECK (account_type IN ('express', 'standard', 'custom')),
+  charges_enabled BOOLEAN DEFAULT FALSE,
+  payouts_enabled BOOLEAN DEFAULT FALSE,
+  details_submitted BOOLEAN DEFAULT FALSE,
+  country TEXT,
+  default_currency TEXT DEFAULT 'usd',
+  requirements JSONB DEFAULT '{}',
+  verification_status TEXT DEFAULT 'pending' CHECK (verification_status IN ('pending', 'verified', 'restricted', 'disabled')),
+  onboarding_link TEXT,
+  onboarding_expires_at TIMESTAMP WITH TIME ZONE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  CONSTRAINT unique_judge_payout_account UNIQUE (judge_id),
+  CONSTRAINT unique_stripe_account UNIQUE (stripe_account_id)
+);
+
+-- Payouts table
+CREATE TABLE IF NOT EXISTS payouts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  judge_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  gross_amount_cents INTEGER NOT NULL CHECK (gross_amount_cents > 0),
+  fee_amount_cents INTEGER NOT NULL DEFAULT 0 CHECK (fee_amount_cents >= 0),
+  net_amount_cents INTEGER NOT NULL CHECK (net_amount_cents >= 0),
+  currency TEXT DEFAULT 'usd',
+  payout_method TEXT DEFAULT 'stripe_express' CHECK (payout_method IN ('stripe_express', 'bank_transfer', 'paypal')),
+  destination_account_id TEXT,
+  stripe_transfer_id TEXT,
+  stripe_payout_id TEXT,
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'processing', 'completed', 'failed', 'cancelled')),
+  period_start TIMESTAMP WITH TIME ZONE,
+  period_end TIMESTAMP WITH TIME ZONE,
+  description TEXT,
+  earnings_count INTEGER DEFAULT 0,
+  processing_started_at TIMESTAMP WITH TIME ZONE,
+  completed_at TIMESTAMP WITH TIME ZONE,
+  failed_at TIMESTAMP WITH TIME ZONE,
+  failure_reason TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Judge earnings tracking
 CREATE TABLE IF NOT EXISTS judge_earnings (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -413,6 +462,7 @@ CREATE TABLE IF NOT EXISTS judge_earnings (
   verdict_response_id UUID REFERENCES verdict_responses(id) ON DELETE CASCADE,
   comparison_verdict_id UUID REFERENCES comparison_verdicts(id) ON DELETE CASCADE,
   split_test_verdict_id UUID REFERENCES split_test_verdicts(id) ON DELETE CASCADE,
+  payout_id UUID REFERENCES payouts(id),
   amount DECIMAL(10,2) NOT NULL DEFAULT 0.00 CHECK (amount >= 0),
   currency TEXT DEFAULT 'USD',
   payout_status TEXT DEFAULT 'pending' CHECK (payout_status IN ('pending', 'processing', 'paid', 'cancelled')),
@@ -752,6 +802,19 @@ CREATE TABLE IF NOT EXISTS admin_request_actions (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Request status transition tracking
+CREATE TABLE IF NOT EXISTS request_status_transitions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  request_id UUID NOT NULL REFERENCES verdict_requests(id) ON DELETE CASCADE,
+  request_type TEXT NOT NULL DEFAULT 'verdict' CHECK (request_type IN ('verdict', 'comparison', 'split_test')),
+  from_status request_status,
+  to_status request_status NOT NULL,
+  triggered_by UUID REFERENCES profiles(id) ON DELETE SET NULL,
+  trigger_reason TEXT CHECK (trigger_reason IN ('user_action', 'target_reached', 'admin_action', 'timeout', 'cancellation', 'system')),
+  metadata JSONB DEFAULT '{}',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- ============================================================================
 -- PART 14: INDEXES FOR PERFORMANCE
 -- ============================================================================
@@ -779,9 +842,15 @@ CREATE INDEX IF NOT EXISTS idx_credit_audit_user ON credit_audit_log(user_id, ti
 -- Judge indexes
 CREATE INDEX IF NOT EXISTS idx_judge_earnings_judge ON judge_earnings(judge_id);
 CREATE INDEX IF NOT EXISTS idx_judge_earnings_status ON judge_earnings(payout_status);
+CREATE INDEX IF NOT EXISTS idx_judge_earnings_payout ON judge_earnings(payout_id);
 CREATE INDEX IF NOT EXISTS idx_judge_ratings_judge ON judge_ratings(judge_id);
 CREATE INDEX IF NOT EXISTS idx_judge_verifications_user ON judge_verifications(user_id);
 CREATE INDEX IF NOT EXISTS idx_judge_verifications_status ON judge_verifications(status);
+CREATE INDEX IF NOT EXISTS idx_judge_payout_accounts_judge ON judge_payout_accounts(judge_id);
+CREATE INDEX IF NOT EXISTS idx_payouts_judge ON payouts(judge_id);
+CREATE INDEX IF NOT EXISTS idx_payouts_status ON payouts(status);
+CREATE INDEX IF NOT EXISTS idx_status_transitions_request ON request_status_transitions(request_id);
+CREATE INDEX IF NOT EXISTS idx_status_transitions_created ON request_status_transitions(created_at DESC);
 
 -- Notification indexes
 CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, read, created_at DESC);
@@ -1072,6 +1141,187 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+-- ============================================================================
+-- ATOMIC CREDIT PURCHASE (with idempotency)
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION process_credit_purchase(
+  p_user_id UUID,
+  p_credits INT,
+  p_stripe_session_id TEXT,
+  p_amount_cents INT,
+  p_description TEXT DEFAULT 'Credit purchase'
+)
+RETURNS TABLE(
+  success BOOLEAN,
+  new_balance INT,
+  message TEXT,
+  already_processed BOOLEAN
+) AS $$
+DECLARE
+  existing_tx_id UUID;
+  current_balance INT;
+  updated_balance INT;
+BEGIN
+  -- Check for existing completed transaction (idempotency)
+  SELECT id INTO existing_tx_id
+  FROM transactions
+  WHERE stripe_session_id = p_stripe_session_id
+    AND status = 'completed';
+
+  IF existing_tx_id IS NOT NULL THEN
+    -- Already processed - return current balance without error
+    SELECT credits INTO current_balance FROM profiles WHERE id = p_user_id;
+    RETURN QUERY SELECT TRUE, COALESCE(current_balance, 0), 'Already processed'::TEXT, TRUE;
+    RETURN;
+  END IF;
+
+  -- Lock user row to prevent concurrent modifications
+  SELECT credits INTO current_balance FROM profiles WHERE id = p_user_id FOR UPDATE;
+  IF NOT FOUND THEN
+    RETURN QUERY SELECT FALSE, 0, 'User not found'::TEXT, FALSE;
+    RETURN;
+  END IF;
+
+  -- Add credits to profile
+  UPDATE profiles
+  SET credits = credits + p_credits,
+      total_earned = total_earned + p_credits,
+      updated_at = NOW()
+  WHERE id = p_user_id
+  RETURNING credits INTO updated_balance;
+
+  -- Create or update transaction record
+  INSERT INTO transactions (
+    user_id,
+    stripe_session_id,
+    type,
+    status,
+    amount,
+    credits_amount,
+    description
+  ) VALUES (
+    p_user_id,
+    p_stripe_session_id,
+    'credit_purchase',
+    'completed',
+    p_amount_cents / 100.0,
+    p_credits,
+    p_description
+  )
+  ON CONFLICT (stripe_session_id) WHERE stripe_session_id IS NOT NULL
+  DO UPDATE SET
+    status = 'completed',
+    credits_amount = p_credits,
+    updated_at = NOW();
+
+  -- Create audit trail in credit_transactions
+  INSERT INTO credit_transactions (
+    user_id,
+    amount,
+    type,
+    description,
+    source,
+    metadata
+  )
+  VALUES (
+    p_user_id,
+    p_credits,
+    'purchased',
+    p_description,
+    'stripe',
+    jsonb_build_object(
+      'stripe_session_id', p_stripe_session_id,
+      'amount_cents', p_amount_cents
+    )
+  );
+
+  RETURN QUERY SELECT TRUE, updated_balance, 'Credits added successfully'::TEXT, FALSE;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- ============================================================================
+-- PAYOUT FUNCTIONS
+-- ============================================================================
+
+-- Get available payout amount for a judge (in cents)
+-- Returns earnings that are pending, older than 7 days, and not assigned to a payout
+CREATE OR REPLACE FUNCTION get_available_payout_amount(target_judge_id UUID)
+RETURNS INTEGER AS $$
+DECLARE
+  total_cents INTEGER;
+BEGIN
+  SELECT COALESCE(SUM(CAST(amount * 100 AS INTEGER)), 0) INTO total_cents
+  FROM judge_earnings
+  WHERE judge_id = target_judge_id
+    AND payout_status = 'pending'
+    AND payout_id IS NULL
+    AND created_at < NOW() - INTERVAL '7 days';
+
+  RETURN total_cents;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Get detailed earnings summary for a judge
+CREATE OR REPLACE FUNCTION get_judge_earnings_summary(target_judge_id UUID)
+RETURNS TABLE(
+  total_earned_cents INTEGER,
+  pending_cents INTEGER,
+  available_for_payout_cents INTEGER,
+  paid_cents INTEGER,
+  earnings_count INTEGER
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT
+    COALESCE(SUM(CAST(amount * 100 AS INTEGER)), 0) AS total_earned_cents,
+    COALESCE(SUM(CASE WHEN payout_status = 'pending' THEN CAST(amount * 100 AS INTEGER) ELSE 0 END), 0) AS pending_cents,
+    COALESCE(SUM(CASE WHEN payout_status = 'pending' AND payout_id IS NULL AND created_at < NOW() - INTERVAL '7 days' THEN CAST(amount * 100 AS INTEGER) ELSE 0 END), 0) AS available_for_payout_cents,
+    COALESCE(SUM(CASE WHEN payout_status = 'paid' THEN CAST(amount * 100 AS INTEGER) ELSE 0 END), 0) AS paid_cents,
+    COUNT(*)::INTEGER AS earnings_count
+  FROM judge_earnings
+  WHERE judge_id = target_judge_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- ============================================================================
+-- STATUS TRANSITION LOGGING
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION log_request_status_transition(
+  p_request_id UUID,
+  p_from_status request_status,
+  p_to_status request_status,
+  p_triggered_by UUID DEFAULT NULL,
+  p_reason TEXT DEFAULT 'system',
+  p_metadata JSONB DEFAULT '{}'
+)
+RETURNS UUID AS $$
+DECLARE
+  transition_id UUID;
+BEGIN
+  INSERT INTO request_status_transitions (
+    request_id,
+    from_status,
+    to_status,
+    triggered_by,
+    trigger_reason,
+    metadata
+  )
+  VALUES (
+    p_request_id,
+    p_from_status,
+    p_to_status,
+    p_triggered_by,
+    p_reason,
+    p_metadata
+  )
+  RETURNING id INTO transition_id;
+
+  RETURN transition_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
 -- Onboarding completion trigger
 CREATE OR REPLACE FUNCTION check_onboarding_completion()
 RETURNS TRIGGER AS $$
@@ -1118,6 +1368,9 @@ ALTER TABLE content_reports ENABLE ROW LEVEL SECURITY;
 ALTER TABLE decision_folders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE user_achievements ENABLE ROW LEVEL SECURITY;
 ALTER TABLE tips ENABLE ROW LEVEL SECURITY;
+ALTER TABLE judge_payout_accounts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE payouts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE request_status_transitions ENABLE ROW LEVEL SECURITY;
 
 -- Profile policies
 CREATE POLICY "Users can view own profile" ON profiles FOR SELECT USING (auth.uid() = id);
@@ -1157,6 +1410,23 @@ CREATE POLICY "Users can view own transactions" ON credit_transactions FOR SELEC
 
 -- Folder policies
 CREATE POLICY "Users can manage own folders" ON decision_folders FOR ALL USING (auth.uid() = user_id);
+
+-- Judge payout account policies
+CREATE POLICY "Judges can view own payout account" ON judge_payout_accounts
+  FOR SELECT USING (auth.uid() = judge_id);
+CREATE POLICY "Judges can update own payout account" ON judge_payout_accounts
+  FOR UPDATE USING (auth.uid() = judge_id);
+
+-- Payout policies
+CREATE POLICY "Judges can view own payouts" ON payouts
+  FOR SELECT USING (auth.uid() = judge_id);
+
+-- Status transition policies
+CREATE POLICY "Users can view transitions for own requests" ON request_status_transitions
+  FOR SELECT USING (
+    auth.uid() = triggered_by OR
+    auth.uid() = (SELECT user_id FROM verdict_requests WHERE id = request_id)
+  );
 
 -- ============================================================================
 -- PART 18: STORAGE POLICIES
@@ -1223,6 +1493,12 @@ GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO anon, authenticated, service_role;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO anon, authenticated, service_role;
 
+-- Specific grants for payout tables
+GRANT SELECT, INSERT, UPDATE ON judge_payout_accounts TO authenticated, service_role;
+GRANT SELECT, INSERT ON payouts TO authenticated, service_role;
+GRANT UPDATE ON payouts TO service_role;
+GRANT SELECT, INSERT ON request_status_transitions TO authenticated, service_role;
+
 -- ============================================================================
 -- VERIFICATION
 -- ============================================================================
@@ -1232,11 +1508,19 @@ BEGIN
   RAISE NOTICE '===========================================';
   RAISE NOTICE 'VERDICT DATABASE SCHEMA - COMPLETE';
   RAISE NOTICE '===========================================';
-  RAISE NOTICE 'Tables: 35+';
-  RAISE NOTICE 'Functions: 5';
+  RAISE NOTICE 'Tables: 38+';
+  RAISE NOTICE 'Functions: 20+';
   RAISE NOTICE 'Storage Buckets: 4';
   RAISE NOTICE 'RLS Policies: Enabled';
   RAISE NOTICE 'Default Data: Inserted';
+  RAISE NOTICE '===========================================';
+  RAISE NOTICE 'Includes:';
+  RAISE NOTICE '  - Core tables (profiles, requests, responses)';
+  RAISE NOTICE '  - Credit system (transactions, audit log)';
+  RAISE NOTICE '  - Judge system (earnings, reputation, payouts)';
+  RAISE NOTICE '  - Payout infrastructure (Stripe Connect)';
+  RAISE NOTICE '  - Status transition tracking';
+  RAISE NOTICE '  - Atomic credit operations';
   RAISE NOTICE '===========================================';
   RAISE NOTICE 'Ready for production deployment!';
 END $$;

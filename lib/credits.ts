@@ -30,14 +30,41 @@ export const CREDIT_ECONOMY_CONFIG = {
 export class CreditManager {
   private supabase = createClient();
 
-  async getUserCredits(userId: string): Promise<UserCredits | null> {
+  /**
+   * Get user credits from the profiles table (single source of truth)
+   * Returns a standardized object with balance for backwards compatibility
+   */
+  async getUserCredits(userId: string): Promise<{ balance: number; user_id: string } | null> {
+    const { data, error } = await this.supabase
+      .from('profiles')
+      .select('id, credits, total_earned, total_spent')
+      .eq('id', userId)
+      .single() as { data: { id: string; credits: number | null; total_earned: number | null; total_spent: number | null } | null; error: any };
+
+    if (error && error.code !== 'PGRST116') { // Not found is ok
+      throw error;
+    }
+
+    if (!data) return null;
+
+    // Return standardized format for backwards compatibility
+    return {
+      balance: data.credits ?? 0,
+      user_id: data.id
+    };
+  }
+
+  /**
+   * @deprecated Use getUserCredits() instead - this queries the redundant user_credits table
+   */
+  async getLegacyUserCredits(userId: string): Promise<UserCredits | null> {
     const { data, error } = await this.supabase
       .from('user_credits')
       .select('*')
       .eq('user_id', userId)
       .single();
 
-    if (error && error.code !== 'PGRST116') { // Not found is ok
+    if (error && error.code !== 'PGRST116') {
       throw error;
     }
 

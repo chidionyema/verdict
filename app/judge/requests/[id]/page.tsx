@@ -3,8 +3,21 @@
 import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Clock, DollarSign, Send, ArrowLeft, Maximize2 } from 'lucide-react';
+import { Clock, DollarSign, Send, ArrowLeft, Maximize2, Info, CheckCircle } from 'lucide-react';
 import type { VerdictRequest } from '@/lib/database.types';
+import { TIER_CONFIGURATIONS, getTierConfig } from '@/lib/pricing/dynamic-pricing';
+
+// Helper to get judge earning for a request tier
+function getJudgeEarningForTier(tier?: string): string {
+  const tierKey = tier === 'pro' ? 'expert' : (tier || 'community');
+  try {
+    const config = getTierConfig(tierKey);
+    return (config.judge_payout_cents / 100).toFixed(2);
+  } catch {
+    // Fallback to community tier
+    return (TIER_CONFIGURATIONS.community.judge_payout_cents / 100).toFixed(2);
+  }
+}
 
 export default function JudgeVerdictPage({
   params,
@@ -170,7 +183,7 @@ export default function JudgeVerdictPage({
             </div>
             <div className="flex items-center">
               <DollarSign className="h-5 w-5 mr-1 text-green-500" />
-              <span className="font-semibold text-green-600">$0.50</span>
+              <span className="font-semibold text-green-600">${getJudgeEarningForTier((request as any)?.request_tier)}</span>
             </div>
           </div>
         </div>
@@ -313,22 +326,66 @@ export default function JudgeVerdictPage({
             {/* Feedback Text */}
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Step 3 · Your written feedback (min 50 characters)
+                Step 3 · Your written feedback
               </label>
               <textarea
                 value={feedback}
                 onChange={(e) => setFeedback(e.target.value)}
                 placeholder="Provide specific, helpful feedback based on the context..."
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                rows={5}
-              />
-              <p
-                className={`text-sm mt-1 ${
-                  feedback.length < 120 ? 'text-red-500' : 'text-gray-500'
+                className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${
+                  feedback.length > 0 && feedback.length < 120
+                    ? 'border-red-300'
+                    : feedback.length >= 120
+                      ? 'border-green-300'
+                      : 'border-gray-300'
                 }`}
-              >
-                {feedback.length}/500 characters
-              </p>
+                rows={5}
+                maxLength={500}
+              />
+
+              {/* Enhanced Character Counter */}
+              <div className="mt-2 space-y-2">
+                {/* Progress Bar */}
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full transition-all duration-300 ${
+                        feedback.length < 120
+                          ? 'bg-red-400'
+                          : feedback.length < 200
+                            ? 'bg-green-400'
+                            : 'bg-green-500'
+                      }`}
+                      style={{ width: `${Math.min((feedback.length / 500) * 100, 100)}%` }}
+                    />
+                  </div>
+                  <span className={`text-sm font-medium ${
+                    feedback.length < 120 ? 'text-red-600' : 'text-green-600'
+                  }`}>
+                    {feedback.length}/500
+                  </span>
+                </div>
+
+                {/* Status Message */}
+                <div className="flex items-center justify-between text-xs">
+                  {feedback.length < 120 ? (
+                    <span className="text-red-600">
+                      Need {120 - feedback.length} more characters (minimum 120)
+                    </span>
+                  ) : feedback.length < 200 ? (
+                    <span className="text-green-600 flex items-center gap-1">
+                      <CheckCircle className="h-3 w-3" />
+                      Good length! Add more for bonus quality points.
+                    </span>
+                  ) : (
+                    <span className="text-green-600 flex items-center gap-1">
+                      <CheckCircle className="h-3 w-3" />
+                      Excellent detailed feedback!
+                    </span>
+                  )}
+                  <span className="text-gray-400">{feedback.length >= 120 ? 'Ready to submit' : ''}</span>
+                </div>
+              </div>
             </div>
 
             {/* Submit Button */}
@@ -350,6 +407,19 @@ export default function JudgeVerdictPage({
                 </>
               )}
             </button>
+
+            {/* Earnings Info */}
+            <div className="mt-4 p-3 rounded-lg bg-green-50 border border-green-200 text-xs text-green-800">
+              <div className="flex items-start gap-2">
+                <Info className="h-4 w-4 mt-0.5 flex-shrink-0 text-green-600" />
+                <div>
+                  <p className="font-semibold">Earnings: ${getJudgeEarningForTier((request as any)?.request_tier)}</p>
+                  <p className="text-green-700 mt-1">
+                    Earnings are available for payout after a 7-day review period. This ensures quality and protects both judges and seekers.
+                  </p>
+                </div>
+              </div>
+            </div>
 
             {/* Micro‑tips */}
             <div className="mt-4 p-3 rounded-lg bg-gray-50 border border-dashed border-gray-200 text-xs text-gray-600 space-y-1">

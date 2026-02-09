@@ -23,6 +23,7 @@ import {
 import { SplitTestButton } from '@/components/features/SplitTestButton';
 import { ComparisonButton } from '@/components/comparison/ComparisonButton';
 import { LoadingOverlay } from '@/components/ui/LoadingOverlay';
+import { X, Clock, Coins } from 'lucide-react';
 
 interface SubmissionStep {
   step: 'details' | 'mode' | 'payment' | 'processing' | 'success';
@@ -51,6 +52,8 @@ export default function UnifiedSubmitPage() {
     mediaType: 'text'
   });
   const [isProcessingPaymentReturn, setIsProcessingPaymentReturn] = useState(false);
+  const [showZeroCreditsModal, setShowZeroCreditsModal] = useState(false);
+  const [showCreditDeduction, setShowCreditDeduction] = useState(false);
 
   // Check user credits and handle payment returns on load
   useEffect(() => {
@@ -177,19 +180,30 @@ export default function UnifiedSubmitPage() {
 
   const handleModeSelect = (mode: 'community' | 'private') => {
     setSubmissionData({ ...submissionData, mode });
-    
+
     if (mode === 'community') {
       if (userCredits > 0) {
         // User has credits, submit directly
         submitCommunityRequest();
       } else {
-        // Redirect to earn credits
-        router.push('/feed?earn=true&return=/submit-unified');
+        // Show zero credits modal with clear options
+        setShowZeroCreditsModal(true);
       }
     } else {
       // Private mode, go to payment
       setStep('payment');
     }
+  };
+
+  const handleEarnCredits = () => {
+    setShowZeroCreditsModal(false);
+    router.push('/feed?earn=true&return=/submit-unified');
+  };
+
+  const handlePayInstead = () => {
+    setShowZeroCreditsModal(false);
+    setSubmissionData({ ...submissionData, mode: 'private' });
+    setStep('payment');
   };
 
   const submitCommunityRequest = async () => {
@@ -222,10 +236,16 @@ export default function UnifiedSubmitPage() {
         throw new Error(data.error || 'Failed to create request');
       }
 
-      // Success!
+      // Success! Show credit deduction animation
+      setShowCreditDeduction(true);
       setUserCredits(prev => Math.max(0, prev - 1)); // Update local credit count
-      toast.success('Your request has been submitted to the community!');
-      setStep('success');
+
+      // Show animation for 1.5 seconds, then proceed to success
+      setTimeout(() => {
+        setShowCreditDeduction(false);
+        toast.success('Your request has been submitted to the community!');
+        setStep('success');
+      }, 1500);
 
     } catch (error) {
       console.error('Community submission error:', error);
@@ -278,6 +298,108 @@ export default function UnifiedSubmitPage() {
         title="Completing Your Payment..."
         description="Your payment was successful! We're creating your request now."
       />
+
+      {/* Zero Credits Modal */}
+      {showZeroCreditsModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-bold text-gray-900">You Need 1 Credit</h3>
+                <button
+                  onClick={() => setShowZeroCreditsModal(false)}
+                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  <X className="h-5 w-5 text-gray-500" />
+                </button>
+              </div>
+
+              <p className="text-gray-600 mb-6">
+                Community submissions require 1 credit. Choose how you'd like to proceed:
+              </p>
+
+              <div className="space-y-4">
+                {/* Earn Credits Option */}
+                <button
+                  onClick={handleEarnCredits}
+                  className="w-full p-4 border-2 border-green-200 rounded-xl hover:border-green-400 hover:bg-green-50 transition-all text-left group"
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 group-hover:bg-green-200 transition-colors">
+                      <Clock className="h-6 w-6 text-green-600" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-gray-900">Earn 1 Credit Free</h4>
+                      <p className="text-sm text-gray-600 mt-1">
+                        Review 3 submissions from others (~15 minutes). Help the community and get your credit!
+                      </p>
+                      <span className="inline-block mt-2 text-xs font-medium text-green-600 bg-green-100 px-2 py-1 rounded-full">
+                        Recommended
+                      </span>
+                    </div>
+                  </div>
+                </button>
+
+                {/* Pay Instead Option */}
+                <button
+                  onClick={handlePayInstead}
+                  className="w-full p-4 border-2 border-purple-200 rounded-xl hover:border-purple-400 hover:bg-purple-50 transition-all text-left group"
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0 group-hover:bg-purple-200 transition-colors">
+                      <Coins className="h-6 w-6 text-purple-600" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-gray-900">Pay {privatePrice} Instead</h4>
+                      <p className="text-sm text-gray-600 mt-1">
+                        Skip earning credits. Your submission stays private and gets priority feedback.
+                      </p>
+                    </div>
+                  </div>
+                </button>
+              </div>
+
+              <p className="text-xs text-gray-500 text-center mt-6">
+                You can always earn more credits later by helping others with their decisions.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Credit Deduction Animation */}
+      {showCreditDeduction && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-white rounded-3xl shadow-2xl p-8 text-center max-w-sm mx-4 animate-in zoom-in duration-300">
+            <div className="relative mb-6">
+              {/* Animated coin icon */}
+              <div className="w-20 h-20 bg-gradient-to-br from-amber-400 to-yellow-500 rounded-full flex items-center justify-center mx-auto shadow-lg animate-bounce">
+                <Coins className="h-10 w-10 text-white" />
+              </div>
+              {/* Floating -1 indicator */}
+              <div className="absolute -top-2 -right-2 w-10 h-10 bg-red-500 rounded-full flex items-center justify-center text-white font-bold text-lg animate-ping">
+                -1
+              </div>
+            </div>
+
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">Credit Used!</h3>
+            <p className="text-gray-600 mb-4">
+              1 credit has been deducted from your balance.
+            </p>
+
+            <div className="bg-gradient-to-r from-amber-50 to-yellow-50 rounded-xl p-4 border border-amber-200">
+              <p className="text-amber-800 font-medium">
+                Remaining: {userCredits} credit{userCredits !== 1 ? 's' : ''}
+              </p>
+            </div>
+
+            <div className="mt-4 flex items-center justify-center gap-2 text-sm text-gray-500">
+              <div className="w-2 h-2 bg-indigo-600 rounded-full animate-pulse" />
+              <span>Submitting to community...</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         
@@ -632,7 +754,13 @@ function DetailsStep({ submissionData, setSubmissionData, onNext }: any) {
 function ModeSelectionStep({ userCredits, privatePrice, onSelect }: any) {
   return (
     <div className="p-8">
-      <h2 className="text-3xl font-bold text-gray-900 mb-2">How would you like to get feedback?</h2>
+      <div className="flex items-center justify-between mb-2">
+        <h2 className="text-3xl font-bold text-gray-900">How would you like to get feedback?</h2>
+        <div className="flex items-center gap-2 bg-gray-100 px-3 py-1.5 rounded-full">
+          <Coins className="h-4 w-4 text-amber-600" />
+          <span className="text-sm font-medium">{userCredits} credit{userCredits !== 1 ? 's' : ''}</span>
+        </div>
+      </div>
       <p className="text-gray-600 mb-8">Both paths give you 3 comprehensive feedback reports. Choose based on your preference.</p>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

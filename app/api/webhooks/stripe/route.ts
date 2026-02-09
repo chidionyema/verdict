@@ -152,67 +152,115 @@ async function handleCheckoutSessionCompleted(
   supabase: any
 ) {
   const metadata = session.metadata;
-  if (!metadata?.type || !metadata?.user_id) return;
 
-  if (metadata.type === 'credit_purchase') {
-    const credits = parseInt(metadata.credits || '0');
-    const userId = metadata.user_id;
+  // Determine if this is a credit purchase (support both metadata patterns)
+  // Pattern 1: type: 'credit_purchase' (from /api/payment/checkout)
+  // Pattern 2: is_legacy_package: 'true' (from /api/billing/create-checkout-session)
+  const isCreditPurchase = metadata?.type === 'credit_purchase' ||
+                           metadata?.is_legacy_package === 'true';
+  const credits = parseInt(metadata?.credits || '0');
+  const userId = metadata?.user_id;
 
-    // Idempotency: if we've already processed this session, exit early
-    const { data: existingTx } = await supabase
-      .from('transactions')
-      .select('id')
-      .eq('stripe_session_id', session.id)
-      .maybeSingle?.() ?? { data: null };
+  // Handle credit purchases
+  if (isCreditPurchase && userId && credits > 0) {
+    log.info('Processing credit purchase', {
+      sessionId: session.id,
+      userId,
+      credits,
+      amountCents: session.amount_total,
+      metadataPattern: metadata?.type ? 'type' : 'is_legacy_package'
+    });
 
-    if (existingTx) {
-      // Already processed this checkout session
-      return;
-    }
-
-    // Add credits atomically to prevent race conditions
-    const { data: addResult, error: addError } = await supabase.rpc('add_credits', {
+    // Use atomic RPC that handles idempotency, credit addition, and audit logging
+    const { data: purchaseResult, error: purchaseError } = await supabase.rpc('process_credit_purchase', {
       p_user_id: userId,
-      p_credits: credits
+      p_credits: credits,
+      p_stripe_session_id: session.id,
+      p_amount_cents: session.amount_total || 0,
+      p_description: `Credit purchase: ${credits} credits`
     });
 
-    if (addError) {
-      log.error('Failed to add credits', addError, { userId, credits });
-      return;
-    }
-
-    const result = addResult?.[0];
-    if (!result?.success) {
-      log.error('Credit addition failed', null, { message: result?.message, userId, credits });
-      return;
-    }
-
-    // Log transaction (CRITICAL: Must succeed for audit compliance)  
-    const { error: transactionError } = await supabase.from('transactions').insert({
-      user_id: userId,
-      amount_cents: session.amount_total,
-      currency: 'USD',
-      status: 'paid',
-      stripe_session_id: session.id,
-      stripe_payment_intent_id: session.payment_intent as string,
-      description: `Credit purchase: ${credits} credits`,
-      metadata: { credits_purchased: credits }
-    });
-    
-    if (transactionError) {
-      log.error('CRITICAL: Transaction audit log failed after credit addition', transactionError, {
+    if (purchaseError) {
+      log.error('CRITICAL: Credit purchase processing failed', purchaseError, {
         sessionId: session.id,
         userId,
         credits,
         amount: session.amount_total
       });
-      // This is a critical audit failure - consider alerting monitoring systems
-      throw new Error(`Transaction audit failed: ${transactionError.message}`);
+      // Throw to signal Stripe to retry this webhook
+      throw new Error(`Credit purchase failed for session ${session.id}: ${purchaseError.message}`);
     }
 
-  } else if (metadata.type === 'subscription') {
-    // Subscription will be handled by subscription.created event
+    const result = purchaseResult?.[0];
+    if (!result?.success) {
+      log.error('Credit purchase failed', null, {
+        message: result?.message,
+        sessionId: session.id,
+        userId,
+        credits
+      });
+      throw new Error(`Credit purchase failed: ${result?.message}`);
+    }
+
+    if (result?.already_processed) {
+      log.info('Credit purchase already processed (idempotent)', {
+        sessionId: session.id,
+        userId,
+        currentBalance: result?.new_balance
+      });
+    } else {
+      log.info('Credits added successfully', {
+        sessionId: session.id,
+        userId,
+        credits,
+        newBalance: result?.new_balance,
+        amount: session.amount_total
+      });
+
+      // Create notification for user
+      try {
+        await supabase.rpc('create_notification', {
+          p_user_id: userId,
+          p_type: 'credit_purchase',
+          p_title: 'Credits Added!',
+          p_message: `${credits} credits have been added to your account.`,
+          p_metadata: JSON.stringify({
+            credits,
+            new_balance: result?.new_balance,
+            stripe_session_id: session.id
+          })
+        });
+      } catch (notifError) {
+        // Non-critical - log but don't fail
+        log.warn('Failed to create credit purchase notification', { error: notifError, userId });
+      }
+    }
+    return;
+  }
+
+  // Handle subscription checkouts
+  if (metadata?.type === 'subscription') {
     log.info('Subscription checkout completed, waiting for subscription.created event', { sessionId: session.id });
+    return;
+  }
+
+  // Handle private submission payments (no credits, just payment confirmation)
+  if (metadata?.submission_type === 'private' && userId) {
+    log.info('Private submission payment completed', {
+      sessionId: session.id,
+      userId,
+      amount: session.amount_total
+    });
+    return;
+  }
+
+  // Log unhandled checkout sessions for debugging
+  if (metadata) {
+    log.warn('Unhandled checkout session type', {
+      sessionId: session.id,
+      metadata,
+      paymentStatus: session.payment_status
+    });
   }
 }
 

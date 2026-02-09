@@ -255,8 +255,10 @@ export default function JudgeQualificationPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-indigo-600"></div>
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 flex flex-col items-center justify-center">
+        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-indigo-600 mb-4"></div>
+        <p className="text-gray-600 font-medium">Loading qualification...</p>
+        <p className="text-gray-400 text-sm mt-2">This should only take a moment</p>
       </div>
     );
   }
@@ -428,10 +430,22 @@ export default function JudgeQualificationPage() {
                 <button
                   onClick={submitQualification}
                   disabled={Object.keys(quizAnswers).length < QUIZ_QUESTIONS.length || isSubmitting}
-                  className="bg-indigo-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-indigo-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed min-h-[48px]"
+                  className="bg-indigo-600 text-white px-8 py-3 rounded-lg font-semibold hover:bg-indigo-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed min-h-[48px] inline-flex items-center justify-center gap-2"
                 >
-                  {isSubmitting ? 'Submitting...' : 'Submit Quiz'}
+                  {isSubmitting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                      Checking answers...
+                    </>
+                  ) : (
+                    'Submit Quiz'
+                  )}
                 </button>
+                {Object.keys(quizAnswers).length < QUIZ_QUESTIONS.length && (
+                  <p className="text-sm text-gray-500 mt-2">
+                    Please answer all {QUIZ_QUESTIONS.length} questions ({Object.keys(quizAnswers).length}/{QUIZ_QUESTIONS.length} answered)
+                  </p>
+                )}
               </div>
             </div>
           ) : (

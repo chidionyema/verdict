@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient, createServiceClient } from '@/lib/supabase/server';
+import { createClient, createServiceClient, hasServiceKey } from '@/lib/supabase/server';
 import { log } from '@/lib/logger';
 import { reputationManager } from '@/lib/reputation';
 import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
@@ -60,83 +60,71 @@ async function GET_Handler(
       }
     }
 
-    // Fetch verdicts for this request using service client to avoid RLS edge-cases,
-    // after we've already verified that the caller is allowed to view this request.
+    // Fetch verdicts for this request
+    // We've already verified that the caller is allowed to view this request
     let verdicts: any[] | null = null;
     let verdictsError: any = null;
     const receivedCount = (verdictRequest as any).received_verdict_count || 0;
+    const isOwner = (verdictRequest as any).user_id === user.id;
+
+    // Strategy: Use service client if available (bypasses RLS), otherwise use regular client
+    // For request owners, the regular client should work via RLS policies
+    const useServiceClient = hasServiceKey();
 
     try {
-      const serviceClient = createServiceClient() as any;
-      
-      // Try fetching all verdicts first (without status filter)
-      // The status column might not exist or might be causing issues
-      let result = await (serviceClient as any)
-        .from('verdict_responses')
-        .select('*')
-        .eq('request_id', id)
-        .order('created_at', { ascending: true });
-      
-      verdicts = result.data;
-      verdictsError = result.error;
-      
+      if (useServiceClient) {
+        const serviceClient = createServiceClient() as any;
+
+        const result = await serviceClient
+          .from('verdict_responses')
+          .select('*')
+          .eq('request_id', id)
+          .order('created_at', { ascending: true });
+
+        verdicts = result.data;
+        verdictsError = result.error;
+      } else {
+        // No service key - use regular client
+        // This relies on RLS policies allowing the owner to see verdicts
+        log.info('Using regular client for verdict fetch (no service key)', {
+          request_id: id,
+          user_id: user.id,
+          is_owner: isOwner,
+        });
+
+        const result = await (supabase as any)
+          .from('verdict_responses')
+          .select('*')
+          .eq('request_id', id)
+          .order('created_at', { ascending: true });
+
+        verdicts = result.data;
+        verdictsError = result.error;
+      }
+
       // Filter out 'removed' verdicts in memory if status field exists
       if (verdicts && verdicts.length > 0) {
         verdicts = verdicts.filter((v: any) => v.status !== 'removed');
       }
-      
-      // If we got an error or no results but count says there should be verdicts, log details
+
+      // Log mismatch for debugging
       if (receivedCount > 0 && (!verdicts || verdicts.length === 0)) {
         log.error('Verdict count mismatch - no verdicts found', {
           request_id: id,
           received_verdict_count: receivedCount,
           verdicts_found: verdicts?.length || 0,
           query_error: verdictsError,
-          service_key_set: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
-        });
-        
-        // Try a direct count query to see if verdicts actually exist
-        const countResult = await (serviceClient as any)
-          .from('verdict_responses')
-          .select('id', { count: 'exact', head: true })
-          .eq('request_id', id);
-        
-        log.info('Direct count query result', {
-          request_id: id,
-          count: countResult.count,
-          count_error: countResult.error,
+          used_service_client: useServiceClient,
+          is_owner: isOwner,
         });
       }
-    } catch (serviceClientError: any) {
-      log.error('Service client creation/query failed', {
-        error: serviceClientError?.message || serviceClientError,
+    } catch (queryError: any) {
+      log.error('Verdict fetch failed', {
+        error: queryError?.message || queryError,
         request_id: id,
-        has_service_key: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+        used_service_client: useServiceClient,
       });
-      
-      // Fallback: try with regular client (might work if RLS allows for this user)
-      try {
-        const result = await (supabase as any)
-          .from('verdict_responses')
-          .select('*')
-          .eq('request_id', id)
-          .neq('status', 'removed') // Exclude removed verdicts
-          .order('created_at', { ascending: true });
-        
-        verdicts = result.data;
-        verdictsError = result.error;
-        
-        if (result.error) {
-          log.error('Regular client also failed', {
-            error: result.error,
-            request_id: id,
-            user_id: user.id,
-          });
-        }
-      } catch (fallbackError) {
-        log.error('Fallback verdict fetch also failed', fallbackError);
-        verdictsError = fallbackError;
-      }
+      verdictsError = queryError;
     }
 
     if (verdictsError) {
@@ -258,16 +246,108 @@ async function PATCH_Handler(
       updateData.is_flagged = true;
       updateData.flagged_reason = reason || 'Flagged by user';
     } else if (action === 'cancel') {
+      const currentStatus = (verdictRequest as any).status;
       if (
-        (verdictRequest as any).status !== 'in_progress' &&
-        (verdictRequest as any).status !== 'pending'
+        currentStatus !== 'in_progress' &&
+        currentStatus !== 'open' &&
+        currentStatus !== 'pending'
       ) {
         return NextResponse.json(
-          { error: 'Can only cancel requests that are in progress' },
+          { error: 'Can only cancel requests that are open or in progress' },
           { status: 400 }
         );
       }
+
       updateData.status = 'cancelled';
+
+      // Calculate pro-rated refund based on delivered verdicts
+      const receivedCount = (verdictRequest as any).received_verdict_count || 0;
+      const targetCount = (verdictRequest as any).target_verdict_count || 3;
+      const creditsCharged = (verdictRequest as any).credits_charged ||
+                             (verdictRequest as any).credits_cost || 0;
+
+      if (creditsCharged > 0 && targetCount > 0) {
+        // Calculate undelivered ratio and refund amount
+        const deliveredRatio = receivedCount / targetCount;
+        const refundCredits = Math.floor(creditsCharged * (1 - deliveredRatio));
+
+        if (refundCredits > 0) {
+          // Refund credits using the refund_credits RPC
+          const { data: refundResult, error: refundError } = await (supabase.rpc as any)(
+            'refund_credits',
+            {
+              p_user_id: user.id,
+              p_credits: refundCredits,
+              p_reason: `Cancelled request ${id}: ${receivedCount}/${targetCount} verdicts received`
+            }
+          );
+
+          if (refundError) {
+            log.error('Failed to refund credits on cancellation', refundError, {
+              requestId: id,
+              userId: user.id,
+              refundCredits,
+              receivedCount,
+              targetCount
+            });
+            // Don't fail the cancellation, but log the issue for manual reconciliation
+          } else {
+            log.info('Credits refunded on cancellation', {
+              requestId: id,
+              userId: user.id,
+              refundCredits,
+              newBalance: refundResult?.[0]?.new_balance,
+              receivedCount,
+              targetCount
+            });
+            updateData.credits_refunded = refundCredits;
+
+            // Create notification for user about refund
+            try {
+              await (supabase.rpc as any)('create_notification', {
+                p_user_id: user.id,
+                p_type: 'credit_refund',
+                p_title: 'Credits Refunded',
+                p_message: `${refundCredits} credit${refundCredits > 1 ? 's' : ''} refunded for cancelled request.`,
+                p_metadata: JSON.stringify({
+                  refund_credits: refundCredits,
+                  request_id: id,
+                  verdicts_received: receivedCount,
+                  verdicts_target: targetCount
+                })
+              });
+            } catch (notifError) {
+              log.warn('Failed to create refund notification', { error: notifError });
+            }
+          }
+        } else {
+          log.info('No refund on cancellation - all verdicts delivered', {
+            requestId: id,
+            receivedCount,
+            targetCount,
+            creditsCharged
+          });
+        }
+      }
+
+      // Log status transition for audit trail
+      try {
+        await (supabase.rpc as any)('log_request_status_transition', {
+          p_request_id: id,
+          p_from_status: currentStatus,
+          p_to_status: 'cancelled',
+          p_triggered_by: user.id,
+          p_reason: 'user_action',
+          p_metadata: JSON.stringify({
+            refund_credits: updateData.credits_refunded || 0,
+            verdicts_received: receivedCount,
+            verdicts_target: targetCount,
+            cancellation_reason: reason || 'User requested cancellation'
+          })
+        });
+      } catch (transitionError) {
+        log.warn('Failed to log status transition', { error: transitionError });
+      }
     } else {
       return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
     }

@@ -144,15 +144,32 @@ export function JudgeTraining({ onComplete, onSkip, className = '' }: JudgeTrain
               <p className="text-gray-600">{currentCard.content}</p>
             </div>
 
-            {/* Placeholder for image */}
-            {currentCard.imageUrl && (
-              <div className="bg-gray-100 rounded-lg aspect-square flex items-center justify-center">
-                <div className="text-gray-400 text-sm text-center">
-                  <div className="w-16 h-16 bg-gray-200 rounded-lg mx-auto mb-2"></div>
-                  Example content
-                </div>
+            {/* Visual representation of the submission */}
+            <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg aspect-[4/3] flex items-center justify-center border border-gray-200">
+              <div className="text-center p-6">
+                {currentCard.id === 'good-example' && (
+                  <>
+                    <div className="text-5xl mb-3">💇</div>
+                    <p className="text-gray-600 text-sm font-medium">Professional haircut photo</p>
+                    <p className="text-gray-400 text-xs mt-1">Well-lit, clean background, neat styling</p>
+                  </>
+                )}
+                {currentCard.id === 'poor-photo' && (
+                  <>
+                    <div className="text-5xl mb-3">🚗</div>
+                    <p className="text-gray-600 text-sm font-medium">Car selfie photo</p>
+                    <p className="text-gray-400 text-xs mt-1">Dark lighting, messy background</p>
+                  </>
+                )}
+                {currentCard.id === 'creative-work' && (
+                  <>
+                    <div className="text-5xl mb-3">☕</div>
+                    <p className="text-gray-600 text-sm font-medium">Coffee shop logo design</p>
+                    <p className="text-gray-400 text-xs mt-1">Handcrafted typography, earthy tones</p>
+                  </>
+                )}
               </div>
-            )}
+            </div>
 
             {/* Training Actions */}
             {!showExplanation && (

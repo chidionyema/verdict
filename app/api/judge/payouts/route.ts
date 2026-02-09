@@ -203,15 +203,35 @@ async function POST_Handler(request: NextRequest) {
         .eq('id', payout.id);
 
       // Update earnings to mark as paid
-      await (supabase as any)
+      // Note: earnings are created with 'pending' status and must be 7+ days old
+      // to be eligible for payout (maturation period)
+      const maturationDate = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const { data: updatedEarnings, error: updateError } = await (supabase as any)
         .from('judge_earnings')
         .update({
           payout_status: 'paid',
           payout_id: payout.id,
+          payout_date: new Date().toISOString(),
         })
         .eq('judge_id', user.id)
-        .eq('payout_status', 'available')
-        .lte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()); // 7+ days old
+        .eq('payout_status', 'pending')  // Earnings are created with 'pending' status
+        .is('payout_id', null)  // Not already assigned to a payout
+        .lte('created_at', maturationDate)  // 7+ days old (maturation period)
+        .select('id');
+
+      const earningsCount = updatedEarnings?.length || 0;
+      log.info('Updated earnings for payout', {
+        payoutId: payout.id,
+        earningsCount,
+        maturationDate,
+        updateError: updateError || null
+      });
+
+      // Update payout with earnings count
+      await (supabase as any)
+        .from('payouts')
+        .update({ earnings_count: earningsCount })
+        .eq('id', payout.id);
 
       return NextResponse.json({
         success: true,

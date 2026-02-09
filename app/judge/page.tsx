@@ -1,19 +1,19 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { 
-  DollarSign, 
-  Clock, 
-  Award, 
-  ArrowRight, 
-  ToggleLeft, 
-  ToggleRight, 
-  TrendingUp, 
-  Star, 
-  Zap, 
-  Filter, 
+import {
+  DollarSign,
+  Clock,
+  Award,
+  ArrowRight,
+  ToggleLeft,
+  ToggleRight,
+  TrendingUp,
+  Star,
+  Zap,
+  Filter,
   Search,
   Flame,
   Trophy,
@@ -36,12 +36,27 @@ import {
   AlertCircle,
   Heart,
   Users,
-  Plus
+  Plus,
+  Info,
+  HelpCircle
 } from 'lucide-react';
 import type { Profile } from '@/lib/database.types';
 import JudgeProgression from '@/components/judge/JudgeProgression';
 import { EmptyState } from '@/components/ui/EmptyStates';
 import { CrossRolePrompt } from '@/components/ui/CrossRolePrompt';
+import { TIER_CONFIGURATIONS, getTierConfig } from '@/lib/pricing/dynamic-pricing';
+
+// Helper to get judge earning for a request tier
+function getJudgeEarningForTier(tier?: string): string {
+  const tierKey = tier === 'pro' ? 'expert' : (tier || 'community');
+  try {
+    const config = getTierConfig(tierKey);
+    return (config.judge_payout_cents / 100).toFixed(2);
+  } catch {
+    // Fallback to community tier
+    return (TIER_CONFIGURATIONS.community.judge_payout_cents / 100).toFixed(2);
+  }
+}
 
 interface QueueRequest {
   id: string;
@@ -94,9 +109,20 @@ export const dynamic = 'force-dynamic';
 
 export default function JudgeDashboardPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const judgeRedirectPath = '/judge/qualify';
 
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [showSubmissionSuccess, setShowSubmissionSuccess] = useState(false);
+
+  // Check for submission success param
+  useEffect(() => {
+    if (searchParams.get('submitted') === 'true') {
+      setShowSubmissionSuccess(true);
+      // Clear the URL param without navigation
+      window.history.replaceState({}, '', '/judge');
+    }
+  }, [searchParams]);
   const [queue, setQueue] = useState<QueueRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [toggling, setToggling] = useState(false);
@@ -128,6 +154,7 @@ export default function JudgeDashboardPage() {
   const [earningsData, setEarningsData] = useState<Array<{ date: string; amount: number }>>([]);
   const [queueLoading, setQueueLoading] = useState(false);
   const [queueError, setQueueError] = useState<string | null>(null);
+  const [showQueueInfo, setShowQueueInfo] = useState(false);
 
   // Filter and sort queue
   const filteredQueue = queue
@@ -490,6 +517,43 @@ export default function JudgeDashboardPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/50 to-purple-50/50">
       <div className="max-w-7xl mx-auto px-4 py-8">
+
+        {/* Submission Success Banner */}
+        {showSubmissionSuccess && (
+          <div className="mb-6 bg-gradient-to-r from-green-500 to-emerald-500 rounded-2xl shadow-xl p-6 text-white relative overflow-hidden animate-in slide-in-from-top duration-300">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl" />
+            <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                  <CheckCircle2 className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg">Verdict Submitted!</h3>
+                  <p className="text-green-100 text-sm">
+                    You earned credits for your feedback. Want to use them now?
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => router.push('/submit-unified')}
+                  className="px-4 py-2 bg-white text-green-600 rounded-lg font-semibold hover:bg-green-50 transition inline-flex items-center gap-2"
+                >
+                  <Coins className="h-4 w-4" />
+                  Use Your Credits
+                </button>
+                <button
+                  onClick={() => setShowSubmissionSuccess(false)}
+                  className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition"
+                  aria-label="Dismiss"
+                >
+                  <XCircle className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Premium Header with Level Progress */}
         <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl border border-white/50 p-8 mb-8 relative overflow-hidden">
           {/* Background Pattern */}
@@ -855,7 +919,7 @@ export default function JudgeDashboardPage() {
               <div className="flex items-center justify-center gap-8 text-sm text-gray-500">
                 <div className="flex items-center gap-2">
                   <Coins className="h-4 w-4 text-green-600" />
-                  <span>~$0.55 per verdict</span>
+                  <span>~${getJudgeEarningForTier('community')}-${getJudgeEarningForTier('expert')} per verdict</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Clock className="h-4 w-4 text-blue-600" />
@@ -891,6 +955,65 @@ export default function JudgeDashboardPage() {
                         Priority Matching
                       </span>
                     )}
+                    {/* Queue Type Info Button */}
+                    <div className="relative">
+                      <button
+                        onClick={() => setShowQueueInfo(!showQueueInfo)}
+                        className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
+                        aria-label="Learn about queue types"
+                      >
+                        <HelpCircle className="h-5 w-5" />
+                      </button>
+
+                      {/* Queue Info Tooltip */}
+                      {showQueueInfo && (
+                        <div className="absolute left-0 top-10 z-50 w-80 bg-white rounded-xl shadow-2xl border border-gray-200 p-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                          <div className="flex items-center justify-between mb-3">
+                            <h4 className="font-bold text-gray-900 flex items-center gap-2">
+                              <Info className="h-4 w-4 text-indigo-600" />
+                              Queue Types Explained
+                            </h4>
+                            <button
+                              onClick={() => setShowQueueInfo(false)}
+                              className="p-1 hover:bg-gray-100 rounded transition"
+                            >
+                              <XCircle className="h-4 w-4 text-gray-400" />
+                            </button>
+                          </div>
+
+                          <div className="space-y-3">
+                            {/* Community Queue */}
+                            <div className="bg-blue-50 rounded-lg p-3">
+                              <div className="flex items-center gap-2 mb-1">
+                                <Users className="h-4 w-4 text-blue-600" />
+                                <span className="font-semibold text-blue-900 text-sm">Community Queue</span>
+                              </div>
+                              <p className="text-xs text-blue-700">
+                                Standard requests from regular users. Open to all qualified judges. Earn ${getJudgeEarningForTier('community')} per verdict.
+                              </p>
+                            </div>
+
+                            {/* Expert Queue */}
+                            <div className="bg-purple-50 rounded-lg p-3">
+                              <div className="flex items-center gap-2 mb-1">
+                                <Crown className="h-4 w-4 text-purple-600" />
+                                <span className="font-semibold text-purple-900 text-sm">Expert Queue</span>
+                              </div>
+                              <p className="text-xs text-purple-700">
+                                Premium requests matched to your verified expertise. Higher payouts (${getJudgeEarningForTier('expert')}+) for specialized feedback.
+                              </p>
+                            </div>
+
+                            {/* How to unlock */}
+                            <div className="bg-gray-50 rounded-lg p-3">
+                              <p className="text-xs text-gray-600">
+                                <strong>Unlock expert queue:</strong> Complete 100+ verdicts with 8.5+ quality rating, or verify your professional credentials.
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <p className="text-gray-600 mt-1">
                     {isExpert 
@@ -1045,8 +1168,7 @@ export default function JudgeDashboardPage() {
                           <div className="flex items-center gap-2">
                             <DollarSign className="h-4 w-4 text-green-600" />
                             <span className="font-semibold text-green-700">
-                              Earn ${filteredQueue[0].request_tier === 'pro' ? '2.00' : 
-                                   filteredQueue[0].request_tier === 'standard' ? '1.00' : '0.60'}
+                              Earn ${getJudgeEarningForTier(filteredQueue[0].request_tier)}
                               {filteredQueue[0].request_tier === 'pro' && (
                                 <span className="text-purple-600 ml-1">+bonus</span>
                               )}
@@ -1147,35 +1269,70 @@ export default function JudgeDashboardPage() {
 
               {/* Regular Request Cards */}
               {!queueLoading && !queueError && queue.length === 0 ? (
-                <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl border border-white/50 p-12 text-center">
-                  <div className="w-24 h-24 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <Clock className="h-12 w-12 text-indigo-600" />
+                <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl border border-white/50 p-8 md:p-12">
+                  <div className="text-center mb-8">
+                    <div className="w-20 h-20 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                      <Clock className="h-10 w-10 text-indigo-600" />
+                    </div>
+                    <h3 className="text-2xl font-bold text-gray-900 mb-3">
+                      No requests available right now
+                    </h3>
+                    <p className="text-gray-600 max-w-md mx-auto">
+                      The queue is temporarily empty. New requests come in frequently!
+                    </p>
                   </div>
-                  <h3 className="text-2xl font-bold text-gray-900 mb-3">
-                    No requests available right now
-                  </h3>
-                  <p className="text-gray-600 mb-6 max-w-md mx-auto">
-                    New requests are added frequently. You can refresh to check, or browse the community feed.
-                  </p>
+
+                  {/* Helpful tips while waiting */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                    <div className="bg-blue-50 rounded-xl p-4 text-center">
+                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-2">
+                        <Clock className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <h4 className="font-semibold text-blue-900 text-sm mb-1">Peak Times</h4>
+                      <p className="text-xs text-blue-700">Evenings (6-10 PM) and weekends typically have more requests</p>
+                    </div>
+                    <div className="bg-green-50 rounded-xl p-4 text-center">
+                      <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-2">
+                        <Users className="h-5 w-5 text-green-600" />
+                      </div>
+                      <h4 className="font-semibold text-green-900 text-sm mb-1">Auto-Refresh</h4>
+                      <p className="text-xs text-green-700">Your queue refreshes every 30 seconds automatically</p>
+                    </div>
+                    <div className="bg-purple-50 rounded-xl p-4 text-center">
+                      <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center mx-auto mb-2">
+                        <Star className="h-5 w-5 text-purple-600" />
+                      </div>
+                      <h4 className="font-semibold text-purple-900 text-sm mb-1">Build Your Profile</h4>
+                      <p className="text-xs text-purple-700">Higher ratings unlock access to premium requests</p>
+                    </div>
+                  </div>
+
+                  {/* Action buttons */}
                   <div className="flex flex-col sm:flex-row gap-3 justify-center mb-6">
                     <button
                       onClick={() => fetchData()}
-                      className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition min-h-[48px]"
+                      className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition min-h-[48px] inline-flex items-center justify-center gap-2"
                     >
-                      Refresh Queue
+                      <Clock className="h-4 w-4" />
+                      Refresh Now
                     </button>
                     <button
                       onClick={() => router.push('/feed')}
-                      className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition min-h-[48px]"
+                      className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition min-h-[48px] inline-flex items-center justify-center gap-2"
                     >
+                      <MessageSquare className="h-4 w-4" />
                       Browse Community Feed
                     </button>
                   </div>
-                  <div className="flex items-center justify-center gap-6 text-sm text-gray-500">
-                    <div className="flex items-center gap-2">
-                      <Timer className="h-4 w-4 text-green-600" />
-                      <span>New requests added every few minutes</span>
-                    </div>
+
+                  {/* Tips for getting more requests */}
+                  <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-4 text-sm">
+                    <p className="font-medium text-indigo-900 mb-2">Want more requests?</p>
+                    <ul className="text-indigo-700 space-y-1 text-xs">
+                      <li>• Complete more verdicts to build your reputation</li>
+                      <li>• Maintain high quality scores to unlock expert requests</li>
+                      <li>• Check back during peak hours for more opportunities</li>
+                    </ul>
                   </div>
                 </div>
               ) : !queueLoading && !queueError && filteredQueue.length === 0 ? (
@@ -1274,7 +1431,7 @@ export default function JudgeDashboardPage() {
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                               <DollarSign className="h-5 w-5 text-green-600" />
-                              <span className="text-lg font-bold text-green-700">$0.55</span>
+                              <span className="text-lg font-bold text-green-700">${getJudgeEarningForTier(request.request_tier)}</span>
                               <span className="text-xs text-gray-500">~3-5 min</span>
                             </div>
                             

@@ -143,8 +143,8 @@ export async function GET(
 
             sendSnapshot(latest);
 
-            // Stop streaming once completed/cancelled
-            if (latest.status === 'completed' || latest.status === 'cancelled') {
+            // Stop streaming once closed/cancelled (schema uses 'closed', not 'completed')
+            if (latest.status === 'closed' || latest.status === 'cancelled') {
               cleanup();
               try {
                 controller.close();

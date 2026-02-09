@@ -41,44 +41,29 @@ async function GET_Handler(request: NextRequest) {
       log.error('Error counting verdicts', verdictsError, { userId: user.id });
     }
 
-    // Get total earnings
-    const { data: earningsData, error: earningsError } = await (supabase as any)
-      .from('judge_earnings')
-      .select('amount')
-      .eq('judge_id', user.id);
+    // Get earnings summary using RPC for consistent values across all pages
+    // This ensures we use the same calculation (including 7-day maturation) everywhere
+    const { data: earningsSummary, error: earningsError } = await (supabase.rpc as any)(
+      'get_judge_earnings_summary',
+      { target_judge_id: user.id }
+    );
 
     if (earningsError) {
-      log.error('Error fetching earnings', earningsError, { userId: user.id });
+      log.error('Error fetching earnings summary', earningsError, { userId: user.id });
     }
 
-    const totalEarnings =
-      earningsData?.reduce(
-        (sum: number, e: any) => {
-          const amount = parseFloat(e.amount || '0');
-          return sum + (Number.isNaN(amount) ? 0 : amount);
-        },
-        0
-      ) || 0;
+    // RPC returns amounts in cents, convert to dollars
+    const summaryData = earningsSummary?.[0] || {
+      total_earned_cents: 0,
+      pending_cents: 0,
+      available_for_payout_cents: 0,
+      paid_cents: 0,
+    };
 
-    // Get available for payout (pending earnings)
-    const { data: pendingEarnings, error: pendingError } = await (supabase as any)
-      .from('judge_earnings')
-      .select('amount')
-      .eq('judge_id', user.id)
-      .eq('payout_status', 'pending');
-
-    if (pendingError) {
-      log.error('Error fetching pending earnings', pendingError, { userId: user.id });
-    }
-
-    const availableForPayout =
-      pendingEarnings?.reduce(
-        (sum: number, e: any) => {
-          const amount = parseFloat(e.amount || '0');
-          return sum + (Number.isNaN(amount) ? 0 : amount);
-        },
-        0
-      ) || 0;
+    const totalEarnings = (summaryData.total_earned_cents || 0) / 100;
+    const pendingEarnings = (summaryData.pending_cents || 0) / 100;
+    const availableForPayout = (summaryData.available_for_payout_cents || 0) / 100;
+    const paidEarnings = (summaryData.paid_cents || 0) / 100;
 
     // Get average quality score
     const { data: qualityData, error: qualityError } = await (supabase as any)
@@ -121,7 +106,9 @@ async function GET_Handler(request: NextRequest) {
     return NextResponse.json({
       verdicts_given: verdictsCount || 0,
       total_earnings: totalEarnings,
+      pending_earnings: pendingEarnings,
       available_for_payout: availableForPayout,
+      paid_earnings: paidEarnings,
       average_quality_score: averageQuality,
       recent_verdicts: recentVerdicts || 0,
     }, { status: 200 });

@@ -77,21 +77,25 @@ async function GET_Handler(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch earnings' }, { status: 500 });
     }
 
-    // Get earnings by status and total amounts (in dollars)
-    const { data: earningsSummary } = await (supabase as any)
-      .from('judge_earnings')
-      .select('payout_status, amount')
-      .eq('judge_id', user.id);
+    // Get earnings summary using RPC for consistent values across all pages
+    // This ensures we use the same calculation (including 7-day maturation) everywhere
+    const { data: earningsSummaryData, error: summaryError } = await (supabase.rpc as any)(
+      'get_judge_earnings_summary',
+      { target_judge_id: user.id }
+    );
 
-    const summary =
-      earningsSummary?.reduce((acc: Record<string, number>, earning: any) => {
-        const amt = Number(earning.amount ?? 0);
-        if (!acc[earning.payout_status]) {
-          acc[earning.payout_status] = 0;
-        }
-        acc[earning.payout_status] += amt;
-        return acc;
-      }, {} as Record<string, number>) || {};
+    if (summaryError) {
+      log.error('Error fetching earnings summary', summaryError, { userId: user.id });
+    }
+
+    // RPC returns amounts in cents, convert to dollars
+    const summaryRow = earningsSummaryData?.[0] || {
+      total_earned_cents: 0,
+      pending_cents: 0,
+      available_for_payout_cents: 0,
+      paid_cents: 0,
+      earnings_count: 0,
+    };
 
     return NextResponse.json({
       earnings,
@@ -102,14 +106,12 @@ async function GET_Handler(request: NextRequest) {
         total_pages: Math.ceil((count || 0) / limit),
       },
       summary: {
-        // These amounts are in dollars
-        available_for_payout: summary.pending || 0,
-        pending: summary.pending || 0,
-        paid: summary.paid || 0,
-        total_earned: Object.values(summary).reduce(
-          (sum: number, amount: unknown) => sum + (amount as number),
-          0
-        ),
+        // These amounts are in dollars (converted from cents)
+        total_earned: (summaryRow.total_earned_cents || 0) / 100,
+        pending: (summaryRow.pending_cents || 0) / 100,
+        available_for_payout: (summaryRow.available_for_payout_cents || 0) / 100,
+        paid: (summaryRow.paid_cents || 0) / 100,
+        earnings_count: summaryRow.earnings_count || 0,
       },
     });
 

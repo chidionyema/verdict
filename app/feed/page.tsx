@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Heart, X, MessageSquare, Clock, Eye, Users, Zap, Plus } from 'lucide-react';
+import { Heart, X, MessageSquare, Clock, Eye, Users, Zap, Plus, Filter, Camera, FileText, Briefcase, Sparkles } from 'lucide-react';
 import { CreditBalance } from '@/components/credits/CreditBalance';
 import { JudgeReputation } from '@/components/reputation/JudgeReputation';
 import { CreditEarningProgress } from '@/components/credits/CreditEarningProgress';
@@ -52,6 +52,8 @@ export default function FeedPage() {
   const [trainingCompleted, setTrainingCompleted] = useState(false);
   const [earnMode, setEarnMode] = useState(false);
   const [returnUrl, setReturnUrl] = useState<string | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
 
   // Progressive profiling
   const { shouldShow: showProgressiveProfile, triggerType, dismiss: dismissProgressiveProfile, checkTrigger } = useProgressiveProfile();
@@ -101,7 +103,7 @@ export default function FeedPage() {
         setUser(user);
         
         if (user) {
-          await loadFeedItems(supabase);
+          await loadFeedItems(supabase, categoryFilter);
           await loadJudgeStats(user.id, supabase);
           
           // Check if user needs training (new judge with < 3 total judgments)
@@ -132,21 +134,37 @@ export default function FeedPage() {
     init();
   }, []);
 
-  async function loadFeedItems(supabase: ReturnType<typeof createClient>) {
+  // Reload feed when category filter changes
+  useEffect(() => {
+    if (user && supabaseRef.current) {
+      setLoading(true);
+      setCurrentIndex(0);
+      loadFeedItems(supabaseRef.current, categoryFilter);
+    }
+  }, [categoryFilter]);
+
+  async function loadFeedItems(supabase: ReturnType<typeof createClient>, category?: string | null) {
     try {
       if (!supabase) return;
-      
+
       // Add timeout to prevent infinite loading
-      const timeoutPromise = new Promise((_, reject) => 
+      const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Request timeout')), 10000)
       );
-      
+
       // Fetch public verdict requests that haven't been judged by current user
-      const fetchPromise = supabase
+      let query = supabase
         .from('verdict_requests')
         .select('*')
         .eq('visibility', 'public')
-        .eq('status', 'in_progress')
+        .eq('status', 'in_progress');
+
+      // Apply category filter if set
+      if (category) {
+        query = query.eq('category', category);
+      }
+
+      const fetchPromise = query
         .order('created_at', { ascending: false })
         .limit(50);
 
@@ -547,6 +565,69 @@ export default function FeedPage() {
         </div>
       )}
 
+      {/* Category Filter Bar */}
+      <div className="bg-white border-b border-gray-200 sticky top-[68px] z-[9]">
+        <div className="max-w-lg mx-auto px-4 py-2">
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
+            <button
+              onClick={() => setCategoryFilter(null)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                categoryFilter === null
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              All
+            </button>
+            <button
+              onClick={() => setCategoryFilter('appearance')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                categoryFilter === 'appearance'
+                  ? 'bg-pink-600 text-white'
+                  : 'bg-pink-50 text-pink-700 hover:bg-pink-100'
+              }`}
+            >
+              <Camera className="h-3.5 w-3.5" />
+              Appearance
+            </button>
+            <button
+              onClick={() => setCategoryFilter('writing')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                categoryFilter === 'writing'
+                  ? 'bg-green-600 text-white'
+                  : 'bg-green-50 text-green-700 hover:bg-green-100'
+              }`}
+            >
+              <FileText className="h-3.5 w-3.5" />
+              Writing
+            </button>
+            <button
+              onClick={() => setCategoryFilter('career')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                categoryFilter === 'career'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
+              }`}
+            >
+              <Briefcase className="h-3.5 w-3.5" />
+              Career
+            </button>
+            <button
+              onClick={() => setCategoryFilter('other')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                categoryFilter === 'other'
+                  ? 'bg-gray-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              <MessageSquare className="h-3.5 w-3.5" />
+              Other
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Main Feed */}
       <div className="max-w-lg mx-auto">
         {feedError ? (
@@ -610,7 +691,7 @@ export default function FeedPage() {
                       setLoading(true);
                       setFeedError(null);
                       if (supabaseRef.current) {
-                        loadFeedItems(supabaseRef.current);
+                        loadFeedItems(supabaseRef.current, categoryFilter);
                       }
                     }}
                     className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition min-h-[48px]"
@@ -631,9 +712,24 @@ export default function FeedPage() {
           <div className="px-4 py-12">
             <EmptyState
               variant="no-requests"
-              title="All caught up!"
-              description="You've seen all available submissions. Check back later for more, or submit your own for feedback!"
-              actions={[
+              title={categoryFilter ? `No ${categoryFilter} submissions` : "All caught up!"}
+              description={categoryFilter
+                ? `There are no submissions in the ${categoryFilter} category right now. Try a different category or check back later.`
+                : "You've seen all available submissions. Check back later for more, or submit your own for feedback!"}
+              actions={categoryFilter ? [
+                {
+                  label: 'View All Categories',
+                  action: () => setCategoryFilter(null),
+                  variant: 'primary',
+                  icon: Sparkles
+                },
+                {
+                  label: 'Return to Dashboard',
+                  action: () => router.push('/dashboard'),
+                  variant: 'secondary',
+                  icon: Users
+                }
+              ] : [
                 {
                   label: 'Submit Your Own Request',
                   action: () => router.push('/start'),
