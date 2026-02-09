@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import {
@@ -107,7 +107,7 @@ interface ActivityItem {
 // Force dynamic rendering to avoid Supabase client issues during build
 export const dynamic = 'force-dynamic';
 
-export default function JudgeDashboardPage() {
+function JudgeDashboardContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const judgeRedirectPath = '/judge/qualify';
@@ -1610,5 +1610,20 @@ export default function JudgeDashboardPage() {
         }
       `}</style>
     </div>
+  );
+}
+
+export default function JudgeDashboardPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto mb-4" />
+          <p className="text-gray-500">Loading judge dashboard...</p>
+        </div>
+      </div>
+    }>
+      <JudgeDashboardContent />
+    </Suspense>
   );
 }
