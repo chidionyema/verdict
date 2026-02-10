@@ -3,6 +3,20 @@ import { createClient } from '@/lib/supabase/server';
 import { log } from '@/lib/logger';
 import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
 
+// Get default action label based on notification type
+function getDefaultActionLabel(type: string): string | null {
+  const labels: Record<string, string> = {
+    verdict_received: 'View Verdict',
+    new_verdict: 'View Verdict',
+    request_completed: 'View Results',
+    new_judge_request: 'Start Judging',
+    credit_purchase: 'View Balance',
+    earning_credited: 'View Earnings',
+    judge_qualified: 'Start Judging',
+  };
+  return labels[type] || null;
+}
+
 // GET /api/notifications - Get user's notifications
 async function GET_Handler(request: NextRequest) {
   try {
@@ -37,7 +51,7 @@ async function GET_Handler(request: NextRequest) {
       .range(offset, offset + limit - 1);
 
     if (unread_only) {
-      query = query.eq('is_read', false);
+      query = query.eq('read', false); // Database uses 'read', not 'is_read'
     }
 
     const { data: notifications, error: fetchError } = await query;
@@ -52,8 +66,21 @@ async function GET_Handler(request: NextRequest) {
     const { data: unreadCountData } = await supabase
       .rpc('get_unread_notification_count', { target_user_id: user.id }) as { data: number | null };
 
-    return NextResponse.json({ 
-      notifications: notifications || [],
+    // Transform notifications to client format (map 'read' to 'is_read' and extract metadata fields)
+    const transformedNotifications = (notifications || []).map((n: any) => ({
+      id: n.id,
+      created_at: n.created_at,
+      type: n.type,
+      title: n.title,
+      message: n.message,
+      is_read: n.read, // Map database 'read' to client 'is_read'
+      priority: n.metadata?.priority || 'normal',
+      action_label: n.metadata?.action_label || getDefaultActionLabel(n.type),
+      action_url: n.metadata?.action_url || null,
+    }));
+
+    return NextResponse.json({
+      notifications: transformedNotifications,
       unread_count: unreadCountData || 0,
       has_more: notifications?.length === limit
     });

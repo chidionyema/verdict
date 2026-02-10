@@ -363,19 +363,27 @@ export default function FeedPage() {
 
   async function handleTrainingComplete() {
     if (!user || !supabaseRef.current) return;
-    
+
     try {
-      // Mark training as completed
-      await (supabaseRef.current
+      // Mark training as completed - verify the update succeeded
+      const { error: updateError } = await (supabaseRef.current
         .from('profiles')
         .update as any)({ judge_training_completed: true })
         .eq('id', user.id);
 
+      if (updateError) {
+        console.error('Error updating training status:', updateError);
+        toast.error('Failed to save training completion. Please try again.');
+        return;
+      }
+
+      // Only update UI state after database update succeeds
       setShowTraining(false);
       setTrainingCompleted(true);
       toast.success('Training completed! You can now start judging.');
     } catch (error) {
       console.error('Error completing training:', error);
+      toast.error('An error occurred. Please try again.');
     }
   }
 

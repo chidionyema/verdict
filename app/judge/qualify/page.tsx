@@ -220,12 +220,14 @@ export default function JudgeQualificationPage() {
         throw new Error(`Failed to save demographics: ${errorData.error || 'Unknown error'}`);
       }
 
-      // Update profile to judge status
+      // Update profile to judge status AND mark training as completed
+      // (since they passed the qualification quiz, they don't need training again)
       const profileRes = await fetch('/api/profile', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           is_judge: true,
+          judge_training_completed: true,
           judge_qualification_date: new Date().toISOString()
         }),
       });

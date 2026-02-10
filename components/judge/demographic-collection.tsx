@@ -547,11 +547,11 @@ export function DemographicCollection({ onComplete }: DemographicCollectionProps
                   const finalData: any = {
                     age_range: data.age_range || '',
                     gender: data.gender || customGender || '',
-                    ethnicity: data.ethnicity?.includes('Self-describe') 
+                    ethnicity: data.ethnicity?.includes('Self-describe')
                       ? [...data.ethnicity.filter(e => e !== 'Self-describe'), customEthnicity].filter(Boolean)
                       : data.ethnicity || [],
                     location: data.location || '',
-                    education: data.education || '',
+                    education_level: data.education || '',  // API expects education_level, not education
                     profession: data.profession || '',
                     relationship_status: data.relationship_status || '',
                     income_range: data.income_range || '',

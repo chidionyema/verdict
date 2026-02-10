@@ -120,11 +120,32 @@ async function POST_Handler(
     // Get authenticated user
     const supabase = await createClient();
     const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
+
     if (userError || !user) {
       return NextResponse.json(
         { error: 'Authentication required' },
         { status: 401 }
+      );
+    }
+
+    // CRITICAL: Verify user is a qualified judge
+    const { data: judgeProfile, error: profileError } = await supabase
+      .from('profiles')
+      .select('is_judge, judge_qualification_date')
+      .eq('id', user.id)
+      .single();
+
+    if (profileError || !judgeProfile) {
+      return NextResponse.json(
+        { error: 'Profile not found' },
+        { status: 404 }
+      );
+    }
+
+    if (!(judgeProfile as any).is_judge || !(judgeProfile as any).judge_qualification_date) {
+      return NextResponse.json(
+        { error: 'You must be a qualified judge to submit verdicts' },
+        { status: 403 }
       );
     }
 

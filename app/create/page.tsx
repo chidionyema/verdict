@@ -55,7 +55,7 @@ export const dynamic = 'force-dynamic';
 type RequestType = 'verdict' | 'comparison' | 'split_test';
 type MediaType = 'photo' | 'text' | 'audio';
 type Category = 'appearance' | 'profile' | 'writing' | 'decision';
-type Tier = 'community' | 'standard' | 'premium';
+type Tier = 'community' | 'standard' | 'pro';
 
 interface FormData {
   requestType: RequestType;
@@ -194,8 +194,8 @@ const TIERS = [
     popular: true,
   },
   {
-    id: 'premium' as Tier,
-    title: 'Premium',
+    id: 'pro' as Tier,
+    title: 'Pro',
     subtitle: '10 feedback reports from expert judges',
     price: '4 credits',
     verdictCount: 10,
@@ -389,7 +389,7 @@ export default function CreateRequestPage() {
       return 'community'; // Users with insufficient credits default to free path
     }
     if (profileData.credits >= 4 && profileData.total_submissions > 3) {
-      return 'premium'; // Experienced users with credits get premium
+      return 'pro'; // Experienced users with credits get pro tier
     }
     return 'standard'; // Default for most users
   };

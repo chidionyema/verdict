@@ -28,7 +28,7 @@ interface FeedbackPreviewProps {
     textContent: string;
     mediaFiles: File[];
     targetVerdictCount: number;
-    tier: 'community' | 'standard' | 'premium';
+    tier: 'community' | 'standard' | 'pro';
   };
   onContinue: () => void;
   onEdit: () => void;
@@ -170,7 +170,7 @@ export function FeedbackPreview({ formData, onContinue, onEdit }: FeedbackPrevie
     }
 
     // Tier-based quality prediction
-    if (formData.tier === 'premium') {
+    if (formData.tier === 'pro') {
       score += 20;
       setExpectedOutcome('Comprehensive expert analysis with actionable insights');
     } else if (formData.tier === 'standard') {
@@ -199,7 +199,7 @@ export function FeedbackPreview({ formData, onContinue, onEdit }: FeedbackPrevie
   };
 
   const estimatedTime = () => {
-    const baseTime = formData.tier === 'premium' ? 60 : formData.tier === 'standard' ? 120 : 30;
+    const baseTime = formData.tier === 'pro' ? 60 : formData.tier === 'standard' ? 120 : 30;
     const complexity = formData.context.length > 100 ? 1.2 : 1;
     return Math.round(baseTime * complexity);
   };

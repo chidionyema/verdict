@@ -231,47 +231,47 @@ export class SubcategoryDetector {
 
 // Smart tier recommendation based on content complexity
 export class TierRecommendation {
-  static recommendTier(text: string, hasImage: boolean): 'basic' | 'standard' | 'premium' {
-    if (!text || text.length < 20) return 'basic';
-    
+  static recommendTier(text: string, hasImage: boolean): 'community' | 'standard' | 'pro' {
+    if (!text || text.length < 20) return 'community';
+
     let complexity = 0;
     const lowerText = text.toLowerCase();
-    
+
     // Length-based complexity
     if (text.length > 200) complexity += 2;
     else if (text.length > 100) complexity += 1;
-    
+
     // Complex decision indicators
     const complexKeywords = [
       'important', 'crucial', 'major', 'life-changing', 'significant',
       'expensive', 'investment', 'career', 'relationship', 'future',
       'difficult', 'complicated', 'complex', 'detailed', 'thorough'
     ];
-    
+
     complexKeywords.forEach(keyword => {
       if (lowerText.includes(keyword)) complexity += 1;
     });
-    
+
     // Image adds complexity
     if (hasImage) complexity += 1;
-    
+
     // Multiple questions/aspects
     const questionMarkers = (text.match(/[?]/g) || []).length;
     if (questionMarkers > 1) complexity += 1;
-    
+
     // Determine tier based on complexity score
-    if (complexity >= 5) return 'premium';
+    if (complexity >= 5) return 'pro';
     if (complexity >= 3) return 'standard';
-    return 'basic';
+    return 'community';
   }
 
-  static getRecommendationReason(tier: 'basic' | 'standard' | 'premium'): string {
+  static getRecommendationReason(tier: 'community' | 'standard' | 'pro'): string {
     switch (tier) {
-      case 'premium':
+      case 'pro':
         return 'Recommended for complex or important decisions';
       case 'standard':
         return 'Good balance of feedback and value';
-      case 'basic':
+      case 'community':
         return 'Perfect for quick feedback';
     }
   }

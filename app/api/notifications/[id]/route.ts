@@ -34,16 +34,27 @@ async function PATCH_Handler(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // First verify the notification belongs to the user
+    const { data: notification, error: fetchError } = await supabase
+      .from('notifications')
+      .select('id, user_id')
+      .eq('id', id)
+      .single();
+
+    if (fetchError || !notification) {
+      return NextResponse.json({ error: 'Notification not found' }, { status: 404 });
+    }
+
+    if ((notification as any).user_id !== user.id) {
+      return NextResponse.json({ error: 'Not authorized to access this notification' }, { status: 403 });
+    }
+
     const { data: success, error: markError } = await supabase
       .rpc('mark_notification_read', { notification_id: id } as any) as any;
 
     if (markError) {
       log.error('Failed to mark notification as read', markError, { notificationId: id });
       return NextResponse.json({ error: 'Failed to mark notification as read' }, { status: 500 });
-    }
-
-    if (!success) {
-      return NextResponse.json({ error: 'Notification not found or already read' }, { status: 404 });
     }
 
     return NextResponse.json({ success: true });

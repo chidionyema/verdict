@@ -50,14 +50,36 @@ async function PATCH_Handler(request: NextRequest) {
           .eq('id', user.id)
           .single();
 
-        // Allow if already a judge OR if they have a qualification date in the request body
-        const hasQualificationDate = body.judge_qualification_date || (currentProfile as any)?.judge_qualification_date;
+        // SECURITY FIX: Only allow becoming a judge if:
+        // 1. Already a judge (no-op), OR
+        // 2. Has passed the quiz (indicated by providing judge_qualification_date in THIS request)
+        //    This is only valid when called from the qualification page after passing the quiz
+        // The qualification date must be a valid recent date (within last hour) to prevent replay attacks
+        const requestQualificationDate = body.judge_qualification_date;
+        const existingQualificationDate = (currentProfile as any)?.judge_qualification_date;
 
-        if (!(currentProfile as any)?.is_judge && !hasQualificationDate) {
-          return NextResponse.json(
-            { error: 'Must complete judge qualification first' },
-            { status: 403 }
-          );
+        if (!(currentProfile as any)?.is_judge) {
+          if (!requestQualificationDate && !existingQualificationDate) {
+            return NextResponse.json(
+              { error: 'Must complete judge qualification first' },
+              { status: 403 }
+            );
+          }
+
+          // If providing a new qualification date, validate it's recent (within last hour)
+          // This prevents users from replaying old qualification dates
+          if (requestQualificationDate && !existingQualificationDate) {
+            const qualDate = new Date(requestQualificationDate);
+            const now = new Date();
+            const hourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+
+            if (isNaN(qualDate.getTime()) || qualDate < hourAgo || qualDate > now) {
+              return NextResponse.json(
+                { error: 'Invalid qualification date' },
+                { status: 400 }
+              );
+            }
+          }
         }
       }
 
@@ -65,8 +87,29 @@ async function PATCH_Handler(request: NextRequest) {
     }
 
     // Handle judge_qualification_date (only set during qualification completion)
+    // SECURITY: Only allow setting if user doesn't already have a qualification date
     if (body.judge_qualification_date !== undefined) {
-      updateData.judge_qualification_date = body.judge_qualification_date;
+      const { data: currentProfile } = await supabase
+        .from('profiles')
+        .select('judge_qualification_date')
+        .eq('id', user.id)
+        .single();
+
+      // Only set if not already set (prevent tampering)
+      if (!(currentProfile as any)?.judge_qualification_date) {
+        updateData.judge_qualification_date = body.judge_qualification_date;
+      }
+    }
+
+    // Handle judge_training_completed (set during qualification or training completion)
+    if (body.judge_training_completed !== undefined) {
+      if (typeof body.judge_training_completed !== 'boolean') {
+        return NextResponse.json(
+          { error: 'judge_training_completed must be a boolean' },
+          { status: 400 }
+        );
+      }
+      updateData.judge_training_completed = body.judge_training_completed;
     }
 
     if (country !== undefined) {
