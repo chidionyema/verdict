@@ -4,38 +4,21 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
-import { 
-  Menu, 
-  X, 
-  User, 
-  CreditCard, 
-  Clock, 
-  Plus, 
-  Bell, 
-  ChevronDown, 
-  Zap, 
-  Shield, 
-  Home,
-  BarChart3,
+import {
+  Menu,
+  X,
+  User,
+  Plus,
+  Bell,
+  ChevronDown,
+  Shield,
   Users,
-  Scale,
   RotateCcw,
-  Award,
-  Crown,
   Sparkles,
-  Target,
   Grid,
-  MessageSquare,
-  Eye,
   Settings,
   LogOut,
   HelpCircle,
-  Camera,
-  FileText,
-  Mic,
-  Star,
-  TrendingUp,
-  Activity,
 } from 'lucide-react';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { MagneticButton, FloatingBadge, RippleButton } from '@/components/ui/MicroInteractions';
@@ -69,11 +52,9 @@ export default function Navigation() {
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [showSubmitDropdown, setShowSubmitDropdown] = useState(false);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
-  
-  // Refs for click outside detection
-  const submitDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Ref for click outside detection
   const profileDropdownRef = useRef<HTMLDivElement>(null);
 
   // Smart context detection
@@ -177,12 +158,9 @@ export default function Navigation() {
     }
   }, []);
 
-  // Close dropdowns on click outside
+  // Close dropdown on click outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (submitDropdownRef.current && !submitDropdownRef.current.contains(event.target as Node)) {
-        setShowSubmitDropdown(false);
-      }
       if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target as Node)) {
         setShowProfileDropdown(false);
       }
@@ -206,13 +184,6 @@ export default function Navigation() {
   const getLogoDestination = () => {
     if (!user) return '/';
     return '/workspace';
-  };
-
-  // Smart "New Request" button context
-  const getNewRequestLabel = () => {
-    if (isWorkspacePage) return 'New Request';
-    if (userStats.activeRequests === 0) return 'Start First Request';
-    return 'Create Request';
   };
 
   // Define navigation item interface
@@ -338,89 +309,33 @@ export default function Navigation() {
 
             {user && (
               <>
-                {/* Smart Submit Button with Dropdown */}
-                <div className="relative" ref={submitDropdownRef}>
-                  <MagneticButton
-                    onClick={() => setShowSubmitDropdown(!showSubmitDropdown)}
-                    className="flex items-center space-x-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2 rounded-lg hover:shadow-lg transition-all font-medium group relative overflow-hidden"
-                  >
-                    <Plus className="h-4 w-4 group-hover:rotate-90 transition-transform" />
-                    <span>{getNewRequestLabel()}</span>
-                    <ChevronDown className="h-4 w-4" />
-                  </MagneticButton>
+                {/* Simple New Submission Button - Direct to unified flow */}
+                <Link
+                  href="/submit"
+                  className="flex items-center space-x-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2 rounded-lg hover:shadow-lg transition-all font-medium group"
+                >
+                  <Plus className="h-4 w-4 group-hover:rotate-90 transition-transform" />
+                  <span>New Submission</span>
+                </Link>
 
-                  {showSubmitDropdown && (
-                    <div className="absolute top-full mt-2 right-0 w-64 bg-white rounded-xl shadow-xl border border-gray-200 py-2 z-50">
-                      <div className="px-4 py-2 border-b border-gray-100">
-                        <p className="text-sm font-medium text-gray-900">Quick Create</p>
-                        <p className="text-xs text-gray-700">Choose your feedback type</p>
-                      </div>
-                      
-                      <Link
-                        href="/create?type=verdict"
-                        onClick={() => setShowSubmitDropdown(false)}
-                        className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 transition-colors"
-                      >
-                        <MessageSquare className="h-5 w-5 text-blue-600" />
-                        <div>
-                          <p className="font-medium text-gray-900">Standard Feedback</p>
-                          <p className="text-xs text-gray-700">Get expert opinions</p>
-                        </div>
-                      </Link>
-                      
-                      <Link
-                        href="/create?type=comparison"
-                        onClick={() => setShowSubmitDropdown(false)}
-                        className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 transition-colors"
-                      >
-                        <Scale className="h-5 w-5 text-purple-600" />
-                        <div>
-                          <p className="font-medium text-gray-900">A/B Comparison</p>
-                          <p className="text-xs text-gray-700">Compare two options</p>
-                        </div>
-                        <span className="ml-auto text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full">
-                          Advanced
-                        </span>
-                      </Link>
-                      
-                      <Link
-                        href="/create?type=split_test"
-                        onClick={() => setShowSubmitDropdown(false)}
-                        className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 transition-colors"
-                      >
-                        <RotateCcw className="h-5 w-5 text-orange-600" />
-                        <div>
-                          <p className="font-medium text-gray-900">Split Test</p>
-                          <p className="text-xs text-gray-700">Test with demographics</p>
-                        </div>
-                        <span className="ml-auto text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full">
-                          Pro
-                        </span>
-                      </Link>
-
-                      <div className="border-t border-gray-100 mt-2 pt-2">
-                        <Link
-                          href="/create"
-                          onClick={() => setShowSubmitDropdown(false)}
-                          className="flex items-center space-x-3 px-4 py-2 text-indigo-600 hover:bg-indigo-50 transition-colors"
-                        >
-                          <Sparkles className="h-4 w-4" />
-                          <span className="font-medium">Full Creation Flow</span>
-                        </Link>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Credits Display */}
-                <div className="flex items-center space-x-2 bg-gray-100 px-3 py-1 rounded-full">
-                  <CreditCard className="h-4 w-4 text-gray-600" />
-                  <span className="text-sm font-medium text-gray-700">
-                    {userProfile?.credits || 0}
+                {/* Credits Display - With label and context */}
+                <Link
+                  href="/account"
+                  className="flex items-center space-x-2 bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 px-3 py-1.5 rounded-full hover:border-amber-300 transition-colors"
+                  title="View your credits and account"
+                >
+                  <div className="w-5 h-5 bg-gradient-to-br from-amber-400 to-yellow-500 rounded-full flex items-center justify-center">
+                    <span className="text-white text-xs font-bold">{userProfile?.credits || 0}</span>
+                  </div>
+                  <span className="text-sm font-medium text-amber-800">
+                    {userProfile?.credits === 1 ? 'Credit' : 'Credits'}
                   </span>
                   {fetchError && (
                     <button
-                      onClick={() => user && fetchUserData(user.id)}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        user && fetchUserData(user.id);
+                      }}
                       className="text-red-500 hover:text-red-700 ml-1"
                       title="Failed to load data. Click to retry."
                       aria-label="Retry loading user data"
@@ -428,7 +343,7 @@ export default function Navigation() {
                       <RotateCcw className="h-3 w-3" />
                     </button>
                   )}
-                </div>
+                </Link>
 
                 {/* Notifications */}
                 <button className="relative min-h-[44px] min-w-[44px] p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2" aria-label="View notifications">
@@ -606,18 +521,28 @@ export default function Navigation() {
               {user ? (
                 <>
                   <Link
-                    href="/create"
+                    href="/submit"
                     onClick={() => setMobileMenuOpen(false)}
                     className="flex items-center space-x-3 px-4 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white mx-4 rounded-lg"
                   >
                     <Plus className="h-5 w-5" />
-                    <span>{getNewRequestLabel()}</span>
+                    <span>New Submission</span>
                   </Link>
 
-                  <div className="px-4 py-2">
-                    <div className="flex items-center justify-between text-sm text-gray-600">
-                      <span>Credits: {userProfile?.credits || 0}</span>
-                      <span>Active: {userStats.activeRequests}</span>
+                  <div className="mx-4 mt-2 p-3 bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-8 h-8 bg-gradient-to-br from-amber-400 to-yellow-500 rounded-full flex items-center justify-center">
+                          <span className="text-white font-bold">{userProfile?.credits || 0}</span>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-amber-900">
+                            {userProfile?.credits || 0} {userProfile?.credits === 1 ? 'Credit' : 'Credits'}
+                          </p>
+                          <p className="text-xs text-amber-700">= {userProfile?.credits || 0} free submissions</p>
+                        </div>
+                      </div>
+                      <span className="text-xs text-gray-500">{userStats.activeRequests} active</span>
                     </div>
                   </div>
 

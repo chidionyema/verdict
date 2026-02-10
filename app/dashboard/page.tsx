@@ -145,7 +145,7 @@ export default function DashboardPage() {
       if (isWelcome === 'true') {
         setNotification({
           type: 'success',
-          message: 'Welcome! You have 3 free credits to get started. Create your first request!',
+          message: 'Welcome! You have 3 free submissions. Each submission gets you 3 detailed feedback reports from real people.',
         });
         window.history.replaceState({}, '', '/dashboard');
       }

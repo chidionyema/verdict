@@ -178,7 +178,7 @@ function AccountContent() {
             <div>
               <h2 className="text-xl font-semibold">Request credits</h2>
               <p className="text-gray-500">
-                Each credit lets you create one Basic request (3 expert verdicts).
+                Each credit = 1 submission with 3 feedback reports from real people.
               </p>
             </div>
             <div className="text-right">
@@ -191,9 +191,9 @@ function AccountContent() {
 
           <h3 className="font-medium text-gray-900 mb-2">Buy More Credits</h3>
           <p className="text-sm text-gray-600 mb-4">
-            <span className="font-semibold">1 credit = 1 Basic request</span> (
-            {STANDARD_VERDICT_COUNT} expert verdicts). Higher tiers use more credits per
-            request but always show you the total before you pay.
+            <span className="font-semibold">1 credit = 1 submission</span> (
+            {STANDARD_VERDICT_COUNT} feedback reports). Higher tiers use more credits per
+            submission but always show you the total before you confirm.
           </p>
 
           {/* Value Comparison */}
@@ -211,10 +211,10 @@ function AccountContent() {
                 <span className="font-semibold text-gray-900">$150/hour</span>
               </div>
               <div>
-                <span className="text-indigo-600 font-semibold">Verdict:</span>{' '}
+                <span className="text-indigo-600 font-semibold">AskVerdict:</span>{' '}
                 <span className="font-bold text-indigo-700">
                   ~{pricing.privatePrice} for{' '}
-                  {STANDARD_VERDICT_COUNT} expert verdicts
+                  {STANDARD_VERDICT_COUNT} feedback reports
                 </span>
               </div>
             </div>
@@ -268,8 +268,8 @@ function AccountContent() {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-4 py-2 font-medium text-gray-700">Tier</th>
-                  <th className="px-4 py-2 font-medium text-gray-700">Verdicts per request</th>
-                  <th className="px-4 py-2 font-medium text-gray-700">Credits per request</th>
+                  <th className="px-4 py-2 font-medium text-gray-700">Feedback reports</th>
+                  <th className="px-4 py-2 font-medium text-gray-700">Credits used</th>
                 </tr>
               </thead>
               <tbody>
