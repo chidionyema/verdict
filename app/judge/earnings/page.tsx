@@ -16,6 +16,9 @@ import {
   RefreshCw,
   Globe,
   ChevronDown,
+  Info,
+  Shield,
+  Banknote,
 } from 'lucide-react';
 
 // Supported countries for Stripe Connect Express (matching API)
@@ -64,6 +67,7 @@ import { createClient } from '@/lib/supabase/client';
 import { toast } from '@/components/ui/toast';
 import Breadcrumb from '@/components/Breadcrumb';
 import { BackButton } from '@/components/ui/BackButton';
+import { RoleIndicator } from '@/components/ui/RoleIndicator';
 
 interface PayoutAccount {
   id: string;
@@ -259,7 +263,48 @@ export default function JudgeEarningsPage() {
             <h1 className="text-2xl font-bold text-gray-900 mt-2">Earnings & Payouts</h1>
             <p className="text-gray-600">Manage your judge earnings and request payouts</p>
           </div>
+          <RoleIndicator role="reviewer" />
         </div>
+
+        {/* Payout Progress - Clear visual toward goal */}
+        {earnings.total_earned > 0 && (
+          <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-6 mb-8">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <TrendingUp className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-green-900">Progress to Next Payout</h3>
+                  <p className="text-sm text-green-700">
+                    {availableAmount >= minimumPayout
+                      ? 'Ready to cash out!'
+                      : `${formatCurrency(minimumPayout - availableAmount)} more to reach minimum`}
+                  </p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-2xl font-bold text-green-700">{formatCurrency(availableAmount)}</p>
+                <p className="text-xs text-green-600">of {formatCurrency(minimumPayout)} minimum</p>
+              </div>
+            </div>
+            <div className="w-full bg-green-200 rounded-full h-3">
+              <div
+                className={`h-3 rounded-full transition-all ${
+                  availableAmount >= minimumPayout
+                    ? 'bg-gradient-to-r from-green-500 to-emerald-500'
+                    : 'bg-gradient-to-r from-green-400 to-emerald-400'
+                }`}
+                style={{ width: `${Math.min((availableAmount / minimumPayout) * 100, 100)}%` }}
+              />
+            </div>
+            {availableAmount >= minimumPayout && payoutAccount?.payouts_enabled && (
+              <p className="text-center text-sm font-medium text-green-700 mt-3">
+                You've reached the minimum! Request your payout below.
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Earnings Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
@@ -273,25 +318,48 @@ export default function JudgeEarningsPage() {
             <p className="text-2xl font-bold text-gray-900">{formatCurrency(earnings.total_earned)}</p>
           </div>
 
-          <div className="bg-white rounded-xl p-6 shadow-sm border">
+          <div className="bg-white rounded-xl p-6 shadow-sm border group relative">
             <div className="flex items-center gap-3 mb-2">
               <div className="p-2 bg-indigo-100 rounded-lg">
                 <Wallet className="h-5 w-5 text-indigo-600" />
               </div>
               <span className="text-sm text-gray-600">Available</span>
+              <div className="relative ml-auto">
+                <Info className="h-4 w-4 text-gray-400 cursor-help" />
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 p-3 bg-gray-900 text-white text-xs rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10 shadow-lg">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Banknote className="h-3 w-3 text-green-400" />
+                    <span className="font-semibold">Ready to withdraw</span>
+                  </div>
+                  <p>These earnings have cleared the 7-day quality protection period. Request a payout anytime!</p>
+                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-2 h-2 bg-gray-900 rotate-45" />
+                </div>
+              </div>
             </div>
             <p className="text-2xl font-bold text-indigo-600">{formatCurrency(availableAmount)}</p>
+            <p className="text-xs text-green-600 mt-1">Ready for payout</p>
           </div>
 
-          <div className="bg-white rounded-xl p-6 shadow-sm border">
+          <div className="bg-white rounded-xl p-6 shadow-sm border group relative">
             <div className="flex items-center gap-3 mb-2">
               <div className="p-2 bg-yellow-100 rounded-lg">
                 <Clock className="h-5 w-5 text-yellow-600" />
               </div>
               <span className="text-sm text-gray-600">Pending</span>
+              <div className="relative ml-auto">
+                <Info className="h-4 w-4 text-gray-400 cursor-help" />
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-gray-900 text-white text-xs rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10 shadow-lg">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Shield className="h-3 w-3 text-yellow-400" />
+                    <span className="font-semibold">Protected earnings</span>
+                  </div>
+                  <p>Earnings are held for 7 days to ensure verdict quality. This protects both you and seekers. After 7 days, they automatically move to "Available."</p>
+                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-2 h-2 bg-gray-900 rotate-45" />
+                </div>
+              </div>
             </div>
             <p className="text-2xl font-bold text-gray-900">{formatCurrency(earnings.pending_amount)}</p>
-            <p className="text-xs text-gray-500 mt-1">7-day maturation</p>
+            <p className="text-xs text-yellow-600 mt-1">Clears in 7 days</p>
           </div>
 
           <div className="bg-white rounded-xl p-6 shadow-sm border">
@@ -467,27 +535,74 @@ export default function JudgeEarningsPage() {
           )}
         </div>
 
+        {/* Payout Journey Timeline */}
+        <div className="mt-8 bg-white border border-gray-200 rounded-xl p-6">
+          <h3 className="font-semibold text-gray-900 mb-6 text-center">Your Earnings Journey</h3>
+          <div className="relative">
+            {/* Timeline connector */}
+            <div className="absolute top-8 left-0 right-0 h-1 bg-gradient-to-r from-indigo-200 via-yellow-200 to-green-200 hidden sm:block" />
+
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-6 sm:gap-4 relative">
+              {/* Step 1 */}
+              <div className="flex flex-col items-center text-center">
+                <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center z-10 border-4 border-white shadow-md">
+                  <Shield className="h-7 w-7 text-indigo-600" />
+                </div>
+                <h4 className="font-semibold text-gray-900 mt-3 text-sm">Submit Verdict</h4>
+                <p className="text-xs text-gray-500 mt-1">Provide quality feedback</p>
+              </div>
+
+              {/* Step 2 */}
+              <div className="flex flex-col items-center text-center">
+                <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center z-10 border-4 border-white shadow-md">
+                  <Clock className="h-7 w-7 text-yellow-600" />
+                </div>
+                <h4 className="font-semibold text-gray-900 mt-3 text-sm">7-Day Hold</h4>
+                <p className="text-xs text-gray-500 mt-1">Quality protection period</p>
+              </div>
+
+              {/* Step 3 */}
+              <div className="flex flex-col items-center text-center">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center z-10 border-4 border-white shadow-md">
+                  <Wallet className="h-7 w-7 text-green-600" />
+                </div>
+                <h4 className="font-semibold text-gray-900 mt-3 text-sm">Becomes Available</h4>
+                <p className="text-xs text-gray-500 mt-1">Min {formatCurrency(minimumPayout)} to withdraw</p>
+              </div>
+
+              {/* Step 4 */}
+              <div className="flex flex-col items-center text-center">
+                <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center z-10 border-4 border-white shadow-md">
+                  <Banknote className="h-7 w-7 text-emerald-600" />
+                </div>
+                <h4 className="font-semibold text-gray-900 mt-3 text-sm">Get Paid</h4>
+                <p className="text-xs text-gray-500 mt-1">Direct to your bank</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Info Section */}
-        <div className="mt-8 p-6 bg-blue-50 border border-blue-200 rounded-xl">
-          <h3 className="font-semibold text-blue-900 mb-2">How Payouts Work</h3>
-          <ul className="text-sm text-blue-800 space-y-2">
-            <li className="flex items-start gap-2">
-              <CheckCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
-              <span>Earnings become available 7 days after you submit a verdict</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <CheckCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
-              <span>Minimum payout is {formatCurrency(minimumPayout)}</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <CheckCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
-              <span>Payouts typically arrive within 2-3 business days</span>
-            </li>
-            <li className="flex items-start gap-2">
-              <CheckCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
-              <span>A small processing fee (2.9% + $0.30) is deducted from each payout</span>
-            </li>
-          </ul>
+        <div className="mt-6 p-6 bg-blue-50 border border-blue-200 rounded-xl">
+          <h3 className="font-semibold text-blue-900 mb-3">Quick Facts</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="flex items-start gap-2 text-sm text-blue-800">
+              <CheckCircle className="h-4 w-4 mt-0.5 flex-shrink-0 text-blue-600" />
+              <span>Earnings clear after 7 days</span>
+            </div>
+            <div className="flex items-start gap-2 text-sm text-blue-800">
+              <CheckCircle className="h-4 w-4 mt-0.5 flex-shrink-0 text-blue-600" />
+              <span>Minimum payout: {formatCurrency(minimumPayout)}</span>
+            </div>
+            <div className="flex items-start gap-2 text-sm text-blue-800">
+              <CheckCircle className="h-4 w-4 mt-0.5 flex-shrink-0 text-blue-600" />
+              <span>Arrives in 2-3 business days</span>
+            </div>
+            <div className="flex items-start gap-2 text-sm text-blue-800">
+              <CheckCircle className="h-4 w-4 mt-0.5 flex-shrink-0 text-blue-600" />
+              <span>Processing fee: 2.9% + $0.30</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>

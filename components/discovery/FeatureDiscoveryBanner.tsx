@@ -37,7 +37,7 @@ export function FeatureDiscoveryBanner() {
   };
 
   const handleCTA = () => {
-    router.push('/start-simple');
+    router.push('/submit');
   };
 
   if (!isVisible) return null;

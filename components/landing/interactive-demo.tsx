@@ -309,10 +309,10 @@ export function InteractiveDemo() {
             Join thousands who've gotten honest feedback in minutes
           </p>
           <TouchButton
-            onClick={() => (window.location.href = '/start-simple')}
+            onClick={() => (window.location.href = '/submit')}
             className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-6 py-3"
           >
-            Start Free with 3 Credits
+            Get Started Free
             <ArrowRight className="ml-2 w-4 h-4" />
           </TouchButton>
         </div>

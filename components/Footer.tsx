@@ -43,7 +43,7 @@ export default function Footer() {
             <h3 className="text-white font-semibold mb-4">Product</h3>
             <ul className="space-y-3">
               <li>
-                <Link href="/start-simple" className="text-gray-400 hover:text-white transition-colors">
+                <Link href="/submit" className="text-gray-400 hover:text-white transition-colors">
                   Get Feedback
                 </Link>
               </li>

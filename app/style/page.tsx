@@ -48,7 +48,7 @@ export default function StyleLandingPage() {
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
             <button
-              onClick={() => router.push('/start-simple?category=appearance&subcategory=fashion')}
+              onClick={() => router.push('/submit?category=appearance&subcategory=fashion')}
               className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-8 py-4 rounded-xl font-bold text-lg hover:shadow-xl transition-all transform hover:scale-105 min-h-[48px] inline-flex items-center gap-2"
             >
               Get Outfit Feedback
@@ -291,7 +291,7 @@ export default function StyleLandingPage() {
             Get honest feedback from real people in under an hour. Quick, affordable, and brutally honest.
           </p>
           <button
-            onClick={() => router.push('/start-simple?category=appearance&subcategory=fashion')}
+            onClick={() => router.push('/submit?category=appearance&subcategory=fashion')}
             className="bg-white text-purple-600 px-8 py-4 rounded-xl font-bold text-lg hover:shadow-xl transition-all transform hover:scale-105 min-h-[48px]"
           >
             Get My Outfit Feedback

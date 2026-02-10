@@ -19,7 +19,7 @@ const PROTECTED_ROUTES = [
 const ADMIN_ROUTES = ['/admin'];
 
 // Routes that require reviewer access (excluding qualify which is for new judges)
-const JUDGE_ROUTES = ['/judge/dashboard', '/judge/feedback', '/judge/my-feedback', '/judge/performance'];
+const JUDGE_ROUTES = ['/judge/feedback', '/judge/my-feedback', '/judge/performance'];
 
 // Routes that allow new judges to qualify
 const JUDGE_QUALIFICATION_ROUTES = ['/judge/qualify', '/judge/verify'];

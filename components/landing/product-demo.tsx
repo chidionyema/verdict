@@ -404,7 +404,7 @@ export function ProductDemo() {
           {/* CTA section */}
           <div className="text-center mt-12">
             <TouchButton
-              onClick={() => window.location.href = '/start-simple'}
+              onClick={() => window.location.href = '/submit'}
               size="lg"
               className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-xl"
             >

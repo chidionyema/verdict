@@ -415,7 +415,7 @@ export default function HomePage() {
                 {/* Dual Path CTAs */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-3xl mx-auto">
                   <SmartLink
-                    href="/start"
+                    href="/submit"
                     className="bg-white text-indigo-600 px-8 py-5 rounded-2xl text-lg font-bold hover:bg-gray-50 transition-all duration-300 shadow-xl hover:shadow-2xl transform hover:-translate-y-1 group"
                   >
                     <div className="flex flex-col items-center">
@@ -478,7 +478,7 @@ export default function HomePage() {
       {/* Mobile sticky CTA */}
       <div className="fixed bottom-4 left-0 right-0 px-4 sm:hidden z-40">
         <SmartLink
-          href="/start"
+          href="/submit"
           className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-4 rounded-xl shadow-xl font-semibold text-base flex items-center justify-center gap-2 min-h-[48px] backdrop-blur-sm border border-white/20 hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-0.5"
         >
           Start judging (free)

@@ -80,7 +80,7 @@ export const emailTemplates = {
           <p>Thank you for joining Verdict! We're excited to have you as part of our community.</p>
           <p>Get started by submitting your first request for honest, anonymous feedback from real people.</p>
           <div style="text-align: center; margin: 32px 0;">
-            <a href="${getAppUrl()}/start-simple" style="display: inline-block; background: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500;">Submit Your First Request</a>
+            <a href="${getAppUrl()}/submit" style="display: inline-block; background: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500;">Submit Your First Request</a>
           </div>
           <p>If you have any questions, our support team is here to help.</p>
           <p style="color: #6B7280; font-size: 14px; margin-top: 32px;">— The Verdict Team</p>
@@ -226,7 +226,39 @@ export const emailTemplates = {
           <p>Thank you for your payment of <strong>${data.amount}</strong>!</p>
           <p><strong>${data.credits} credits</strong> have been added to your account. You can now submit more requests for feedback.</p>
           <div style="text-align: center; margin: 32px 0;">
-            <a href="${getAppUrl()}/start-simple" style="display: inline-block; background: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500;">Submit a Request</a>
+            <a href="${getAppUrl()}/submit" style="display: inline-block; background: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500;">Submit a Request</a>
+          </div>
+          <p style="color: #6B7280; font-size: 14px; margin-top: 32px;">— The Verdict Team</p>
+        </body>
+      </html>
+    `,
+  }),
+
+  judgeEarningReceived: (data: { amount: string; category?: string; verdictId?: string }) => ({
+    subject: `You earned ${data.amount} for your verdict!`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        </head>
+        <body style="font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #374151; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="text-align: center; margin-bottom: 32px;">
+            <h1 style="color: #10B981; margin: 0;">Earnings Added!</h1>
+          </div>
+          <p>Great news! You've earned <strong>${data.amount}</strong> for your verdict${data.category ? ` on a <strong>${data.category}</strong> request` : ''}.</p>
+          <div style="background: #ECFDF5; padding: 16px; border-radius: 8px; margin: 24px 0;">
+            <p style="margin: 0; color: #065F46;"><strong>Earning Details</strong></p>
+            <p style="margin: 8px 0 0 0; color: #047857;">Amount: ${data.amount}</p>
+            <p style="margin: 4px 0 0 0; color: #6B7280; font-size: 14px;">Earnings become available for payout after a 7-day review period.</p>
+          </div>
+          <p>Keep providing quality feedback to earn more!</p>
+          <div style="text-align: center; margin: 32px 0;">
+            <a href="${getAppUrl()}/judge/earnings" style="display: inline-block; background: #10B981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500;">View Earnings</a>
+          </div>
+          <div style="text-align: center; margin-top: 16px;">
+            <a href="${getAppUrl()}/judge" style="display: inline-block; background: #F3F4F6; color: #374151; padding: 10px 20px; text-decoration: none; border-radius: 6px; font-weight: 500;">Find More Requests</a>
           </div>
           <p style="color: #6B7280; font-size: 14px; margin-top: 32px;">— The Verdict Team</p>
         </body>
@@ -274,5 +306,10 @@ export async function sendVerdictCompletedEmail(to: string, requestId: string, t
 
 export async function sendPaymentReceivedEmail(to: string, amount: string, credits: number) {
   const template = emailTemplates.paymentReceived({ amount, credits });
+  return sendEmail({ to, ...template });
+}
+
+export async function sendJudgeEarningEmail(to: string, amount: string, category?: string, verdictId?: string) {
+  const template = emailTemplates.judgeEarningReceived({ amount, category, verdictId });
   return sendEmail({ to, ...template });
 }

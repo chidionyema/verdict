@@ -66,11 +66,11 @@ export function SimplifiedHeroSection() {
           {/* Single clear CTA to unified start page */}
           <div className="flex flex-col items-center gap-4 max-w-md mx-auto">
             <TouchButton
-              onClick={() => router.push('/start')}
+              onClick={() => router.push('/submit')}
               className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-10 py-6 text-xl font-bold rounded-xl shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200"
             >
               <span className="flex items-center justify-center gap-2">
-                Choose Your Path
+                Get Started
                 <ArrowRight className="h-6 w-6" />
               </span>
             </TouchButton>

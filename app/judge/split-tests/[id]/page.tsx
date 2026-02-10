@@ -8,6 +8,19 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 import { toast } from '@/components/ui/toast';
+import { TIER_CONFIGURATIONS, getTierConfig } from '@/lib/pricing/dynamic-pricing';
+
+// Helper to get judge earning for a request tier
+function getJudgeEarningForTier(tier?: string): string {
+  const tierKey = tier === 'pro' ? 'expert' : (tier || 'community');
+  try {
+    const config = getTierConfig(tierKey);
+    return (config.judge_payout_cents / 100).toFixed(2);
+  } catch {
+    // Fallback to community tier
+    return (TIER_CONFIGURATIONS.community.judge_payout_cents / 100).toFixed(2);
+  }
+}
 
 interface SplitTestData {
   id: string;
@@ -86,11 +99,9 @@ export default function JudgeSplitTestPage({
     }
   };
 
-  const calculateEarnings = () => {
-    const base = splitTest?.request_tier === 'pro' ? 1.25 : 0.75;
-    const speedBonus = timeRemaining > 120 ? 0.25 : 0;
-    const qualityBonus = reasoning.length > 200 ? 0.20 : 0;
-    return (base + speedBonus + qualityBonus).toFixed(2);
+  // Get earning based on request tier
+  const getEarningAmount = () => {
+    return getJudgeEarningForTier(splitTest?.request_tier);
   };
 
   const canSubmit = () => {
@@ -192,7 +203,7 @@ export default function JudgeSplitTestPage({
             </div>
             <div className="flex items-center">
               <DollarSign className="h-5 w-5 mr-1 text-green-300" />
-              <span className="font-semibold text-green-300">${calculateEarnings()}</span>
+              <span className="font-semibold text-green-300">${getEarningAmount()}</span>
             </div>
           </div>
         </div>
@@ -459,10 +470,10 @@ export default function JudgeSplitTestPage({
           {/* Earnings Preview */}
           <div className="bg-green-50 rounded-lg p-4 mb-6">
             <p className="text-sm text-green-800">
-              <strong>Estimated earnings:</strong> ${calculateEarnings()}
+              <strong>You'll earn:</strong> ${getEarningAmount()}
             </p>
             <p className="text-xs text-green-600 mt-1">
-              Base: ${splitTest.request_tier === 'pro' ? '1.25' : '0.75'} + Speed bonus: {timeRemaining > 120 ? '$0.25' : '$0.00'} + Quality bonus: {reasoning.length > 200 ? '$0.20' : '$0.00'}
+              Based on request tier ({splitTest.request_tier || 'community'}). Available for payout after 7 days.
             </p>
           </div>
 

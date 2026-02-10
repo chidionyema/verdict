@@ -195,11 +195,11 @@ export function HowItWorks({ showCTA = true, compact = false }: HowItWorksProps)
         {showCTA && (
           <div className="text-center mt-12">
             <TouchButton
-              onClick={() => (window.location.href = '/start-simple')}
+              onClick={() => (window.location.href = '/submit')}
               size="lg"
               className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl"
             >
-              Start Free with 3 Credits
+              Get Started Free
               <ArrowRight className="ml-2 w-5 h-5" />
             </TouchButton>
             

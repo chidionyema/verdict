@@ -10,6 +10,19 @@ import {
 import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
 import { toast } from '@/components/ui/toast';
+import { TIER_CONFIGURATIONS, getTierConfig } from '@/lib/pricing/dynamic-pricing';
+
+// Helper to get judge earning for a request tier
+function getJudgeEarningForTier(tier?: string): string {
+  const tierKey = tier === 'pro' ? 'expert' : (tier || 'community');
+  try {
+    const config = getTierConfig(tierKey);
+    return (config.judge_payout_cents / 100).toFixed(2);
+  } catch {
+    // Fallback to community tier
+    return (TIER_CONFIGURATIONS.community.judge_payout_cents / 100).toFixed(2);
+  }
+}
 
 interface ComparisonData {
   id: string;
@@ -94,11 +107,9 @@ export default function JudgeComparisonPage({
     }
   };
 
-  const calculateEarnings = () => {
-    const base = comparison?.request_tier === 'pro' ? 1.0 : 0.5;
-    const speedBonus = timeRemaining > 120 ? 0.25 : 0;
-    const qualityBonus = reasoning.length > 200 ? 0.15 : 0;
-    return (base + speedBonus + qualityBonus).toFixed(2);
+  // Get earning based on request tier
+  const getEarningAmount = () => {
+    return getJudgeEarningForTier(comparison?.request_tier);
   };
 
   const expertiseOptions = [
@@ -240,7 +251,7 @@ export default function JudgeComparisonPage({
         throw new Error(error.error || 'Failed to submit verdict');
       }
 
-      router.push('/judge/dashboard?success=comparison');
+      router.push('/judge?success=comparison');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to submit verdict');
       setSubmitting(false);
@@ -262,7 +273,7 @@ export default function JudgeComparisonPage({
           <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
           <p className="text-gray-600 mb-4">{error || 'Comparison not found'}</p>
           <button
-            onClick={() => router.push('/judge/dashboard')}
+            onClick={() => router.push('/judge')}
             className="text-purple-600 hover:underline cursor-pointer"
           >
             Return to Dashboard
@@ -278,7 +289,7 @@ export default function JudgeComparisonPage({
       <div className="bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 text-white sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
           <button
-            onClick={() => router.push('/judge/dashboard')}
+            onClick={() => router.push('/judge')}
             className="flex items-center text-white/80 hover:text-white cursor-pointer"
           >
             <ArrowLeft className="h-5 w-5 mr-2" />
@@ -297,7 +308,7 @@ export default function JudgeComparisonPage({
             </div>
             <div className="flex items-center">
               <DollarSign className="h-5 w-5 mr-1 text-green-300" />
-              <span className="font-semibold text-green-300">${calculateEarnings()}</span>
+              <span className="font-semibold text-green-300">${getEarningAmount()}</span>
             </div>
           </div>
         </div>
@@ -669,10 +680,10 @@ export default function JudgeComparisonPage({
           {/* Earnings Preview */}
           <div className="bg-green-50 rounded-lg p-4 mb-6">
             <p className="text-sm text-green-800">
-              <strong>Estimated earnings:</strong> ${calculateEarnings()}
+              <strong>You'll earn:</strong> ${getEarningAmount()}
             </p>
             <p className="text-xs text-green-600 mt-1">
-              Base: ${comparison.request_tier === 'pro' ? '1.00' : '0.50'} + Speed bonus: {timeRemaining > 120 ? '$0.25' : '$0.00'} + Quality bonus: {reasoning.length > 200 ? '$0.15' : '$0.00'}
+              Based on request tier ({comparison.request_tier || 'community'}). Available for payout after 7 days.
             </p>
           </div>
 

@@ -47,7 +47,7 @@ async function POST_Handler(request: NextRequest) {
         notification_title: 'Email verified! 🎉',
         notification_message: 'Your email has been verified. Welcome to Verdict! You now have 3 free requests (3 verdicts each) to start.',
         action_label: 'Create Your First Request',
-        action_url: '/start-simple',
+        action_url: '/submit',
         notification_priority: 'high'
       });
     }

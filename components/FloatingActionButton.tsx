@@ -46,7 +46,7 @@ export default function FloatingActionButton({ className = '' }: FloatingActionB
 
   // Hide on certain pages where it's not needed
   useEffect(() => {
-    const hiddenPaths = ['/start', '/auth/login', '/auth/signup', '/welcome'];
+    const hiddenPaths = ['/submit', '/auth/login', '/auth/signup', '/welcome'];
     const shouldHide = hiddenPaths.some(path => pathname.startsWith(path));
     setIsVisible(!shouldHide && !!user);
   }, [pathname, user]);
@@ -57,7 +57,7 @@ export default function FloatingActionButton({ className = '' }: FloatingActionB
       label: 'Photo Feedback',
       icon: Camera,
       description: 'Get feedback on photos',
-      action: () => router.push('/start-simple?type=photo'),
+      action: () => router.push('/submit?type=photo'),
       color: 'bg-blue-500 hover:bg-blue-600'
     },
     {
@@ -65,7 +65,7 @@ export default function FloatingActionButton({ className = '' }: FloatingActionB
       label: 'Text Feedback',
       icon: MessageSquare,
       description: 'Get feedback on text',
-      action: () => router.push('/start-simple?type=text'),
+      action: () => router.push('/submit?type=text'),
       color: 'bg-green-500 hover:bg-green-600'
     },
     {
@@ -73,7 +73,7 @@ export default function FloatingActionButton({ className = '' }: FloatingActionB
       label: 'Quick Decision',
       icon: Zap,
       description: 'Help with choices',
-      action: () => router.push('/start-simple?category=decision'),
+      action: () => router.push('/submit?category=decision'),
       color: 'bg-purple-500 hover:bg-purple-600'
     }
   ];

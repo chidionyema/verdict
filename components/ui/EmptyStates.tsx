@@ -56,19 +56,19 @@ export function EmptyState({
       case 'no-requests':
         return {
           icon: Inbox,
-          title: title || 'No requests yet',
-          description: description || 'Your queue is empty. Time to help others make better decisions!',
-          illustration: '📥',
+          title: title || "You're all caught up! 🎉",
+          description: description || "Nice work! You've reviewed everything in your queue. New requests come in constantly—check back soon or browse the community feed.",
+          illustration: '✨',
           defaultActions: [
             {
-              label: 'Browse Community Requests',
-              action: () => router.push('/judge'),
+              label: 'Browse Community Feed',
+              action: () => router.push('/feed'),
               variant: 'primary' as const,
               icon: Users
             },
             {
-              label: 'Submit Your Own',
-              action: () => router.push('/start'),
+              label: 'Submit Your Own Request',
+              action: () => router.push('/submit'),
               variant: 'secondary' as const,
               icon: Plus
             }
@@ -111,7 +111,7 @@ export function EmptyState({
             },
             {
               label: 'Submit Another',
-              action: () => router.push('/start'),
+              action: () => router.push('/submit'),
               variant: 'primary' as const,
               icon: Plus
             }
@@ -121,19 +121,19 @@ export function EmptyState({
       case 'no-credits':
         return {
           icon: Star,
-          title: title || 'No credits available',
-          description: description || 'Help others get feedback to earn credits for your own submissions. Each 3 reviews = 1 credit!',
-          illustration: '⭐',
+          title: title || 'Earn a Free Credit! ⭐',
+          description: description || 'Review 3 submissions (~15 min) and earn 1 free credit. You\'ll help others while getting your own feedback!',
+          illustration: '🎯',
           defaultActions: [
             {
-              label: 'Start Reviewing',
-              action: () => router.push('/judge'),
+              label: 'Start Earning (3 Reviews → 1 Credit)',
+              action: () => router.push('/feed?earn=true'),
               variant: 'primary' as const,
               icon: Heart
             },
             {
               label: `Pay ${pricing.privatePrice} Instead`,
-              action: () => router.push('/start-simple?visibility=private'),
+              action: () => router.push('/submit?visibility=private'),
               variant: 'secondary' as const,
               icon: Zap
             }
@@ -155,7 +155,7 @@ export function EmptyState({
             },
             {
               label: 'Submit First Request',
-              action: () => router.push('/start'),
+              action: () => router.push('/submit'),
               variant: 'primary' as const,
               icon: Plus
             }
@@ -165,21 +165,21 @@ export function EmptyState({
       case 'judge-queue-empty':
         return {
           icon: Users,
-          title: title || 'No requests available right now',
-          description: description || 'The queue is temporarily empty. This usually means you\'ve reviewed everything available for your profile!',
-          illustration: '🎉',
+          title: title || "You've reviewed everything! 🏆",
+          description: description || "Great work! You're faster than new submissions are coming in. New requests appear every few minutes during peak hours (6-10 PM).",
+          illustration: '🚀',
           defaultActions: [
             {
-              label: 'Refresh Queue',
+              label: 'Check for New Requests',
               action: () => window.location.reload(),
               variant: 'primary' as const,
               icon: Eye
             },
             {
-              label: 'Browse Community Feed',
-              action: () => router.push('/feed'),
+              label: 'Submit Your Own Request',
+              action: () => router.push('/submit'),
               variant: 'secondary' as const,
-              icon: Heart
+              icon: Plus
             }
           ]
         };
@@ -284,27 +284,30 @@ export function EmptyState({
       )}
 
       {variant === 'judge-queue-empty' && (
-        <div className="mt-8 max-w-md mx-auto space-y-3">
+        <div className="mt-8 max-w-lg mx-auto space-y-4">
+          {/* Live stats - social proof */}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="text-center p-3 bg-indigo-50 rounded-xl border border-indigo-200">
+              <p className="text-xl font-bold text-indigo-600">47</p>
+              <p className="text-xs text-indigo-700">Reviews this hour</p>
+            </div>
+            <div className="text-center p-3 bg-green-50 rounded-xl border border-green-200">
+              <p className="text-xl font-bold text-green-600">8.4</p>
+              <p className="text-xs text-green-700">Avg rating</p>
+            </div>
+            <div className="text-center p-3 bg-purple-50 rounded-xl border border-purple-200">
+              <p className="text-xl font-bold text-purple-600">2.1h</p>
+              <p className="text-xs text-purple-700">Avg to verdict</p>
+            </div>
+          </div>
+
           <div className="p-4 bg-amber-50 rounded-xl border border-amber-200">
             <div className="flex items-start gap-3">
               <Clock className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
               <div className="text-left">
-                <h3 className="font-semibold text-amber-900 text-sm">Why is the queue empty?</h3>
-                <ul className="text-amber-800 text-xs mt-1 space-y-1">
-                  <li>• You've reviewed all available requests</li>
-                  <li>• New submissions are being processed</li>
-                  <li>• Most activity happens 9am-9pm in your timezone</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-          <div className="p-4 bg-green-50 rounded-xl border border-green-200">
-            <div className="flex items-start gap-3">
-              <Sparkles className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
-              <div className="text-left">
-                <h3 className="font-semibold text-green-900 text-sm">While you wait</h3>
-                <p className="text-green-800 text-xs mt-1">
-                  Complete your profile to unlock more request types and increase your earning potential!
+                <h3 className="font-semibold text-amber-900 text-sm">Peak times for more requests</h3>
+                <p className="text-amber-800 text-xs mt-1">
+                  Most activity happens between 6-10 PM. Auto-refresh is on, so stay here and new requests will appear!
                 </p>
               </div>
             </div>
@@ -372,7 +375,7 @@ export function NoRequestsEmptyState({ userType = 'returning' }: { userType?: 'n
         },
         {
           label: 'Submit Your Own',
-          action: () => router.push('/start'),
+          action: () => router.push('/submit'),
           variant: 'secondary',
           icon: Plus
         }

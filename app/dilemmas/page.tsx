@@ -457,7 +457,7 @@ export default function DilemmasPage() {
           </div>
           <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
             <Link
-              href="/start-simple"
+              href="/submit"
               className="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 transition"
             >
               Ask your own question
@@ -546,7 +546,7 @@ export default function DilemmasPage() {
               questions and verdicts appear here.
             </p>
             <Link
-              href="/start-simple"
+              href="/submit"
               className="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-indigo-700 transition"
             >
               Be the first to ask

@@ -249,16 +249,34 @@ export function InsufficientCreditsModal({
 
         {/* Content */}
         <div className="p-6">
+          {/* Credit explanation */}
+          <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 mb-4 text-center">
+            <p className="text-sm text-indigo-800">
+              <strong>1 credit = 1 submission with 3 honest feedback reports</strong>
+            </p>
+          </div>
+
           {/* Credits needed indicator */}
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 flex items-center gap-4">
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4 flex items-center gap-4">
             <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
               <AlertCircle className="h-6 w-6 text-amber-600" />
             </div>
             <div>
               <p className="font-semibold text-amber-900">You need {creditsNeeded} more credit{creditsNeeded !== 1 ? 's' : ''}</p>
-              <p className="text-sm text-amber-700">Choose a package below to continue</p>
+              <p className="text-sm text-amber-700">Choose a package below or earn for free</p>
             </div>
           </div>
+
+          {/* Earn credits option */}
+          <Link
+            href="/feed?earn=true&return=/submit"
+            className="block w-full p-4 mb-6 bg-green-50 border-2 border-green-200 rounded-xl hover:border-green-400 transition text-center"
+          >
+            <p className="font-bold text-green-800">🎯 Earn 1 Credit Free (~15 min)</p>
+            <p className="text-sm text-green-700 mt-1">
+              Review 3 submissions from others to earn 1 credit
+            </p>
+          </Link>
 
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6 flex items-center gap-3">

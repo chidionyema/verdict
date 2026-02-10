@@ -5,6 +5,7 @@ import { getTierConfig, TIER_CONFIGURATIONS } from '@/lib/pricing/dynamic-pricin
 import { addJudgeVerdict } from '@/lib/verdicts';
 import { verdictRateLimiter, checkRateLimit } from '@/lib/rate-limiter';
 import { sendRequestLifecycleEmail } from '@/lib/notifications';
+import { sendJudgeEarningEmail } from '@/lib/email';
 import { log } from '@/lib/logger';
 import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
 
@@ -138,34 +139,41 @@ const POST_Handler = async (request: NextRequest) => {
     // Calculate judge payout (convert cents to dollars)
     const baseEarning = tierConfig.judge_payout_cents / 100;
 
+    // Only create earnings if amount is positive
+    let earningsData = null;
+    let earningsError = null;
+    let isNewEarning = false;
+
     if (baseEarning <= 0) {
-      log.warn('Zero earning calculated for verdict', {
+      log.warn('Zero earning calculated for verdict - skipping earnings record', {
         verdictId: verdict.id,
         requestTier,
         tierConfig: tierConfig.id,
         judge_payout_cents: tierConfig.judge_payout_cents
       });
+    } else {
+      // Create earnings record for the judge - use upsert to prevent duplicate earnings
+      // The verdict_response_id should be unique, preventing race condition duplicates
+      const result = await (supabase as any)
+        .from('judge_earnings')
+        .upsert({
+          judge_id: user.id,
+          verdict_response_id: verdict.id,
+          amount: baseEarning,
+          currency: 'USD',
+          payout_status: 'pending',
+          created_at: new Date().toISOString(),
+        }, {
+          onConflict: 'verdict_response_id', // Prevent duplicate earnings for same verdict
+          ignoreDuplicates: true
+        })
+        .select()
+        .single();
+
+      earningsData = result.data;
+      earningsError = result.error;
+      isNewEarning = !earningsError && earningsData;
     }
-
-    // Create earnings record for the judge - use upsert to prevent duplicate earnings
-    // The verdict_response_id should be unique, preventing race condition duplicates
-    const { data: earningsData, error: earningsError } = await (supabase as any)
-      .from('judge_earnings')
-      .upsert({
-        judge_id: user.id,
-        verdict_response_id: verdict.id,
-        amount: baseEarning,
-        currency: 'USD',
-        payout_status: 'pending',
-        created_at: new Date().toISOString(),
-      }, {
-        onConflict: 'verdict_response_id', // Prevent duplicate earnings for same verdict
-        ignoreDuplicates: true
-      })
-      .select()
-      .single();
-
-    const isNewEarning = !earningsError && earningsData;
 
     if (earningsError) {
       // Check if it's a duplicate - that's OK (idempotent)
@@ -210,6 +218,28 @@ const POST_Handler = async (request: NextRequest) => {
       } catch (judgeNotifError) {
         log.warn('Failed to create judge earnings notification', { error: judgeNotifError, judgeId: user.id });
         // Don't fail if notification creation fails
+      }
+
+      // Send email notification to judge about earnings (best-effort)
+      try {
+        const { data: judgeProfile } = await (supabase as any)
+          .from('profiles')
+          .select('email')
+          .eq('id', user.id)
+          .single();
+
+        const judgeEmail = (judgeProfile as any)?.email as string | undefined;
+        if (judgeEmail) {
+          void sendJudgeEarningEmail(
+            judgeEmail,
+            `$${baseEarning.toFixed(2)}`,
+            updatedRequest.category,
+            verdict.id
+          );
+        }
+      } catch (emailErr) {
+        log.warn('Failed to send judge earnings email', { error: emailErr, judgeId: user.id });
+        // Don't fail if email fails
       }
     }
 

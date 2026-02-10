@@ -392,10 +392,10 @@ export function SocialProofSection() {
             </div>
             
             <button
-              onClick={() => window.location.href = '/start-simple'}
+              onClick={() => window.location.href = '/submit'}
               className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-8 py-4 rounded-xl font-semibold transition-all duration-300 transform hover:-translate-y-1 hover:shadow-xl inline-flex items-center gap-2"
             >
-              Try it risk-free
+              Get Started Free
               <ArrowRight className="w-5 h-5" />
             </button>
           </CardContent>

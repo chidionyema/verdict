@@ -76,7 +76,7 @@ export function useSmartDefaults() {
     if (context.timeOfDay === 'morning' && context.dayOfWeek === 'weekday') {
       suggestions.quickActions.push({
         label: '📧 Work outfit check',
-        action: () => router.push('/start-simple?category=appearance&subcategory=professional'),
+        action: () => router.push('/submit?category=appearance&subcategory=professional'),
         priority: 'high'
       });
     }
@@ -84,7 +84,7 @@ export function useSmartDefaults() {
     if (context.timeOfDay === 'evening' && context.dayOfWeek === 'weekend') {
       suggestions.quickActions.push({
         label: '💕 Dating profile update',
-        action: () => router.push('/start-simple?category=profile&subcategory=dating'),
+        action: () => router.push('/submit?category=profile&subcategory=dating'),
         priority: 'high'
       });
     }

@@ -9,12 +9,16 @@ interface ComparisonButtonProps {
   category?: string;
   variant?: 'default' | 'card' | 'inline';
   className?: string;
+  initialQuestion?: string;
+  initialContext?: string;
 }
 
-export function ComparisonButton({ 
-  category = 'career', 
+export function ComparisonButton({
+  category = 'career',
   variant = 'default',
-  className = ''
+  className = '',
+  initialQuestion = '',
+  initialContext = ''
 }: ComparisonButtonProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -57,10 +61,12 @@ export function ComparisonButton({
           </TouchButton>
         </div>
 
-        <EnhancedComparisonModal 
+        <EnhancedComparisonModal
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           category={category}
+          initialQuestion={initialQuestion}
+          initialContext={initialContext}
         />
       </>
     );
@@ -77,10 +83,12 @@ export function ComparisonButton({
           Compare Options
         </button>
 
-        <EnhancedComparisonModal 
+        <EnhancedComparisonModal
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
           category={category}
+          initialQuestion={initialQuestion}
+          initialContext={initialContext}
         />
       </>
     );
@@ -98,10 +106,12 @@ export function ComparisonButton({
         <ArrowRight className="h-5 w-5 ml-2" />
       </TouchButton>
 
-      <EnhancedComparisonModal 
+      <EnhancedComparisonModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         category={category}
+        initialQuestion={initialQuestion}
+        initialContext={initialContext}
       />
     </>
   );

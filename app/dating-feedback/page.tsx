@@ -81,7 +81,7 @@ export default function DatingFeedbackPage() {
           {/* CTA into simplified start with profile/dating context */}
           <div className="flex flex-col sm:flex-row sm:items-center gap-4">
             <button
-              onClick={() => router.push('/start-simple?category=profile&subcategory=dating')}
+              onClick={() => router.push('/submit?category=profile&subcategory=dating')}
               className="bg-indigo-600 text-white px-8 py-3 rounded-xl font-semibold hover:bg-indigo-700 transition min-h-[48px]"
             >
               Get dating profile feedback in minutes

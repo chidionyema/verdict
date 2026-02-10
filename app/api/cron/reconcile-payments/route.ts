@@ -29,20 +29,20 @@ async function POST_Handler(request: NextRequest) {
 
     const supabase = await createClient();
     
-    // Look back 2 hours to catch any delayed webhook deliveries
-    const startTime = Math.floor((Date.now() - (2 * 60 * 60 * 1000)) / 1000);
+    // Look back 24 hours to catch any delayed webhook deliveries or missed events
+    const startTime = Math.floor((Date.now() - (24 * 60 * 60 * 1000)) / 1000);
 
-    log.info('Starting automated payment reconciliation', { 
+    log.info('Starting automated payment reconciliation', {
       startTime,
       timestamp: new Date().toISOString(),
-      lookbackHours: 2
+      lookbackHours: 24
     });
 
     // Get successful checkout sessions from Stripe that might be missing
     const sessions = await stripe.checkout.sessions.list({
       created: { gte: startTime },
       status: 'complete',
-      limit: 50 // Process recent ones only
+      limit: 100 // Process more with 24-hour lookback
     });
 
     const results = {
@@ -215,7 +215,7 @@ async function POST_Handler(request: NextRequest) {
       duration,
       {
         creditsAdded: results.creditsAdded,
-        lookbackHours: 2
+        lookbackHours: 24
       }
     );
 

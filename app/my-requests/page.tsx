@@ -23,9 +23,12 @@ import {
   Award,
   Target,
   Zap,
+  Coins,
+  Repeat2,
 } from 'lucide-react';
 import { getTierConfigByVerdictCount } from '@/lib/validations';
 import { EmptyState } from '@/components/ui/EmptyStates';
+import { RoleIndicator } from '@/components/ui/RoleIndicator';
 
 // Force dynamic rendering to avoid Supabase client issues during build
 export const dynamic = 'force-dynamic';
@@ -39,6 +42,7 @@ export default function MyRequestsPage() {
   const [filter, setFilter] = useState<'all' | 'open' | 'closed' | 'cancelled'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [userCredits, setUserCredits] = useState<number>(0);
   const previousCountsRef = useRef<Record<string, number>>({});
 
   const fetchData = async () => {
@@ -54,11 +58,22 @@ export default function MyRequestsPage() {
       // Get user first
       const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
-      
+
       if (!user) {
         setError('Not logged in');
         setLoading(false);
         return;
+      }
+
+      // Fetch user credits
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('credits')
+        .eq('id', user.id)
+        .single();
+
+      if (profile && 'credits' in profile) {
+        setUserCredits((profile as any).credits || 0);
       }
 
       // Fetch requests using the API
@@ -471,13 +486,40 @@ export default function MyRequestsPage() {
                 This is your home base – track every request and its verdicts in one place.
               </p>
             </div>
-            <Link
-              href="/start-simple"
-              className="bg-indigo-600 text-white px-6 py-3 rounded-xl hover:bg-indigo-700 transition font-medium shadow-lg"
-            >
-              + New Request
-            </Link>
+            <div className="flex items-center gap-4">
+              <RoleIndicator role="submitter" />
+              <Link
+                href="/submit"
+                className="bg-indigo-600 text-white px-6 py-3 rounded-xl hover:bg-indigo-700 transition font-medium shadow-lg"
+              >
+                + New Request
+              </Link>
+            </div>
           </div>
+          {/* Credit Balance - Always visible */}
+          <div className="bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 rounded-xl p-4 mb-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-yellow-500 rounded-xl flex items-center justify-center shadow-lg">
+                  <Coins className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold text-amber-900">{userCredits}</p>
+                  <p className="text-amber-700 text-sm">Credits Available</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-amber-600 mb-2">1 credit = 1 submission</p>
+                <Link
+                  href="/feed?earn=true"
+                  className="text-sm font-medium text-amber-800 hover:text-amber-900 underline"
+                >
+                  Earn more credits →
+                </Link>
+              </div>
+            </div>
+          </div>
+
           {/* Stats Row */}
           {requests.length > 0 && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -679,17 +721,40 @@ export default function MyRequestsPage() {
                       )}
                     </div>
 
-                    {/* First Verdict Notification */}
-                    {request.received_verdict_count === 1 && request.status !== 'closed' && (
-                      <div className="flex items-center gap-2 mb-3 px-3 py-2 bg-green-50 border border-green-200 rounded-lg">
+                    {/* Verdict Preview - Show snippet of latest feedback */}
+                    {request.verdict_preview && request.received_verdict_count > 0 && (
+                      <div className="mb-3 p-3 bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-lg">
+                        <div className="flex items-start gap-2">
+                          <div className="flex-shrink-0 mt-0.5">
+                            <Star className="h-4 w-4 text-indigo-600 fill-current" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium text-indigo-800 mb-1">Latest feedback:</p>
+                            <p className="text-sm text-indigo-700 italic line-clamp-2">
+                              "{request.verdict_preview}"
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Verdict Notification - Enhanced visibility */}
+                    {request.received_verdict_count > 0 && request.status !== 'closed' && (
+                      <Link
+                        href={request.view_url || `/requests/${request.id}`}
+                        className="flex items-center gap-2 mb-3 px-3 py-2 bg-green-50 border border-green-200 rounded-lg hover:bg-green-100 transition-colors"
+                      >
                         <span className="relative flex h-2 w-2">
                           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                           <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
                         </span>
-                        <span className="text-sm font-medium text-green-700">
-                          First verdict is in! Tap to see it.
+                        <span className="text-sm font-medium text-green-700 flex-1">
+                          {request.received_verdict_count === 1
+                            ? 'First verdict is in! Tap to see it.'
+                            : `${request.received_verdict_count} verdicts received! View feedback →`}
                         </span>
-                      </div>
+                        <Eye className="h-4 w-4 text-green-600" />
+                      </Link>
                     )}
                   </div>
 
@@ -744,6 +809,23 @@ export default function MyRequestsPage() {
                       >
                         <Copy className="h-4 w-4" />
                       </button>
+                      <button
+                        onClick={() => {
+                          // Encode the context and category for URL params
+                          const params = new URLSearchParams({
+                            category: request.category || '',
+                            context: request.context?.substring(0, 500) || '',
+                            request_type: request.request_type || 'verdict',
+                            duplicate: 'true',
+                          });
+                          router.push(`/submit?${params.toString()}`);
+                          toast.success('Creating similar request...');
+                        }}
+                        className="px-3 py-2 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition cursor-pointer"
+                        title="Submit similar request"
+                      >
+                        <Repeat2 className="h-4 w-4" />
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -778,7 +860,7 @@ export default function MyRequestsPage() {
                     </button>
                   )}
                   <button
-                    onClick={() => router.push('/start')}
+                    onClick={() => router.push('/submit')}
                     className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition min-h-[48px]"
                   >
                     Create New Request

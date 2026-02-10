@@ -156,13 +156,19 @@ export function DynamicHero() {
             </span>
           </div>
 
-          {/* Dynamic headline */}
+          {/* Core Value Proposition - Always visible first */}
           <h1 className={`${deviceStyles.headline} font-bold text-white leading-tight`}>
-            {content.headline}
+            Get honest feedback from real people
           </h1>
 
-          {/* Context-aware subheadline */}
+          {/* Clear explanation */}
           <p className={`${deviceStyles.subheadline} text-white/90 max-w-2xl`}>
+            Submit anything. Get 3 detailed feedback reports in under 2 hours.
+            <span className="font-semibold"> 100% anonymous.</span>
+          </p>
+
+          {/* Time-based secondary message */}
+          <p className="text-white/70 text-sm max-w-xl">
             {content.subheadline}
           </p>
 
@@ -171,7 +177,7 @@ export function DynamicHero() {
             <button
               onClick={() => {
                 localStorage.setItem('verdict_hero_timeOfDay', timeOfDay);
-                router.push('/start');
+                router.push('/submit');
               }}
               className={`bg-white text-gray-900 ${deviceStyles.button} rounded-xl font-bold hover:bg-gray-100 transition-all duration-300 shadow-xl hover:shadow-2xl transform hover:-translate-y-0.5 flex items-center justify-center gap-2`}
             >

@@ -418,12 +418,30 @@ export function SplitTestModal({ isOpen, onClose, category }: SplitTestModalProp
                 Your A/B comparison is now live. You'll get detailed feedback on which photo
                 performs better and why within the next hour.
               </p>
-              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
                 <p className="text-sm text-green-800">
                   🎯 <strong>What to expect:</strong> Judges will see both photos side-by-side
                   and provide specific feedback on which one works better for your goal.
                 </p>
               </div>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <TouchButton
+                  onClick={resetModal}
+                  variant="outline"
+                >
+                  Close
+                </TouchButton>
+                <TouchButton
+                  onClick={() => window.location.href = '/my-requests'}
+                  className="bg-violet-600 hover:bg-violet-700"
+                >
+                  View My Requests
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </TouchButton>
+              </div>
+              <p className="text-sm text-gray-500 mt-4">
+                Redirecting to your split test in a moment...
+              </p>
             </div>
           )}
         </div>

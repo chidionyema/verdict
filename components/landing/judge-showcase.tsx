@@ -160,7 +160,7 @@ export function JudgeShowcase() {
             Every judge is carefully vetted to ensure you get valuable, actionable feedback
           </p>
           <button
-            onClick={() => window.location.href = '/start-simple'}
+            onClick={() => window.location.href = '/submit'}
             className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-8 py-4 rounded-xl font-bold text-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5"
           >
             Get Feedback from Expert Judges →

@@ -76,7 +76,7 @@ export function CrossRolePrompt({
       title: 'Need Feedback Yourself?',
       description: 'Get honest opinions on your dating profile, career decisions, or style from real people.',
       cta: 'Get Feedback',
-      href: '/start',
+      href: '/submit',
       icon: MessageSquare,
       gradient: 'from-indigo-500 to-purple-600',
       bgGradient: 'from-indigo-50 to-purple-50',
@@ -214,7 +214,7 @@ export function CrossRolePromptCompact({
     },
     judge: {
       text: 'Get feedback',
-      href: '/start',
+      href: '/submit',
       icon: MessageSquare,
       color: 'text-indigo-600 hover:text-indigo-700',
       bg: 'bg-indigo-50 hover:bg-indigo-100',

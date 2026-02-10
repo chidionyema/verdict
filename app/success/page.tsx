@@ -194,7 +194,7 @@ function SuccessContent() {
             View all my requests
           </a>
           <a
-            href="/start-simple"
+            href="/submit"
             className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium text-center"
           >
             Submit another request

@@ -47,37 +47,35 @@ export function MobileBottomNav({ className = '' }: MobileBottomNavProps) {
 
   if (shouldHide || !isAuthenticated) return null;
 
+  // Always show both Judge and My Requests for seamless role switching
   const navItems = [
     {
-      href: '/dashboard',
-      label: 'Home',
-      icon: LayoutDashboard,
-      active: pathname === '/dashboard' || pathname === '/workspace',
-    },
-    {
-      href: '/feed',
-      label: 'Community',
-      icon: Users,
-      active: pathname === '/feed',
-    },
-    {
-      href: '/start',
-      label: 'Create',
-      icon: Plus,
-      active: pathname?.startsWith('/start') || pathname?.startsWith('/submit'),
-      primary: true,
-    },
-    ...(isJudge ? [{
-      href: '/judge',
-      label: 'Judge',
-      icon: Shield,
-      active: pathname?.startsWith('/judge'),
-    }] : [{
       href: '/my-requests',
       label: 'Requests',
       icon: MessageSquare,
       active: pathname === '/my-requests',
-    }]),
+    },
+    {
+      href: '/feed',
+      label: 'Earn',
+      icon: Users,
+      active: pathname === '/feed',
+    },
+    {
+      href: '/submit',
+      label: 'Submit',
+      icon: Plus,
+      active: pathname?.startsWith('/submit'),
+      primary: true,
+    },
+    {
+      href: '/judge',
+      label: 'Review',
+      icon: Shield,
+      active: pathname?.startsWith('/judge'),
+      // Show badge if user is a qualified judge
+      badge: isJudge,
+    },
     {
       href: '/account',
       label: 'Profile',
@@ -111,13 +109,19 @@ export function MobileBottomNav({ className = '' }: MobileBottomNavProps) {
             <Link
               key={item.href}
               href={item.href}
-              className={`flex flex-col items-center justify-center flex-1 py-2 min-h-[56px] transition-colors ${
+              className={`relative flex flex-col items-center justify-center flex-1 py-2 min-h-[56px] transition-colors ${
                 item.active
                   ? 'text-indigo-600'
                   : 'text-gray-500 hover:text-gray-700'
               }`}
             >
-              <Icon className={`h-5 w-5 ${item.active ? 'stroke-[2.5]' : ''}`} />
+              <div className="relative">
+                <Icon className={`h-5 w-5 ${item.active ? 'stroke-[2.5]' : ''}`} />
+                {/* Badge for qualified judges */}
+                {(item as any).badge && (
+                  <div className="absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full" />
+                )}
+              </div>
               <span className={`text-xs mt-1 ${item.active ? 'font-medium' : ''}`}>
                 {item.label}
               </span>

@@ -329,10 +329,10 @@ export function FeaturesComparison() {
             
             <div className="flex flex-col sm:flex-row gap-4 items-center justify-center">
               <TouchButton
-                onClick={() => (window.location.href = '/start-simple')}
+                onClick={() => (window.location.href = '/submit')}
                 className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-8 py-4 text-lg font-semibold"
               >
-                Start Free with 3 Credits
+                Get Started Free
               </TouchButton>
               
               <div className="flex items-center gap-4 text-sm text-gray-600">

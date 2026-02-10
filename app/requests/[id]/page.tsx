@@ -70,6 +70,8 @@ export default function RequestDetailPage({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [verdictMismatch, setVerdictMismatch] = useState(false);
+  const [mismatchRetryCount, setMismatchRetryCount] = useState(0);
+  const maxMismatchRetries = 3;
   const [userContext, setUserContext] = useState<UserContext>({
     isSeeker: false,
     isJudge: false,
@@ -213,11 +215,21 @@ export default function RequestDetailPage({
           request_id: id,
           received_count: data.request.received_verdict_count,
           verdicts_returned: fetchedVerdicts.length,
+          retry_count: mismatchRetryCount,
         });
-        // Set a specific error state so UI can show appropriate message
-        setVerdictMismatch(true);
+
+        // Auto-retry up to maxMismatchRetries times with exponential backoff
+        if (mismatchRetryCount < maxMismatchRetries) {
+          setMismatchRetryCount(prev => prev + 1);
+          const delay = 1000 * Math.pow(2, mismatchRetryCount); // 1s, 2s, 4s
+          setTimeout(() => fetchRequest(), delay);
+        } else {
+          // Max retries reached, show manual retry option
+          setVerdictMismatch(true);
+        }
       } else {
         setVerdictMismatch(false);
+        setMismatchRetryCount(0); // Reset retry count on success
       }
 
       setLoading(false);
@@ -881,7 +893,7 @@ export default function RequestDetailPage({
                         Share Results
                       </button>
                       <Link
-                        href="/start"
+                        href="/submit"
                         className="px-4 py-2 bg-white text-green-700 border border-green-300 rounded-lg font-medium hover:bg-green-50 transition text-sm min-h-[44px] flex items-center"
                       >
                         Ask Another Question
@@ -890,7 +902,7 @@ export default function RequestDetailPage({
                   ) : averageRating >= 6 ? (
                     <>
                       <Link
-                        href={`/start?category=${request.category}&followup=true`}
+                        href={`/submit?category=${request.category}&followup=true`}
                         className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition text-sm min-h-[44px]"
                       >
                         Test a New Version
@@ -908,7 +920,7 @@ export default function RequestDetailPage({
                   ) : (
                     <>
                       <Link
-                        href={`/start?category=${request.category}&followup=true`}
+                        href={`/submit?category=${request.category}&followup=true`}
                         className="px-4 py-2 bg-amber-600 text-white rounded-lg font-medium hover:bg-amber-700 transition text-sm min-h-[44px]"
                       >
                         Create Improved Version
@@ -1123,13 +1135,27 @@ export default function RequestDetailPage({
                       🔄 Checking for updates every 5 seconds
                     </div>
                   )}
+                  {/* Auto-retry in progress */}
+                  {mismatchRetryCount > 0 && mismatchRetryCount < maxMismatchRetries && (
+                    <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <p className="text-sm text-blue-800 flex items-center gap-2">
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                        Syncing verdicts... (attempt {mismatchRetryCount + 1}/{maxMismatchRetries})
+                      </p>
+                    </div>
+                  )}
+                  {/* Manual retry after max auto-retries */}
                   {verdictMismatch && (
                     <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
                       <p className="text-sm text-amber-800 mb-2">
                         <strong>Sync issue:</strong> {request.received_verdict_count} verdict{request.received_verdict_count > 1 ? 's' : ''} recorded but not displaying.
                       </p>
                       <button
-                        onClick={fetchRequest}
+                        onClick={() => {
+                          setMismatchRetryCount(0);
+                          setVerdictMismatch(false);
+                          fetchRequest();
+                        }}
                         className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition text-sm font-medium"
                       >
                         Retry Loading Verdicts
@@ -1381,7 +1407,7 @@ export default function RequestDetailPage({
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-left">
                 <Link
-                  href={`/start-simple?category=${encodeURIComponent(request.category)}`}
+                  href={`/submit?category=${encodeURIComponent(request.category)}`}
                   className="flex flex-col gap-2 bg-indigo-600 text-white px-6 py-4 rounded-xl font-medium hover:bg-indigo-700 transition shadow-lg"
                 >
                   <div className="flex items-center gap-2">
@@ -1394,7 +1420,7 @@ export default function RequestDetailPage({
                 </Link>
 
                 <Link
-                  href="/start-simple"
+                  href="/submit"
                   className="flex flex-col gap-2 bg-white text-gray-800 px-6 py-4 rounded-xl font-medium hover:bg-gray-50 transition border border-gray-200"
                 >
                   <div className="flex items-center gap-2">

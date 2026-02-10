@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 import { MagneticButton, FloatingBadge, RippleButton } from '@/components/ui/MicroInteractions';
+import NotificationCenter from '@/components/NotificationCenter';
 
 interface UserProfile {
   credits: number;
@@ -59,7 +60,6 @@ export default function Navigation() {
 
   // Smart context detection
   const isHomePage = pathname === '/';
-  const isWorkspacePage = pathname === '/workspace';
   const isCreatePage = pathname === '/create';
   const isJudgePage = pathname?.startsWith('/judge');
   const isFeedPage = pathname === '/feed';
@@ -183,7 +183,7 @@ export default function Navigation() {
   // Smart logo destination
   const getLogoDestination = () => {
     if (!user) return '/';
-    return '/workspace';
+    return '/dashboard';
   };
 
   // Define navigation item interface
@@ -206,11 +206,11 @@ export default function Navigation() {
     }
 
     const items: NavItem[] = [
-      { 
-        href: '/workspace', 
-        label: 'Workspace', 
+      {
+        href: '/dashboard',
+        label: 'Dashboard',
         icon: Grid,
-        active: isWorkspacePage,
+        active: pathname === '/dashboard',
         badge: userStats.activeRequests > 0 ? userStats.activeRequests : undefined,
       },
     ];
@@ -346,14 +346,7 @@ export default function Navigation() {
                 </Link>
 
                 {/* Notifications */}
-                <button className="relative min-h-[44px] min-w-[44px] p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2" aria-label="View notifications">
-                  <Bell className="h-5 w-5" />
-                  {userStats.activeRequests > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center font-medium">
-                      {userStats.activeRequests}
-                    </span>
-                  )}
-                </button>
+                <NotificationCenter />
 
                 {/* Profile Dropdown */}
                 <div className="relative" ref={profileDropdownRef}>
@@ -402,12 +395,12 @@ export default function Navigation() {
                       </div>
 
                       <Link
-                        href="/workspace"
+                        href="/dashboard"
                         onClick={() => setShowProfileDropdown(false)}
                         className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 transition-colors"
                       >
                         <Grid className="h-4 w-4 text-gray-600" />
-                        <span>My Workspace</span>
+                        <span>My Dashboard</span>
                       </Link>
 
                       {userProfile?.is_judge && (

@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Heart, X, MessageSquare, Clock, Eye, Users, Zap, Plus, Filter, Camera, FileText, Briefcase, Sparkles } from 'lucide-react';
+import { Heart, X, MessageSquare, Clock, Eye, Users, Zap, Plus, Filter, Camera, FileText, Briefcase, Sparkles, ArrowLeft } from 'lucide-react';
+import { RoleIndicator } from '@/components/ui/RoleIndicator';
 import { CreditBalance } from '@/components/credits/CreditBalance';
 import { JudgeReputation } from '@/components/reputation/JudgeReputation';
 import { CreditEarningProgress } from '@/components/credits/CreditEarningProgress';
@@ -54,6 +55,28 @@ export default function FeedPage() {
   const [returnUrl, setReturnUrl] = useState<string | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+
+  // Persist category filter to localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedFilter = localStorage.getItem('verdict_feed_category_filter');
+      if (savedFilter && savedFilter !== 'null') {
+        setCategoryFilter(savedFilter);
+      }
+    }
+  }, []);
+
+  // Save category filter changes to localStorage
+  const handleCategoryFilterChange = (category: string | null) => {
+    setCategoryFilter(category);
+    if (typeof window !== 'undefined') {
+      if (category) {
+        localStorage.setItem('verdict_feed_category_filter', category);
+      } else {
+        localStorage.removeItem('verdict_feed_category_filter');
+      }
+    }
+  };
 
   // Progressive profiling
   const { shouldShow: showProgressiveProfile, triggerType, dismiss: dismissProgressiveProfile, checkTrigger } = useProgressiveProfile();
@@ -363,24 +386,44 @@ export default function FeedPage() {
       return;
     }
 
-    // Check if user has enough experience to skip
-    const { count: totalJudgments } = await supabaseRef.current
-      .from('verdict_responses')
-      .select('*', { count: 'exact', head: true })
-      .eq('judge_id', user.id);
+    try {
+      // Check if user has enough experience to skip
+      const { count: totalJudgments, error: countError } = await supabaseRef.current
+        .from('verdict_responses')
+        .select('*', { count: 'exact', head: true })
+        .eq('judge_id', user.id);
 
-    if ((totalJudgments || 0) >= 3) {
-      // Experienced user - allow skip and mark training as completed
-      await (supabaseRef.current
-        .from('profiles')
-        .update as any)({ judge_training_completed: true })
-        .eq('id', user.id);
+      if (countError) {
+        console.error('Error checking judgments:', countError);
+        toast.error('Unable to verify experience. Please complete training.');
+        return;
+      }
 
-      setShowTraining(false);
-      toast.success('Welcome back! You can start judging.');
-    } else {
-      // New user - training is required
-      toast.error('Training is required for new judges. Complete the quick tutorial to continue.');
+      if ((totalJudgments || 0) >= 3) {
+        // Experienced user - allow skip and mark training as completed
+        // Update database first, then update UI state atomically
+        const { error: updateError } = await (supabaseRef.current
+          .from('profiles')
+          .update as any)({ judge_training_completed: true })
+          .eq('id', user.id);
+
+        if (updateError) {
+          console.error('Error updating training status:', updateError);
+          toast.error('Unable to skip training. Please try again.');
+          return;
+        }
+
+        // Only update UI state after database update succeeds
+        setTrainingCompleted(true);
+        setShowTraining(false);
+        toast.success('Welcome back! You can start judging.');
+      } else {
+        // New user - training is required
+        toast.error('Training is required for new judges. Complete the quick tutorial to continue.');
+      }
+    } catch (error) {
+      console.error('Training skip error:', error);
+      toast.error('An error occurred. Please complete training.');
     }
   }
 
@@ -498,9 +541,19 @@ export default function FeedPage() {
         </div>
       </div>
 
-      {/* Credit Balance - Minimal in corner */}
-      <div className="fixed top-4 right-4 z-20">
+      {/* Role Indicator + Credit Balance + Back Navigation */}
+      <div className="fixed top-4 right-4 z-20 flex items-center gap-3">
+        <RoleIndicator role="reviewer" />
         <CreditBalance compact />
+      </div>
+      <div className="fixed top-4 left-4 z-20">
+        <button
+          onClick={() => router.push('/my-requests')}
+          className="flex items-center gap-2 px-3 py-2 bg-white/90 backdrop-blur border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors shadow-sm"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          My Submissions
+        </button>
       </div>
 
       {/* Earn Mode Banner */}
@@ -570,7 +623,7 @@ export default function FeedPage() {
         <div className="max-w-lg mx-auto px-4 py-2">
           <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
             <button
-              onClick={() => setCategoryFilter(null)}
+              onClick={() => handleCategoryFilterChange(null)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
                 categoryFilter === null
                   ? 'bg-indigo-600 text-white'
@@ -581,7 +634,7 @@ export default function FeedPage() {
               All
             </button>
             <button
-              onClick={() => setCategoryFilter('appearance')}
+              onClick={() => handleCategoryFilterChange('appearance')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
                 categoryFilter === 'appearance'
                   ? 'bg-pink-600 text-white'
@@ -592,7 +645,7 @@ export default function FeedPage() {
               Appearance
             </button>
             <button
-              onClick={() => setCategoryFilter('writing')}
+              onClick={() => handleCategoryFilterChange('writing')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
                 categoryFilter === 'writing'
                   ? 'bg-green-600 text-white'
@@ -603,7 +656,7 @@ export default function FeedPage() {
               Writing
             </button>
             <button
-              onClick={() => setCategoryFilter('career')}
+              onClick={() => handleCategoryFilterChange('career')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
                 categoryFilter === 'career'
                   ? 'bg-blue-600 text-white'
@@ -614,7 +667,7 @@ export default function FeedPage() {
               Career
             </button>
             <button
-              onClick={() => setCategoryFilter('other')}
+              onClick={() => handleCategoryFilterChange('other')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
                 categoryFilter === 'other'
                   ? 'bg-gray-600 text-white'
@@ -719,7 +772,7 @@ export default function FeedPage() {
               actions={categoryFilter ? [
                 {
                   label: 'View All Categories',
-                  action: () => setCategoryFilter(null),
+                  action: () => handleCategoryFilterChange(null),
                   variant: 'primary',
                   icon: Sparkles
                 },
@@ -732,7 +785,7 @@ export default function FeedPage() {
               ] : [
                 {
                   label: 'Submit Your Own Request',
-                  action: () => router.push('/start'),
+                  action: () => router.push('/submit'),
                   variant: 'primary',
                   icon: Plus
                 },
@@ -779,7 +832,7 @@ export default function FeedPage() {
               <span className="text-xs">Dashboard</span>
             </button>
             <button
-              onClick={() => router.push('/start')}
+              onClick={() => router.push('/submit')}
               className="flex flex-col items-center gap-1 text-gray-400"
             >
               <MessageSquare className="h-5 w-5" />

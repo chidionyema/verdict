@@ -137,15 +137,16 @@ async function fetchVerdictRequests(supabase: any, userId: string, searchParams:
     throw new Error(`Database query failed: ${error.message || error.code || 'Unknown error'}`);
   }
 
-  // Fetch verdict responses for all requests to calculate average ratings
+  // Fetch verdict responses for all requests to calculate average ratings and get previews
   const requestIds = (requests || []).map((r: any) => r.id);
   let verdictsByRequest: Record<string, any[]> = {};
 
   if (requestIds.length > 0) {
     const { data: verdicts } = await supabase
       .from('verdict_responses')
-      .select('request_id, rating')
-      .in('request_id', requestIds);
+      .select('request_id, rating, summary, reasoning, created_at')
+      .in('request_id', requestIds)
+      .order('created_at', { ascending: false });
 
     if (verdicts) {
       verdicts.forEach((v: any) => {
@@ -157,7 +158,7 @@ async function fetchVerdictRequests(supabase: any, userId: string, searchParams:
     }
   }
 
-  // Return requests with calculated average rating
+  // Return requests with calculated average rating and verdict preview
   return (requests || []).map((request: any) => {
     const reqVerdicts = verdictsByRequest[request.id] || [];
     const validRatings = reqVerdicts.filter((v: any) => v.rating != null);
@@ -165,10 +166,22 @@ async function fetchVerdictRequests(supabase: any, userId: string, searchParams:
       ? validRatings.reduce((sum: number, v: any) => sum + v.rating, 0) / validRatings.length
       : null;
 
+    // Get the latest verdict's preview text (summary or first part of reasoning)
+    const latestVerdict = reqVerdicts[0];
+    let verdictPreview = null;
+    if (latestVerdict) {
+      const previewText = latestVerdict.summary || latestVerdict.reasoning || '';
+      // Truncate to ~100 chars for preview
+      verdictPreview = previewText.length > 100
+        ? previewText.substring(0, 100).trim() + '...'
+        : previewText;
+    }
+
     return {
       ...request,
       verdict_count: request.received_verdict_count || 0,
       avg_rating: avgRating,
+      verdict_preview: verdictPreview,
       folder_id: null // Add for compatibility with UI
     };
   });

@@ -2,6 +2,18 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { log } from '@/lib/logger';
 import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
+import { TIER_CONFIGURATIONS, getTierConfig } from '@/lib/pricing/dynamic-pricing';
+
+// Helper to get judge earning for a request tier
+function getJudgeEarningCents(tier?: string): number {
+  const tierKey = tier === 'pro' ? 'expert' : (tier || 'community');
+  try {
+    const config = getTierConfig(tierKey);
+    return config.judge_payout_cents;
+  } catch {
+    return TIER_CONFIGURATIONS.community.judge_payout_cents;
+  }
+}
 
 // UUID validation regex
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -136,7 +148,7 @@ async function POST_Handler(
 
     const comparisonData = comparison as any;
 
-    if (comparisonData.status !== 'pending' && comparisonData.status !== 'active') {
+    if (comparisonData.status !== 'open' && comparisonData.status !== 'in_progress') {
       return NextResponse.json(
         { error: 'Comparison is no longer accepting verdicts' },
         { status: 410 }
@@ -152,7 +164,7 @@ async function POST_Handler(
 
     // Check if user has already submitted a verdict for this comparison
     const { data: existingVerdict } = await supabase
-      .from('comparison_responses')
+      .from('comparison_verdicts')
       .select('id')
       .eq('comparison_id', comparisonId)
       .eq('judge_id', user.id)
@@ -175,7 +187,7 @@ async function POST_Handler(
 
     // Create the verdict
     const { data: verdict, error: verdictError } = await supabase
-      .from('comparison_responses')
+      .from('comparison_verdicts')
       .insert({
         comparison_id: comparisonId,
         judge_id: user.id,
@@ -206,32 +218,82 @@ async function POST_Handler(
       );
     }
 
-    // Award credits to judge for completing the verdict
-    const creditAmount = comparisonData.request_tier === 'pro' ? 1.0 : 0.5; // More for pro tier comparisons
+    // Increment verdict count and auto-close if target reached
+    let updatedComparison;
+    try {
+      const { data: incrementResult, error: incrementError } = await (supabase as any).rpc(
+        'increment_comparison_verdict_count_and_close',
+        { p_comparison_id: comparisonId }
+      );
+
+      if (incrementError) {
+        log.error('Failed to increment comparison verdict count', { error: incrementError, comparisonId });
+      } else {
+        updatedComparison = incrementResult;
+      }
+    } catch (incrementError) {
+      log.error('RPC call failed for increment_comparison_verdict_count_and_close', { error: incrementError, comparisonId });
+    }
+
+    // Calculate judge earning based on request tier
+    const earningCents = getJudgeEarningCents(comparisonData.request_tier);
+    const earningAmount = earningCents / 100; // Convert to dollars
+
+    // Create earnings record for the judge (for payout tracking)
+    // This is the critical record that appears in judge earnings dashboard
+    const verdictId = (verdict as any)?.id;
+    try {
+      await (supabase as any)
+        .from('judge_earnings')
+        .upsert({
+          judge_id: user.id,
+          verdict_response_id: verdictId, // Using verdict ID as unique key
+          amount: earningAmount,
+          currency: 'USD',
+          payout_status: 'pending',
+          created_at: new Date().toISOString(),
+        }, {
+          onConflict: 'verdict_response_id',
+          ignoreDuplicates: true
+        });
+
+      log.info('Judge earnings created for comparison verdict', {
+        judgeId: user.id,
+        verdictId,
+        amount: earningAmount,
+        tier: comparisonData.request_tier
+      });
+    } catch (earningsError) {
+      // Log but don't fail - verdict was already created
+      log.error('Failed to create judge_earnings record for comparison', {
+        error: earningsError,
+        judgeId: user.id,
+        verdictId,
+        amount: earningAmount
+      });
+    }
+
+    // Award credits to judge (for credit balance - separate from earnings)
+    // Note: Verdict already created, so don't fail the request if this fails
     try {
       await (supabase as any).rpc('award_credits', {
         target_user_id: user.id,
-        credit_amount: creditAmount,
+        credit_amount: earningAmount,
         transaction_type: 'judgment',
         transaction_source: 'comparison_verdict',
-        transaction_source_id: (verdict as any)?.id || comparisonId,
+        transaction_source_id: verdictId || comparisonId,
         transaction_description: 'Comparison Judgment Reward',
       });
     } catch (rpcError) {
-      // EMERGENCY FIX: Remove dangerous fallback - fail safely instead
-      console.error('award_credits RPC failed - credit system temporarily unavailable:', rpcError);
-      
-      // Log the failure for investigation but don't manipulate credits unsafely
-      console.error('CRITICAL: Credit award failed for user', user.id, 'amount:', creditAmount);
-      
-      // Return error instead of dangerous fallback
-      return NextResponse.json(
-        { 
-          error: 'Credit system temporarily unavailable. Your judgment was recorded but credits will be awarded later.',
-          details: 'Please contact support if this persists.'
-        }, 
-        { status: 503 }
-      );
+      // Verdict was already created successfully - log for async recovery but don't fail
+      log.error('award_credits RPC failed for comparison verdict - needs async recovery', {
+        error: rpcError,
+        userId: user.id,
+        amount: earningAmount,
+        verdictId,
+        comparisonId
+      });
+      // Continue - verdict was recorded, credits can be reconciled later
     }
 
     // Update judge reputation (non-critical, can silently fail)
@@ -264,23 +326,26 @@ async function POST_Handler(
       console.log('user_actions table not found, skipping log');
     }
 
-    // Get updated comparison status (triggers will have updated it)
-    const { data: updatedComparison } = await supabase
-      .from('comparison_requests')
-      .select('received_verdict_count, target_verdict_count, status, winning_option')
-      .eq('id', comparisonId)
-      .single() as { data: any, error: any };
+    // Get updated comparison status if not already set by increment RPC
+    if (!updatedComparison) {
+      const { data: fetchedComparison } = await supabase
+        .from('comparison_requests')
+        .select('received_verdict_count, target_verdict_count, status, winner_option')
+        .eq('id', comparisonId)
+        .single() as { data: any, error: any };
+      updatedComparison = fetchedComparison;
+    }
 
     return NextResponse.json({
       success: true,
-      verdictId: (verdict as any)?.id || 'unknown',
-      creditsEarned: creditAmount,
+      verdictId: verdictId || 'unknown',
+      creditsEarned: earningAmount,
       comparisonStatus: {
         receivedVerdicts: updatedComparison?.received_verdict_count || 0,
         targetVerdicts: updatedComparison?.target_verdict_count || 0,
         status: updatedComparison?.status,
-        isComplete: updatedComparison?.status === 'completed',
-        winningOption: updatedComparison?.winning_option,
+        isComplete: updatedComparison?.status === 'closed',
+        winningOption: updatedComparison?.winner_option,
       },
     });
 

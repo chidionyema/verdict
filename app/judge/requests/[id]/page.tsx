@@ -3,7 +3,8 @@
 import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Clock, DollarSign, Send, ArrowLeft, Maximize2, Info, CheckCircle } from 'lucide-react';
+import { Clock, DollarSign, Send, ArrowLeft, Maximize2, Info, CheckCircle, Award } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
 import type { VerdictRequest } from '@/lib/database.types';
 import { TIER_CONFIGURATIONS, getTierConfig } from '@/lib/pricing/dynamic-pricing';
 
@@ -27,6 +28,7 @@ export default function JudgeVerdictPage({
   const { id } = use(params);
   const router = useRouter();
 
+  const supabase = createClient();
   const [request, setRequest] = useState<VerdictRequest | null>(null);
   const [rating, setRating] = useState(7);
   const [feedback, setFeedback] = useState('');
@@ -35,10 +37,34 @@ export default function JudgeVerdictPage({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [showImageModal, setShowImageModal] = useState(false);
+  const [alreadyJudged, setAlreadyJudged] = useState(false);
+  const [existingVerdictId, setExistingVerdictId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchRequest();
+    checkAlreadyJudged();
   }, [id]);
+
+  const checkAlreadyJudged = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: existingVerdict } = await supabase
+        .from('verdict_responses')
+        .select('id')
+        .eq('request_id', id)
+        .eq('judge_id', user.id)
+        .single();
+
+      if (existingVerdict) {
+        setAlreadyJudged(true);
+        setExistingVerdictId((existingVerdict as { id: string }).id);
+      }
+    } catch (err) {
+      // No existing verdict found - this is expected
+    }
+  };
 
   const fetchRequest = async () => {
     try {
@@ -262,18 +288,51 @@ export default function JudgeVerdictPage({
             </div>
           </section>
 
-          {/* Verdict Form */}
+          {/* Verdict Form or Already Judged State */}
           <section className="bg-white rounded-xl shadow-lg p-6 border border-gray-100">
-            <h2 className="text-sm font-semibold text-gray-900 mb-1">
-              Your Verdict
-            </h2>
-            <p className="text-xs text-gray-500 mb-4">
-              {request.requested_tone === 'encouraging'
-                ? 'The seeker wants encouraging, supportive feedback. Be gentle and focus on positives while still being helpful.'
-                : request.requested_tone === 'brutally_honest'
-                ? 'The seeker wants brutally honest feedback with no sugar-coating. Be direct and straightforward in your assessment.'
-                : 'Give one clear recommendation, explain why in a few sentences, and keep your tone kind and direct.'}
-            </p>
+            {alreadyJudged ? (
+              /* Already Judged State */
+              <div className="text-center py-8">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Award className="h-8 w-8 text-green-600" />
+                </div>
+                <h2 className="text-xl font-bold text-gray-900 mb-2">
+                  You've Already Judged This Request
+                </h2>
+                <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                  Your verdict has been submitted and the seeker will see your feedback.
+                  Thank you for contributing!
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                  <Link
+                    href={`/requests/${id}`}
+                    className="inline-flex items-center justify-center px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium"
+                  >
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    View Your Verdict
+                  </Link>
+                  <Link
+                    href="/judge"
+                    className="inline-flex items-center justify-center px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium"
+                  >
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Back to Queue
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              /* Verdict Form */
+              <>
+                <h2 className="text-sm font-semibold text-gray-900 mb-1">
+                  Your Verdict
+                </h2>
+                <p className="text-xs text-gray-500 mb-4">
+                  {request.requested_tone === 'encouraging'
+                    ? 'The seeker wants encouraging, supportive feedback. Be gentle and focus on positives while still being helpful.'
+                    : request.requested_tone === 'brutally_honest'
+                    ? 'The seeker wants brutally honest feedback with no sugar-coating. Be direct and straightforward in your assessment.'
+                    : 'Give one clear recommendation, explain why in a few sentences, and keep your tone kind and direct.'}
+                </p>
 
             {/* Rating */}
             <div className="mb-6">
@@ -321,6 +380,32 @@ export default function JudgeVerdictPage({
                   </button>
                 ))}
               </div>
+
+              {/* Tone mismatch warning */}
+              {request.requested_tone && (() => {
+                const requestedTone = request.requested_tone;
+                const isMismatch =
+                  (requestedTone === 'encouraging' && tone === 'honest') ||
+                  (requestedTone === 'brutally_honest' && tone === 'encouraging') ||
+                  (requestedTone === 'honest' && tone === 'encouraging');
+
+                if (isMismatch) {
+                  return (
+                    <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2">
+                      <Info className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                      <p className="text-sm text-amber-800">
+                        <strong>Note:</strong> The seeker requested{' '}
+                        <span className="font-semibold">
+                          {requestedTone === 'encouraging' ? 'encouraging' :
+                           requestedTone === 'brutally_honest' ? 'brutally honest' : 'honest'}
+                        </span>{' '}
+                        feedback. Your "{tone}" tone may not match their preference.
+                      </p>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
             </div>
 
             {/* Feedback Text */}
@@ -388,14 +473,14 @@ export default function JudgeVerdictPage({
               </div>
             </div>
 
-            {/* Submit Button */}
+            {/* Submit Button - Shows earnings */}
             <button
               onClick={handleSubmit}
               disabled={feedback.length < 120 || submitting}
-              className={`w-full py-3 rounded-lg font-semibold transition flex items-center justify-center cursor-pointer ${
+              className={`w-full py-4 min-h-[56px] rounded-xl font-bold transition flex items-center justify-center cursor-pointer ${
                 feedback.length < 120 || submitting
                   ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-md'
+                  : 'bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 shadow-lg hover:shadow-xl'
               }`}
             >
               {submitting ? (
@@ -403,7 +488,7 @@ export default function JudgeVerdictPage({
               ) : (
                 <>
                   <Send className="h-5 w-5 mr-2" />
-                  Submit Verdict
+                  Submit & Earn ${getJudgeEarningForTier((request as any)?.request_tier)}
                 </>
               )}
             </button>
@@ -430,6 +515,8 @@ export default function JudgeVerdictPage({
                 <li>End with one concrete action the seeker can take next.</li>
               </ul>
             </div>
+              </>
+            )}
           </section>
         </div>
       </div>

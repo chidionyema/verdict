@@ -42,6 +42,8 @@ export default function DashboardPage() {
   const [purchaseError, setPurchaseError] = useState<string | null>(null);
   const [showWelcomeBack, setShowWelcomeBack] = useState(false);
   const [daysSinceLastVisit, setDaysSinceLastVisit] = useState(0);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [newVerdictsCount, setNewVerdictsCount] = useState(0);
 
   // Check for returning users
   useEffect(() => {
@@ -102,17 +104,37 @@ export default function DashboardPage() {
       }
       setProfile(profileData);
 
-      // Fetch requests
-      const res = await fetch('/api/requests');
-      if (res.ok) {
-        const { requests: requestsData } = await res.json();
+      // Fetch requests and notifications in parallel
+      const [requestsRes, notificationsRes] = await Promise.all([
+        fetch('/api/requests'),
+        fetch('/api/notifications?unread_only=true&limit=50')
+      ]);
+
+      if (requestsRes.ok) {
+        const { requests: requestsData } = await requestsRes.json();
         setRequests(requestsData || []);
-      } else if (res.status === 401) {
+
+        // Count new verdicts for welcome back (requests with recent verdicts)
+        const lastVisit = localStorage.getItem('verdict_last_dashboard_visit');
+        if (lastVisit) {
+          const lastVisitDate = new Date(parseInt(lastVisit));
+          const requestsWithNewVerdicts = (requestsData || []).filter((r: any) => {
+            const updatedAt = new Date(r.updated_at);
+            return updatedAt > lastVisitDate && r.received_verdict_count > 0;
+          });
+          setNewVerdictsCount(requestsWithNewVerdicts.length);
+        }
+      } else if (requestsRes.status === 401) {
         setError('Session expired. Please log in again.');
       } else {
-        const errorData = await res.json().catch(() => ({}));
-        console.error('Failed to fetch requests:', res.status, errorData);
+        const errorData = await requestsRes.json().catch(() => ({}));
+        console.error('Failed to fetch requests:', requestsRes.status, errorData);
         setError('Failed to load your requests. Please try again.');
+      }
+
+      if (notificationsRes.ok) {
+        const { unread_count } = await notificationsRes.json();
+        setUnreadNotifications(unread_count || 0);
       }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -566,20 +588,39 @@ export default function DashboardPage() {
                   Welcome back! {daysSinceLastVisit >= 7 ? "We've missed you" : "Good to see you again"}
                 </p>
                 <p className="text-sm text-indigo-700">
-                  {requests.filter(r => r.status === 'closed').length > 0
-                    ? `You have ${requests.filter(r => r.status === 'open' || r.status === 'in_progress').length} active requests`
-                    : "Ready to get feedback on something new?"
-                  }
+                  {/* Show summary of what happened while away */}
+                  {(() => {
+                    const updates: string[] = [];
+                    if (newVerdictsCount > 0) {
+                      updates.push(`${newVerdictsCount} new verdict${newVerdictsCount > 1 ? 's' : ''}`);
+                    }
+                    if (unreadNotifications > 0) {
+                      updates.push(`${unreadNotifications} notification${unreadNotifications > 1 ? 's' : ''}`);
+                    }
+                    const activeCount = requests.filter(r => r.status === 'open' || r.status === 'in_progress').length;
+                    if (activeCount > 0) {
+                      updates.push(`${activeCount} active request${activeCount > 1 ? 's' : ''}`);
+                    }
+                    return updates.length > 0
+                      ? `You have ${updates.join(', ')}`
+                      : "Ready to get feedback on something new?";
+                  })()}
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-3">
+              {newVerdictsCount > 0 && (
+                <span className="px-3 py-1.5 bg-green-100 text-green-700 rounded-full text-sm font-medium flex items-center gap-1.5">
+                  <CheckCircle className="h-4 w-4" />
+                  {newVerdictsCount} new verdict{newVerdictsCount > 1 ? 's' : ''}
+                </span>
+              )}
               <Link
-                href="/start"
+                href="/submit"
                 className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-medium hover:from-indigo-700 hover:to-purple-700 transition text-sm flex items-center gap-2"
               >
                 <Plus className="h-4 w-4" />
-                New Request
+                New Submission
               </Link>
               <button
                 onClick={() => setShowWelcomeBack(false)}
@@ -603,15 +644,18 @@ export default function DashboardPage() {
               </div>
               <div>
                 <p className="font-semibold text-amber-900">You're out of credits!</p>
-                <p className="text-sm text-amber-700">Get credits to submit new requests, or earn them by judging.</p>
+                <p className="text-sm text-amber-700">
+                  Review 3 submissions to earn 1 free credit, or buy credits instantly.
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-3">
               <Link
-                href="/feed"
-                className="px-4 py-2 bg-white border border-amber-300 text-amber-700 rounded-lg font-medium hover:bg-amber-50 transition text-sm"
+                href="/feed?earn=true"
+                className="px-4 py-2 bg-white border border-amber-300 text-amber-700 rounded-lg font-medium hover:bg-amber-50 transition text-sm flex items-center gap-2"
               >
-                Earn Free Credits
+                <Clock className="h-4 w-4" />
+                Earn Credit (~15 min)
               </Link>
               <button
                 onClick={() => setShowCreditsModal(true)}
@@ -673,10 +717,9 @@ export default function DashboardPage() {
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
             <p className="text-gray-600 mt-1">
-              Overview of your requests and progress •{' '}
-              {profile?.credits || 0}{' '}
-              {profile?.credits === 1 ? 'request left' : 'requests left'} •{' '}
-              {filteredAndSortedRequests.length} of {requests.length} requests
+              Overview of your feedback requests •{' '}
+              <span className="font-medium text-indigo-600">{profile?.credits || 0} {profile?.credits === 1 ? 'credit' : 'credits'}</span>{' '}
+              (1 credit = 1 submission with 3 feedback reports)
             </p>
           </div>
           
@@ -721,7 +764,7 @@ export default function DashboardPage() {
             </button>
 
             <Link
-              href="/start"
+              href="/submit"
               className="bg-indigo-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-indigo-700 transition flex items-center justify-center min-h-[48px] whitespace-nowrap"
             >
               <Plus className="h-5 w-5 mr-2" />
@@ -849,7 +892,7 @@ export default function DashboardPage() {
               </div>
               
               <Link
-                href="/start"
+                href="/submit"
                 className="inline-flex items-center gap-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-10 py-5 rounded-2xl hover:shadow-2xl transition-all duration-300 font-bold text-lg hover:-translate-y-1 group mb-8"
               >
                 <Sparkles className="h-6 w-6 animate-spin" />
@@ -899,7 +942,7 @@ export default function DashboardPage() {
                 Clear Filters
               </button>
               <Link
-                href="/start"
+                href="/submit"
                 className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-3 rounded-2xl hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 font-semibold"
               >
                 New Request

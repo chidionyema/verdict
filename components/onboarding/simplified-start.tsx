@@ -303,7 +303,7 @@ export function SimplifiedStart() {
           requestedTone,
         }));
       }
-      router.push('/auth/signup?redirect=/start-simple');
+      router.push('/auth/signup?redirect=/submit');
       return;
     }
 

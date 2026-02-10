@@ -74,7 +74,7 @@ export function SmartExitIntent() {
         icon: <Sparkles className="h-6 w-6" />,
         action: () => {
           localStorage.setItem('verdict_vip_claimed', 'true');
-          router.push('/start?vip=true');
+          router.push('/submit?vip=true');
         },
         color: 'from-purple-600 to-pink-600'
       };
@@ -103,7 +103,7 @@ export function SmartExitIntent() {
         icon: <Gift className="h-6 w-6" />,
         action: () => {
           localStorage.setItem('verdict_discount', 'SAVE20');
-          router.push('/start?discount=SAVE20');
+          router.push('/submit?discount=SAVE20');
         },
         color: 'from-orange-600 to-red-600'
       };
@@ -139,7 +139,7 @@ export function SmartExitIntent() {
     localStorage.setItem('verdict_email', email);
     localStorage.setItem('verdict_guide_requested', 'true');
     setIsVisible(false);
-    router.push('/start?welcome=true');
+    router.push('/submit?welcome=true');
   };
 
   if (!isVisible) return null;

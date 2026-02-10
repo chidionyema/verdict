@@ -48,7 +48,7 @@ export default function CareerLandingPage() {
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
             <button
-              onClick={() => router.push('/start-simple?category=writing&subcategory=career')}
+              onClick={() => router.push('/submit?category=writing&subcategory=career')}
               className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-8 py-4 rounded-xl font-bold text-lg hover:shadow-xl transition-all transform hover:scale-105 min-h-[48px] inline-flex items-center gap-2"
             >
               Get Career Feedback
@@ -291,7 +291,7 @@ export default function CareerLandingPage() {
             Get professional feedback from verified reviewers in under an hour. Make better career moves with confidence.
           </p>
           <button
-            onClick={() => router.push('/start-simple?category=writing&subcategory=career')}
+            onClick={() => router.push('/submit?category=writing&subcategory=career')}
             className="bg-white text-blue-600 px-8 py-4 rounded-xl font-bold text-lg hover:shadow-xl transition-all transform hover:scale-105 min-h-[48px]"
           >
             Get My Career Feedback

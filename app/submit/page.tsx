@@ -20,7 +20,9 @@ import {
 } from 'lucide-react';
 import { ComparisonButton } from '@/components/comparison/ComparisonButton';
 import { LoadingOverlay } from '@/components/ui/LoadingOverlay';
-import { X, Clock, Coins } from 'lucide-react';
+import { RoleIndicator } from '@/components/ui/RoleIndicator';
+import { ConfettiAnimation, MicroInteractionStyles } from '@/components/animations/DelightfulMicroInteractions';
+import { X, Clock, Coins, ArrowLeft, Mail, Bell } from 'lucide-react';
 
 interface SubmissionStep {
   step: 'details' | 'mode' | 'payment' | 'processing' | 'success';
@@ -34,6 +36,7 @@ interface SubmissionData {
   mediaUrl?: string;
   visibility?: 'public' | 'private';
   mode?: 'community' | 'private';
+  requestId?: string;
 }
 
 export default function SubmitPage() {
@@ -96,29 +99,48 @@ export default function SubmitPage() {
           console.error('Error processing submission:', error);
           toast.error('Connection issue. Retrying...');
 
-          await new Promise(resolve => setTimeout(resolve, 2000));
+          // Exponential backoff retry: 2s, 4s, 8s
+          const maxRetries = 3;
+          let lastError = error;
 
-          try {
-            const retryResponse = await fetch('/api/submit/process-payment', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ session_id: sessionId })
-            });
-            const retryData = await retryResponse.json().catch(() => ({ error: 'Unknown error' }));
+          for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            const delay = Math.min(2000 * Math.pow(2, attempt - 1), 8000);
+            await new Promise(resolve => setTimeout(resolve, delay));
 
-            if (retryResponse.ok && retryData.success) {
-              setIsProcessingPaymentReturn(false);
-              setStep('success');
-            } else {
-              setIsProcessingPaymentReturn(false);
-              toast.error('Please contact support with session ID: ' + sessionId);
-              setStep('details');
+            try {
+              const retryResponse = await fetch('/api/submit/process-payment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ session_id: sessionId })
+              });
+              const retryData = await retryResponse.json().catch(() => ({ error: 'Unknown error' }));
+
+              if (retryResponse.ok && retryData.success) {
+                setIsProcessingPaymentReturn(false);
+                if (retryData.idempotent) {
+                  toast.success('Your submission was already created!');
+                }
+                setStep('success');
+                return; // Success - exit the retry loop
+              } else if (retryData.refunded) {
+                setIsProcessingPaymentReturn(false);
+                toast.error('Submission failed. Your payment has been refunded.');
+                setStep('mode');
+                return;
+              }
+              // Continue to next retry
+            } catch (retryError) {
+              lastError = retryError;
+              if (attempt < maxRetries) {
+                toast.error(`Retry ${attempt}/${maxRetries} failed. Trying again...`);
+              }
             }
-          } catch (retryError) {
-            setIsProcessingPaymentReturn(false);
-            toast.error('Please contact support with session ID: ' + sessionId);
-            setStep('details');
           }
+
+          // All retries exhausted
+          setIsProcessingPaymentReturn(false);
+          toast.error('Please contact support with session ID: ' + sessionId);
+          setStep('details');
         }
         return;
       }
@@ -137,6 +159,31 @@ export default function SubmitPage() {
           setUserCredits((profile as any).credits || 0);
         }
       }
+
+      // Handle prefilled data from duplicate action
+      // Re-use urlParams from above
+      if (urlParams.get('duplicate') === 'true') {
+        const category = urlParams.get('category') || '';
+        const context = urlParams.get('context') || '';
+        const requestType = urlParams.get('request_type') || 'verdict';
+
+        // Map request_type to mediaType
+        const mediaTypeMap: Record<string, 'text' | 'photo' | 'comparison' | 'split_test'> = {
+          verdict: 'text',
+          comparison: 'comparison',
+          split_test: 'split_test',
+        };
+
+        setSubmissionData(prev => ({
+          ...prev,
+          category,
+          context,
+          mediaType: mediaTypeMap[requestType] || 'text',
+        }));
+
+        toast.success('Prefilled from your previous request. Edit as needed!');
+      }
+
       setLoading(false);
     }
 
@@ -238,6 +285,9 @@ export default function SubmitPage() {
         throw new Error(data.error || 'Failed to create request');
       }
 
+      // Store the request ID for the success page
+      setSubmissionData(prev => ({ ...prev, requestId: data.request?.id }));
+
       setShowCreditDeduction(true);
       setUserCredits(prev => Math.max(0, prev - 1));
 
@@ -291,72 +341,120 @@ export default function SubmitPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 py-12">
+      {/* Navigation & Role Indicator - Fixed position for visibility */}
+      <div className="fixed top-4 left-4 z-20">
+        <button
+          onClick={() => router.push('/my-requests')}
+          className="flex items-center gap-2 px-3 py-2 bg-white/90 backdrop-blur-sm rounded-lg shadow-sm hover:shadow-md transition-all text-gray-700 hover:text-gray-900"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          <span className="text-sm font-medium">My Submissions</span>
+        </button>
+      </div>
+      <div className="fixed top-4 right-4 z-20">
+        <RoleIndicator role="submitter" />
+      </div>
+
       <LoadingOverlay
         isVisible={isProcessingPaymentReturn}
         title="Completing Your Payment..."
         description="Your payment was successful! We're creating your request now."
       />
 
-      {/* Zero Credits Modal */}
+      {/* Zero Credits Modal - Honest and transparent */}
       {showZeroCreditsModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden animate-in fade-in zoom-in duration-200">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xl font-bold text-gray-900">You Need 1 Credit</h3>
+            {/* Honest header */}
+            <div className="bg-gradient-to-r from-amber-500 to-orange-500 p-6 text-white">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
+                    <Coins className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold">You're Out of Credits</h3>
+                    <p className="text-amber-100 text-sm">Choose how you'd like to proceed</p>
+                  </div>
+                </div>
                 <button
                   onClick={() => setShowZeroCreditsModal(false)}
-                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                  className="p-2 hover:bg-white/20 rounded-full transition-colors"
                 >
-                  <X className="h-5 w-5 text-gray-500" />
+                  <X className="h-5 w-5" />
                 </button>
               </div>
+            </div>
 
-              <p className="text-gray-600 mb-6">
-                Community submissions require 1 credit. Choose how you'd like to proceed:
-              </p>
+            <div className="p-6">
+              {/* Clear explanation */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-5">
+                <p className="text-sm text-blue-900 font-medium mb-2">How credits work:</p>
+                <ul className="text-sm text-blue-800 space-y-1">
+                  <li className="flex items-center gap-2">
+                    <span className="w-5 h-5 bg-blue-200 rounded-full flex items-center justify-center text-xs font-bold">1</span>
+                    Review 3 other submissions (~15 min total)
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-5 h-5 bg-blue-200 rounded-full flex items-center justify-center text-xs font-bold">2</span>
+                    Earn 1 free credit
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-5 h-5 bg-blue-200 rounded-full flex items-center justify-center text-xs font-bold">3</span>
+                    Submit your request & get 3 feedback reports
+                  </li>
+                </ul>
+              </div>
 
               <div className="space-y-4">
+                {/* Option 1 - Earn credits (free but takes time) */}
                 <button
                   onClick={handleEarnCredits}
-                  className="w-full p-4 border-2 border-green-200 rounded-xl hover:border-green-400 hover:bg-green-50 transition-all text-left group"
+                  className="w-full p-4 bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl hover:from-green-600 hover:to-emerald-700 transition-all text-white shadow-lg hover:shadow-xl min-h-[56px]"
                 >
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 group-hover:bg-green-200 transition-colors">
-                      <Clock className="h-6 w-6 text-green-600" />
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                        <Eye className="h-5 w-5" />
+                      </div>
+                      <div className="text-left">
+                        <h4 className="font-bold">Earn a Free Credit</h4>
+                        <p className="text-sm text-green-100">~15 min · Help 3 others, get 1 free submission</p>
+                      </div>
                     </div>
-                    <div>
-                      <h4 className="font-semibold text-gray-900">Earn 1 Credit Free</h4>
-                      <p className="text-sm text-gray-600 mt-1">
-                        Review 3 submissions from others (~15 minutes). Help the community and get your credit!
-                      </p>
-                      <span className="inline-block mt-2 text-xs font-medium text-green-600 bg-green-100 px-2 py-1 rounded-full">
-                        Recommended
-                      </span>
-                    </div>
+                    <ArrowRight className="h-5 w-5" />
                   </div>
                 </button>
 
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 h-px bg-gray-200"></div>
+                  <span className="text-gray-400 text-sm">or skip the wait</span>
+                  <div className="flex-1 h-px bg-gray-200"></div>
+                </div>
+
+                {/* Option 2 - Pay (instant) */}
                 <button
                   onClick={handlePayInstead}
-                  className="w-full p-4 border-2 border-purple-200 rounded-xl hover:border-purple-400 hover:bg-purple-50 transition-all text-left group"
+                  className="w-full p-4 border-2 border-indigo-200 rounded-xl hover:border-indigo-400 hover:bg-indigo-50 transition-all text-left group min-h-[56px]"
                 >
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0 group-hover:bg-purple-200 transition-colors">
-                      <Coins className="h-6 w-6 text-purple-600" />
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0 group-hover:bg-indigo-200 transition-colors">
+                        <Zap className="h-5 w-5 text-indigo-600" />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-gray-900">Pay {privatePrice} · Submit Now</h4>
+                        <p className="text-sm text-gray-500">Instant · Private · Priority queue</p>
+                      </div>
                     </div>
-                    <div>
-                      <h4 className="font-semibold text-gray-900">Pay {privatePrice} Instead</h4>
-                      <p className="text-sm text-gray-600 mt-1">
-                        Skip earning credits. Your submission stays private and gets priority feedback.
-                      </p>
-                    </div>
+                    <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-indigo-600" />
                   </div>
                 </button>
               </div>
 
-              <p className="text-xs text-gray-500 text-center mt-6">
-                You can always earn more credits later by helping others with their decisions.
+              <p className="text-xs text-gray-500 text-center mt-5 flex items-center justify-center gap-1">
+                <Clock className="h-3 w-3" />
+                Reviewing takes about 5 minutes per submission
               </p>
             </div>
           </div>
@@ -433,6 +531,7 @@ export default function SubmitPage() {
               submissionData={submissionData}
               setSubmissionData={setSubmissionData}
               onNext={handleDetailsSubmit}
+              userCredits={userCredits}
             />
           )}
 
@@ -467,7 +566,7 @@ export default function SubmitPage() {
 }
 
 // Step Components
-function DetailsStep({ submissionData, setSubmissionData, onNext }: any) {
+function DetailsStep({ submissionData, setSubmissionData, onNext, userCredits }: any) {
   const categories = [
     {
       id: 'appearance',
@@ -518,8 +617,23 @@ function DetailsStep({ submissionData, setSubmissionData, onNext }: any) {
 
   return (
     <div className="p-8">
-      <h2 className="text-3xl font-bold text-gray-900 mb-2">What would you like feedback on?</h2>
-      <p className="text-gray-600 mb-8">Tell us about your situation and we'll get you honest opinions from real people.</p>
+      {/* Credit Balance - Always visible */}
+      <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-100">
+        <div>
+          <h2 className="text-3xl font-bold text-gray-900">What would you like feedback on?</h2>
+          <p className="text-gray-600 mt-1">Tell us about your situation and we'll get you honest opinions from real people.</p>
+        </div>
+        <div className="flex-shrink-0 ml-4">
+          <div className={`px-4 py-2 rounded-xl ${userCredits > 0 ? 'bg-green-50 border border-green-200' : 'bg-amber-50 border border-amber-200'}`}>
+            <div className="flex items-center gap-2">
+              <Coins className={`h-5 w-5 ${userCredits > 0 ? 'text-green-600' : 'text-amber-600'}`} />
+              <span className={`font-bold ${userCredits > 0 ? 'text-green-700' : 'text-amber-700'}`}>{userCredits}</span>
+              <span className={`text-sm ${userCredits > 0 ? 'text-green-600' : 'text-amber-600'}`}>credit{userCredits !== 1 ? 's' : ''}</span>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">1 credit = 1 submission</p>
+          </div>
+        </div>
+      </div>
 
       {/* Category Selection */}
       <div className="mb-6">
@@ -586,7 +700,7 @@ function DetailsStep({ submissionData, setSubmissionData, onNext }: any) {
           value={submissionData.question}
           onChange={(e) => setSubmissionData({ ...submissionData, question: e.target.value })}
           placeholder="What specific question do you want answered?"
-          className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-600 focus:border-transparent ${
+          className={`w-full px-4 py-4 min-h-[48px] border rounded-lg focus:ring-2 focus:ring-indigo-600 focus:border-transparent ${
             submissionData.question && submissionData.question.trim().length < 10
               ? 'border-amber-300 bg-amber-50'
               : 'border-gray-300'
@@ -616,7 +730,7 @@ function DetailsStep({ submissionData, setSubmissionData, onNext }: any) {
           onChange={(e) => setSubmissionData({ ...submissionData, context: e.target.value })}
           placeholder="Provide any relevant background information..."
           rows={4}
-          className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-600 focus:border-transparent ${
+          className={`w-full px-4 py-4 min-h-[120px] border rounded-lg focus:ring-2 focus:ring-indigo-600 focus:border-transparent ${
             submissionData.context && submissionData.context.trim().length < 20
               ? 'border-amber-300 bg-amber-50'
               : 'border-gray-300'
@@ -708,11 +822,18 @@ function DetailsStep({ submissionData, setSubmissionData, onNext }: any) {
       </div>
 
       {submissionData.mediaType === 'comparison' ? (
-        <ComparisonButton
-          category={submissionData.category}
-          variant="default"
-          className="w-full py-4 text-lg"
-        />
+        <div className="space-y-3">
+          <ComparisonButton
+            category={submissionData.category}
+            variant="default"
+            className="w-full py-4 text-lg"
+            initialQuestion={submissionData.question}
+            initialContext={submissionData.context}
+          />
+          <p className="text-sm text-center text-gray-500">
+            Click above to open the comparison wizard where you'll define your two options
+          </p>
+        </div>
       ) : (
         <div className="space-y-2">
           <button
@@ -1013,35 +1134,118 @@ function ProcessingStep({ mode }: any) {
 function SuccessStep({ mode, submissionData }: any) {
   const router = useRouter();
   const isRoastMode = submissionData?.roastMode || submissionData?.category === 'roast';
+  const requestId = submissionData?.requestId;
+  const [showConfetti, setShowConfetti] = useState(true);
+
+  // Trigger haptic feedback on mobile
+  useEffect(() => {
+    if (navigator.vibrate) {
+      navigator.vibrate([100, 50, 100, 50, 200]); // Celebration pattern
+    }
+    // Auto-hide confetti after 5 seconds
+    const timer = setTimeout(() => setShowConfetti(false), 5000);
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
-    <div className="p-8 text-center">
-      <div className={`w-16 h-16 ${isRoastMode ? 'bg-red-600' : 'bg-green-600'} rounded-full flex items-center justify-center mx-auto mb-6`}>
+    <div className="p-8 text-center relative">
+      {/* Confetti celebration */}
+      <ConfettiAnimation active={showConfetti} />
+      <MicroInteractionStyles />
+
+      <div className={`w-20 h-20 ${isRoastMode ? 'bg-gradient-to-br from-red-500 to-orange-600' : 'bg-gradient-to-br from-green-500 to-emerald-600'} rounded-full flex items-center justify-center mx-auto mb-6 shadow-xl animate-bounce`}>
         {isRoastMode ? (
-          <Flame className="h-8 w-8 text-white" />
+          <Flame className="h-10 w-10 text-white" />
         ) : (
-          <CheckCircle className="h-8 w-8 text-white" />
+          <CheckCircle className="h-10 w-10 text-white" />
         )}
       </div>
 
-      <h2 className="text-3xl font-bold text-gray-900 mb-4">
-        {isRoastMode ? 'Get Ready to Be Roasted!' : 'Success!'}
+      <h2 className="text-3xl font-bold text-gray-900 mb-2">
+        {isRoastMode ? '🔥 Get Ready to Be Roasted!' : '🎉 Your Request is Live!'}
       </h2>
 
-      <p className="text-gray-600 mb-6">
-        {isRoastMode ? (
-          <>
-            Your roast request is live! Prepare for some brutal honesty from strangers.
-            You'll get 3 savage feedback reports within{' '}
-            <strong>{mode === 'community' ? '2-4 hours' : '30 minutes'}</strong>.
-          </>
-        ) : (
-          <>
-            Your submission has been received. You'll get 3 feedback reports within{' '}
-            {mode === 'community' ? '2-4 hours' : '30 minutes'}.
-          </>
-        )}
+      <p className="text-lg text-green-600 font-medium mb-4">
+        Reviewers are being notified right now
       </p>
+
+      {/* Request ID - Clear reference for user */}
+      {requestId && (
+        <div className="bg-indigo-50 border border-indigo-200 rounded-lg px-4 py-2 mb-4 inline-block">
+          <p className="text-sm text-indigo-800">
+            <span className="font-medium">Request ID:</span>{' '}
+            <code className="font-mono text-indigo-900">{requestId.slice(0, 8)}</code>
+          </p>
+        </div>
+      )}
+
+      {/* How you'll be notified - CLEAR guidance */}
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4 mb-6 max-w-md mx-auto">
+        <h4 className="font-semibold text-blue-900 mb-3 flex items-center justify-center gap-2">
+          <Bell className="h-4 w-4" />
+          How you'll get notified
+        </h4>
+        <div className="grid grid-cols-2 gap-3 text-left">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+              <Mail className="h-4 w-4 text-blue-600" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-blue-900">Email</p>
+              <p className="text-xs text-blue-700">Per verdict</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center">
+              <Bell className="h-4 w-4 text-indigo-600" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-indigo-900">In-app</p>
+              <p className="text-xs text-indigo-700">Real-time</p>
+            </div>
+          </div>
+        </div>
+        <p className="text-xs text-blue-700 mt-3 text-center">
+          Expect <strong>3 verdicts</strong> within <strong>{mode === 'community' ? '2-4 hours' : '30 minutes'}</strong>
+        </p>
+      </div>
+
+      {/* What happens next - clear timeline */}
+      <div className="bg-gray-50 border border-gray-200 rounded-xl p-5 mb-6 text-left max-w-md mx-auto">
+        <h4 className="font-semibold text-gray-900 mb-3 text-center">What happens next?</h4>
+        <div className="space-y-3">
+          <div className="flex items-start gap-3">
+            <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+              <CheckCircle className="h-3 w-3 text-white" />
+            </div>
+            <div>
+              <p className="text-sm text-gray-700">
+                <strong className="text-green-700">Done!</strong> Reviewers can see your submission now
+              </p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <div className="w-6 h-6 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 animate-pulse">
+              <span className="text-indigo-600 text-xs font-bold">2</span>
+            </div>
+            <div>
+              <p className="text-sm text-gray-700">
+                <strong>3 people provide feedback</strong> with ratings and detailed comments
+              </p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <div className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+              <span className="text-gray-500 text-xs font-bold">3</span>
+            </div>
+            <div>
+              <p className="text-sm text-gray-700">
+                <strong>Check "My Requests"</strong> to track progress and view results
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {isRoastMode && (
         <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
@@ -1056,20 +1260,39 @@ function SuccessStep({ mode, submissionData }: any) {
         </div>
       )}
 
-      <div className="flex gap-4 justify-center">
+      <div className="flex flex-col sm:flex-row gap-4 justify-center">
+        {/* Primary CTA - Track results */}
         <button
           onClick={() => router.push('/my-requests')}
-          className="bg-indigo-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-indigo-700 transition-colors"
+          className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-8 py-4 rounded-xl font-bold hover:shadow-xl transition-all flex items-center justify-center gap-2 min-h-[56px]"
         >
-          View My Requests
+          <Eye className="h-5 w-5" />
+          Track Your Results
         </button>
+
+        {/* Secondary - View specific request */}
+        {requestId && (
+          <button
+            onClick={() => router.push(`/requests/${requestId}`)}
+            className="bg-white border-2 border-indigo-200 text-indigo-700 px-6 py-4 rounded-xl font-semibold hover:border-indigo-400 hover:bg-indigo-50 transition-colors flex items-center justify-center gap-2 min-h-[56px]"
+          >
+            View This Request
+          </button>
+        )}
+
+        {/* Tertiary - Earn credits */}
         <button
-          onClick={() => router.push('/feed')}
-          className="bg-gray-100 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:bg-gray-200 transition-colors"
+          onClick={() => router.push('/feed?earn=true')}
+          className="bg-gray-100 text-gray-700 px-6 py-4 rounded-xl font-semibold hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 min-h-[56px]"
         >
-          Browse Community
+          Earn More Credits
         </button>
       </div>
+
+      <p className="text-sm text-gray-500 mt-6 flex items-center justify-center gap-2">
+        <Mail className="h-4 w-4" />
+        We'll email you when feedback arrives. You can safely close this page.
+      </p>
     </div>
   );
 }

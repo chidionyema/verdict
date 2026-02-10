@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -32,6 +33,7 @@ interface TabCounts {
 }
 
 export default function MyVerdictsPage() {
+  const router = useRouter();
   const [requests, setRequests] = useState<VerdictRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'all' | 'waiting' | 'complete'>('all');
@@ -167,7 +169,7 @@ export default function MyVerdictsPage() {
           </div>
           
           <TouchButton
-            onClick={() => window.location.href = '/start-simple'}
+            onClick={() => router.push('/submit')}
             className="mt-4 sm:mt-0 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
           >
             <Plus className="w-4 h-4 mr-2" />
@@ -272,7 +274,7 @@ export default function MyVerdictsPage() {
                     Get started by creating your first request for honest feedback.
                   </p>
                   <TouchButton
-                    onClick={() => window.location.href = '/start-simple'}
+                    onClick={() => router.push('/submit')}
                     className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
                   >
                     Create your first request

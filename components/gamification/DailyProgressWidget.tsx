@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Flame, Target, TrendingUp, Zap, CheckCircle } from 'lucide-react';
 import { useStreakTracking } from '@/hooks/useStreakTracking';
 
@@ -22,6 +23,7 @@ interface DailyGoal {
 }
 
 export function DailyProgressWidget({ userId, compact = false, className = '' }: DailyProgressWidgetProps) {
+  const router = useRouter();
   const { streakData, getMotivationalMessage } = useStreakTracking(userId);
   const [showCelebration, setShowCelebration] = useState(false);
 
@@ -222,7 +224,7 @@ export function DailyProgressWidget({ userId, compact = false, className = '' }:
             Complete {totalGoals - completedGoals} more {totalGoals - completedGoals === 1 ? 'goal' : 'goals'} to earn today's bonus
           </p>
           <button
-            onClick={() => window.location.href = '/feed'}
+            onClick={() => router.push('/feed')}
             className="bg-white text-indigo-600 px-6 py-2 rounded-lg font-semibold hover:bg-gray-100 transition-colors"
           >
             Start Judging

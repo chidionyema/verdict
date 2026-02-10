@@ -33,6 +33,7 @@ import {
   Timer,
   CheckCircle2,
   XCircle,
+  RefreshCw,
   AlertCircle,
   Heart,
   Users,
@@ -45,6 +46,8 @@ import JudgeProgression from '@/components/judge/JudgeProgression';
 import { EmptyState } from '@/components/ui/EmptyStates';
 import { CrossRolePrompt } from '@/components/ui/CrossRolePrompt';
 import { TIER_CONFIGURATIONS, getTierConfig } from '@/lib/pricing/dynamic-pricing';
+import { RoleIndicator } from '@/components/ui/RoleIndicator';
+import Link from 'next/link';
 
 // Helper to get judge earning for a request tier
 function getJudgeEarningForTier(tier?: string): string {
@@ -115,9 +118,16 @@ function JudgeDashboardContent() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [showSubmissionSuccess, setShowSubmissionSuccess] = useState(false);
 
-  // Check for submission success param
+  // Check for submission success param - handle all redirect patterns
+  // - submitted=true (from /judge/requests/[id])
+  // - success=true (from /judge/verdict/[id])
+  // - success=comparison (from /judge/comparisons/[id])
+  // - success=split_test (from /judge/split-tests/[id])
   useEffect(() => {
-    if (searchParams.get('submitted') === 'true') {
+    const submitted = searchParams.get('submitted');
+    const success = searchParams.get('success');
+
+    if (submitted === 'true' || success === 'true' || success === 'comparison' || success === 'split_test') {
       setShowSubmissionSuccess(true);
       // Clear the URL param without navigation
       window.history.replaceState({}, '', '/judge');
@@ -530,17 +540,27 @@ function JudgeDashboardContent() {
                 <div>
                   <h3 className="font-bold text-lg">Verdict Submitted!</h3>
                   <p className="text-green-100 text-sm">
-                    You earned credits for your feedback. Want to use them now?
+                    You earned money for this verdict! Available for payout after 7 days.
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
                 <button
-                  onClick={() => router.push('/submit-unified')}
+                  onClick={() => router.push('/judge/earnings')}
                   className="px-4 py-2 bg-white text-green-600 rounded-lg font-semibold hover:bg-green-50 transition inline-flex items-center gap-2"
                 >
-                  <Coins className="h-4 w-4" />
-                  Use Your Credits
+                  <DollarSign className="h-4 w-4" />
+                  View Earnings
+                </button>
+                <button
+                  onClick={() => {
+                    setShowSubmissionSuccess(false);
+                    fetchData();
+                  }}
+                  className="px-4 py-2 bg-white/20 text-white rounded-lg font-semibold hover:bg-white/30 transition inline-flex items-center gap-2"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Judge Another
                 </button>
                 <button
                   onClick={() => setShowSubmissionSuccess(false)}
@@ -567,7 +587,7 @@ function JudgeDashboardContent() {
                   {judgeLevel.icon}
                 </div>
                 <div>
-                  <h1 className="text-4xl font-black text-gray-900 tracking-tight">Judge Dashboard</h1>
+                  <h1 className="text-4xl font-black text-gray-900 tracking-tight">Earn by Reviewing</h1>
                   <div className="flex items-center gap-3 mt-1">
                     <span className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gradient-to-r ${judgeLevel.color} text-white text-sm font-semibold shadow-lg`}>
                       {judgeLevel.icon}
@@ -602,6 +622,16 @@ function JudgeDashboardContent() {
             </div>
             
             <div className="flex items-center gap-3">
+              <RoleIndicator role="reviewer" className="mr-2" />
+
+              <Link
+                href="/judge/earnings"
+                className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-6 py-3 rounded-xl font-semibold hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5 flex items-center gap-2"
+              >
+                <DollarSign className="h-5 w-5" />
+                ${stats.available_for_payout.toFixed(2)}
+              </Link>
+
               <button
                 onClick={() => setShowAchievements(!showAchievements)}
                 className="relative bg-gradient-to-r from-yellow-500 to-amber-500 text-white px-6 py-3 rounded-xl font-semibold hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5"

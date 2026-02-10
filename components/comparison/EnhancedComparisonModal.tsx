@@ -17,6 +17,8 @@ interface EnhancedComparisonModalProps {
   isOpen: boolean;
   onClose: () => void;
   category?: string;
+  initialQuestion?: string;
+  initialContext?: string;
 }
 
 interface ComparisonOption {
@@ -106,16 +108,18 @@ const comparisonTemplates = {
   }
 };
 
-export function EnhancedComparisonModal({ 
-  isOpen, 
-  onClose, 
-  category = 'career' 
+export function EnhancedComparisonModal({
+  isOpen,
+  onClose,
+  category = 'career',
+  initialQuestion = '',
+  initialContext = ''
 }: EnhancedComparisonModalProps) {
   const [options, setOptions] = useState<{ A: ComparisonOption; B: ComparisonOption }>({
     A: { id: 'A', title: '', description: '' },
     B: { id: 'B', title: '', description: '' }
   });
-  const [question, setQuestion] = useState('');
+  const [question, setQuestion] = useState(initialQuestion);
   const [context, setContext] = useState<DecisionContext>({
     timeframe: '',
     importance: 'medium',
@@ -136,11 +140,23 @@ export function EnhancedComparisonModal({
 
   const template = comparisonTemplates[category as keyof typeof comparisonTemplates] || comparisonTemplates.career;
 
+  // Initialize with provided values when modal opens
   useEffect(() => {
     if (isOpen) {
       fetchUserCredits();
+      // Pre-fill question if provided
+      if (initialQuestion && !question) {
+        setQuestion(initialQuestion);
+      }
+      // Pre-fill context goals if provided
+      if (initialContext && context.goals.every(g => !g.trim())) {
+        setContext(prev => ({
+          ...prev,
+          goals: [initialContext]
+        }));
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, initialQuestion, initialContext]);
 
   const fetchUserCredits = async () => {
     try {
@@ -795,17 +811,35 @@ export function EnhancedComparisonModal({
               </div>
               <h3 className="text-2xl font-bold text-gray-900 mb-4">Comparison Created!</h3>
               <p className="text-gray-600 mb-6">
-                Your A/B comparison is being analyzed by {selectedTier === 'pro' ? 'verified experts' : 'experienced reviewers'}. 
+                Your A/B comparison is being analyzed by {selectedTier === 'pro' ? 'verified experts' : 'experienced reviewers'}.
                 You'll receive detailed feedback on both options within {selectedTier === 'pro' ? '15 minutes' : '30 minutes'}.
               </p>
               {selectedTier === 'pro' && (
-                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-6">
                   <p className="text-sm text-purple-800">
-                    🧠 <strong>Pro Analysis:</strong> You'll also receive an AI-powered decision matrix 
+                    🧠 <strong>Pro Analysis:</strong> You'll also receive an AI-powered decision matrix
                     comparing the pros and cons of each option with confidence scores.
                   </p>
                 </div>
               )}
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <TouchButton
+                  onClick={resetModal}
+                  variant="outline"
+                >
+                  Close
+                </TouchButton>
+                <TouchButton
+                  onClick={() => window.location.href = '/my-requests'}
+                  className="bg-purple-600 hover:bg-purple-700"
+                >
+                  View My Requests
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </TouchButton>
+              </div>
+              <p className="text-sm text-gray-500 mt-4">
+                Redirecting to your comparison in a moment...
+              </p>
             </div>
           )}
         </div>

@@ -450,10 +450,10 @@ function MobileBottomNav({ pathname }: { pathname: string | null }) {
       active: pathname === '/feed',
     },
     {
-      href: '/start',
+      href: '/submit',
       label: 'Create',
       icon: Plus,
-      active: pathname?.startsWith('/start') || pathname?.startsWith('/submit'),
+      active: pathname?.startsWith('/submit'),
       primary: true,
     },
     {

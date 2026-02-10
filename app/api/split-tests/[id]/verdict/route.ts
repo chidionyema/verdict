@@ -1,6 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
+import { log } from '@/lib/logger';
+import { TIER_CONFIGURATIONS, getTierConfig } from '@/lib/pricing/dynamic-pricing';
+
+// Helper to get judge earning for a request tier
+function getJudgeEarningCents(tier?: string): number {
+  const tierKey = tier === 'pro' ? 'expert' : (tier || 'community');
+  try {
+    const config = getTierConfig(tierKey);
+    return config.judge_payout_cents;
+  } catch {
+    return TIER_CONFIGURATIONS.community.judge_payout_cents;
+  }
+}
 
 // UUID validation regex
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -149,7 +162,7 @@ async function POST_Handler(
     const { data: existingVerdict } = await supabase
       .from('split_test_verdicts')
       .select('id')
-      .eq('split_test_request_id', splitTestId)
+      .eq('split_test_id', splitTestId)
       .eq('judge_id', user.id)
       .single();
 
@@ -172,7 +185,7 @@ async function POST_Handler(
     const { data: verdict, error: verdictError } = await supabase
       .from('split_test_verdicts')
       .insert({
-        split_test_request_id: splitTestId,
+        split_test_id: splitTestId,
         judge_id: user.id,
         chosen_photo: chosenPhoto,
         confidence_score: confidenceScore,
@@ -199,32 +212,82 @@ async function POST_Handler(
       );
     }
 
-    // Award credits to judge for completing the verdict
-    const creditAmount = 0.34; // 1/3 credit for split test verdict
+    // Increment verdict count and auto-close if target reached
+    let updatedSplitTest;
+    try {
+      const { data: incrementResult, error: incrementError } = await (supabase as any).rpc(
+        'increment_split_test_verdict_count_and_close',
+        { p_split_test_id: splitTestId }
+      );
+
+      if (incrementError) {
+        console.error('Failed to increment split test verdict count:', incrementError);
+      } else {
+        updatedSplitTest = incrementResult;
+      }
+    } catch (incrementError) {
+      console.error('RPC call failed for increment_split_test_verdict_count_and_close:', incrementError);
+    }
+
+    // Calculate judge earning based on request tier
+    const earningCents = getJudgeEarningCents(splitTestData.request_tier);
+    const earningAmount = earningCents / 100; // Convert to dollars
+
+    // Create earnings record for the judge (for payout tracking)
+    // This is the critical record that appears in judge earnings dashboard
+    const verdictId = (verdict as any)?.id;
+    try {
+      await (supabase as any)
+        .from('judge_earnings')
+        .upsert({
+          judge_id: user.id,
+          verdict_response_id: verdictId, // Using verdict ID as unique key
+          amount: earningAmount,
+          currency: 'USD',
+          payout_status: 'pending',
+          created_at: new Date().toISOString(),
+        }, {
+          onConflict: 'verdict_response_id',
+          ignoreDuplicates: true
+        });
+
+      log.info('Judge earnings created for split test verdict', {
+        judgeId: user.id,
+        verdictId,
+        amount: earningAmount,
+        tier: splitTestData.request_tier
+      });
+    } catch (earningsError) {
+      // Log but don't fail - verdict was already created
+      log.error('Failed to create judge_earnings record for split test', {
+        error: earningsError,
+        judgeId: user.id,
+        verdictId,
+        amount: earningAmount
+      });
+    }
+
+    // Award credits to judge (for credit balance - separate from earnings)
+    // Note: Verdict already created, so don't fail the request if this fails
     try {
       await (supabase as any).rpc('award_credits', {
         target_user_id: user.id,
-        credit_amount: creditAmount,
+        credit_amount: earningAmount,
         transaction_type: 'judgment',
         transaction_source: 'split_test_verdict',
-        transaction_source_id: (verdict as any)?.id || splitTestId,
+        transaction_source_id: verdictId || splitTestId,
         transaction_description: 'Split Test Judgment Reward',
       });
     } catch (rpcError) {
-      // EMERGENCY FIX: Remove dangerous fallback - fail safely instead
-      console.error('award_credits RPC failed - credit system temporarily unavailable:', rpcError);
-      
-      // Log the failure for investigation but don't manipulate credits unsafely
-      console.error('CRITICAL: Credit award failed for user', user.id, 'amount:', creditAmount);
-      
-      // Return error instead of dangerous fallback
-      return NextResponse.json(
-        { 
-          error: 'Credit system temporarily unavailable. Your judgment was recorded but credits will be awarded later.',
-          details: 'Please contact support if this persists.'
-        }, 
-        { status: 503 }
-      );
+      // Verdict was already created successfully - log for async recovery but don't fail
+      log.error('award_credits RPC failed for split test verdict - needs async recovery', {
+        error: rpcError,
+        userId: user.id,
+        amount: earningAmount,
+        verdictId,
+        splitTestId
+      });
+      // Continue - verdict was recorded, credits can be reconciled later
     }
 
     // Update judge reputation (non-critical, can silently fail)
@@ -257,17 +320,20 @@ async function POST_Handler(
       console.log('user_actions table not found, skipping log');
     }
 
-    // Get updated split test status (triggers will have updated it)
-    const { data: updatedSplitTest } = await supabase
-      .from('split_test_requests')
-      .select('received_verdict_count, target_verdict_count, status, winning_photo')
-      .eq('id', splitTestId)
-      .single() as { data: any, error: any };
+    // Get updated split test status if not already set by increment RPC
+    if (!updatedSplitTest) {
+      const { data: fetchedSplitTest } = await supabase
+        .from('split_test_requests')
+        .select('received_verdict_count, target_verdict_count, status, winning_photo')
+        .eq('id', splitTestId)
+        .single() as { data: any, error: any };
+      updatedSplitTest = fetchedSplitTest;
+    }
 
     return NextResponse.json({
       success: true,
-      verdictId: (verdict as any)?.id || 'unknown',
-      creditsEarned: creditAmount,
+      verdictId: verdictId || 'unknown',
+      creditsEarned: earningAmount,
       splitTestStatus: {
         receivedVerdicts: updatedSplitTest?.received_verdict_count || 0,
         targetVerdicts: updatedSplitTest?.target_verdict_count || 0,

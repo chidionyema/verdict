@@ -85,7 +85,7 @@ export default function JudgeHistoryPage() {
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4">
               <Link
-                href="/judge/dashboard"
+                href="/judge"
                 className="flex items-center text-gray-600 hover:text-gray-900 transition"
               >
                 <ArrowLeft className="h-5 w-5 mr-2" />
@@ -202,7 +202,7 @@ export default function JudgeHistoryPage() {
               </p>
               {responses.length === 0 && (
                 <Link
-                  href="/judge/dashboard"
+                  href="/judge"
                   className="inline-block bg-indigo-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-indigo-700 transition"
                 >
                   View Available Requests

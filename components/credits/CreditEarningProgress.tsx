@@ -94,7 +94,7 @@ export function CreditEarningProgress({
               </div>
               <div className="space-y-3">
                 <Link
-                  href={returnUrl || '/start'}
+                  href={returnUrl || '/submit'}
                   className="block w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white px-6 py-3 rounded-xl font-semibold hover:from-green-700 hover:to-emerald-700 transition-all text-center"
                 >
                   <span className="flex items-center justify-center gap-2">
@@ -168,7 +168,7 @@ export function CreditEarningProgress({
         {showUseCreditsPrompt && currentCredits > 0 && (
           <div className="mt-3 pt-3 border-t border-indigo-200">
             <Link
-              href={returnUrl || '/start'}
+              href={returnUrl || '/submit'}
               className="flex items-center justify-between p-2 bg-green-50 hover:bg-green-100 rounded-lg transition group"
             >
               <div className="flex items-center gap-2 text-green-700">

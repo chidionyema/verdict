@@ -60,27 +60,28 @@ function SignupContent() {
     },
     seeker: {
       title: 'Get Real Feedback',
-      subtitle: 'Get honest opinions from real people in minutes',
+      subtitle: 'Get 3 free submissions. Each gets honest feedback from 3 real people.',
       benefits: [
-        { icon: Users, text: '3+ reviews per credit' },
-        { icon: MessageSquare, text: 'Detailed, actionable feedback' },
+        { icon: Users, text: '3 free submissions included' },
+        { icon: MessageSquare, text: '3 detailed feedback reports per submission' },
+        { icon: Clock, text: 'Results within 2-4 hours' },
         { icon: Shield, text: '100% satisfaction guarantee' },
       ],
-      successTitle: 'Welcome! You\'re All Set',
-      successSubtitle: 'Your account is ready. Start getting feedback now!',
-      successCta: 'Get Your First Feedback',
-      successCtaHref: redirect,
+      successTitle: 'Welcome! You Have 3 Free Submissions',
+      successSubtitle: 'Each submission gets you honest feedback from 3 real people. After your free submissions, earn more by helping others or purchase credits.',
+      successCta: 'Create Your First Submission',
+      successCtaHref: redirect === '/' ? '/submit' : redirect,
       gradient: 'from-indigo-600 to-purple-600',
       bgGradient: 'from-indigo-50 via-white to-purple-50',
     },
     general: {
       title: 'Create your account',
-      subtitle: 'Get 3 free credits when you sign up (each gets you 3 feedback reports)',
+      subtitle: 'Get 3 free submissions instantly. Each submission gets honest feedback from 3 real people within 2-4 hours.',
       benefits: [],
-      successTitle: 'Welcome! You\'re All Set',
-      successSubtitle: 'Your account is ready to use. Start getting feedback from real people!',
-      successCta: 'Get Your First Feedback',
-      successCtaHref: redirect,
+      successTitle: 'Welcome! You Have 3 Free Submissions',
+      successSubtitle: 'You have 3 credits. Each credit = 1 submission with 3 feedback reports from real people.',
+      successCta: 'Create Your First Submission',
+      successCtaHref: redirect === '/' ? '/submit' : redirect,
       gradient: 'from-indigo-600 to-purple-600',
       bgGradient: 'from-indigo-50 via-white to-purple-50',
     },
@@ -298,7 +299,7 @@ function SignupContent() {
                 placeholder="Email"
                 required
                 aria-label="Email address"
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                className="w-full p-4 min-h-[48px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-base"
               />
               <input
                 type="password"
@@ -308,7 +309,7 @@ function SignupContent() {
                 minLength={6}
                 required
                 aria-label="Password"
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                className="w-full p-4 min-h-[48px] border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-base"
               />
               <button
                 type="submit"

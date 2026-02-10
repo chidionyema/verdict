@@ -140,13 +140,34 @@ async function GET_Handler(
 
     // Log if there's a mismatch between count and actual verdicts
     const actualVerdictsCount = verdicts?.length || 0;
-    if (receivedCount > 0 && actualVerdictsCount === 0) {
-      log.warn('Verdict count mismatch', {
+    if (receivedCount !== actualVerdictsCount && !verdictsError) {
+      log.warn('Verdict count mismatch - reconciling', {
         request_id: id,
         received_verdict_count: receivedCount,
         actual_verdicts_found: actualVerdictsCount,
-        verdicts_error: verdictsError,
       });
+
+      // Auto-reconcile the count to prevent request from being stuck
+      try {
+        await (supabase as any)
+          .from('verdict_requests')
+          .update({ received_verdict_count: actualVerdictsCount })
+          .eq('id', id);
+
+        // Update local reference for response
+        (verdictRequest as any).received_verdict_count = actualVerdictsCount;
+
+        log.info('Verdict count reconciled', {
+          request_id: id,
+          old_count: receivedCount,
+          new_count: actualVerdictsCount,
+        });
+      } catch (reconcileError) {
+        log.error('Failed to reconcile verdict count', {
+          error: reconcileError,
+          request_id: id,
+        });
+      }
     }
 
     // BULLETPROOF: Bulk fetch reviewer reputations to prevent N+1 DoS
@@ -268,8 +289,9 @@ async function PATCH_Handler(
 
       if (creditsCharged > 0 && targetCount > 0) {
         // Calculate undelivered ratio and refund amount
+        // Use Math.ceil to round UP in favor of the user (they shouldn't lose fractional credits)
         const deliveredRatio = receivedCount / targetCount;
-        const refundCredits = Math.floor(creditsCharged * (1 - deliveredRatio));
+        const refundCredits = Math.ceil(creditsCharged * (1 - deliveredRatio));
 
         if (refundCredits > 0) {
           // Refund credits using the refund_credits RPC
@@ -290,7 +312,9 @@ async function PATCH_Handler(
               receivedCount,
               targetCount
             });
-            // Don't fail the cancellation, but log the issue for manual reconciliation
+            // Mark request as needing manual refund reconciliation
+            updateData.refund_pending = true;
+            updateData.refund_amount = refundCredits;
           } else {
             log.info('Credits refunded on cancellation', {
               requestId: id,

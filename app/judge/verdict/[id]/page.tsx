@@ -6,6 +6,19 @@ import { useStore } from '@/lib/store';
 import { Clock, DollarSign, Send, ArrowLeft } from 'lucide-react';
 import { ResponseTemplates } from '@/components/judge/ResponseTemplates';
 import { toast } from '@/components/ui/toast';
+import { TIER_CONFIGURATIONS, getTierConfig } from '@/lib/pricing/dynamic-pricing';
+
+// Helper to get judge earning for a request tier
+function getJudgeEarningForTier(tier?: string): string {
+  const tierKey = tier === 'pro' ? 'expert' : (tier || 'community');
+  try {
+    const config = getTierConfig(tierKey);
+    return (config.judge_payout_cents / 100).toFixed(2);
+  } catch {
+    // Fallback to community tier
+    return (TIER_CONFIGURATIONS.community.judge_payout_cents / 100).toFixed(2);
+  }
+}
 
 export default function VerdictSubmissionPage({
   params,
@@ -38,11 +51,10 @@ export default function VerdictSubmissionPage({
 
   const totalLength = verdictSummary.length + reasons.length;
 
-  const calculateEarnings = () => {
-    let base = 0.5;
-    const speedBonus = timeRemaining > 60 ? 0.25 : 0;
-    const qualityBonus = totalLength > 300 ? 0.15 : 0;
-    return (base + speedBonus + qualityBonus).toFixed(2);
+  // Get earning based on request tier
+  const getEarningAmount = () => {
+    const tier = (request as any)?.request_tier;
+    return getJudgeEarningForTier(tier);
   };
 
   const handleSubmit = async () => {
@@ -84,7 +96,7 @@ export default function VerdictSubmissionPage({
 
       // Success - remove from available requests and redirect
       claimRequest(id);
-      router.push('/judge/dashboard?success=true');
+      router.push('/judge?success=true');
     } catch (error) {
       console.error('Submit error:', error);
       toast.error('Failed to submit verdict. Please try again.');
@@ -98,7 +110,7 @@ export default function VerdictSubmissionPage({
         <div className="text-center">
           <p className="text-gray-600 mb-4">Request not found or already claimed</p>
           <button
-            onClick={() => router.push('/judge/dashboard')}
+            onClick={() => router.push('/judge')}
             className="text-indigo-600 hover:underline cursor-pointer"
           >
             Return to Dashboard
@@ -114,7 +126,7 @@ export default function VerdictSubmissionPage({
       <div className="bg-white border-b sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <button
-            onClick={() => router.push('/judge/dashboard')}
+            onClick={() => router.push('/judge')}
             className="flex items-center text-gray-600 hover:text-gray-900 cursor-pointer"
           >
             <ArrowLeft className="h-5 w-5 mr-2" />
@@ -139,7 +151,7 @@ export default function VerdictSubmissionPage({
             <div className="flex items-center">
               <DollarSign className="h-5 w-5 mr-1 text-green-500" />
               <span className="font-semibold text-green-600">
-                ${calculateEarnings()}
+                ${getEarningAmount()}
               </span>
             </div>
           </div>
@@ -292,15 +304,13 @@ export default function VerdictSubmissionPage({
             {/* Earnings Preview */}
             <div className="bg-green-50 rounded-lg p-4 mb-6">
               <p className="text-sm text-green-800">
-                <strong>Estimated earnings:</strong> ${calculateEarnings()}
+                <strong>You'll earn:</strong> ${getEarningAmount()}
               </p>
               <p className="text-xs text-green-600 mt-1">
-                Base: $0.50 + Speed bonus:{' '}
-                {timeRemaining > 60 ? '$0.25' : '$0.00'} + Quality bonus:{' '}
-                {totalLength > 300 ? '$0.15' : '$0.00'}
+                Based on request tier. Available for payout after 7 days.
               </p>
               <p className="text-xs text-gray-600 mt-2">
-                💡 More detail = better help (and possibly better ratings!)
+                💡 Quality feedback leads to better ratings and access to higher-paying requests!
               </p>
             </div>
 

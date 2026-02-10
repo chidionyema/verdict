@@ -210,7 +210,7 @@ export function InteractiveFeedbackPreview() {
                 {COMPUTED_CONFIG.JUDGE_EARNING_TEXT}
               </button>
               <button
-                onClick={() => window.location.href = '/start'}
+                onClick={() => window.location.href = '/submit'}
                 className="flex-1 bg-indigo-800 border-2 border-white/30 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-900 transition-all duration-300"
               >
                 Submit Privately ({pricing.privatePrice})
