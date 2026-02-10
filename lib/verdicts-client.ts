@@ -126,20 +126,28 @@ export async function submitRequest(input: SubmitRequestInput): Promise<SubmitRe
       requestId = result.request.id;
       
     } else if (input.requestType === 'comparison') {
-      // Create comparison request
+      // Create comparison request - format must match API expectations
       const response = await fetch('/api/comparisons/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          title: input.context,
-          description: input.context,
-          option_a_title: 'Option A',
-          option_a_description: mediaUrls[0] || input.textContent?.split('\n')[0] || '',
-          option_b_title: 'Option B', 
-          option_b_description: mediaUrls[1] || input.textContent?.split('\n')[1] || '',
+          question: input.context,
           category: input.category,
-          required_verdicts: input.targetVerdictCount,
-          credits_required: input.creditsToUse,
+          optionA: {
+            title: 'Option A',
+            description: mediaUrls[0] || input.textContent?.split('\n')[0] || 'First option',
+          },
+          optionB: {
+            title: 'Option B',
+            description: mediaUrls[1] || input.textContent?.split('\n')[1] || 'Second option',
+          },
+          context: {
+            timeframe: 'soon',
+            importance: 'medium' as const,
+            goals: [input.context || 'Get feedback on my decision'],
+          },
+          requestTier: input.creditsToUse <= 1 ? 'community' : input.creditsToUse <= 2 ? 'standard' : 'pro',
+          visibility: 'private',
         }),
       });
 
@@ -147,30 +155,67 @@ export async function submitRequest(input: SubmitRequestInput): Promise<SubmitRe
       if (!response.ok) {
         return { success: false, error: result.error || 'Failed to create comparison' };
       }
-      
-      requestId = result.data?.id;
+
+      requestId = result.comparisonId;
       
     } else if (input.requestType === 'split_test') {
-      // Create split test
-      const response = await fetch('/api/split-tests/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          question: input.context,
-          context: input.context,
-          photo_a_url: mediaUrls[0] || '',
-          photo_b_url: mediaUrls[1] || '',
-          category: input.category,
-          required_verdicts: input.targetVerdictCount,
-        }),
-      });
-
-      const result = await response.json();
-      if (!response.ok) {
-        return { success: false, error: result.error || 'Failed to create split test' };
+      // Split tests require exactly 2 photos
+      if (!input.files || input.files.length < 2) {
+        return {
+          success: false,
+          error: 'Split tests require exactly 2 photos. Please upload both Photo A and Photo B.'
+        };
       }
-      
-      requestId = result.split_test?.id;
+
+      // Convert files to base64 for the API
+      const fileToBase64 = async (file: File): Promise<{ name: string; type: string; size: number; data: string }> => {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            resolve({
+              name: file.name,
+              type: file.type,
+              size: file.size,
+              data: reader.result as string,
+            });
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      };
+
+      try {
+        const [photoAFile, photoBFile] = await Promise.all([
+          fileToBase64(input.files[0]),
+          fileToBase64(input.files[1]),
+        ]);
+
+        const response = await fetch('/api/split-tests/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            category: input.category,
+            question: input.context,
+            context: input.context,
+            photoAFile,
+            photoBFile,
+            visibility: 'public',
+            targetVerdicts: input.targetVerdictCount,
+          }),
+        });
+
+        const result = await response.json();
+        if (!response.ok) {
+          return { success: false, error: result.error || 'Failed to create split test' };
+        }
+
+        requestId = result.splitTestId;
+      } catch (error) {
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Failed to process photos for split test'
+        };
+      }
     }
 
     if (!requestId) {

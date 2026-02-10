@@ -646,6 +646,31 @@ export default function CreateRequestPage() {
           <p className="text-gray-600">Complete all sections below and submit to get feedback</p>
         </div>
 
+        {/* Warning if request type is not standard verdict */}
+        {formData.requestType !== 'verdict' && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
+            <div className="flex items-start gap-3">
+              <Info className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-amber-800 font-medium">
+                  You're creating a {formData.requestType === 'comparison' ? 'Comparison' : 'Split Test'} request
+                </p>
+                <p className="text-amber-700 text-sm mt-1">
+                  {formData.requestType === 'comparison'
+                    ? 'This requires two options to compare. '
+                    : 'This requires exactly 2 photos to compare. '}
+                  <button
+                    onClick={() => updateFormData({ requestType: 'verdict' })}
+                    className="text-amber-800 underline hover:text-amber-900"
+                  >
+                    Switch to standard feedback instead
+                  </button>
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Progressive Hints */}
         <ProgressiveHints 
           currentStep={currentStep}

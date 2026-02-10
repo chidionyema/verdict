@@ -210,17 +210,36 @@ export default function UnifiedSubmitPage() {
     setStep('processing');
 
     try {
+      // Validate required fields before API call
+      const validationErrors: string[] = [];
+      if (!submissionData.category) validationErrors.push('category');
+      if (!submissionData.mediaType) validationErrors.push('content type');
+      if (!submissionData.context || submissionData.context.trim().length < 20) {
+        validationErrors.push('context (20+ characters required)');
+      }
+      if (submissionData.mediaType === 'photo' && !submissionData.mediaUrl) {
+        validationErrors.push('photo upload');
+      }
+
+      if (validationErrors.length > 0) {
+        toast.error(`Please complete: ${validationErrors.join(', ')}`);
+        setStep('details');
+        return;
+      }
+
       const response = await fetch('/api/requests', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           category: submissionData.category,
-          media_type: submissionData.mediaType,
-          media_url: submissionData.mediaUrl,
-          text_content: submissionData.question,
+          media_type: submissionData.mediaType === 'split_test' || submissionData.mediaType === 'comparison'
+            ? 'photo'  // Normalize to valid media type
+            : submissionData.mediaType,
+          media_url: submissionData.mediaUrl || null,
+          text_content: submissionData.mediaType === 'text' ? submissionData.question : null,
           context: submissionData.context,
-          visibility: 'public', // Community = public visibility
-          request_tier: 'community', // Use community tier (costs 1 credit)
+          visibility: 'public',
+          request_tier: 'community',
         })
       });
 

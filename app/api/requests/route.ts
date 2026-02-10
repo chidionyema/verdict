@@ -359,6 +359,19 @@ const POST_Handler = async (request: NextRequest) => {
       visibility,
     } = body;
 
+    // Early validation for required fields with specific error messages
+    const missingFields: string[] = [];
+    if (!category) missingFields.push('category');
+    if (!media_type) missingFields.push('media_type');
+    if (!context) missingFields.push('context');
+
+    if (missingFields.length > 0) {
+      return NextResponse.json({
+        error: `Missing required fields: ${missingFields.join(', ')}`,
+        details: 'Please fill in all required fields before submitting.'
+      }, { status: 400 });
+    }
+
     // Input size limits to prevent DoS and database abuse
     const MAX_TEXT_CONTENT_LENGTH = 10000; // 10KB
     const MAX_CONTEXT_LENGTH = 5000; // 5KB
