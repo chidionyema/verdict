@@ -26,10 +26,11 @@ interface InsufficientCreditsModalProps {
   returnUrl?: string; // URL to return to after earning credits (default: /submit)
 }
 
+// Package IDs must match CREDIT_PACKAGES in lib/validations.ts
 const defaultPackages: CreditPackage[] = [
-  { id: 'starter', name: 'Starter', credits: 10, price: 9.99 },
-  { id: 'popular', name: 'Popular', credits: 25, price: 19.99, popular: true },
-  { id: 'pro', name: 'Pro Pack', credits: 60, price: 39.99 },
+  { id: 'starter', name: 'Starter', credits: 5, price: 17.45 },
+  { id: 'popular', name: 'Popular', credits: 10, price: 34.90, popular: true },
+  { id: 'value', name: 'Value Pack', credits: 25, price: 87.25 },
 ];
 
 export function InsufficientCreditsModal({

@@ -90,38 +90,39 @@ export default function CreditsPage() {
     }
   };
 
+  // Package IDs must match CREDIT_PACKAGES in lib/validations.ts
   const getDefaultPackages = (): CreditPackage[] => [
     {
-      id: '1',
+      id: 'starter',
       name: 'Starter',
-      credits: 10,
-      price: 9.99,
+      credits: 5,
+      price: 17.45,
       popular: false,
       description: 'Perfect for trying out the platform'
     },
     {
-      id: '2',
+      id: 'popular',
       name: 'Popular',
-      credits: 25,
-      price: 19.99,
+      credits: 10,
+      price: 34.90,
       popular: true,
       description: 'Most popular choice for regular users'
     },
     {
-      id: '3',
-      name: 'Pro',
-      credits: 60,
-      price: 39.99,
+      id: 'value',
+      name: 'Value',
+      credits: 25,
+      price: 87.25,
       popular: false,
-      description: 'Great value for power users'
+      description: 'Great value for regular users'
     },
     {
-      id: '4',
-      name: 'Enterprise',
-      credits: 150,
-      price: 89.99,
+      id: 'pro',
+      name: 'Pro',
+      credits: 50,
+      price: 174.50,
       popular: false,
-      description: 'Maximum value for heavy usage'
+      description: 'Maximum value for power users'
     }
   ];
 

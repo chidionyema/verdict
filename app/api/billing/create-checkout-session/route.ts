@@ -19,7 +19,7 @@ const LEGACY_TIER_PRICING = {
   },
   pro: {
     price_cents: 1200, // £12.00
-    name: 'Professional Tier',  
+    name: 'Professional Tier',
     description: 'Expert-only feedback + LLM synthesis + A/B comparison',
     credits: 1,
     tier: 'expert' // Map 'pro' to 'expert'
@@ -45,13 +45,34 @@ function getTierPricing(tierId: string, judgeCount: number = 3) {
       tier: tierId
     };
   }
-  
+
   // Legacy fallback
   if (tierId in LEGACY_TIER_PRICING) {
     return LEGACY_TIER_PRICING[tierId as TierId];
   }
-  
+
   throw new Error(`Invalid tier ID: ${tierId}`);
+}
+
+// Helper to look up package from database
+async function getPackageFromDatabase(supabase: any, packageId: string) {
+  const { data, error } = await supabase
+    .from('credit_packages')
+    .select('id, name, credits, price_cents, description, is_active')
+    .eq('id', packageId)
+    .eq('is_active', true)
+    .single();
+
+  if (error || !data) {
+    return null;
+  }
+
+  return {
+    credits: data.credits,
+    price_cents: data.price_cents,
+    name: data.name,
+    description: data.description || `${data.credits} verdict credits`
+  };
 }
 
 // POST /api/billing/create-checkout-session
@@ -69,20 +90,42 @@ async function POST_Handler(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { package_id, tier_id, judge_count } = body;
+    const { package_id, tier_id, judge_count, credits } = body;
 
     // Support both legacy credit packages and new pricing tiers
     let pkg;
     let isLegacyPackage = false;
-    
+
     if (tier_id && isValidTierId(tier_id)) {
       // New dynamic pricing tier model
       const judgeCount = judge_count || 3;
       pkg = getTierPricing(tier_id, judgeCount);
     } else if (package_id && isValidPackageId(package_id)) {
-      // Legacy credit packages
+      // Hardcoded credit packages (starter, popular, value, pro)
       pkg = CREDIT_PACKAGES[package_id];
       isLegacyPackage = true;
+    } else if (package_id) {
+      // Try looking up in database (for UUID-based packages)
+      const dbPackage = await getPackageFromDatabase(supabase, package_id);
+      if (dbPackage) {
+        pkg = dbPackage;
+        isLegacyPackage = true;
+      } else {
+        // Final fallback: check if credits were passed directly (for dynamic packages)
+        if (credits && typeof credits === 'number' && credits > 0) {
+          // Use standard pricing per credit
+          const PRICE_PER_CREDIT_CENTS = 349; // $3.49 per credit
+          pkg = {
+            credits: credits,
+            price_cents: credits * PRICE_PER_CREDIT_CENTS,
+            name: `${credits} Credits`,
+            description: `${credits} verdict credits`
+          };
+          isLegacyPackage = true;
+        } else {
+          return NextResponse.json({ error: 'Invalid package or tier' }, { status: 400 });
+        }
+      }
     } else {
       return NextResponse.json({ error: 'Invalid package or tier' }, { status: 400 });
     }
