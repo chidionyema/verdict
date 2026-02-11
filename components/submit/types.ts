@@ -24,6 +24,8 @@ export interface CategoryOption {
   iconColor: string;
 }
 
+// Category IDs must match the database category_type enum:
+// 'appearance', 'profile', 'writing', 'decision', 'comparison', 'split_test'
 export const CATEGORIES: CategoryOption[] = [
   {
     id: 'appearance',
@@ -35,19 +37,10 @@ export const CATEGORIES: CategoryOption[] = [
     iconColor: 'text-pink-600',
   },
   {
-    id: 'dating',
-    name: 'Dating & Relationships',
-    icon: '💕',
-    description: 'Dating profiles, texts, advice',
-    gradient: 'from-red-500 to-pink-500',
-    bgColor: 'bg-red-50',
-    iconColor: 'text-red-600',
-  },
-  {
-    id: 'career',
-    name: 'Career & Professional',
+    id: 'profile',
+    name: 'Profile Review',
     icon: '💼',
-    description: 'Resume, LinkedIn, workplace',
+    description: 'Dating profiles, LinkedIn, resumes',
     gradient: 'from-blue-500 to-indigo-500',
     bgColor: 'bg-blue-50',
     iconColor: 'text-blue-600',
@@ -65,7 +58,7 @@ export const CATEGORIES: CategoryOption[] = [
     id: 'decision',
     name: 'Life Decisions',
     icon: '🤔',
-    description: 'Important choices, dilemmas',
+    description: 'Important choices, dilemmas, relationships',
     gradient: 'from-emerald-500 to-teal-500',
     bgColor: 'bg-emerald-50',
     iconColor: 'text-emerald-600',
