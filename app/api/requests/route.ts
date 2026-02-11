@@ -128,7 +128,7 @@ async function fetchVerdictRequests(supabase: any, userId: string, searchParams:
       received_verdict_count,
       created_at,
       request_tier,
-      verdict_responses(rating, summary, reasoning, created_at)
+      verdict_responses(rating, feedback, created_at)
     `)
     .eq('user_id', userId)
     .is('deleted_at', null)
@@ -147,7 +147,7 @@ async function fetchVerdictRequests(supabase: any, userId: string, searchParams:
       ? validRatings.reduce((sum: number, v: any) => sum + v.rating, 0) / validRatings.length
       : null;
 
-    // Get the latest verdict's preview text (summary or first part of reasoning)
+    // Get the latest verdict's preview text
     // Sort by created_at descending to get latest first
     const sortedVerdicts = [...reqVerdicts].sort((a: any, b: any) =>
       new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
@@ -155,7 +155,7 @@ async function fetchVerdictRequests(supabase: any, userId: string, searchParams:
     const latestVerdict = sortedVerdicts[0];
     let verdictPreview = null;
     if (latestVerdict) {
-      const previewText = latestVerdict.summary || latestVerdict.reasoning || '';
+      const previewText = latestVerdict.feedback || '';
       // Truncate to ~100 chars for preview
       verdictPreview = previewText.length > 100
         ? previewText.substring(0, 100).trim() + '...'
