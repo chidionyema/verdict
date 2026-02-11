@@ -77,7 +77,7 @@ async function GET_Handler() {
                         'User',
           avatar_url: user.user_metadata?.avatar_url || null,
           credits: 3, // Initial free credits
-          is_judge: false,
+          is_judge: true, // Everyone can review by default
           is_admin: false,
           onboarding_completed: false,
           created_at: new Date().toISOString(),

@@ -35,18 +35,21 @@ const POST_Handler = async (request: NextRequest) => {
       );
     }
 
-    // Check if user is a judge
+    // Auto-enable judging for authenticated users
+    // The is_judge flag is for verified/expert judges, not required for basic reviewing
+    // Anyone can review submissions and earn credits
     const { data: profile } = await (supabase as any)
       .from('profiles')
       .select('is_judge')
       .eq('id', user.id)
       .single();
 
-    if (!profile || profile.is_judge !== true) {
-      return NextResponse.json(
-        { error: 'Must be a judge to submit verdicts' },
-        { status: 403 }
-      );
+    // If user isn't marked as judge yet, mark them (first-time reviewer)
+    if (profile && !profile.is_judge) {
+      await (supabase as any)
+        .from('profiles')
+        .update({ is_judge: true })
+        .eq('id', user.id);
     }
 
     const body = await request.json();

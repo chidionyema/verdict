@@ -181,6 +181,22 @@ BEGIN
 END $$;
 
 -- ============================================================================
+-- 7. ENABLE ALL USERS TO REVIEW (FIX is_judge FLAG)
+-- ============================================================================
+-- The is_judge flag was incorrectly blocking users from reviewing.
+-- Anyone should be able to review submissions and earn credits.
+-- The is_judge flag should only distinguish verified/expert judges, not block basic reviewing.
+
+-- Set is_judge = true for all existing users so they can review
+UPDATE profiles
+SET is_judge = true
+WHERE is_judge = false OR is_judge IS NULL;
+
+-- Set default for new users to true (everyone can review by default)
+ALTER TABLE profiles
+ALTER COLUMN is_judge SET DEFAULT true;
+
+-- ============================================================================
 -- VERIFICATION QUERY (run after migration to confirm)
 -- ============================================================================
 --

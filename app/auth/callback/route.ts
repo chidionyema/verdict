@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
         display_name: user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'User',
         avatar_url: user.user_metadata?.avatar_url || null,
         credits: INITIAL_FREE_CREDITS,
-        is_judge: false,
+        is_judge: true, // Everyone can review by default
         is_admin: false,
         onboarding_completed: false,
         created_at: new Date().toISOString(),
