@@ -157,16 +157,23 @@ async function POST_Handler(request: NextRequest) {
 
     // If profile is now complete, create celebration notification
     if (updatedStatus?.is_completed) {
-      // @ts-ignore - RPC function types not generated
-      await supabase.rpc('create_notification', {
-        target_user_id: user.id,
-        notification_type: 'profile_completed',
-        notification_title: 'Profile Complete! 🎉',
-        notification_message: 'Congratulations! You\'ve completed your profile and unlocked all features.',
-        action_label: 'Explore Platform',
-        action_url: '/dashboard',
-        notification_priority: 'high'
-      });
+      try {
+        // @ts-ignore - RPC function types not generated
+        await supabase.rpc('create_notification', {
+          p_user_id: user.id,
+          p_type: 'profile_completed',
+          p_title: 'Profile Complete!',
+          p_message: 'Congratulations! You\'ve completed your profile and unlocked all features.',
+          p_metadata: JSON.stringify({
+            action_label: 'Explore Platform',
+            action_url: '/dashboard',
+            priority: 'high'
+          })
+        });
+      } catch (notifError) {
+        // Non-critical - log but don't fail
+        log.warn('Failed to create profile completion notification', { error: notifError, userId: user.id });
+      }
     }
 
     return NextResponse.json({

@@ -23,7 +23,13 @@ async function POST_Handler(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { amount, currency, description } = await request.json();
+    let requestBody;
+    try {
+      requestBody = await request.json();
+    } catch {
+      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+    }
+    const { amount, currency, description } = requestBody;
 
     if (!amount || !currency || !description) {
       return NextResponse.json({
@@ -57,19 +63,50 @@ async function POST_Handler(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Create payment intent with validated values
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: amountCents,
-      currency: normalizedCurrency,
-      description,
-      metadata: {
-        user_id: user.id,
-        description: description,
-      },
-      automatic_payment_methods: {
-        enabled: true,
-      },
-    });
+    // Create payment intent with validated values and idempotency
+    const idempotencyKey = `pi_${user.id}_${amountCents}_${Date.now()}`;
+
+    let paymentIntent;
+    try {
+      paymentIntent = await stripe.paymentIntents.create({
+        amount: amountCents,
+        currency: normalizedCurrency,
+        description,
+        metadata: {
+          user_id: user.id,
+          description: description,
+        },
+        automatic_payment_methods: {
+          enabled: true,
+        },
+      }, {
+        idempotencyKey,
+      });
+    } catch (stripeError: unknown) {
+      const isStripeError = stripeError && typeof stripeError === 'object' && 'type' in stripeError;
+
+      if (isStripeError) {
+        const err = stripeError as { type: string; message?: string; code?: string };
+        console.error('Stripe payment intent error:', err.type, err.code, err.message);
+
+        if (err.type === 'StripeCardError') {
+          return NextResponse.json({
+            error: 'Card declined',
+            message: err.message || 'Your card was declined.',
+          }, { status: 402 });
+        }
+
+        if (err.type === 'StripeRateLimitError') {
+          return NextResponse.json({
+            error: 'Service busy',
+            message: 'Please try again in a moment.',
+            retry_after: 30,
+          }, { status: 503 });
+        }
+      }
+
+      throw stripeError;
+    }
 
     return NextResponse.json({
       client_secret: paymentIntent.client_secret,

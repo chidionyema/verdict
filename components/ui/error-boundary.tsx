@@ -1,8 +1,9 @@
 'use client';
 
 import React, { Component, ReactNode } from 'react';
-import { AlertTriangle, RefreshCw, Bug } from 'lucide-react';
+import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { TouchButton } from './touch-button';
+import { captureException } from '@/lib/monitoring/sentry';
 
 interface Props {
   children: ReactNode;
@@ -75,14 +76,22 @@ export class ErrorBoundary extends Component<Props, State> {
     console.error('ErrorBoundary caught an error:', error);
     console.error('Component stack:', errorInfo.componentStack);
 
-    // Report to error tracking service
+    // Report to Sentry
+    captureException(error, {
+      section: 'error_boundary',
+      level: this.props.level || 'component',
+      errorId: this.state.errorId,
+      componentStack: errorInfo.componentStack,
+    });
+
+    // Report to error tracking service callback
     this.props.onError?.(error, errorInfo);
 
-    // Also send to performance monitor if available
+    // Also send to Google Analytics if available
     if (typeof window !== 'undefined' && (window as any).gtag) {
       (window as any).gtag('event', 'exception', {
         description: error.toString(),
-        fatal: false,
+        fatal: this.props.level === 'page',
       });
     }
   }

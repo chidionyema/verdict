@@ -19,6 +19,7 @@ import { isRTL, type Locale, locales } from "@/i18n.config";
 import { generateAlternateLinks } from "@/lib/i18n-metadata";
 import { NORTH_STAR_TAGLINE } from "@/lib/copy";
 import MonitoringProvider from "./monitoring-provider";
+import { GlobalErrorHandler } from "@/components/GlobalErrorHandler";
 import "@/lib/env-validation";
 
 const geistSans = Geist({
@@ -117,8 +118,9 @@ export default async function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <I18nProvider locale={locale} messages={messages}>
-          <ComponentErrorBoundary>
-            <MonitoringProvider>
+          <GlobalErrorHandler>
+            <ComponentErrorBoundary>
+              <MonitoringProvider>
               <SafariViewportFix />
               <SkipLink />
               <AccessibilityWrapper>
@@ -164,10 +166,11 @@ export default async function RootLayout({
             </div>
           </footer>
 
-          <FloatingActionButton />
-          <ToastContainer />
-          <CookieConsentBanner />
-          <AnalyticsProvider />
+            <FloatingActionButton />
+            <ToastContainer />
+            <CookieConsentBanner />
+            <AnalyticsProvider />
+          </GlobalErrorHandler>
         </I18nProvider>
       </body>
     </html>

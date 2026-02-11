@@ -36,7 +36,9 @@
       "Bash(curl:*)",
       "Bash(mv:*)",
       "Bash(git commit:*)",
-      "Bash(git push)"
+      "Bash(git push)",
+      "Bash(__NEW_LINE_9249e5bd73c6d242__ echo \"=== FINANCIAL FIELDS CONSTRAINT ANALYSIS ===\" echo \"\" echo \"Checking financial constraints on payment/credit fields:\" echo \"\" __NEW_LINE_9249e5bd73c6d242__ grep -n \"amount\\\\|credits\\\\|price\\\\|balance\" /Users/roseonyema/documents/code/verdict/database/000_FULL_SCHEMA.sql)",
+      "Bash(xargs:*)"
     ],
     "deny": [],
     "ask": []

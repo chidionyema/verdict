@@ -110,8 +110,9 @@ const GET_Handler = async (request: NextRequest) => {
   }
 }
 
-// Fetch standard verdict requests for user
+// Fetch standard verdict requests for user (optimized: single query with JOIN)
 async function fetchVerdictRequests(supabase: any, userId: string, searchParams: URLSearchParams) {
+  // Use nested select to fetch requests with their verdicts in a single query
   const { data: requests, error } = await supabase
     .from('verdict_requests')
     .select(`
@@ -126,7 +127,8 @@ async function fetchVerdictRequests(supabase: any, userId: string, searchParams:
       target_verdict_count,
       received_verdict_count,
       created_at,
-      request_tier
+      request_tier,
+      verdict_responses(rating, summary, reasoning, created_at)
     `)
     .eq('user_id', userId)
     .is('deleted_at', null)
@@ -137,37 +139,20 @@ async function fetchVerdictRequests(supabase: any, userId: string, searchParams:
     throw new Error(`Database query failed: ${error.message || error.code || 'Unknown error'}`);
   }
 
-  // Fetch verdict responses for all requests to calculate average ratings and get previews
-  const requestIds = (requests || []).map((r: any) => r.id);
-  let verdictsByRequest: Record<string, any[]> = {};
-
-  if (requestIds.length > 0) {
-    const { data: verdicts } = await supabase
-      .from('verdict_responses')
-      .select('request_id, rating, summary, reasoning, created_at')
-      .in('request_id', requestIds)
-      .order('created_at', { ascending: false });
-
-    if (verdicts) {
-      verdicts.forEach((v: any) => {
-        if (!verdictsByRequest[v.request_id]) {
-          verdictsByRequest[v.request_id] = [];
-        }
-        verdictsByRequest[v.request_id].push(v);
-      });
-    }
-  }
-
   // Return requests with calculated average rating and verdict preview
   return (requests || []).map((request: any) => {
-    const reqVerdicts = verdictsByRequest[request.id] || [];
+    const reqVerdicts = request.verdict_responses || [];
     const validRatings = reqVerdicts.filter((v: any) => v.rating != null);
     const avgRating = validRatings.length > 0
       ? validRatings.reduce((sum: number, v: any) => sum + v.rating, 0) / validRatings.length
       : null;
 
     // Get the latest verdict's preview text (summary or first part of reasoning)
-    const latestVerdict = reqVerdicts[0];
+    // Sort by created_at descending to get latest first
+    const sortedVerdicts = [...reqVerdicts].sort((a: any, b: any) =>
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+    const latestVerdict = sortedVerdicts[0];
     let verdictPreview = null;
     if (latestVerdict) {
       const previewText = latestVerdict.summary || latestVerdict.reasoning || '';
@@ -177,8 +162,11 @@ async function fetchVerdictRequests(supabase: any, userId: string, searchParams:
         : previewText;
     }
 
+    // Remove the nested verdict_responses from the response (only return computed fields)
+    const { verdict_responses, ...requestWithoutVerdicts } = request;
+
     return {
-      ...request,
+      ...requestWithoutVerdicts,
       verdict_count: request.received_verdict_count || 0,
       avg_rating: avgRating,
       verdict_preview: verdictPreview,
@@ -187,9 +175,10 @@ async function fetchVerdictRequests(supabase: any, userId: string, searchParams:
   });
 }
 
-// Fetch comparison requests for user with average ratings
+// Fetch comparison requests for user with average ratings (optimized: single query with JOIN)
 async function fetchComparisonRequestsForUser(supabase: any, userId: string) {
   try {
+    // Use nested select to fetch requests with their verdicts in a single query
     const { data: requests, error } = await supabase
       .from('comparison_requests')
       .select(`
@@ -204,7 +193,8 @@ async function fetchComparisonRequestsForUser(supabase: any, userId: string) {
         request_tier,
         target_verdict_count,
         received_verdict_count,
-        winner_option
+        winner_option,
+        comparison_verdicts(confidence_score)
       `)
       .eq('user_id', userId);
 
@@ -213,29 +203,9 @@ async function fetchComparisonRequestsForUser(supabase: any, userId: string) {
       return [];
     }
 
-    // Fetch verdicts for all comparison requests to calculate average confidence
-    const requestIds = (requests || []).map((r: any) => r.id);
-    let verdictsByRequest: Record<string, any[]> = {};
-
-    if (requestIds.length > 0) {
-      const { data: verdicts } = await supabase
-        .from('comparison_verdicts')
-        .select('comparison_id, confidence_score')
-        .in('comparison_id', requestIds);
-
-      if (verdicts) {
-        verdicts.forEach((v: any) => {
-          if (!verdictsByRequest[v.comparison_id]) {
-            verdictsByRequest[v.comparison_id] = [];
-          }
-          verdictsByRequest[v.comparison_id].push(v);
-        });
-      }
-    }
-
     // Normalize comparison request format to match verdict requests
     return (requests || []).map((req: any) => {
-      const reqVerdicts = verdictsByRequest[req.id] || [];
+      const reqVerdicts = req.comparison_verdicts || [];
       const avgRating = reqVerdicts.length > 0
         ? reqVerdicts.reduce((sum: number, v: any) => sum + (v.confidence_score || 0), 0) / reqVerdicts.length
         : null;
@@ -357,7 +327,13 @@ const POST_Handler = async (request: NextRequest) => {
       );
     }
 
-    const body = await request.json();
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+    }
+
     const {
       category,
       subcategory,
