@@ -1,5 +1,5 @@
 -- ============================================================================
--- MIGRATION 004: Fix verdict_requests RLS Policy for Feed Access
+-- MIGRATION 004: Fix RLS Policies for Feed Access and Profile Loading
 -- ============================================================================
 --
 -- PROBLEM:
@@ -120,6 +120,63 @@ BEGIN
     TO service_role
     USING (true)
     WITH CHECK (true);
+  END IF;
+END $$;
+
+-- ============================================================================
+-- 6. FIX PROFILES RLS POLICIES
+-- ============================================================================
+-- The profiles table needs proper RLS for users to read their own profile
+
+-- Enable RLS on profiles if not already enabled
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+
+-- Allow users to view their own profile
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE tablename = 'profiles'
+    AND policyname = 'Users can view own profile'
+  ) THEN
+    CREATE POLICY "Users can view own profile"
+    ON profiles
+    FOR SELECT
+    TO authenticated
+    USING (auth.uid() = id);
+  END IF;
+END $$;
+
+-- Allow users to update their own profile
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE tablename = 'profiles'
+    AND policyname = 'Users can update own profile'
+  ) THEN
+    CREATE POLICY "Users can update own profile"
+    ON profiles
+    FOR UPDATE
+    TO authenticated
+    USING (auth.uid() = id)
+    WITH CHECK (auth.uid() = id);
+  END IF;
+END $$;
+
+-- Allow users to insert their own profile (for new signups)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE tablename = 'profiles'
+    AND policyname = 'Users can insert own profile'
+  ) THEN
+    CREATE POLICY "Users can insert own profile"
+    ON profiles
+    FOR INSERT
+    TO authenticated
+    WITH CHECK (auth.uid() = id);
   END IF;
 END $$;
 

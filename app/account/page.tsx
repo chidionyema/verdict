@@ -31,15 +31,29 @@ function AccountContent() {
     fetchProfile();
   }, []);
 
+  const [error, setError] = useState<string | null>(null);
+
   const fetchProfile = async () => {
     try {
       const res = await fetch('/api/me');
-      if (res.ok) {
-        const { profile: profileData } = await res.json();
-        setProfile(profileData);
+      const data = await res.json();
+
+      if (!res.ok) {
+        console.error('Profile fetch failed:', res.status, data);
+        if (res.status === 401) {
+          // Redirect to login
+          router.push('/auth/login?redirect=/account');
+          return;
+        }
+        setError(data.error || 'Failed to load profile');
+        return;
       }
-    } catch (error) {
-      console.error('Error fetching profile:', error);
+
+      setProfile(data.profile);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching profile:', err);
+      setError('Network error. Please check your connection.');
     } finally {
       setLoading(false);
     }
@@ -128,6 +142,19 @@ function AccountContent() {
           <div className="bg-green-50 text-green-700 p-4 rounded-lg mb-8 flex items-center">
             <Check className="h-5 w-5 mr-2" />
             Payment successful! Your account has been updated.
+          </div>
+        )}
+
+        {error && (
+          <div className="bg-red-50 text-red-700 p-4 rounded-lg mb-8 flex items-center">
+            <AlertCircle className="h-5 w-5 mr-2" />
+            {error}
+            <button
+              onClick={() => { setError(null); fetchProfile(); }}
+              className="ml-auto text-sm underline hover:no-underline"
+            >
+              Retry
+            </button>
           </div>
         )}
 
