@@ -136,20 +136,35 @@ export function ContentStep({
 
   return (
     <div className="space-y-8">
-      {/* Credit notice if 0 credits */}
-      {userCredits === 0 && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-          <div className="flex items-start gap-3">
-            <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+      {/* Upfront credit cost notice - always visible */}
+      <div className={`rounded-xl p-4 ${
+        userCredits === 0
+          ? 'bg-amber-50 border border-amber-200'
+          : 'bg-indigo-50 border border-indigo-200'
+      }`}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+              userCredits === 0 ? 'bg-amber-100' : 'bg-indigo-100'
+            }`}>
+              <span className="text-lg font-bold">{userCredits}</span>
+            </div>
             <div>
-              <p className="font-medium text-amber-900">You have 0 credits</p>
-              <p className="text-sm text-amber-700 mt-1">
-                Complete your submission below. You can earn a credit for free or pay at checkout.
+              <p className="font-medium text-gray-900">
+                {userCredits === 0 ? 'You have 0 credits' : `You have ${userCredits} credit${userCredits !== 1 ? 's' : ''}`}
+              </p>
+              <p className="text-sm text-gray-600">
+                Submissions cost 1 credit and get 3 reviews
               </p>
             </div>
           </div>
+          {userCredits === 0 && (
+            <div className="text-xs text-amber-700 bg-amber-100 px-2 py-1 rounded-full">
+              Earn or buy at checkout
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Request Type Selection */}
       <div>

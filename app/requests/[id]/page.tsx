@@ -38,6 +38,7 @@ import { HelpfulnessRating } from '@/components/reputation/HelpfulnessRating';
 import { JudgeFeedbackRating } from '@/components/feedback/JudgeFeedbackRating';
 import { JudgeCredibilityBadge } from '@/components/reputation/JudgeCredibilityBadge';
 import ConsensusAnalysis from '@/components/consensus/ConsensusAnalysis';
+import { FirstTimeHint } from '@/components/ui/TerminologyTooltip';
 
 interface VerdictWithNumber extends VerdictResponse {
   judge_number: number;
@@ -1055,6 +1056,14 @@ export default function RequestDetailPage({
 
           {/* Verdicts List */}
           <div className="lg:col-span-2" id="verdicts-section">
+            {/* First-time explanation for new users */}
+            {verdicts.length > 0 && userContext.isSeeker && (
+              <FirstTimeHint
+                text="Verdicts are honest feedback from real reviewers in our community. Each person shares their opinion and suggestions to help you improve."
+                storageKey="verdict_explanation_seen"
+              />
+            )}
+
             {verdicts.length > 0 && (
               <div className="bg-white rounded-xl shadow-sm p-4 mb-6">
                 <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">

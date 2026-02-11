@@ -13,6 +13,9 @@ import { RetentionDiscountBanner } from '@/components/retention/RetentionDiscoun
 import { ReferralWidget } from '@/components/referrals/ReferralDashboard';
 import { JudgePerformanceDashboard } from '@/components/judge/JudgePerformanceDashboard';
 import { CrossRolePrompt } from '@/components/ui/CrossRolePrompt';
+import { UnifiedActivityWidget } from '@/components/ui/UnifiedActivityWidget';
+import { RoleSwitcher, MobileRoleFAB } from '@/components/ui/RoleSwitcher';
+import { ProgressCelebration } from '@/components/ui/ProgressCelebration';
 
 type FilterStatus = 'all' | 'open' | 'in_progress' | 'closed' | 'cancelled';
 type SortBy = 'newest' | 'oldest' | 'status' | 'progress';
@@ -44,6 +47,7 @@ export default function DashboardPage() {
   const [daysSinceLastVisit, setDaysSinceLastVisit] = useState(0);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [newVerdictsCount, setNewVerdictsCount] = useState(0);
+  const [reviewsThisWeek, setReviewsThisWeek] = useState(0);
 
   // Check for returning users
   useEffect(() => {
@@ -104,10 +108,14 @@ export default function DashboardPage() {
       }
       setProfile(profileData);
 
-      // Fetch requests and notifications in parallel
-      const [requestsRes, notificationsRes] = await Promise.all([
+      // Fetch requests, notifications, and review count in parallel
+      const [requestsRes, notificationsRes, verdictsRes] = await Promise.all([
         fetch('/api/requests'),
-        fetch('/api/notifications?unread_only=true&limit=50')
+        fetch('/api/notifications?unread_only=true&limit=50'),
+        (supabase as any)
+          .from('verdict_responses')
+          .select('id, created_at')
+          .eq('judge_id', user.id)
       ]);
 
       if (requestsRes.ok) {
@@ -135,6 +143,16 @@ export default function DashboardPage() {
       if (notificationsRes.ok) {
         const { unread_count } = await notificationsRes.json();
         setUnreadNotifications(unread_count || 0);
+      }
+
+      // Calculate reviews this week for credit earning progress
+      if (verdictsRes.data) {
+        const now = new Date();
+        const weekStart = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
+        const recentReviews = (verdictsRes.data as any[]).filter(
+          (v) => new Date(v.created_at) >= weekStart
+        ).length;
+        setReviewsThisWeek(recentReviews);
       }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -634,36 +652,49 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Low Credits Alert */}
+      {/* Low Credits Alert with Progress */}
       {profile && profile.credits === 0 && (
         <div className="bg-gradient-to-r from-amber-50 to-orange-50 border-b border-amber-200 px-4 py-4">
-          <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center">
-                <Coins className="h-5 w-5 text-amber-600" />
+          <div className="max-w-6xl mx-auto">
+            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center">
+                  <Coins className="h-5 w-5 text-amber-600" />
+                </div>
+                <div>
+                  <p className="font-semibold text-amber-900">You're out of credits!</p>
+                  <p className="text-sm text-amber-700">
+                    Review 3 submissions to earn 1 free credit, or buy credits instantly.
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="font-semibold text-amber-900">You're out of credits!</p>
-                <p className="text-sm text-amber-700">
-                  Review 3 submissions to earn 1 free credit, or buy credits instantly.
-                </p>
+              <div className="flex items-center gap-3">
+                <Link
+                  href="/feed?earn=true"
+                  className="px-4 py-2 bg-white border border-amber-300 text-amber-700 rounded-lg font-medium hover:bg-amber-50 transition text-sm flex items-center gap-2"
+                >
+                  <Clock className="h-4 w-4" />
+                  Earn Credit (~15 min)
+                </Link>
+                <button
+                  onClick={() => setShowCreditsModal(true)}
+                  className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg font-medium hover:from-amber-600 hover:to-orange-600 transition text-sm"
+                >
+                  Buy Credits
+                </button>
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              <Link
-                href="/feed?earn=true"
-                className="px-4 py-2 bg-white border border-amber-300 text-amber-700 rounded-lg font-medium hover:bg-amber-50 transition text-sm flex items-center gap-2"
-              >
-                <Clock className="h-4 w-4" />
-                Earn Credit (~15 min)
-              </Link>
-              <button
-                onClick={() => setShowCreditsModal(true)}
-                className="px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg font-medium hover:from-amber-600 hover:to-orange-600 transition text-sm"
-              >
-                Buy Credits
-              </button>
-            </div>
+            {/* Progress toward next free credit */}
+            {reviewsThisWeek > 0 && reviewsThisWeek < 3 && (
+              <div className="mt-4 max-w-md">
+                <ProgressCelebration
+                  current={reviewsThisWeek % 3}
+                  target={3}
+                  unit="reviews"
+                  reward="1 free credit"
+                />
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -697,11 +728,11 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Judge Performance Dashboard */}
+      {/* Unified Activity Dashboard - Shows seeker & reviewer stats */}
       {profile && (
         <div className="max-w-6xl mx-auto px-4 mb-6">
-          <JudgePerformanceDashboard 
-            judgeId={profile.id} 
+          <UnifiedActivityWidget
+            userId={profile.id}
             className="w-full"
           />
         </div>
@@ -714,13 +745,22 @@ export default function DashboardPage() {
         
         {/* Header */}
         <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center mb-8 gap-4">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-            <p className="text-gray-600 mt-1">
-              Overview of your feedback requests •{' '}
-              <span className="font-medium text-indigo-600">{profile?.credits || 0} {profile?.credits === 1 ? 'credit' : 'credits'}</span>{' '}
-              (1 credit = 1 submission with 3 feedback reports)
-            </p>
+          <div className="flex items-start gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+              <p className="text-gray-600 mt-1">
+                Overview of your feedback requests •{' '}
+                <span className="font-medium text-indigo-600">{profile?.credits || 0} {profile?.credits === 1 ? 'credit' : 'credits'}</span>{' '}
+                (1 credit = 1 submission with 3 feedback reports)
+              </p>
+            </div>
+            {/* Role Switcher - Quick toggle between seeker/reviewer modes */}
+            <RoleSwitcher
+              credits={profile?.credits || 0}
+              pendingVerdicts={requests.filter(r => r.status === 'open' || r.status === 'in_progress')
+                .reduce((sum, r) => sum + (r.target_verdict_count - r.received_verdict_count), 0)}
+              className="hidden lg:block"
+            />
           </div>
           
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
@@ -1144,6 +1184,9 @@ export default function DashboardPage() {
         </div>
       </div>
       
+      {/* Mobile Role FAB - Quick switch for mobile users */}
+      <MobileRoleFAB credits={profile?.credits || 0} />
+
       {/* Premium Styling */}
       <style jsx>{`
         .animate-shimmer {

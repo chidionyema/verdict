@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Heart, X, MessageSquare, Clock, Eye, Camera, FileText, Zap, SkipForward } from 'lucide-react';
+import { Heart, X, MessageSquare, Clock, Eye, Camera, FileText, Zap, SkipForward, Sparkles } from 'lucide-react';
+import { triggerHaptic } from '@/components/ui/Confetti';
 
 // Flexible type that works with both feedback_requests and verdict_requests
 interface FeedRequest {
@@ -69,16 +70,21 @@ export function FeedCard({ item, onJudge, onSkip, judging }: FeedCardProps) {
 
   async function handleQuickJudge(verdict: 'like' | 'dislike') {
     if (judging) return;
+    // Haptic feedback for tactile response
+    triggerHaptic('medium');
+
     // For roast mode, provide harsher feedback templates
-    const roastFeedback = isRoastMode ? 
+    const roastFeedback = isRoastMode ?
       (verdict === 'like' ? '🔥 This is actually decent' : '💀 This ain\'t it chief') :
       (verdict === 'like' ? '👍 Looks good' : '👎 Could be better');
-    
+
     await onJudge(verdict, roastFeedback);
   }
 
   async function handleDetailedJudge(verdict: 'like' | 'dislike') {
-    if (judging || !detailedFeedback.trim()) return;
+    if (judging || detailedFeedback.trim().length < 50) return;
+    // Haptic feedback for successful submission
+    triggerHaptic('success');
     await onJudge(verdict, detailedFeedback);
     setDetailedFeedback('');
     setShowDetailedFeedback(false);
@@ -194,7 +200,7 @@ export function FeedCard({ item, onJudge, onSkip, judging }: FeedCardProps) {
           <div className="text-center">
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-yellow-100 rounded-full">
               <Zap className="h-3 w-3 text-yellow-600" />
-              <span className="text-xs text-yellow-700 font-medium">+0.2 credits for judging</span>
+              <span className="text-xs text-yellow-700 font-medium">Judge 3 = Earn 1 credit</span>
             </div>
           </div>
         </div>
@@ -205,7 +211,7 @@ export function FeedCard({ item, onJudge, onSkip, judging }: FeedCardProps) {
               Detailed Feedback
             </label>
             <p id="feedback-hint" className="text-xs text-gray-500 mb-2">
-              Write at least 10 characters to submit your feedback
+              Write at least 50 characters to submit your feedback
             </p>
             <textarea
               id="detailed-feedback"
@@ -223,9 +229,9 @@ export function FeedCard({ item, onJudge, onSkip, judging }: FeedCardProps) {
               aria-describedby="feedback-hint feedback-counter"
             />
             <div className="flex justify-between items-center mt-1">
-              <span className={`text-xs ${detailedFeedback.trim().length < 10 && detailedFeedback.length > 0 ? 'text-amber-600' : 'text-gray-500'}`}>
-                {detailedFeedback.trim().length < 10 && detailedFeedback.length > 0
-                  ? `${10 - detailedFeedback.trim().length} more characters needed`
+              <span className={`text-xs ${detailedFeedback.trim().length < 50 && detailedFeedback.length > 0 ? 'text-amber-600' : 'text-gray-500'}`}>
+                {detailedFeedback.trim().length < 50 && detailedFeedback.length > 0
+                  ? `${50 - detailedFeedback.trim().length} more characters needed`
                   : detailedFeedback.trim().length >= 10
                   ? '✓ Ready to submit'
                   : ''}
@@ -244,7 +250,7 @@ export function FeedCard({ item, onJudge, onSkip, judging }: FeedCardProps) {
           <div className="flex gap-3">
             <button
               onClick={() => handleDetailedJudge('dislike')}
-              disabled={judging || detailedFeedback.trim().length < 10}
+              disabled={judging || detailedFeedback.trim().length < 50}
               className="flex-1 bg-red-500 hover:bg-red-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white py-3 px-4 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2 min-h-[48px]"
             >
               <X className="h-5 w-5" />
@@ -252,16 +258,16 @@ export function FeedCard({ item, onJudge, onSkip, judging }: FeedCardProps) {
             </button>
             <button
               onClick={() => handleDetailedJudge('like')}
-              disabled={judging || detailedFeedback.trim().length < 10}
+              disabled={judging || detailedFeedback.trim().length < 50}
               className="flex-1 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white py-3 px-4 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2 min-h-[48px]"
             >
               <Heart className="h-5 w-5" />
               Looks Good
             </button>
           </div>
-          {detailedFeedback.trim().length > 0 && detailedFeedback.trim().length < 10 && (
+          {detailedFeedback.trim().length > 0 && detailedFeedback.trim().length < 50 && (
             <p className="text-xs text-amber-600 text-center" role="alert">
-              Add {10 - detailedFeedback.trim().length} more characters to submit
+              Add {50 - detailedFeedback.trim().length} more characters to submit
             </p>
           )}
           

@@ -9,6 +9,7 @@ import { JudgeReputation } from '@/components/reputation/JudgeReputation';
 import { CreditEarningProgress } from '@/components/credits/CreditEarningProgress';
 import { FeedCard } from '@/components/feed/FeedCard';
 import { EmptyState } from '@/components/ui/EmptyStates';
+import { FirstTimeHint } from '@/components/ui/TerminologyTooltip';
 import { JudgeTraining } from '@/components/training/JudgeTraining';
 import { ProgressiveFeedDashboard } from '@/components/feed/ProgressiveFeedDashboard';
 import { ProgressiveProfile } from '@/components/onboarding/ProgressiveProfile';
@@ -854,6 +855,12 @@ export default function FeedPage() {
           </div>
         ) : (
           <div className="p-4">
+            {/* First-time hint for new judges */}
+            <FirstTimeHint
+              text="Your feedback helps others make better decisions. Be specific and constructive - every review brings you closer to earning a free credit!"
+              storageKey="judge_feed_hint_seen"
+            />
+
             {/* Current item */}
             {currentItem && (
               <FeedCard

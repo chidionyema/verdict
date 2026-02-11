@@ -98,8 +98,8 @@ export default function JudgeVerdictPage({
   };
 
   const handleSubmit = async () => {
-    if (feedback.length < 120) {
-      setError('Please provide at least 120 characters of feedback (about 20 words)');
+    if (feedback.length < 50) {
+      setError('Please provide at least 50 characters of feedback');
       return;
     }
 
@@ -418,7 +418,7 @@ export default function JudgeVerdictPage({
                 onChange={(e) => setFeedback(e.target.value)}
                 placeholder="Provide specific, helpful feedback based on the context..."
                 className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${
-                  feedback.length > 0 && feedback.length < 120
+                  feedback.length > 0 && feedback.length < 50
                     ? 'border-red-300'
                     : feedback.length >= 120
                       ? 'border-green-300'
@@ -435,7 +435,7 @@ export default function JudgeVerdictPage({
                   <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
                     <div
                       className={`h-full transition-all duration-300 ${
-                        feedback.length < 120
+                        feedback.length < 50
                           ? 'bg-red-400'
                           : feedback.length < 200
                             ? 'bg-green-400'
@@ -445,7 +445,7 @@ export default function JudgeVerdictPage({
                     />
                   </div>
                   <span className={`text-sm font-medium ${
-                    feedback.length < 120 ? 'text-red-600' : 'text-green-600'
+                    feedback.length < 50 ? 'text-red-600' : 'text-green-600'
                   }`}>
                     {feedback.length}/500
                   </span>
@@ -453,14 +453,14 @@ export default function JudgeVerdictPage({
 
                 {/* Status Message */}
                 <div className="flex items-center justify-between text-xs">
-                  {feedback.length < 120 ? (
+                  {feedback.length < 50 ? (
                     <span className="text-red-600">
-                      Need {120 - feedback.length} more characters (minimum 120)
+                      Need {50 - feedback.length} more characters (minimum 50)
                     </span>
-                  ) : feedback.length < 200 ? (
+                  ) : feedback.length < 120 ? (
                     <span className="text-green-600 flex items-center gap-1">
                       <CheckCircle className="h-3 w-3" />
-                      Good length! Add more for bonus quality points.
+                      Good! More detail = better quality.
                     </span>
                   ) : (
                     <span className="text-green-600 flex items-center gap-1">
@@ -468,7 +468,7 @@ export default function JudgeVerdictPage({
                       Excellent detailed feedback!
                     </span>
                   )}
-                  <span className="text-gray-400">{feedback.length >= 120 ? 'Ready to submit' : ''}</span>
+                  <span className="text-gray-400">{feedback.length >= 50 ? 'Ready to submit' : ''}</span>
                 </div>
               </div>
             </div>
@@ -476,9 +476,9 @@ export default function JudgeVerdictPage({
             {/* Submit Button - Shows earnings */}
             <button
               onClick={handleSubmit}
-              disabled={feedback.length < 120 || submitting}
+              disabled={feedback.length < 50 || submitting}
               className={`w-full py-4 min-h-[56px] rounded-xl font-bold transition flex items-center justify-center cursor-pointer ${
-                feedback.length < 120 || submitting
+                feedback.length < 50 || submitting
                   ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                   : 'bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 shadow-lg hover:shadow-xl'
               }`}

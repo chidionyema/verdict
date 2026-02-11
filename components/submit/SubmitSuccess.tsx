@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Check, ArrowRight, Eye, Share2, Bell } from 'lucide-react';
+import { Check, ArrowRight, Eye, Share2, Bell, Sparkles, Users } from 'lucide-react';
 import { SubmissionData, TIERS, CATEGORIES } from './types';
+import { Confetti, playSuccessSound, triggerHaptic } from '@/components/ui/Confetti';
 
 interface SubmitSuccessProps {
   requestId: string;
@@ -18,25 +19,17 @@ export function SubmitSuccess({ requestId, data, creditsUsed }: SubmitSuccessPro
   const tier = TIERS.find(t => t.id === data.tier);
   const category = CATEGORIES.find(c => c.id === data.category);
 
-  // Trigger confetti on mount
+  // Trigger celebration on mount
   useEffect(() => {
     setShowConfetti(true);
-
-    // Haptic feedback
-    if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
-
-    // Optional success sound (respect prefers-reduced-motion)
-    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      const audio = new Audio('/sounds/success-chime.mp3');
-      audio.volume = 0.3;
-      audio.play().catch(() => {}); // Ignore autoplay blocks
-    }
+    triggerHaptic('success');
+    playSuccessSound();
   }, []);
 
   return (
     <div className="relative min-h-[80vh] flex items-center justify-center">
       {/* Confetti effect */}
-      {showConfetti && <ConfettiEffect />}
+      <Confetti active={showConfetti} duration={4000} pieces={100} />
 
       <div className="max-w-lg w-full mx-auto text-center">
         {/* Success icon */}
@@ -141,24 +134,3 @@ export function SubmitSuccess({ requestId, data, creditsUsed }: SubmitSuccessPro
   );
 }
 
-// Simple confetti effect
-function ConfettiEffect() {
-  return (
-    <div className="fixed inset-0 pointer-events-none overflow-hidden z-50">
-      {Array.from({ length: 50 }).map((_, i) => (
-        <div
-          key={i}
-          className="absolute w-3 h-3 rounded-full animate-confetti"
-          style={{
-            left: `${Math.random() * 100}%`,
-            backgroundColor: ['#6366f1', '#8b5cf6', '#10b981', '#f59e0b', '#ec4899'][
-              Math.floor(Math.random() * 5)
-            ],
-            animationDelay: `${Math.random() * 0.5}s`,
-            animationDuration: `${1 + Math.random() * 2}s`,
-          }}
-        />
-      ))}
-    </div>
-  );
-}

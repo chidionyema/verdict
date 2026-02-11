@@ -104,7 +104,7 @@ export function JudgeTraining({ onComplete, onSkip, className = '' }: JudgeTrain
               <span className="font-semibold text-indigo-800">Minimum requirements:</span>
             </div>
             <ul className="text-sm text-indigo-700 space-y-1 ml-7">
-              <li>• At least 20 words of feedback</li>
+              <li>• At least 50 characters of feedback</li>
               <li>• Be specific about what works or doesn't</li>
               <li>• Offer suggestions when giving critique</li>
             </ul>
