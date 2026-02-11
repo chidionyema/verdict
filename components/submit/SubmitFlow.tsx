@@ -69,14 +69,14 @@ export function SubmitFlow({ initialStep, returnFrom }: SubmitFlowProps) {
         if (user) {
           setUser(user);
 
-          // Get credits
-          const { data: creditData } = await supabase
-            .from('user_credits')
-            .select('balance')
-            .eq('user_id', user.id)
-            .single() as { data: { balance: number } | null; error: any };
+          // Get credits from profiles table (same source as dashboard)
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('credits')
+            .eq('id', user.id)
+            .single();
 
-          setUserCredits(creditData?.balance ?? 0);
+          setUserCredits((profile as any)?.credits ?? 0);
         }
       } catch (error) {
         console.error('Failed to initialize:', error);
@@ -182,16 +182,16 @@ export function SubmitFlow({ initialStep, returnFrom }: SubmitFlowProps) {
   const handlePurchaseSuccess = useCallback(async () => {
     setShowCreditsModal(false);
 
-    // Refresh credits
+    // Refresh credits from profiles table
     try {
       const supabase = createClient();
-      const { data: creditData } = await supabase
-        .from('user_credits')
-        .select('balance')
-        .eq('user_id', user?.id)
-        .single() as { data: { balance: number } | null; error: any };
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('credits')
+        .eq('id', user?.id)
+        .single();
 
-      setUserCredits(creditData?.balance ?? 0);
+      setUserCredits((profile as any)?.credits ?? 0);
       toast.success('Credits added! Ready to submit.');
     } catch {
       // Reload page as fallback
