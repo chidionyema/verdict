@@ -130,20 +130,27 @@ export async function createVerdictRequest(
     }
   }
 
-  // Use protected credit deduction to prevent race conditions and double spending
-  const { safeDeductCredits, generateSecureRequestId } = require('./credit-guard');
-  
-  const requestId = generateSecureRequestId(userId);
-  const deductionResult = await safeDeductCredits(userId, creditsToUse, requestId);
+  // Simple credit check and deduction
+  const currentCredits = (profile as any)?.credits ?? 0;
 
-  if (!deductionResult.success) {
-    const err = new Error(deductionResult.message);
+  if (currentCredits < creditsToUse) {
+    const err = new Error('Insufficient credits');
     // @ts-expect-error augment error
-    err.code = deductionResult.message.includes('Insufficient') ? 'INSUFFICIENT_CREDITS' : 'DEDUCTION_FAILED';
+    err.code = 'INSUFFICIENT_CREDITS';
     throw err;
   }
 
-  // Create the request
+  // Deduct credits directly from profiles table
+  const { error: deductError } = await (supabase as any)
+    .from('profiles')
+    .update({ credits: currentCredits - creditsToUse })
+    .eq('id', userId);
+
+  if (deductError) {
+    throw new Error(`Failed to deduct credits: ${deductError.message}`);
+  }
+
+  // Create the request (only include columns that exist in the database schema)
   const { data: newRequest, error: createRequestError } = await (supabase as any)
     .from('verdict_requests')
     .insert({
@@ -154,11 +161,8 @@ export async function createVerdictRequest(
       media_url: media_type === 'photo' || media_type === 'audio' ? media_url || null : null,
       text_content: media_type === 'text' ? text_content || null : null,
       context,
-      question: context, // For now, context serves as question
       requested_tone: requestedTone || 'honest',
-      roast_mode: roastMode || false,
-      visibility: visibility || 'private',
-      status: 'in_progress',
+      status: 'open',
       target_verdict_count: targetCount,
       received_verdict_count: 0,
       request_tier: requestTier || 'community',
@@ -167,12 +171,11 @@ export async function createVerdictRequest(
     .single();
 
   if (createRequestError || !newRequest) {
-    // Atomic credit refund on failure
-    await (supabase.rpc as any)('refund_credits', {
-      p_user_id: userId,
-      p_credits: creditsToUse,
-      p_reason: 'Request creation failed'
-    });
+    // Refund credits on failure by restoring the balance
+    await (supabase as any)
+      .from('profiles')
+      .update({ credits: currentCredits })
+      .eq('id', userId);
 
     throw new Error(`Failed to create request: ${createRequestError?.message}`);
   }
