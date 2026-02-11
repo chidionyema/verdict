@@ -18,8 +18,14 @@ async function POST_Handler(request: NextRequest) {
 
     const supabase = await createClient();
 
-    // Parse request body with strict validation
-    const body = await request.json().catch(() => ({}));
+    // Parse request body with proper error handling
+    let body;
+    try {
+      body = await request.json();
+    } catch (parseError) {
+      log.warn('Invalid JSON in admin fix-credits request', { error: parseError });
+      return NextResponse.json({ error: 'Invalid JSON in request body' }, { status: 400 });
+    }
 
     // Validate target user ID - must be explicitly provided and valid UUID
     const targetUserId = body.user_id;
@@ -92,24 +98,46 @@ async function POST_Handler(request: NextRequest) {
       return NextResponse.json({ error: `Failed to adjust credits: ${result.message}` }, { status: 500 });
     }
 
-    // Audit the action with full context
-    await auditAdminAction(adminAuth.user!, 'fix_credits', {
-      target_user_id: targetUserId,
-      target_email: (profile as any).email,
-      old_credits: currentCredits,
-      new_credits: result.newBalance,
-      reason: reason,
-      admin_id: adminAuth.user!.id
-    });
+    // CRITICAL: Audit the action with full context - audit MUST succeed for compliance
+    // If audit fails, we still succeeded in changing credits but must report the audit failure
+    try {
+      await auditAdminAction(adminAuth.user!, 'fix_credits', {
+        target_user_id: targetUserId,
+        target_email: (profile as any).email,
+        old_credits: currentCredits,
+        new_credits: result.newBalance,
+        reason: reason,
+        admin_id: adminAuth.user!.id
+      }, { failOnError: true });
+    } catch (auditError) {
+      // Log critical error - action succeeded but audit failed
+      log.error('CRITICAL: Credit adjustment succeeded but audit logging failed', auditError, {
+        adminId: adminAuth.user!.id,
+        targetUserId,
+        oldCredits: currentCredits,
+        newCredits: result.newBalance,
+        reason
+      });
 
-    return NextResponse.json({ 
-      message: `Credits adjusted successfully`,
+      // Return success but flag the audit failure for investigation
+      return NextResponse.json({
+        message: 'Credits adjusted but audit logging failed - requires investigation',
+        target_user: targetUserId,
+        old_credits: currentCredits,
+        new_credits: result.newBalance,
+        audit_warning: 'Audit logging failed - this action requires manual audit review'
+      }, { status: 200 });
+    }
+
+    return NextResponse.json({
+      message: 'Credits adjusted successfully',
       target_user: targetUserId,
       old_credits: currentCredits,
       new_credits: result.newBalance
     });
 
   } catch (error) {
+    log.error('Admin fix-credits endpoint error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

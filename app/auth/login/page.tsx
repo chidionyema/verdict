@@ -7,10 +7,24 @@ import { Loader2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import GoogleOAuthButton from '@/components/GoogleOAuthButton';
 
+// Validate redirect URL to prevent open redirect attacks
+function getSafeRedirect(redirectParam: string | null, defaultPath: string): string {
+  const redirect = redirectParam || defaultPath;
+  // Block protocol-relative URLs (//evil.com) and absolute URLs (https://evil.com)
+  if (redirect.startsWith('//') || redirect.includes('://')) {
+    return defaultPath;
+  }
+  // Ensure redirect starts with / (relative path only)
+  if (!redirect.startsWith('/')) {
+    return defaultPath;
+  }
+  return redirect;
+}
+
 function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirect = searchParams.get('redirect') || '/dashboard';
+  const redirect = getSafeRedirect(searchParams.get('redirect'), '/dashboard');
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

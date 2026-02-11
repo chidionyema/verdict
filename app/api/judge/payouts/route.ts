@@ -152,11 +152,31 @@ async function POST_Handler(request: NextRequest) {
       }, { status: 400 });
     }
 
+    // SECURITY: Validate amount bounds before calculation to prevent overflow
+    const MAX_PAYOUT_CENTS = 10000000; // $100,000 max single payout (reasonable limit)
+    if (validated.amount_cents > MAX_PAYOUT_CENTS) {
+      log.warn('Payout amount exceeds maximum', {
+        userId: user.id,
+        requestedAmount: validated.amount_cents,
+        maxAllowed: MAX_PAYOUT_CENTS
+      });
+      return NextResponse.json({
+        error: `Maximum payout amount is $${(MAX_PAYOUT_CENTS / 100).toLocaleString()}`
+      }, { status: 400 });
+    }
+
     // Calculate fees (Stripe Express accounts typically have ~2.9% + 30¢)
     const platformFeePercentage = 0.029; // 2.9%
     const platformFeeFixed = 30; // 30¢
     const feeAmount = Math.round(validated.amount_cents * platformFeePercentage) + platformFeeFixed;
     const netAmount = validated.amount_cents - feeAmount;
+
+    // SECURITY: Ensure net amount is positive after fees
+    if (netAmount <= 0) {
+      return NextResponse.json({
+        error: 'Payout amount too small to cover fees'
+      }, { status: 400 });
+    }
 
     // Create payout record
     const { data: payout, error: payoutError } = await (supabase as any)

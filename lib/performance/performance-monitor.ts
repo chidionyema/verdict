@@ -11,6 +11,21 @@ interface PerformanceMetric {
   userAgent: string;
 }
 
+// Silent error handler that logs in development for debugging
+const handleAnalyticsError = (endpoint: string) => (error: Error) => {
+  // Log in development for debugging, silent in production to avoid UX impact
+  if (process.env.NODE_ENV === 'development') {
+    console.warn(`[PerformanceMonitor] Analytics request to ${endpoint} failed:`, error.message);
+  }
+  // In production, we intentionally swallow these errors to not affect UX
+  // But we track failure count for observability
+  analyticsFailureCount++;
+};
+
+// Track analytics failures for observability
+let analyticsFailureCount = 0;
+export const getAnalyticsFailureCount = () => analyticsFailureCount;
+
 class PerformanceMonitor {
   private metrics: PerformanceMetric[] = [];
   private sessionId: string;
@@ -158,7 +173,7 @@ class PerformanceMonitor {
         sessionId: this.sessionId,
         timestamp: Date.now()
       })
-    }).catch(() => {}); // Silently fail to avoid affecting UX
+    }).catch(handleAnalyticsError('/api/analytics/interaction'));
   }
 
   private recordSlowImage(src: string, duration: number) {
@@ -172,7 +187,7 @@ class PerformanceMonitor {
         url: window.location.href,
         timestamp: Date.now()
       })
-    }).catch(() => {});
+    }).catch(handleAnalyticsError('/api/analytics/slow-image'));
   }
 
   private sendSlowApiMetric(metric: any) {
@@ -180,7 +195,7 @@ class PerformanceMonitor {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(metric)
-    }).catch(() => {});
+    }).catch(handleAnalyticsError('/api/analytics/slow-api'));
   }
 
   private sendMetricImmediately(metric: PerformanceMetric) {
@@ -192,7 +207,7 @@ class PerformanceMonitor {
         sessionId: this.sessionId,
         priority: 'critical'
       })
-    }).catch(() => {});
+    }).catch(handleAnalyticsError('/api/analytics/performance'));
   }
 
   private batchSendTimeout: NodeJS.Timeout | null = null;

@@ -158,8 +158,48 @@ async function handleCheckoutSessionCompleted(
   // Pattern 2: is_legacy_package: 'true' (from /api/billing/create-checkout-session)
   const isCreditPurchase = metadata?.type === 'credit_purchase' ||
                            metadata?.is_legacy_package === 'true';
-  const credits = parseInt(metadata?.credits || '0');
+  const rawCredits = parseInt(metadata?.credits || '0');
   const userId = metadata?.user_id;
+
+  // SECURITY: Validate credit amount bounds to prevent manipulation
+  // Max credits per transaction: 1000 (reasonable limit for any package)
+  // Min credits: 1
+  const MAX_CREDITS_PER_PURCHASE = 1000;
+  const MIN_CREDITS_PER_PURCHASE = 1;
+
+  // Validate credits are within bounds
+  if (rawCredits > MAX_CREDITS_PER_PURCHASE || rawCredits < MIN_CREDITS_PER_PURCHASE) {
+    log.error('SECURITY: Credit amount outside valid bounds', null, {
+      sessionId: session.id,
+      userId,
+      rawCredits,
+      maxAllowed: MAX_CREDITS_PER_PURCHASE,
+      amountCents: session.amount_total
+    });
+    // Don't process, but return success to prevent retries of malicious requests
+    return;
+  }
+
+  // SECURITY: Validate credits match expected amount based on payment
+  // Approximate: $1-5 per credit is reasonable, reject if payment seems too low
+  const amountCents = session.amount_total || 0;
+  const minCentsPerCredit = 50; // $0.50 minimum per credit
+  const expectedMinPayment = rawCredits * minCentsPerCredit;
+
+  if (amountCents < expectedMinPayment && amountCents > 0) {
+    log.error('SECURITY: Credit amount does not match payment', null, {
+      sessionId: session.id,
+      userId,
+      credits: rawCredits,
+      amountCents,
+      expectedMinPayment,
+      centsPerCredit: amountCents / rawCredits
+    });
+    // Don't process suspicious transactions
+    return;
+  }
+
+  const credits = rawCredits;
 
   // Handle credit purchases
   if (isCreditPurchase && userId && credits > 0) {

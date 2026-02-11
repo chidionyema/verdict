@@ -307,6 +307,19 @@ export function SimplifiedStart() {
           refreshCredits();
           setShowCreditsModal(false);
         }}
+        onEarnCreditsClick={() => {
+          // Save form data before navigating to earn credits
+          if (typeof window !== 'undefined') {
+            sessionStorage.setItem('draftRequest', JSON.stringify({
+              mediaType,
+              textContent: mediaType === 'text' ? textContent : null,
+              category,
+              subcategory,
+              context,
+              requestedTone,
+            }));
+          }
+        }}
       />
 
       <StepProgressHeader step={step} getStepProgressLabel={getStepProgressLabel} />

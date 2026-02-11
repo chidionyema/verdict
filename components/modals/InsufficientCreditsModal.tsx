@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { X, Coins, Zap, CreditCard, ArrowRight, AlertCircle, Check, Sparkles } from 'lucide-react';
 import { Spinner } from '@/components/ui/Spinner';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 
 interface CreditPackage {
@@ -21,6 +22,7 @@ interface InsufficientCreditsModalProps {
   requiredCredits: number;
   currentCredits: number;
   onPurchaseSuccess?: () => void;
+  onEarnCreditsClick?: () => void; // Called before navigating to earn credits
 }
 
 const defaultPackages: CreditPackage[] = [
@@ -35,12 +37,14 @@ export function InsufficientCreditsModal({
   requiredCredits,
   currentCredits,
   onPurchaseSuccess,
+  onEarnCreditsClick,
 }: InsufficientCreditsModalProps) {
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [creditPackages, setCreditPackages] = useState<CreditPackage[]>(defaultPackages);
   const [showSuccess, setShowSuccess] = useState(false);
   const [purchasedCredits, setPurchasedCredits] = useState(0);
+  const router = useRouter();
 
   const modalRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -268,15 +272,20 @@ export function InsufficientCreditsModal({
           </div>
 
           {/* Earn credits option */}
-          <Link
-            href="/feed?earn=true&return=/submit"
+          <button
+            onClick={() => {
+              // Call callback to save draft before navigating
+              onEarnCreditsClick?.();
+              onClose();
+              router.push('/feed?earn=true&return=/submit');
+            }}
             className="block w-full p-4 mb-6 bg-green-50 border-2 border-green-200 rounded-xl hover:border-green-400 transition text-center"
           >
             <p className="font-bold text-green-800">🎯 Earn 1 Credit Free (~15 min)</p>
             <p className="text-sm text-green-700 mt-1">
               Review 3 submissions from others to earn 1 credit
             </p>
-          </Link>
+          </button>
 
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6 flex items-center gap-3">

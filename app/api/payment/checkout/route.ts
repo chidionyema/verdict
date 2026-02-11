@@ -4,6 +4,7 @@ import { log } from '@/lib/logger';
 import { z } from 'zod';
 import Stripe from 'stripe';
 import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
+import { validateCSRF } from '@/lib/csrf-protection';
 
 const getStripe = () => {
   if (!process.env.STRIPE_SECRET_KEY) {
@@ -26,6 +27,16 @@ const checkoutSchema = z.object({
 
 async function POST_Handler(request: NextRequest) {
   try {
+    // SECURITY: Validate CSRF to prevent cross-site request forgery on payment endpoints
+    const csrfResult = validateCSRF(request);
+    if (!csrfResult.valid) {
+      log.warn('CSRF validation failed on checkout', {
+        error: csrfResult.error,
+        origin: csrfResult.origin
+      });
+      return NextResponse.json({ error: 'Invalid request origin' }, { status: 403 });
+    }
+
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
@@ -195,7 +206,8 @@ async function POST_Handler(request: NextRequest) {
     }
 
     // Create Stripe Checkout Session with idempotency key
-    const idempotencyKey = `checkout_${user.id}_${validated.type}_${Date.now()}`;
+    // Use crypto.randomUUID() for true idempotency - Date.now() allows duplicate charges within same millisecond
+    const idempotencyKey = `checkout_${user.id}_${validated.type}_${crypto.randomUUID()}`;
 
     let session;
     try {

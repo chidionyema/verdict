@@ -30,23 +30,37 @@ async function GET_Handler(request: NextRequest) {
     }
 
     // Get detailed step information
-    const { data: steps } = await supabase
+    const { data: steps, error: stepsError } = await supabase
       .from('profile_completion_steps')
       .select('step_name, completed, completed_at')
       .eq('user_id', user.id);
 
+    if (stepsError) {
+      log.error('Error fetching completion steps', stepsError);
+      // Continue with empty steps rather than failing - steps table may not exist yet
+    }
+
     // Get profile info for additional context
-    const { data: profile } = await supabase
+    // Use maybeSingle() to handle case where profile doesn't exist yet (new user)
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('email_verified, full_name, avatar_url, bio, is_judge')
       .eq('id', user.id)
-      .single() as { data: {
+      .maybeSingle() as { data: {
         email_verified: boolean;
         full_name: string | null;
         avatar_url: string | null;
         bio: string | null;
         is_judge: boolean;
-      } | null };
+      } | null; error: any };
+
+    if (profileError) {
+      log.error('Error fetching profile for completion status', profileError);
+      // Continue with null profile - user may be new
+    }
+
+    // Safe array for steps - use empty array if query failed or returned null
+    const safeSteps = Array.isArray(steps) ? steps : [];
 
     const stepDetails = {
       email_verification: {
@@ -62,19 +76,19 @@ async function GET_Handler(request: NextRequest) {
         required: true,
       },
       preferences: {
-        completed: steps?.some((s: any) => s.step_name === 'preferences' && s.completed) || false,
+        completed: safeSteps.some((s: any) => s.step_name === 'preferences' && s.completed),
         title: 'Set Preferences',
         description: 'Choose notification and privacy settings',
         required: false,
       },
       first_request: {
-        completed: steps?.some((s: any) => s.step_name === 'first_request' && s.completed) || false,
+        completed: safeSteps.some((s: any) => s.step_name === 'first_request' && s.completed),
         title: 'First Request',
         description: 'Submit your first verdict request',
         required: false,
       },
       judge_qualification: {
-        completed: steps?.some((s: any) => s.step_name === 'judge_qualification' && s.completed) || false,
+        completed: safeSteps.some((s: any) => s.step_name === 'judge_qualification' && s.completed),
         title: 'Become a Judge',
         description: 'Apply to become a judge and help others',
         required: false,

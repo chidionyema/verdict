@@ -149,12 +149,13 @@ export class CreditManager {
     description: string
   ): Promise<boolean> {
     try {
+      // Use correct parameter names matching database schema:
+      // spend_credits(p_user_id UUID, p_credits INT, p_request_id TEXT, p_description TEXT)
       const { data, error } = await (this.supabase.rpc as any)('spend_credits', {
-        target_user_id: userId,
-        credit_amount: creditsToSpend,
-        transaction_source: 'submission',
-        transaction_source_id: submissionId,
-        transaction_description: description
+        p_user_id: userId,
+        p_credits: creditsToSpend,
+        p_request_id: submissionId,
+        p_description: description
       });
 
       if (error) {

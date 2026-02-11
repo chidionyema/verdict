@@ -161,6 +161,31 @@ export default function SubmitPage() {
         }
       }
 
+      // Restore draft data if returning from earn credits flow
+      if (typeof window !== 'undefined') {
+        const draft = sessionStorage.getItem('submitDraft');
+        if (draft) {
+          try {
+            const parsed = JSON.parse(draft);
+            // Only restore if draft is less than 1 hour old
+            if (parsed.savedAt && Date.now() - parsed.savedAt < 60 * 60 * 1000) {
+              if (parsed.submissionData) {
+                setSubmissionData(parsed.submissionData);
+              }
+              if (parsed.step) {
+                setStep(parsed.step);
+              }
+              toast.success('Your draft has been restored!');
+            }
+            // Clear the draft after restoring
+            sessionStorage.removeItem('submitDraft');
+          } catch (e) {
+            console.error('Failed to restore draft:', e);
+            sessionStorage.removeItem('submitDraft');
+          }
+        }
+      }
+
       // Handle prefilled data from duplicate action
       // Re-use urlParams from above
       if (urlParams.get('duplicate') === 'true') {
@@ -230,6 +255,14 @@ export default function SubmitPage() {
 
   const handleEarnCredits = () => {
     setShowZeroCreditsModal(false);
+    // Save form data before leaving so user doesn't lose progress
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('submitDraft', JSON.stringify({
+        submissionData,
+        step: 'mode', // Return to mode selection when they come back
+        savedAt: Date.now()
+      }));
+    }
     router.push('/feed?earn=true&return=/submit');
   };
 
@@ -309,12 +342,22 @@ export default function SubmitPage() {
     setStep('processing');
 
     try {
-      const response = await fetch('/api/submit/process-payment', {
+      // For embedded payment (payment intent flow), create the request directly
+      // since the payment is already confirmed by Stripe
+      const response = await fetch('/api/requests', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          paymentIntentId: paymentData.id,
-          submissionData
+          category: submissionData.category,
+          media_type: submissionData.mediaType === 'split_test' || submissionData.mediaType === 'comparison'
+            ? 'photo'
+            : submissionData.mediaType,
+          media_url: submissionData.mediaUrl || null,
+          text_content: submissionData.mediaType === 'text' ? submissionData.question : null,
+          context: submissionData.context,
+          visibility: 'private',
+          request_tier: 'expert', // Paid submissions get expert tier
+          payment_intent_id: paymentData.id, // Track the payment for verification
         })
       });
 
@@ -324,10 +367,13 @@ export default function SubmitPage() {
         throw new Error(data.error || 'Failed to process submission');
       }
 
+      // Store the request ID for the success page
+      setSubmissionData(prev => ({ ...prev, requestId: data.request?.id }));
+
       setTimeout(() => setStep('success'), 1000);
     } catch (error) {
       console.error('Payment processing error:', error);
-      toast.error('Payment successful but submission failed. Please contact support.');
+      toast.error('Payment successful but submission failed. Please contact support with payment ID: ' + paymentData.id);
       setStep('payment');
     }
   };
@@ -576,34 +622,25 @@ function DetailsStep({ submissionData, setSubmissionData, onNext, userCredits }:
       id: 'appearance',
       name: 'Style & Appearance',
       icon: '👔',
-      description: 'Outfits, hair, photos, looks',
+      description: 'Dating photos, outfits, looks',
       gradient: 'from-pink-500 to-rose-500',
       bgColor: 'bg-pink-50',
       iconColor: 'text-pink-600'
     },
     {
-      id: 'dating',
-      name: 'Dating & Relationships',
-      icon: '💕',
-      description: 'Dating profiles, texts, advice',
-      gradient: 'from-red-500 to-pink-500',
-      bgColor: 'bg-red-50',
-      iconColor: 'text-red-600'
-    },
-    {
-      id: 'career',
-      name: 'Career & Professional',
+      id: 'profile',
+      name: 'Profiles & Bios',
       icon: '💼',
-      description: 'Resume, LinkedIn, workplace',
+      description: 'LinkedIn, dating profiles, resume',
       gradient: 'from-blue-500 to-indigo-500',
       bgColor: 'bg-blue-50',
       iconColor: 'text-blue-600'
     },
     {
       id: 'writing',
-      name: 'Creative & Writing',
+      name: 'Writing & Content',
       icon: '✍️',
-      description: 'Content, copy, creative work',
+      description: 'Emails, messages, creative work',
       gradient: 'from-purple-500 to-violet-500',
       bgColor: 'bg-purple-50',
       iconColor: 'text-purple-600'
@@ -612,7 +649,7 @@ function DetailsStep({ submissionData, setSubmissionData, onNext, userCredits }:
       id: 'decision',
       name: 'Life Decisions',
       icon: '🤔',
-      description: 'Important choices, dilemmas',
+      description: 'Choices, purchases, career moves',
       gradient: 'from-emerald-500 to-teal-500',
       bgColor: 'bg-emerald-50',
       iconColor: 'text-emerald-600'
@@ -635,7 +672,17 @@ function DetailsStep({ submissionData, setSubmissionData, onNext, userCredits }:
               </p>
               <div className="flex flex-wrap gap-2">
                 <button
-                  onClick={() => router.push('/feed?earn=true&return=/submit')}
+                  onClick={() => {
+                    // Save form data before leaving so user doesn't lose progress
+                    if (typeof window !== 'undefined') {
+                      sessionStorage.setItem('submitDraft', JSON.stringify({
+                        submissionData,
+                        step: 'details',
+                        savedAt: Date.now()
+                      }));
+                    }
+                    router.push('/feed?earn=true&return=/submit');
+                  }}
                   className="px-4 py-2 bg-amber-600 text-white text-sm font-medium rounded-lg hover:bg-amber-700 transition-colors"
                 >
                   Earn a Free Credit

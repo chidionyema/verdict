@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { log } from '@/lib/logger';
@@ -89,7 +88,7 @@ async function PATCH_Handler(request: NextRequest) {
       );
     }
 
-    const { data: profile, error: updateError } = await supabase
+    const { data: profile, error: updateError } = await (supabase as any)
       .from('profiles')
       .update(updateData)
       .eq('id', user.id)

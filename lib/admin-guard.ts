@@ -137,13 +137,23 @@ export function hasAdminPermission(user: AdminUser, requiredLevel: 'readonly' | 
 }
 
 /**
- * Audit admin action
+ * Audit admin action - CRITICAL: This must succeed for sensitive operations
+ * @param user - The admin user performing the action
+ * @param action - The action being performed
+ * @param details - Additional details about the action
+ * @param options - Options for audit behavior
+ * @throws Error if audit logging fails and failOnError is true (default for sensitive ops)
  */
-export async function auditAdminAction(user: AdminUser, action: string, details?: any) {
+export async function auditAdminAction(
+  user: AdminUser,
+  action: string,
+  details?: any,
+  options: { failOnError?: boolean } = { failOnError: true }
+): Promise<{ success: boolean; auditId?: string; error?: string }> {
   try {
     const supabase = await createClient();
-    
-    await (supabase as any)
+
+    const { data, error: auditError } = await (supabase as any)
       .from('admin_audit_log')
       .insert({
         admin_id: user.id,
@@ -153,10 +163,38 @@ export async function auditAdminAction(user: AdminUser, action: string, details?
         timestamp: new Date().toISOString(),
         ip_address: 'server-side' // Would get from request context
       })
-      .catch((auditError: any) => {
-        log.error('Admin audit logging failed', auditError);
+      .select('id')
+      .single();
+
+    if (auditError) {
+      log.error('CRITICAL: Admin audit logging failed', auditError, {
+        adminId: user.id,
+        action,
+        details
       });
+
+      if (options.failOnError) {
+        throw new Error(`Audit logging failed: ${auditError.message}. Operation blocked for compliance.`);
+      }
+
+      return { success: false, error: auditError.message };
+    }
+
+    return { success: true, auditId: data?.id };
   } catch (error) {
-    log.error('Admin audit action failed', error);
+    log.error('CRITICAL: Admin audit action failed', error, {
+      adminId: user.id,
+      action,
+      failOnError: options.failOnError
+    });
+
+    if (options.failOnError) {
+      throw error;
+    }
+
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown audit error'
+    };
   }
 }

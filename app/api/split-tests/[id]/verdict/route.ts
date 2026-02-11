@@ -202,6 +202,66 @@ async function POST_Handler(
       );
     }
 
+    // Calculate judge earning based on request tier FIRST
+    const earningCents = getJudgeEarningCents(splitTestData.request_tier);
+    const earningAmount = earningCents / 100; // Convert to dollars
+
+    // Generate a temporary verdict ID for earnings record (will be updated after verdict creation)
+    const tempVerdictId = crypto.randomUUID();
+
+    // ATOMICITY FIX: Create earnings record FIRST with retry logic
+    // This ensures judges get paid for their work even if subsequent steps fail
+    let earningsCreated = false;
+    let earningsRetryCount = 0;
+    const MAX_EARNINGS_RETRIES = 3;
+
+    while (!earningsCreated && earningsRetryCount < MAX_EARNINGS_RETRIES) {
+      try {
+        const { error: earningsError } = await (supabase as any)
+          .from('judge_earnings')
+          .insert({
+            judge_id: user.id,
+            verdict_response_id: tempVerdictId,
+            amount: earningAmount,
+            currency: 'USD',
+            payout_status: 'pending',
+            request_type: 'split_test',
+            request_id: splitTestId,
+            created_at: new Date().toISOString(),
+          });
+
+        if (earningsError) {
+          throw earningsError;
+        }
+        earningsCreated = true;
+        log.info('Judge earnings pre-created for split test verdict', {
+          judgeId: user.id,
+          tempVerdictId,
+          amount: earningAmount,
+          tier: splitTestData.request_tier
+        });
+      } catch (earningsError) {
+        earningsRetryCount++;
+        if (earningsRetryCount >= MAX_EARNINGS_RETRIES) {
+          // CRITICAL: Could not create earnings record - do not proceed with verdict
+          // Judge should not work for free
+          log.error('CRITICAL: Failed to create judge_earnings after retries - blocking verdict', {
+            error: earningsError,
+            judgeId: user.id,
+            splitTestId,
+            amount: earningAmount,
+            retries: earningsRetryCount
+          });
+          return NextResponse.json(
+            { error: 'Payment processing failed. Please try again.' },
+            { status: 500 }
+          );
+        }
+        // Wait before retry with exponential backoff
+        await new Promise(resolve => setTimeout(resolve, 100 * Math.pow(2, earningsRetryCount)));
+      }
+    }
+
     // Create the verdict
     const { data: verdict, error: verdictError } = await supabase
       .from('split_test_verdicts')
@@ -226,11 +286,32 @@ async function POST_Handler(
       .single();
 
     if (verdictError) {
-      console.error('Error creating split test verdict:', verdictError);
+      // Verdict failed but earnings were created - mark earnings for review
+      log.error('Verdict creation failed after earnings created - needs reconciliation', {
+        error: verdictError,
+        judgeId: user.id,
+        tempVerdictId,
+        splitTestId
+      });
+      // Update earnings to flag for review (don't delete - judge did the work)
+      await (supabase as any)
+        .from('judge_earnings')
+        .update({ payout_status: 'needs_review', notes: 'Verdict creation failed' })
+        .eq('verdict_response_id', tempVerdictId);
+
       return NextResponse.json(
-        { error: 'Failed to submit verdict' },
+        { error: 'Failed to submit verdict. Your earnings have been recorded for review.' },
         { status: 500 }
       );
+    }
+
+    // Update earnings record with actual verdict ID
+    const verdictId = (verdict as any)?.id;
+    if (verdictId && verdictId !== tempVerdictId) {
+      await (supabase as any)
+        .from('judge_earnings')
+        .update({ verdict_response_id: verdictId })
+        .eq('verdict_response_id', tempVerdictId);
     }
 
     // Increment verdict count and auto-close if target reached
@@ -242,50 +323,12 @@ async function POST_Handler(
       );
 
       if (incrementError) {
-        console.error('Failed to increment split test verdict count:', incrementError);
+        log.warn('Failed to increment split test verdict count', { error: incrementError, splitTestId });
       } else {
         updatedSplitTest = incrementResult;
       }
     } catch (incrementError) {
-      console.error('RPC call failed for increment_split_test_verdict_count_and_close:', incrementError);
-    }
-
-    // Calculate judge earning based on request tier
-    const earningCents = getJudgeEarningCents(splitTestData.request_tier);
-    const earningAmount = earningCents / 100; // Convert to dollars
-
-    // Create earnings record for the judge (for payout tracking)
-    // This is the critical record that appears in judge earnings dashboard
-    const verdictId = (verdict as any)?.id;
-    try {
-      await (supabase as any)
-        .from('judge_earnings')
-        .upsert({
-          judge_id: user.id,
-          verdict_response_id: verdictId, // Using verdict ID as unique key
-          amount: earningAmount,
-          currency: 'USD',
-          payout_status: 'pending',
-          created_at: new Date().toISOString(),
-        }, {
-          onConflict: 'verdict_response_id',
-          ignoreDuplicates: true
-        });
-
-      log.info('Judge earnings created for split test verdict', {
-        judgeId: user.id,
-        verdictId,
-        amount: earningAmount,
-        tier: splitTestData.request_tier
-      });
-    } catch (earningsError) {
-      // Log but don't fail - verdict was already created
-      log.error('Failed to create judge_earnings record for split test', {
-        error: earningsError,
-        judgeId: user.id,
-        verdictId,
-        amount: earningAmount
-      });
+      log.warn('RPC call failed for increment_split_test_verdict_count_and_close', { error: incrementError, splitTestId });
     }
 
     // Award credits to judge (for credit balance - separate from earnings)

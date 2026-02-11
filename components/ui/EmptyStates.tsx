@@ -396,9 +396,9 @@ export function SearchEmptyState({
   onTryCategory: (cat: string) => void;
 }) {
   const popularCategories = [
-    { name: 'Dating Photos', emoji: '💕', category: 'dating' },
-    { name: 'Work Outfits', emoji: '👔', category: 'professional' },
-    { name: 'Career Advice', emoji: '🚀', category: 'career' }
+    { name: 'Style & Appearance', emoji: '👔', category: 'appearance' },
+    { name: 'Profiles & Bios', emoji: '💼', category: 'profile' },
+    { name: 'Life Decisions', emoji: '🤔', category: 'decision' }
   ];
 
   return (

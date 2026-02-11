@@ -11,10 +11,24 @@ import { DollarSign, Star, Users, MessageSquare, Clock, Shield, Mail, RefreshCw 
 
 type SignupIntent = 'judge' | 'seeker' | 'general';
 
+// Validate redirect URL to prevent open redirect attacks
+function getSafeRedirect(redirectParam: string | null): string {
+  const redirect = redirectParam || '/';
+  // Block protocol-relative URLs (//evil.com) and absolute URLs (https://evil.com)
+  if (redirect.startsWith('//') || redirect.includes('://')) {
+    return '/';
+  }
+  // Ensure redirect starts with / (relative path only)
+  if (!redirect.startsWith('/')) {
+    return '/';
+  }
+  return redirect;
+}
+
 function SignupContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirect = searchParams.get('redirect') || '/';
+  const redirect = getSafeRedirect(searchParams.get('redirect'));
   const intentParam = searchParams.get('intent') as SignupIntent | null;
   const referralCode = searchParams.get('ref') || '';
 

@@ -180,21 +180,28 @@ export function AccessibilityWrapper({ children }: { children: React.ReactNode }
     const closeButton = modal.querySelector('button');
     closeButton?.focus();
     
+    // Cleanup function to remove event listeners and modal - prevents memory leak
+    const cleanup = () => {
+      window.removeEventListener('keydown', handleEscape);
+      modal.removeEventListener('click', handleBackdropClick);
+      modal.remove();
+    };
+
     // Close on escape
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        modal.remove();
-        window.removeEventListener('keydown', handleEscape);
+        cleanup();
       }
     };
     window.addEventListener('keydown', handleEscape);
-    
-    // Close on backdrop click
-    modal.addEventListener('click', (e) => {
+
+    // Close on backdrop click - using named function to allow proper removal
+    const handleBackdropClick = (e: MouseEvent) => {
       if (e.target === modal) {
-        modal.remove();
+        cleanup();
       }
-    });
+    };
+    modal.addEventListener('click', handleBackdropClick);
   };
 
   return (

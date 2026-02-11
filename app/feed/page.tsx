@@ -292,9 +292,19 @@ export default function FeedPage() {
       return;
     }
 
+    // Capture the item and its index at the start to prevent race conditions
+    // if the feed is filtered/changed while the API call is in flight
+    const capturedIndex = currentIndex;
+    const currentItem = feedItems[capturedIndex];
+
+    // Verify the item exists
+    if (!currentItem || !currentItem.id) {
+      toast.error('Unable to find item. Please refresh the page.');
+      return;
+    }
+
     setJudging(true);
     try {
-      const currentItem = feedItems[currentIndex];
 
       // Submit judgment via API (handles verdict_responses, credit earning, notifications)
       const response = await fetch('/api/judge/respond', {
@@ -311,6 +321,12 @@ export default function FeedPage() {
       const data = await response.json();
 
       if (!response.ok) {
+        // Handle session expiry - redirect to login
+        if (response.status === 401) {
+          toast.error('Your session has expired. Please log in again.');
+          router.push('/auth/login?redirect=/feed');
+          return;
+        }
         // Handle specific error cases
         if (response.status === 400 && data.error?.includes('already')) {
           toast.error('You have already judged this request.');

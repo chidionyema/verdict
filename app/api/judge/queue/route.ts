@@ -123,7 +123,7 @@ async function getStandardQueue(supabase: any, userId: string, limit: number) {
         .eq('judge_id', userId)
         .order('created_at', { ascending: false })
         .limit(MAX_EXCLUSION_IDS),
-      // Gracefully handle missing tables
+      // Gracefully handle missing tables with logged fallback
       supabase
         .from('comparison_responses')
         .select('comparison_id')
@@ -131,7 +131,10 @@ async function getStandardQueue(supabase: any, userId: string, limit: number) {
         .order('created_at', { ascending: false })
         .limit(MAX_EXCLUSION_IDS)
         .then((res: any) => ({ data: res.data?.map((r: any) => ({ request_id: r.comparison_id })) || [] }))
-        .catch(() => ({ data: [] })),
+        .catch((err: any) => {
+          log.warn('Failed to fetch comparison_responses, using empty fallback', { error: err, userId });
+          return { data: [] };
+        }),
       supabase
         .from('split_test_verdicts')
         .select('split_test_id')
@@ -139,7 +142,10 @@ async function getStandardQueue(supabase: any, userId: string, limit: number) {
         .order('created_at', { ascending: false })
         .limit(MAX_EXCLUSION_IDS)
         .then((res: any) => ({ data: res.data?.map((r: any) => ({ request_id: r.split_test_id })) || [] }))
-        .catch(() => ({ data: [] }))
+        .catch((err: any) => {
+          log.warn('Failed to fetch split_test_verdicts, using empty fallback', { error: err, userId });
+          return { data: [] };
+        })
     ]);
 
     const excludeVerdictIds = verdictResponses?.data?.map((r: any) => r.request_id) || [];

@@ -4,6 +4,11 @@
 import { createClient } from '@/lib/supabase/server';
 import { log } from '@/lib/logger';
 
+// Configuration for credit operations
+const CREDIT_OPERATION_TIMEOUT_MS = 10000; // 10 second timeout for credit operations
+const MAX_LOCK_RETRY_ATTEMPTS = 3;
+const LOCK_RETRY_DELAY_MS = 100;
+
 // Hash function for generating consistent lock IDs
 function hashText(text: string): number {
   let hash = 0;
@@ -15,12 +20,38 @@ function hashText(text: string): number {
   return Math.abs(hash);
 }
 
+// Timeout wrapper for async operations
+async function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  operationName: string
+): Promise<T> {
+  let timeoutId: NodeJS.Timeout;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error(`${operationName} timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
+  });
+
+  try {
+    const result = await Promise.race([promise, timeoutPromise]);
+    clearTimeout(timeoutId!);
+    return result;
+  } catch (error) {
+    clearTimeout(timeoutId!);
+    throw error;
+  }
+}
+
 interface CreditOperation {
   userId: string;
   requestId: string;
   credits: number;
   operation: 'deduct' | 'refund';
 }
+
+// Track locks held by this process for cleanup
+const heldLocks = new Set<number>();
 
 // Database-level operation tracking for serverless safety
 
@@ -32,19 +63,57 @@ export async function safeDeductCredits(userId: string, credits: number, request
   newBalance: number;
   message: string;
 }> {
-  const operationKey = `${userId}-${credits}-deduct`;
-  
   const supabase = await createClient();
-  
-  // Layer 1: Database-level operation locking (PostgreSQL advisory locks)  
+
+  // Layer 1: Database-level operation locking (PostgreSQL advisory locks)
   const lockId = hashText(`${userId}-credit-deduct`);
-  
+  let lockAcquired = false;
+
   try {
-    // Acquire exclusive lock for this user's credit operations
-    const { data: lockAcquired } = await (supabase as any).rpc('try_advisory_lock', {
-      lock_id: lockId
-    });
-    
+    // Acquire exclusive lock with retry logic and timeout
+    for (let attempt = 1; attempt <= MAX_LOCK_RETRY_ATTEMPTS; attempt++) {
+      try {
+        const lockResult = await withTimeout(
+          (supabase as any).rpc('try_advisory_lock', { lock_id: lockId }),
+          2000, // 2 second timeout for lock acquisition
+          'Advisory lock acquisition'
+        ) as { data: boolean | null; error: any };
+        const { data: acquired, error: lockError } = lockResult;
+
+        if (lockError) {
+          log.warn('Lock acquisition error', { lockId, attempt, error: lockError });
+          if (attempt < MAX_LOCK_RETRY_ATTEMPTS) {
+            await new Promise(resolve => setTimeout(resolve, LOCK_RETRY_DELAY_MS * attempt));
+            continue;
+          }
+          return {
+            success: false,
+            newBalance: 0,
+            message: 'Failed to acquire credit operation lock'
+          };
+        }
+
+        if (acquired) {
+          lockAcquired = true;
+          heldLocks.add(lockId);
+          break;
+        }
+
+        if (attempt < MAX_LOCK_RETRY_ATTEMPTS) {
+          await new Promise(resolve => setTimeout(resolve, LOCK_RETRY_DELAY_MS * attempt));
+        }
+      } catch (error) {
+        log.warn('Lock acquisition attempt failed', { lockId, attempt, error });
+        if (attempt === MAX_LOCK_RETRY_ATTEMPTS) {
+          return {
+            success: false,
+            newBalance: 0,
+            message: 'Credit operation lock acquisition timed out'
+          };
+        }
+      }
+    }
+
     if (!lockAcquired) {
       return {
         success: false,
@@ -130,12 +199,26 @@ export async function safeDeductCredits(userId: string, credits: number, request
       message: 'System error during credit deduction'
     };
   } finally {
-    // Release the database lock
-    await (supabase as any).rpc('advisory_unlock', {
-      lock_id: lockId
-    }).catch((unlockError: any) => {
-      log.warn('Failed to release advisory lock', { lockId, error: unlockError });
-    });
+    // Release the database lock with proper error handling
+    if (lockAcquired) {
+      try {
+        await withTimeout(
+          (supabase as any).rpc('advisory_unlock', { lock_id: lockId }),
+          2000, // 2 second timeout for unlock
+          'Advisory lock release'
+        );
+        heldLocks.delete(lockId);
+      } catch (unlockError) {
+        // CRITICAL: Log this as an error, not a warning - lock leak can cause issues
+        log.error('CRITICAL: Failed to release advisory lock - potential lock leak', unlockError, {
+          lockId,
+          userId,
+          requestId,
+          action: 'Manual database intervention may be required'
+        });
+        heldLocks.delete(lockId); // Remove from local tracking even if DB release failed
+      }
+    }
   }
 }
 

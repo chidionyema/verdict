@@ -8,9 +8,13 @@ export async function GET(request: NextRequest) {
   const code = requestUrl.searchParams.get('code');
   const redirectParam = requestUrl.searchParams.get('redirect');
 
-  // Helper to safely get redirect path
+  // Helper to safely get redirect path - prevent open redirect attacks
   const getSafeRedirect = (path?: string | null): string => {
-    if (!path || !path.startsWith('/')) return '/dashboard';
+    if (!path) return '/dashboard';
+    // Block protocol-relative URLs (//evil.com) and absolute URLs (https://evil.com)
+    if (path.startsWith('//') || path.includes('://')) return '/dashboard';
+    // Ensure starts with single slash (relative path only)
+    if (!path.startsWith('/')) return '/dashboard';
     return path;
   };
 

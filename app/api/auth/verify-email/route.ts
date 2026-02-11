@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { log } from '@/lib/logger';
@@ -12,14 +11,13 @@ async function POST_Handler(request: NextRequest) {
     const { token } = body;
 
     if (!token) {
-      return NextResponse.json({ 
-        error: 'Verification token is required' 
+      return NextResponse.json({
+        error: 'Verification token is required'
       }, { status: 400 });
     }
 
     // Verify the email
-    const { data: success, error: verifyError } = await supabase
-      .rpc('verify_email', { token });
+    const { data: success, error: verifyError } = await (supabase.rpc as any)('verify_email', { token });
 
     if (verifyError) {
       log.error('Email verification failed', verifyError);
@@ -29,8 +27,8 @@ async function POST_Handler(request: NextRequest) {
     }
 
     if (!success) {
-      return NextResponse.json({ 
-        error: 'Invalid or expired verification token' 
+      return NextResponse.json({
+        error: 'Invalid or expired verification token'
       }, { status: 400 });
     }
 
@@ -41,7 +39,7 @@ async function POST_Handler(request: NextRequest) {
 
     if (user) {
       // Create welcome notification
-      await supabase.rpc('create_notification', {
+      await (supabase.rpc as any)('create_notification', {
         target_user_id: user.id,
         notification_type: 'welcome',
         notification_title: 'Email verified! 🎉',

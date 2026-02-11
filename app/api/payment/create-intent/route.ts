@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { stripe, isDemoMode } from '@/lib/stripe';
 import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
+import { validateCSRF } from '@/lib/csrf-protection';
+import { log } from '@/lib/logger';
 
 async function POST_Handler(request: NextRequest) {
   try {
@@ -11,6 +13,16 @@ async function POST_Handler(request: NextRequest) {
         client_secret: 'pi_demo_client_secret',
         demo: true
       });
+    }
+
+    // SECURITY: Validate CSRF to prevent cross-site request forgery on payment endpoints
+    const csrfResult = validateCSRF(request);
+    if (!csrfResult.valid) {
+      log.warn('CSRF validation failed on create-intent', {
+        error: csrfResult.error,
+        origin: csrfResult.origin
+      });
+      return NextResponse.json({ error: 'Invalid request origin' }, { status: 403 });
     }
 
     const supabase = await createClient();
@@ -64,7 +76,8 @@ async function POST_Handler(request: NextRequest) {
     }
 
     // Create payment intent with validated values and idempotency
-    const idempotencyKey = `pi_${user.id}_${amountCents}_${Date.now()}`;
+    // Use crypto.randomUUID() for true idempotency - Date.now() allows duplicate payments within same millisecond
+    const idempotencyKey = `pi_${user.id}_${amountCents}_${crypto.randomUUID()}`;
 
     let paymentIntent;
     try {

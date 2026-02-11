@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/stripe';
 import { createServiceClient } from '@/lib/supabase/server';
@@ -23,7 +22,15 @@ const POST_Handler = async (request: NextRequest) => {
       );
     }
 
-    let event: Stripe.Event;
+    if (!stripe) {
+      log.error('Stripe not initialized - missing STRIPE_SECRET_KEY');
+      return NextResponse.json(
+        { error: 'Payment service not configured' },
+        { status: 503 }
+      );
+    }
+
+    let event: Stripe.Event | undefined;
 
     try {
       event = stripe.webhooks.constructEvent(
@@ -95,21 +102,23 @@ const POST_Handler = async (request: NextRequest) => {
     return NextResponse.json({ received: true });
   } catch (error) {
     const processingTime = Date.now() - startTime;
+    // Use type assertion to access Stripe event id, as TypeScript confuses with DOM Event
+    const stripeEventId = (event as Stripe.Event | undefined)?.id;
     log.error('Stripe webhook handler failed', error, {
       eventType: eventType,
-      eventId: event?.id,
+      eventId: stripeEventId,
       processingTimeMs: processingTime,
       timestamp: new Date().toISOString()
     });
 
     trackPaymentWebhook(eventType, processingTime, false, {
-      eventId: event?.id,
+      eventId: stripeEventId,
       error: error instanceof Error ? error.message : 'Unknown error'
     });
 
     trackCriticalPaymentError('webhook_processing', error, {
       eventType,
-      eventId: event?.id
+      eventId: stripeEventId
     });
     return NextResponse.json({ error: 'Webhook handler failed' }, { status: 500 });
   }
@@ -119,11 +128,11 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
   const supabase = createServiceClient();
 
   // Idempotency check: Has this checkout session already been processed?
-  const { data: existingTransaction } = await supabase
+  const { data: existingTransaction } = await (supabase as any)
     .from('transactions')
     .select('id, status')
     .eq('stripe_session_id', session.id)
-    .single();
+    .single() as { data: { id: string; status: string } | null };
 
   if (existingTransaction?.status === 'completed') {
     log.info('Checkout session already processed, skipping', {
@@ -155,12 +164,13 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
   });
 
   if (!userId) {
-    log.error('Missing user_id in checkout session metadata', null, { 
+    log.error('Missing user_id in checkout session metadata', null, {
       sessionId: session.id,
       metadata: session.metadata,
       severity: 'critical'
     });
-    return;
+    // CRITICAL: Throw error to signal Stripe to retry webhook - payment received but can't credit user
+    throw new Error(`Missing user_id in checkout session ${session.id} - payment received but cannot process`);
   }
 
   if (isLegacyPackage && !credits) {
@@ -181,7 +191,7 @@ async function handleCheckoutComplete(session: Stripe.Checkout.Session) {
   }
 
   // Update transaction status
-  const { error: transactionError } = await supabase
+  const { error: transactionError } = await (supabase as any)
     .from('transactions')
     .update({
       status: 'completed',
@@ -309,9 +319,9 @@ async function handleCheckoutExpired(session: Stripe.Checkout.Session) {
   const supabase = createServiceClient();
 
   // Mark transaction as failed
-  const { error: updateError } = await supabase
+  const { error: updateError } = await (supabase as any)
     .from('transactions')
-    .update({ 
+    .update({
       status: 'failed',
       failure_reason: 'checkout_session_expired',
       failed_at: new Date().toISOString()
@@ -337,9 +347,9 @@ async function handlePaymentFailed(paymentIntent: Stripe.PaymentIntent) {
   const supabase = createServiceClient();
 
   // Find and update transaction by payment intent
-  const { error: updateError } = await supabase
+  const { error: updateError } = await (supabase as any)
     .from('transactions')
-    .update({ 
+    .update({
       status: 'failed',
       failure_reason: paymentIntent.last_payment_error?.message || 'payment_failed',
       failed_at: new Date().toISOString()
