@@ -123,13 +123,24 @@ export function FeedCard({ item, onJudge, onSkip, judging }: FeedCardProps) {
           )}
         </div>
 
-        {/* Media placeholder */}
-        {item.media_type === 'photo' && (
+        {/* Photo display */}
+        {item.media_type === 'photo' && item.media_url && (
+          <div className="relative rounded-xl overflow-hidden bg-gray-100">
+            <img
+              src={item.media_url}
+              alt="Submission for review"
+              className="w-full h-auto max-h-[500px] object-contain"
+              loading="lazy"
+            />
+          </div>
+        )}
+
+        {/* Photo placeholder if no URL */}
+        {item.media_type === 'photo' && !item.media_url && (
           <div className="bg-gray-100 rounded-lg aspect-square flex items-center justify-center">
             <div className="text-center text-gray-500">
               <Camera className="h-8 w-8 mx-auto mb-2" />
-              <p className="text-sm">Photo submission</p>
-              <p className="text-xs">(Blurred for privacy)</p>
+              <p className="text-sm">Photo not available</p>
             </div>
           </div>
         )}
