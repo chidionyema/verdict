@@ -240,6 +240,44 @@ async function getRequesterInsights(userId: string, supabase: any) {
   }
 }
 
+function calculateStreak(responses: any[]): number {
+  if (!responses || responses.length === 0) return 0;
+
+  // Get unique days with activity (sorted desc)
+  const activityDays = new Set<string>();
+  responses.forEach((r: any) => {
+    const date = new Date(r.created_at).toISOString().split('T')[0];
+    activityDays.add(date);
+  });
+
+  const sortedDays = Array.from(activityDays).sort().reverse();
+  if (sortedDays.length === 0) return 0;
+
+  // Check if today or yesterday has activity (streak must be current)
+  const today = new Date().toISOString().split('T')[0];
+  const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+  if (sortedDays[0] !== today && sortedDays[0] !== yesterday) {
+    return 0; // Streak broken
+  }
+
+  // Count consecutive days
+  let streak = 1;
+  for (let i = 1; i < sortedDays.length; i++) {
+    const prevDate = new Date(sortedDays[i - 1]);
+    const currDate = new Date(sortedDays[i]);
+    const diffDays = Math.floor((prevDate.getTime() - currDate.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 1) {
+      streak++;
+    } else {
+      break;
+    }
+  }
+
+  return streak;
+}
+
 async function getJudgeInsights(judgeId: string, supabase: any) {
   try {
     const insights = [];
@@ -341,24 +379,109 @@ async function getJudgeInsights(judgeId: string, supabase: any) {
       });
     }
 
+    // Category opportunity insight - find underexplored high-value categories
+    const categoryPremiums: Record<string, number> = {
+      'appearance': 15,
+      'dating': 20,
+      'career': 10,
+      'writing': 5,
+      'social-media': 12,
+    };
+
+    const userCategoryCount = Object.keys(categoryStats).reduce((acc, cat) => {
+      acc[cat] = (categoryStats[cat] as any).count;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const totalResponses = responses.length;
+    const underexploredCategories = Object.entries(categoryPremiums)
+      .filter(([cat]) => {
+        const userCount = userCategoryCount[cat] || 0;
+        const percentage = totalResponses > 0 ? (userCount / totalResponses) * 100 : 0;
+        return percentage < 10; // Less than 10% of their verdicts
+      })
+      .sort((a, b) => b[1] - a[1]); // Sort by premium %
+
+    if (underexploredCategories.length > 0 && totalResponses >= 5) {
+      const [topCat, premium] = underexploredCategories[0];
+      const displayCat = topCat.replace('-', ' ').replace(/\b\w/g, c => c.toUpperCase());
+      insights.push({
+        type: 'tip',
+        title: `Try ${displayCat} requests`,
+        description: `${displayCat} requests pay ${premium}% above average. You've only done ${userCategoryCount[topCat] || 0} so far.`,
+        action: 'Filter Queue',
+        action_url: `/judge?category=${topCat}`,
+        priority: 'medium',
+      });
+    }
+
     // Earnings insights
     if (earnings && earnings.length > 0) {
       const totalEarnings = earnings.reduce(
-        (sum: number, e: any) => sum + e.net_amount_cents,
+        (sum: number, e: any) => sum + (e.net_amount_cents || e.amount * 100 || 0),
         0
       );
       const availableEarnings = earnings
-        .filter((e: any) => e.payout_status === 'available')
-        .reduce((sum: number, e: any) => sum + e.net_amount_cents, 0);
+        .filter((e: any) => e.payout_status === 'pending' && !e.payout_id)
+        .reduce((sum: number, e: any) => sum + (e.net_amount_cents || e.amount * 100 || 0), 0);
 
-      if (availableEarnings >= 1000) { // $10+
+      const PAYOUT_THRESHOLD = 1000; // $10 = 1000 cents
+      const AVG_EARNING_PER_VERDICT = 250; // $2.50 average
+
+      if (availableEarnings >= PAYOUT_THRESHOLD) {
         insights.push({
-          type: 'info',
-          title: 'Payout Available',
-          description: `You have $${(availableEarnings / 100).toFixed(2)} available for payout. Minimum payout is $10.`,
+          type: 'success',
+          title: 'Payout Ready!',
+          description: `You have $${(availableEarnings / 100).toFixed(2)} available for payout. Request it now!`,
           action: 'Request Payout',
           action_url: '/judge/earnings',
-          priority: 'medium',
+          priority: 'high',
+        });
+      } else if (availableEarnings > 0 && availableEarnings < PAYOUT_THRESHOLD) {
+        // Payout proximity insight
+        const remaining = PAYOUT_THRESHOLD - availableEarnings;
+        const estimatedVerdicts = Math.ceil(remaining / AVG_EARNING_PER_VERDICT);
+
+        insights.push({
+          type: 'info',
+          title: `${estimatedVerdicts} verdict${estimatedVerdicts !== 1 ? 's' : ''} away from payout`,
+          description: `You have $${(availableEarnings / 100).toFixed(2)} available. Earn $${(remaining / 100).toFixed(2)} more to request a payout.`,
+          action: 'View Queue',
+          action_url: '/judge',
+          priority: 'high',
+        });
+      }
+
+      // Best day analysis
+      const earningsByDayOfWeek: Record<number, { total: number; count: number }> = {};
+      const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+      earnings.forEach((e: any) => {
+        const day = new Date(e.created_at).getDay();
+        if (!earningsByDayOfWeek[day]) {
+          earningsByDayOfWeek[day] = { total: 0, count: 0 };
+        }
+        earningsByDayOfWeek[day].total += (e.net_amount_cents || e.amount * 100 || 0);
+        earningsByDayOfWeek[day].count += 1;
+      });
+
+      let bestDayOfWeek = -1;
+      let bestDayAvg = 0;
+
+      Object.entries(earningsByDayOfWeek).forEach(([day, stats]) => {
+        const avg = stats.total / stats.count;
+        if (avg > bestDayAvg && stats.count >= 2) {
+          bestDayAvg = avg;
+          bestDayOfWeek = parseInt(day);
+        }
+      });
+
+      if (bestDayOfWeek >= 0 && bestDayAvg > 0) {
+        insights.push({
+          type: 'tip',
+          title: `${dayNames[bestDayOfWeek]}s are your best day`,
+          description: `You earn an average of $${(bestDayAvg / 100).toFixed(2)} per verdict on ${dayNames[bestDayOfWeek]}s. Consider focusing your judging then.`,
+          priority: 'low',
         });
       }
 
@@ -367,14 +490,14 @@ async function getJudgeInsights(judgeId: string, supabase: any) {
       const recentEarnings = earnings.filter(
         (e: any) => new Date(e.created_at) > last30Days
       );
-      
+
       if (recentEarnings.length > 0) {
         const monthlyEarnings = recentEarnings.reduce(
-          (sum: number, e: any) => sum + e.net_amount_cents,
+          (sum: number, e: any) => sum + (e.net_amount_cents || e.amount * 100 || 0),
           0
         );
         const projectedMonthly = (monthlyEarnings / recentEarnings.length) * 30;
-        
+
         if (projectedMonthly > 5000) { // $50+/month projected
           insights.push({
             type: 'success',
@@ -415,12 +538,48 @@ async function getJudgeInsights(judgeId: string, supabase: any) {
       }
     }
 
+    // Streak tracking and encouragement
+    const streakDays = calculateStreak(responses);
+    const STREAK_MILESTONES = [3, 7, 14, 30];
+    const nextMilestone = STREAK_MILESTONES.find(m => m > streakDays);
+
+    if (streakDays > 0 && nextMilestone) {
+      const daysToMilestone = nextMilestone - streakDays;
+      if (daysToMilestone <= 3) {
+        insights.push({
+          type: 'info',
+          title: `${daysToMilestone} day${daysToMilestone !== 1 ? 's' : ''} to ${nextMilestone}-day streak!`,
+          description: `You're on a ${streakDays}-day streak! Keep judging daily to reach your ${nextMilestone}-day milestone.`,
+          action: 'Continue Streak',
+          action_url: '/judge',
+          priority: 'high',
+        });
+      }
+    } else if (streakDays === 0 && responses.length > 0) {
+      // Check if they had a streak recently
+      const hadRecentActivity = responses.some((r: any) => {
+        const daysDiff = Math.floor((Date.now() - new Date(r.created_at).getTime()) / (1000 * 60 * 60 * 24));
+        return daysDiff <= 2;
+      });
+
+      if (!hadRecentActivity) {
+        insights.push({
+          type: 'tip',
+          title: 'Start a new streak',
+          description: 'Judge today to begin building a new streak and unlock streak bonuses.',
+          action: 'Start Judging',
+          action_url: '/judge',
+          priority: 'medium',
+        });
+      }
+    }
+
     // Activity consistency
     const last7Days = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
     const recentResponses = responses.filter(
       (r: any) => new Date(r.created_at) > last7Days
     );
-    
+
     if (recentResponses.length === 0 && responses.length > 0) {
       insights.push({
         type: 'tip',
