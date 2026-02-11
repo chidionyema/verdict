@@ -16,7 +16,7 @@ async function GET_Handler() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Select only necessary fields - avoid exposing internal/sensitive data
+    // Select profile fields needed by account page and other components
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select(`
@@ -29,6 +29,9 @@ async function GET_Handler() {
         is_judge,
         is_expert,
         pricing_tier,
+        country,
+        age_range,
+        gender,
         created_at,
         updated_at,
         onboarding_completed,

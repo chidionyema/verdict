@@ -500,7 +500,7 @@ const POST_Handler = async (request: NextRequest) => {
           context,
           requestedTone: normalizedTone,
           roastMode: roast_mode || false,
-          visibility: visibility || 'private',
+          visibility: visibility || 'public',
           // Use tier config
           creditsToCharge: tierConfig.credits,
           targetVerdictCount: tierConfig.verdicts,
