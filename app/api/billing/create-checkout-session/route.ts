@@ -230,15 +230,9 @@ async function POST_Handler(request: NextRequest) {
     // Log full error details server-side for debugging
     log.error('Checkout session creation failed', error);
 
-    // In non-production, expose a concise error message to help diagnose issues.
-    const isError = error instanceof Error;
-    const message = isError ? error.message : 'Unknown error';
-
+    // SECURITY: Never expose error details to clients - use server logs for debugging
     return NextResponse.json(
-      {
-        error: 'Internal server error',
-        details: process.env.NODE_ENV === 'production' ? undefined : message,
-      },
+      { error: 'Payment processing failed. Please try again.' },
       { status: 500 }
     );
   }

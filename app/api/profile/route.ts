@@ -19,7 +19,7 @@ async function PATCH_Handler(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { display_name, is_judge, country, age_range, gender } = body;
+    const { display_name, country, age_range, gender } = body;
 
     // Validate fields
     const updateData: Record<string, unknown> = {};
@@ -34,74 +34,23 @@ async function PATCH_Handler(request: NextRequest) {
       updateData.display_name = display_name;
     }
 
-    if (is_judge !== undefined) {
-      if (typeof is_judge !== 'boolean') {
-        return NextResponse.json(
-          { error: 'is_judge must be a boolean' },
-          { status: 400 }
-        );
-      }
-
-      // If trying to become a judge, verify they have completed qualification
-      if (is_judge === true) {
-        const { data: currentProfile } = await supabase
-          .from('profiles')
-          .select('is_judge, judge_qualification_date')
-          .eq('id', user.id)
-          .single();
-
-        // SECURITY FIX: Only allow becoming a judge if:
-        // 1. Already a judge (no-op), OR
-        // 2. Has passed the quiz (indicated by providing judge_qualification_date in THIS request)
-        //    This is only valid when called from the qualification page after passing the quiz
-        // The qualification date must be a valid recent date (within last hour) to prevent replay attacks
-        const requestQualificationDate = body.judge_qualification_date;
-        const existingQualificationDate = (currentProfile as any)?.judge_qualification_date;
-
-        if (!(currentProfile as any)?.is_judge) {
-          if (!requestQualificationDate && !existingQualificationDate) {
-            return NextResponse.json(
-              { error: 'Must complete judge qualification first' },
-              { status: 403 }
-            );
-          }
-
-          // If providing a new qualification date, validate it's recent (within last hour)
-          // This prevents users from replaying old qualification dates
-          if (requestQualificationDate && !existingQualificationDate) {
-            const qualDate = new Date(requestQualificationDate);
-            const now = new Date();
-            const hourAgo = new Date(now.getTime() - 60 * 60 * 1000);
-
-            if (isNaN(qualDate.getTime()) || qualDate < hourAgo || qualDate > now) {
-              return NextResponse.json(
-                { error: 'Invalid qualification date' },
-                { status: 400 }
-              );
-            }
-          }
-        }
-      }
-
-      updateData.is_judge = is_judge;
+    // SECURITY FIX: is_judge and judge_qualification_date can NO LONGER be set via this endpoint.
+    // Judge status must be granted via the secure /api/judge/qualify endpoint which:
+    // 1. Verifies quiz answers server-side
+    // 2. Sets both is_judge and judge_qualification_date atomically
+    // 3. Uses a secure session token to prevent replay attacks
+    //
+    // Attempting to set these fields via profile update will be silently ignored.
+    if (body.is_judge !== undefined || body.judge_qualification_date !== undefined) {
+      log.warn('Attempted to set judge status via profile update', {
+        userId: user.id,
+        attemptedIsJudge: body.is_judge,
+        attemptedQualDate: body.judge_qualification_date,
+      });
+      // Don't add to updateData - silently ignore the attempt
     }
 
-    // Handle judge_qualification_date (only set during qualification completion)
-    // SECURITY: Only allow setting if user doesn't already have a qualification date
-    if (body.judge_qualification_date !== undefined) {
-      const { data: currentProfile } = await supabase
-        .from('profiles')
-        .select('judge_qualification_date')
-        .eq('id', user.id)
-        .single();
-
-      // Only set if not already set (prevent tampering)
-      if (!(currentProfile as any)?.judge_qualification_date) {
-        updateData.judge_qualification_date = body.judge_qualification_date;
-      }
-    }
-
-    // Handle judge_training_completed (set during qualification or training completion)
+    // Handle judge_training_completed - this is safe to set as it's just a progress marker
     if (body.judge_training_completed !== undefined) {
       if (typeof body.judge_training_completed !== 'boolean') {
         return NextResponse.json(

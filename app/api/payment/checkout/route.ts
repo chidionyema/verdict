@@ -33,8 +33,25 @@ async function POST_Handler(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await request.json();
-    const validated = checkoutSchema.parse(body);
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+    }
+
+    let validated;
+    try {
+      validated = checkoutSchema.parse(body);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return NextResponse.json({
+          error: 'Invalid request data',
+          details: error.errors.map(e => ({ field: e.path.join('.'), message: e.message }))
+        }, { status: 400 });
+      }
+      throw error;
+    }
 
     // Get user profile
     const { data: profile, error: profileError } = await supabase
@@ -177,8 +194,44 @@ async function POST_Handler(request: NextRequest) {
       return NextResponse.json({ error: 'Unable to create checkout session' }, { status: 500 });
     }
 
-    // Create Stripe Checkout Session
-    const session = await getStripe().checkout.sessions.create(sessionConfig);
+    // Create Stripe Checkout Session with idempotency key
+    const idempotencyKey = `checkout_${user.id}_${validated.type}_${Date.now()}`;
+
+    let session;
+    try {
+      session = await getStripe().checkout.sessions.create(sessionConfig, {
+        idempotencyKey,
+      });
+    } catch (stripeError: unknown) {
+      const isStripeError = stripeError && typeof stripeError === 'object' && 'type' in stripeError;
+
+      if (isStripeError) {
+        const err = stripeError as { type: string; message?: string; code?: string };
+        log.error('Stripe checkout session creation failed', stripeError, {
+          stripeErrorType: err.type,
+          stripeErrorCode: err.code,
+          userId: user.id,
+          checkoutType: validated.type,
+        });
+
+        if (err.type === 'StripeRateLimitError') {
+          return NextResponse.json({
+            error: 'Service temporarily busy',
+            message: 'Please try again in a moment.',
+            retry_after: 30,
+          }, { status: 503 });
+        }
+
+        if (err.type === 'StripeConnectionError') {
+          return NextResponse.json({
+            error: 'Payment service unavailable',
+            message: 'Unable to connect to payment service. Please try again.',
+          }, { status: 503 });
+        }
+      }
+
+      throw stripeError;
+    }
 
     // Create transaction record
     await (supabase as any)
@@ -206,12 +259,12 @@ async function POST_Handler(request: NextRequest) {
     });
 
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: 'Invalid request data', details: (error as any).errors }, { status: 400 });
-    }
-
     log.error('Checkout session creation failed', error);
-    return NextResponse.json({ error: 'Failed to create checkout session' }, { status: 500 });
+
+    // SECURITY: Never expose error details to clients - use server logs for debugging
+    return NextResponse.json({
+      error: 'Payment processing failed. Please try again.',
+    }, { status: 500 });
   }
 }
 

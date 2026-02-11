@@ -31,7 +31,16 @@ async function POST_Handler(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await request.json();
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      log.error('Invalid JSON in payment request', null, {
+        operationId,
+        severity: 'medium'
+      });
+      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+    }
     const { submissionData } = body;
 
     log.info('Processing submission payment request', {
@@ -80,33 +89,84 @@ async function POST_Handler(request: NextRequest) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
 
-    const session = await stripe.checkout.sessions.create({
-      mode: 'payment',
-      payment_method_types: ['card'],
-      line_items: [
-        {
-          price_data: {
-            currency: 'gbp',
-            product_data: {
-              name: 'Private Feedback Submission',
-              description: `Get 3 anonymous feedback reports: "${submissionData.question.slice(0, 50)}${submissionData.question.length > 50 ? '...' : ''}"`,
+    // Generate idempotency key to prevent duplicate charges on retry
+    const idempotencyKey = `submit_${user.id}_${operationId}`;
+
+    let session;
+    try {
+      session = await stripe.checkout.sessions.create({
+        mode: 'payment',
+        payment_method_types: ['card'],
+        line_items: [
+          {
+            price_data: {
+              currency: 'gbp',
+              product_data: {
+                name: 'Private Feedback Submission',
+                description: `Get 3 anonymous feedback reports: "${submissionData.question.slice(0, 50)}${submissionData.question.length > 50 ? '...' : ''}"`,
+              },
+              unit_amount: priceInCents,
             },
-            unit_amount: priceInCents,
+            quantity: 1,
           },
-          quantity: 1,
+        ],
+        metadata: {
+          user_id: user.id,
+          submission_type: 'private',
+          submission_question: submissionData.question.slice(0, 100),
+          submission_category: submissionData.category || 'general',
+          operation_id: operationId,
+          created_at: new Date().toISOString()
         },
-      ],
-      metadata: {
-        user_id: user.id,
-        submission_type: 'private',
-        submission_question: submissionData.question.slice(0, 100),
-        submission_category: submissionData.category || 'general',
-        operation_id: operationId,
-        created_at: new Date().toISOString()
-      },
-      success_url: `${origin}/submit-unified?success=true&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/submit-unified?step=payment&canceled=true`,
-    });
+        success_url: `${origin}/submit-unified?success=true&session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${origin}/submit-unified?step=payment&canceled=true`,
+      }, {
+        idempotencyKey,
+      });
+    } catch (stripeError: unknown) {
+      const processingTime = Date.now() - startTime;
+      const isStripeError = stripeError && typeof stripeError === 'object' && 'type' in stripeError;
+
+      if (isStripeError) {
+        const err = stripeError as { type: string; message?: string; code?: string };
+        log.error('Stripe API error during checkout creation', stripeError, {
+          operationId,
+          stripeErrorType: err.type,
+          stripeErrorCode: err.code,
+          processingTimeMs: processingTime,
+          severity: 'high'
+        });
+
+        // Return user-friendly error based on Stripe error type
+        if (err.type === 'StripeCardError') {
+          return NextResponse.json({
+            error: 'Card error',
+            message: err.message || 'Your card was declined. Please try a different payment method.',
+            support_id: operationId,
+          }, { status: 402 });
+        }
+
+        if (err.type === 'StripeRateLimitError') {
+          return NextResponse.json({
+            error: 'Service busy',
+            message: 'Payment service is temporarily busy. Please try again in a moment.',
+            support_id: operationId,
+            retry_after: 30,
+          }, { status: 503 });
+        }
+
+        if (err.type === 'StripeConnectionError') {
+          return NextResponse.json({
+            error: 'Connection error',
+            message: 'Unable to connect to payment service. Please try again.',
+            support_id: operationId,
+          }, { status: 503 });
+        }
+      }
+
+      // Re-throw for generic error handler
+      throw stripeError;
+    }
 
     const processingTime = Date.now() - startTime;
     log.info('Stripe checkout session created successfully', {
@@ -138,11 +198,11 @@ async function POST_Handler(request: NextRequest) {
       actionRequired: 'Investigate payment creation failure'
     });
 
+    // SECURITY: Never expose error details to clients - use server logs for debugging
     return NextResponse.json(
       {
-        error: 'Internal server error',
+        error: 'Payment processing failed. Please try again.',
         support_id: operationId, // Provide support ID for user reference
-        details: process.env.NODE_ENV === 'production' ? undefined : message,
       },
       { status: 500 }
     );

@@ -183,7 +183,7 @@ export default function MyRequestsPage() {
             if (!pollInterval) {
               pollInterval = setInterval(() => {
                 fetchData();
-              }, 30000);
+              }, 10000);
             }
           }
         });
@@ -194,7 +194,7 @@ export default function MyRequestsPage() {
         if (!isSubscribed) {
           fetchData();
         }
-      }, 30000);
+      }, 10000);
 
       return () => {
         supabase.removeChannel(channel);
@@ -207,7 +207,7 @@ export default function MyRequestsPage() {
       // Fallback to polling if subscription setup fails entirely
       pollInterval = setInterval(() => {
         fetchData();
-      }, 30000);
+      }, 10000);
 
       return () => {
         if (pollInterval) {

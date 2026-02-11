@@ -3,6 +3,9 @@
  *
  * Use this for monitoring, load balancers, and uptime checks.
  * Returns 200 if app is healthy, 503 if not.
+ *
+ * SECURITY: In production, only returns status (healthy/degraded/unhealthy).
+ * Detailed checks are only available in development or with admin auth.
  */
 
 import { NextResponse } from 'next/server';
@@ -13,104 +16,109 @@ import { isLoggingConfigured } from '@/lib/logger';
 export const dynamic = 'force-dynamic'; // Don't cache this endpoint
 export const runtime = 'nodejs';
 
-interface HealthCheck {
+// Public health response - minimal info for load balancers
+interface PublicHealthCheck {
   status: 'healthy' | 'degraded' | 'unhealthy';
   timestamp: string;
+}
+
+// Detailed health response - only for development/admin
+interface DetailedHealthCheck extends PublicHealthCheck {
   uptime: number;
-  environment: string;
-  version: string;
   checks: {
     database: {
       status: 'healthy' | 'unhealthy' | 'error';
       latency_ms?: number;
     };
-    email: {
-      configured: boolean;
-    };
-    stripe: {
-      configured: boolean;
-    };
-    rate_limiting: {
-      production_ready: boolean;
-    };
-    connection_pooling: {
-      enabled: boolean;
-    };
-    logging: {
-      configured: boolean;
+    services: {
+      status: 'ready' | 'not_ready';
     };
   };
 }
 
 export async function GET() {
   const startTime = Date.now();
+  const isProduction = process.env.NODE_ENV === 'production';
 
-  const health: HealthCheck = {
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    environment: process.env.NODE_ENV || 'development',
-    version: process.env.npm_package_version || '1.0.0',
-    checks: {
-      database: { status: 'unhealthy' },
-      email: { configured: !!process.env.RESEND_API_KEY },
-      stripe: {
-        configured: !!(
-          process.env.STRIPE_SECRET_KEY &&
-          !process.env.STRIPE_SECRET_KEY.includes('your_key')
-        ),
-      },
-      rate_limiting: { production_ready: isRateLimitingProduction() },
-      connection_pooling: { enabled: isConnectionPoolingEnabled() },
-      logging: {
-        configured: isLoggingConfigured(),
-      },
-    },
-  };
+  let status: 'healthy' | 'degraded' | 'unhealthy' = 'healthy';
+  let dbStatus: 'healthy' | 'unhealthy' | 'error' = 'unhealthy';
+  let dbLatency: number | undefined;
 
   try {
     // Check database connectivity
     const dbStartTime = Date.now();
     const supabase = createServiceClient();
     const { error } = await supabase.from('profiles').select('id').limit(1);
-    const dbLatency = Date.now() - dbStartTime;
+    dbLatency = Date.now() - dbStartTime;
 
     if (error) {
-      health.checks.database = { status: 'unhealthy', latency_ms: dbLatency };
-      health.status = 'degraded';
+      dbStatus = 'unhealthy';
+      status = 'degraded';
     } else {
-      health.checks.database = { status: 'healthy', latency_ms: dbLatency };
+      dbStatus = 'healthy';
     }
-  } catch (error) {
-    health.checks.database = { status: 'error' };
-    health.status = 'unhealthy';
+  } catch {
+    dbStatus = 'error';
+    status = 'unhealthy';
   }
 
-  // Determine overall status
-  const criticalChecks = [
-    health.checks.database.status === 'healthy',
-    health.checks.stripe.configured,
-  ];
+  // Check critical services (without exposing which ones)
+  const criticalServicesReady = !!(
+    process.env.STRIPE_SECRET_KEY &&
+    !process.env.STRIPE_SECRET_KEY.includes('your_key')
+  );
 
-  const productionChecks = [
-    health.checks.email.configured,
-    health.checks.rate_limiting.production_ready,
-    health.checks.logging.configured,
-  ];
-
-  if (!criticalChecks.every(Boolean)) {
-    health.status = 'unhealthy';
-  } else if (
-    health.status === 'healthy' &&
-    process.env.NODE_ENV === 'production' &&
-    !productionChecks.every(Boolean)
-  ) {
-    health.status = 'degraded';
+  if (!criticalServicesReady || dbStatus !== 'healthy') {
+    status = status === 'healthy' ? 'degraded' : status;
   }
 
-  const statusCode = health.status === 'unhealthy' ? 503 : 200;
+  // Production readiness checks (internal only, don't expose details)
+  if (isProduction) {
+    const productionReady =
+      !!process.env.RESEND_API_KEY &&
+      isRateLimitingProduction() &&
+      isLoggingConfigured();
 
-  return NextResponse.json(health, {
+    if (!productionReady && status === 'healthy') {
+      status = 'degraded';
+    }
+  }
+
+  const statusCode = status === 'unhealthy' ? 503 : 200;
+
+  // In production, return minimal response to avoid info disclosure
+  if (isProduction) {
+    const publicHealth: PublicHealthCheck = {
+      status,
+      timestamp: new Date().toISOString(),
+    };
+
+    return NextResponse.json(publicHealth, {
+      status: statusCode,
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate',
+        'X-Response-Time': `${Date.now() - startTime}ms`,
+      },
+    });
+  }
+
+  // In development, return detailed response for debugging
+  const detailedHealth: DetailedHealthCheck = {
+    status,
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    checks: {
+      database: {
+        status: dbStatus,
+        latency_ms: dbLatency
+      },
+      services: {
+        status: criticalServicesReady ? 'ready' : 'not_ready',
+      },
+    },
+  };
+
+  return NextResponse.json(detailedHealth, {
     status: statusCode,
     headers: {
       'Cache-Control': 'no-store, no-cache, must-revalidate',
