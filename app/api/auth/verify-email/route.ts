@@ -17,7 +17,7 @@ async function POST_Handler(request: NextRequest) {
     }
 
     // Verify the email
-    const { data: success, error: verifyError } = await (supabase.rpc as any)('verify_email', { token });
+    const { data: result, error: verifyError } = await (supabase.rpc as any)('verify_email', { p_token: token });
 
     if (verifyError) {
       log.error('Email verification failed', verifyError);
@@ -26,9 +26,11 @@ async function POST_Handler(request: NextRequest) {
       }, { status: 500 });
     }
 
-    if (!success) {
+    // The function returns a table with success, user_id, message
+    const verificationResult = result?.[0] || result;
+    if (!verificationResult?.success) {
       return NextResponse.json({
-        error: 'Invalid or expired verification token'
+        error: verificationResult?.message || 'Invalid or expired verification token'
       }, { status: 400 });
     }
 
@@ -40,13 +42,15 @@ async function POST_Handler(request: NextRequest) {
     if (user) {
       // Create welcome notification
       await (supabase.rpc as any)('create_notification', {
-        target_user_id: user.id,
-        notification_type: 'welcome',
-        notification_title: 'Email verified! 🎉',
-        notification_message: 'Your email has been verified. Welcome to Verdict! You now have 3 free requests (3 verdicts each) to start.',
-        action_label: 'Create Your First Request',
-        action_url: '/submit',
-        notification_priority: 'high'
+        p_user_id: user.id,
+        p_type: 'welcome',
+        p_title: 'Email verified! 🎉',
+        p_message: 'Your email has been verified. Welcome to Verdict! You now have 3 free requests (3 verdicts each) to start.',
+        p_metadata: {
+          action_label: 'Create Your First Request',
+          action_url: '/submit',
+          priority: 'high'
+        }
       });
     }
 

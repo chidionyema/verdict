@@ -34,8 +34,8 @@ async function POST_Handler(request: NextRequest) {
     // Create verification token
     const { data: token, error: tokenError } = await supabase
       .rpc('create_email_verification', {
-        target_user_id: user.id,
-        target_email: profile?.email || user.email
+        p_user_id: user.id,
+        p_email: profile?.email || user.email
       });
 
     if (tokenError) {
