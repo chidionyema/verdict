@@ -47,7 +47,7 @@ async function POST_Handler(request: NextRequest) {
       if (error instanceof z.ZodError) {
         return NextResponse.json({
           error: 'Invalid request data',
-          details: error.errors.map(e => ({ field: e.path.join('.'), message: e.message }))
+          details: error.issues.map((e: z.ZodIssue) => ({ field: e.path.join('.'), message: e.message }))
         }, { status: 400 });
       }
       throw error;

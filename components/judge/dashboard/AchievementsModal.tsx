@@ -2,7 +2,6 @@
 
 import { Trophy, CheckCircle2, Gift } from 'lucide-react';
 import type { Achievement } from './types';
-import type { LucideIcon } from 'lucide-react';
 
 interface AchievementsModalProps {
   achievements: Achievement[];
@@ -28,7 +27,7 @@ export function AchievementsModal({ achievements, onClose }: AchievementsModalPr
         <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {achievements.map((achievement) => {
-              const Icon = achievement.icon as LucideIcon;
+              const Icon = achievement.icon;
               return (
                 <div
                   key={achievement.id}

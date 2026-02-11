@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import type { LucideIcon } from 'lucide-react';
 
 export interface QueueRequest {
   id: string;
@@ -30,7 +31,7 @@ export interface Achievement {
   id: string;
   title: string;
   description: string;
-  icon: ReactNode;
+  icon: LucideIcon;
   progress: number;
   maxProgress: number;
   unlocked: boolean;
@@ -67,7 +68,7 @@ export interface JudgeStats {
 export interface JudgeLevel {
   name: string;
   level: number;
-  icon: ReactNode;
+  icon: LucideIcon;
   color: string;
 }
 

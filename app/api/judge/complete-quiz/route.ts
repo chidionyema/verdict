@@ -190,7 +190,7 @@ async function POST_Handler(request: NextRequest) {
     // PASSED - Grant judge status using service client (bypasses RLS)
     const qualificationDate = new Date().toISOString();
 
-    const { error: updateError } = await serviceClient
+    const { error: updateError } = await (serviceClient as any)
       .from('profiles')
       .update({
         is_judge: true,

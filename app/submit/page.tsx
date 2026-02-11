@@ -570,6 +570,7 @@ export default function SubmitPage() {
 
 // Step Components
 function DetailsStep({ submissionData, setSubmissionData, onNext, userCredits }: any) {
+  const router = useRouter();
   const categories = [
     {
       id: 'appearance',

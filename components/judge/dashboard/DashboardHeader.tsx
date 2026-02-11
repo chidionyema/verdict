@@ -5,7 +5,6 @@ import { DollarSign, Trophy, ToggleLeft, ToggleRight, Flame } from 'lucide-react
 import { RoleIndicator } from '@/components/ui/RoleIndicator';
 import type { Profile } from '@/lib/database.types';
 import type { JudgeStats, JudgeLevel, Achievement } from './types';
-import type { LucideIcon } from 'lucide-react';
 
 interface DashboardHeaderProps {
   profile: Profile;
@@ -26,7 +25,7 @@ export function DashboardHeader({
   onToggleJudge,
   onShowAchievements,
 }: DashboardHeaderProps) {
-  const LevelIcon = judgeLevel.icon as LucideIcon;
+  const LevelIcon = judgeLevel.icon;
 
   return (
     <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl border border-white/50 p-8 mb-8 relative overflow-hidden">

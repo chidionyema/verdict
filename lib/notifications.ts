@@ -106,7 +106,7 @@ async function createInAppNotification(
       }
     }
 
-    await supabase.rpc('create_notification', {
+    await (supabase as any).rpc('create_notification', {
       p_user_id: userId,
       p_type: type,
       p_title: title,
