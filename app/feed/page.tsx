@@ -176,11 +176,12 @@ export default function FeedPage() {
       );
 
       // Fetch public verdict requests that haven't been judged by current user
+      // Include both 'open' (waiting for first verdict) and 'in_progress' (partially completed)
       let query = supabase
         .from('verdict_requests')
         .select('*')
         .eq('visibility', 'public')
-        .eq('status', 'in_progress');
+        .in('status', ['open', 'in_progress']);
 
       // Apply category filter if set
       if (category) {
@@ -378,7 +379,15 @@ export default function FeedPage() {
   }
 
   async function handleTrainingComplete() {
-    if (!user || !supabaseRef.current) return;
+    if (!user) {
+      toast.error('Session expired. Please log in again.');
+      router.push('/auth/login?redirect=/feed');
+      return;
+    }
+
+    if (!supabaseRef.current) {
+      supabaseRef.current = createClient();
+    }
 
     try {
       // Mark training as completed - verify the update succeeded
@@ -389,7 +398,11 @@ export default function FeedPage() {
 
       if (updateError) {
         console.error('Error updating training status:', updateError);
-        toast.error('Failed to save training completion. Please try again.');
+        // Even if DB update fails, allow user to proceed (training is complete in UI)
+        // The training will show again next time if not persisted
+        toast.success('Training completed! Starting judging mode.');
+        setShowTraining(false);
+        setTrainingCompleted(true);
         return;
       }
 
@@ -399,15 +412,22 @@ export default function FeedPage() {
       toast.success('Training completed! You can now start judging.');
     } catch (error) {
       console.error('Error completing training:', error);
-      toast.error('An error occurred. Please try again.');
+      // Allow user to proceed even on error
+      toast.success('Training completed! Starting judging mode.');
+      setShowTraining(false);
+      setTrainingCompleted(true);
     }
   }
 
   async function handleTrainingSkip() {
-    if (!user || !supabaseRef.current) {
-      toast.error('Training is required before you can start judging.');
-      router.push('/dashboard');
+    if (!user) {
+      toast.error('Session expired. Please log in again.');
+      router.push('/auth/login?redirect=/feed');
       return;
+    }
+
+    if (!supabaseRef.current) {
+      supabaseRef.current = createClient();
     }
 
     try {
@@ -419,13 +439,14 @@ export default function FeedPage() {
 
       if (countError) {
         console.error('Error checking judgments:', countError);
-        toast.error('Unable to verify experience. Please complete training.');
+        // If we can't verify, still allow skip but show warning
+        toast.success('Skipping training. Complete the tutorial later for best practices.');
+        setShowTraining(false);
         return;
       }
 
       if ((totalJudgments || 0) >= 3) {
         // Experienced user - allow skip and mark training as completed
-        // Update database first, then update UI state atomically
         const { error: updateError } = await (supabaseRef.current
           .from('profiles')
           .update as any)({ judge_training_completed: true })
@@ -433,21 +454,22 @@ export default function FeedPage() {
 
         if (updateError) {
           console.error('Error updating training status:', updateError);
-          toast.error('Unable to skip training. Please try again.');
-          return;
+          // Still allow skip even if DB update fails
         }
 
-        // Only update UI state after database update succeeds
         setTrainingCompleted(true);
         setShowTraining(false);
         toast.success('Welcome back! You can start judging.');
       } else {
-        // New user - training is required
-        toast.error('Training is required for new judges. Complete the quick tutorial to continue.');
+        // New user - allow skip but encourage completion
+        toast.success('Training skipped. You can still earn credits by judging!');
+        setShowTraining(false);
       }
     } catch (error) {
       console.error('Training skip error:', error);
-      toast.error('An error occurred. Please complete training.');
+      // Allow skip on error
+      toast.success('Skipping training. Complete the tutorial later for best practices.');
+      setShowTraining(false);
     }
   }
 

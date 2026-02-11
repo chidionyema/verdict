@@ -25,6 +25,7 @@ export interface Database {
           credits: number;
           onboarding_completed: boolean;
           judge_qualification_date: string | null;
+          judge_training_completed: boolean;
         };
         Insert: {
           id: string;
@@ -41,6 +42,7 @@ export interface Database {
           credits?: number;
           onboarding_completed?: boolean;
           judge_qualification_date?: string | null;
+          judge_training_completed?: boolean;
         };
         Update: {
           id?: string;
@@ -57,6 +59,7 @@ export interface Database {
           credits?: number;
           onboarding_completed?: boolean;
           judge_qualification_date?: string | null;
+          judge_training_completed?: boolean;
         };
       };
       feedback_requests: {
