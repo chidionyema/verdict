@@ -126,7 +126,7 @@ export default function FeedPage() {
         setUser(user);
         
         if (user) {
-          await loadFeedItems(supabase, categoryFilter);
+          await loadFeedItems(supabase, categoryFilter, user.id);
           await loadJudgeStats(user.id, supabase);
           
           // Check if user needs training (new judge with < 3 total judgments)
@@ -162,13 +162,21 @@ export default function FeedPage() {
     if (user && supabaseRef.current) {
       setLoading(true);
       setCurrentIndex(0);
-      loadFeedItems(supabaseRef.current, categoryFilter);
+      loadFeedItems(supabaseRef.current, categoryFilter, user.id);
     }
-  }, [categoryFilter]);
+  }, [categoryFilter, user]);
 
-  async function loadFeedItems(supabase: ReturnType<typeof createClient>, category?: string | null) {
+  async function loadFeedItems(supabase: ReturnType<typeof createClient>, category?: string | null, userId?: string) {
+    // Use passed userId or fall back to state
+    const currentUserId = userId || user?.id;
+
     try {
-      if (!supabase) return;
+      if (!supabase || !currentUserId) {
+        console.error('Missing supabase client or user ID');
+        setFeedError('auth');
+        setLoading(false);
+        return;
+      }
 
       // Add timeout to prevent infinite loading
       const timeoutPromise = new Promise((_, reject) =>
@@ -201,7 +209,7 @@ export default function FeedPage() {
       const { data: userJudgments } = await supabase
         .from('verdict_responses')
         .select('request_id')
-        .eq('judge_id', user.id);
+        .eq('judge_id', currentUserId);
 
       const judgedRequestIds = new Set((userJudgments || []).map((j: any) => j.request_id));
 
@@ -216,7 +224,7 @@ export default function FeedPage() {
         // Skip if user already judged this
         if (judgedRequestIds.has(item.id)) return false;
         // Skip if it's the user's own request
-        if (item.user_id === user.id) return false;
+        if (item.user_id === currentUserId) return false;
         // Skip if request is completed (has 3+ responses)
         if ((item.response_count || 0) >= 3) return false;
         return true;
@@ -789,8 +797,8 @@ export default function FeedPage() {
                     onClick={() => {
                       setLoading(true);
                       setFeedError(null);
-                      if (supabaseRef.current) {
-                        loadFeedItems(supabaseRef.current, categoryFilter);
+                      if (supabaseRef.current && user?.id) {
+                        loadFeedItems(supabaseRef.current, categoryFilter, user.id);
                       }
                     }}
                     className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition min-h-[48px]"
