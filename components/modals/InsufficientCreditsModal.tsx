@@ -23,6 +23,7 @@ interface InsufficientCreditsModalProps {
   currentCredits: number;
   onPurchaseSuccess?: () => void;
   onEarnCreditsClick?: () => void; // Called before navigating to earn credits
+  returnUrl?: string; // URL to return to after earning credits (default: /submit)
 }
 
 const defaultPackages: CreditPackage[] = [
@@ -38,6 +39,7 @@ export function InsufficientCreditsModal({
   currentCredits,
   onPurchaseSuccess,
   onEarnCreditsClick,
+  returnUrl = '/submit',
 }: InsufficientCreditsModalProps) {
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState('');
@@ -277,7 +279,7 @@ export function InsufficientCreditsModal({
               // Call callback to save draft before navigating
               onEarnCreditsClick?.();
               onClose();
-              router.push('/feed?earn=true&return=/submit');
+              router.push(`/feed?earn=true&return=${encodeURIComponent(returnUrl)}`);
             }}
             className="block w-full p-4 mb-6 bg-green-50 border-2 border-green-200 rounded-xl hover:border-green-400 transition text-center"
           >
