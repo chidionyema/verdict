@@ -106,7 +106,7 @@ export async function createVerdictRequest(
         email,
         display_name: email?.split('@')[0] || 'User',
         credits: 3,
-        is_judge: false,
+        is_judge: true,  // All users can judge by default
         is_admin: false,
       }, { onConflict: 'id', ignoreDuplicates: true })
       .select('id, credits')
@@ -166,6 +166,7 @@ export async function createVerdictRequest(
       target_verdict_count: targetCount,
       received_verdict_count: 0,
       request_tier: requestTier || 'community',
+      visibility: visibility || 'public',  // Default to public so judges can see it
     })
     .select()
     .single();

@@ -35,27 +35,56 @@ async function GET_Handler(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Fetch the request
-    const { data: verdictRequest, error: requestError } = await (supabase as any)
-      .from('verdict_requests')
-      .select('*')
-      .eq('id', id)
-      .single();
+    // Use service client to bypass RLS - we'll do access control in code
+    // This is more reliable than depending on complex RLS policies
+    const useServiceClient = hasServiceKey();
+    let verdictRequest: any = null;
+    let requestError: any = null;
+
+    if (useServiceClient) {
+      const serviceClient = createServiceClient() as any;
+      const result = await serviceClient
+        .from('verdict_requests')
+        .select('*')
+        .eq('id', id)
+        .is('deleted_at', null)
+        .single();
+      verdictRequest = result.data;
+      requestError = result.error;
+    } else {
+      // Fallback to regular client
+      const result = await (supabase as any)
+        .from('verdict_requests')
+        .select('*')
+        .eq('id', id)
+        .single();
+      verdictRequest = result.data;
+      requestError = result.error;
+    }
 
     if (requestError || !verdictRequest) {
+      log.warn('Request not found', { id, error: requestError?.message });
       return NextResponse.json({ error: 'Request not found' }, { status: 404 });
     }
 
-    // Check if user owns this request
-    if ((verdictRequest as any).user_id !== user.id) {
-      // Check if user is a judge (can view for judging)
+    // Access control: owner, judges, or admins can view
+    const isOwner = verdictRequest.user_id === user.id;
+
+    if (!isOwner) {
+      // Check if user is a judge or admin
       const { data: profile } = await (supabase as any)
         .from('profiles')
         .select('is_judge, is_admin')
         .eq('id', user.id)
         .single();
 
-      if (!(profile as any)?.is_judge && !(profile as any)?.is_admin) {
+      const isJudge = (profile as any)?.is_judge === true;
+      const isAdmin = (profile as any)?.is_admin === true;
+
+      // Judges can only view open/in_progress requests
+      const canJudge = isJudge && ['open', 'in_progress'].includes(verdictRequest.status);
+
+      if (!canJudge && !isAdmin) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }
     }
@@ -65,11 +94,6 @@ async function GET_Handler(
     let verdicts: any[] | null = null;
     let verdictsError: any = null;
     const receivedCount = (verdictRequest as any).received_verdict_count || 0;
-    const isOwner = (verdictRequest as any).user_id === user.id;
-
-    // Strategy: Use service client if available (bypasses RLS), otherwise use regular client
-    // For request owners, the regular client should work via RLS policies
-    const useServiceClient = hasServiceKey();
 
     try {
       if (useServiceClient) {
