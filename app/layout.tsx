@@ -12,6 +12,7 @@ import { I18nProvider } from "@/components/i18n-provider";
 import { PageErrorBoundary, ComponentErrorBoundary } from "@/components/ui/error-boundary";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { AccessibilityWrapper } from "@/components/accessibility/AccessibilityWrapper";
+import { GlobalProviders } from "@/components/providers/GlobalProviders";
 import { SkipLink } from "@/components/accessibility/SkipLink";
 // Removed SmartEntryPoint - pages handle their own auth
 import SafariViewportFix from "@/components/SafariViewportFix";
@@ -117,6 +118,7 @@ export default async function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <GlobalProviders>
         <I18nProvider locale={locale} messages={messages}>
           <GlobalErrorHandler>
             <ComponentErrorBoundary>
@@ -172,6 +174,7 @@ export default async function RootLayout({
             <AnalyticsProvider />
           </GlobalErrorHandler>
         </I18nProvider>
+        </GlobalProviders>
       </body>
     </html>
   );
