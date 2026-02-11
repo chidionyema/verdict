@@ -155,6 +155,7 @@ async function POST_Handler(request: NextRequest) {
             type: 'purchase',
             credits_delta: pkg.credits,
             amount_cents: pkg.price_cents,
+            currency: 'gbp',
             status: 'completed',
           } as Record<string, unknown>);
 
@@ -175,11 +176,11 @@ async function POST_Handler(request: NextRequest) {
         await (serviceClient.from('transactions') as ReturnType<typeof serviceClient.from>)
           .insert({
             user_id: user.id,
-            type: 'tier_upgrade',
+            type: 'purchase', // 'tier_upgrade' is not a valid type, use 'purchase'
             credits_delta: 0, // No credits, just tier upgrade
             amount_cents: pkg.price_cents,
+            currency: 'gbp',
             status: 'completed',
-            metadata: JSON.stringify({ tier: pkg.tier })
           } as Record<string, unknown>);
 
         const mode = isDemoMode() ? 'demo mode' : 'Stripe not configured';
@@ -253,17 +254,11 @@ async function POST_Handler(request: NextRequest) {
       user_id: user.id,
       stripe_session_id: session.id,
       amount_cents: pkg.price_cents,
+      currency: 'gbp',
       status: 'pending',
+      type: 'purchase', // Always use 'purchase' as it's the only valid type for payments
+      credits_delta: isLegacyPackage ? pkg.credits : 0,
     };
-
-    if (isLegacyPackage) {
-      transactionData.type = 'purchase';
-      transactionData.credits_delta = pkg.credits;
-    } else {
-      transactionData.type = 'tier_upgrade';
-      transactionData.credits_delta = 0;
-      transactionData.metadata = JSON.stringify({ tier: pkg.tier });
-    }
 
     await (serviceClient.from('transactions') as ReturnType<typeof serviceClient.from>)
       .insert(transactionData as Record<string, unknown>);

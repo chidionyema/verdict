@@ -3,55 +3,47 @@ import { createClient } from '@/lib/supabase/server';
 import { log } from '@/lib/logger';
 import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
 
-// POST /api/auth/verify-email - Verify email with token
+// POST /api/auth/verify-email - Handle email verification callback
+// Note: Supabase Auth handles the actual verification via the link in the email.
+// This endpoint is called after redirect to create welcome notification.
 async function POST_Handler(request: NextRequest) {
   try {
     const supabase = await createClient();
-    const body = await request.json();
-    const { token } = body;
 
-    if (!token) {
-      return NextResponse.json({
-        error: 'Verification token is required'
-      }, { status: 400 });
-    }
-
-    // Verify the email
-    const { data: result, error: verifyError } = await (supabase.rpc as any)('verify_email', { p_token: token });
-
-    if (verifyError) {
-      log.error('Email verification failed', verifyError);
-      return NextResponse.json({
-        error: 'Failed to verify email'
-      }, { status: 500 });
-    }
-
-    // The function returns a table with success, user_id, message
-    const verificationResult = result?.[0] || result;
-    if (!verificationResult?.success) {
-      return NextResponse.json({
-        error: verificationResult?.message || 'Invalid or expired verification token'
-      }, { status: 400 });
-    }
-
-    // Get updated user info
     const {
       data: { user },
+      error: authError,
     } = await supabase.auth.getUser();
 
-    if (user) {
-      // Create welcome notification
-      await (supabase.rpc as any)('create_notification', {
-        p_user_id: user.id,
-        p_type: 'welcome',
-        p_title: 'Email verified! 🎉',
-        p_message: 'Your email has been verified. Welcome to Verdict! You now have 3 free requests (3 verdicts each) to start.',
-        p_metadata: {
-          action_label: 'Create Your First Request',
-          action_url: '/submit',
-          priority: 'high'
-        }
-      });
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Check if email is verified via Supabase Auth
+    if (!user.email_confirmed_at) {
+      return NextResponse.json({
+        error: 'Email is not yet verified'
+      }, { status: 400 });
+    }
+
+    // Try to create welcome notification (non-blocking)
+    try {
+      await (supabase as any)
+        .from('notifications')
+        .insert({
+          user_id: user.id,
+          type: 'welcome',
+          title: 'Email verified! 🎉',
+          message: 'Your email has been verified. Welcome to Verdict!',
+          metadata: {
+            action_label: 'Create Your First Request',
+            action_url: '/submit',
+            priority: 'high'
+          }
+        });
+    } catch (notifError) {
+      // Non-critical - log but don't fail the request
+      log.warn('Failed to create welcome notification', { error: notifError, userId: user.id });
     }
 
     return NextResponse.json({

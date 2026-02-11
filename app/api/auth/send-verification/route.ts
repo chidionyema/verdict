@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { sendVerificationEmail } from '@/lib/email';
 import { log } from '@/lib/logger';
 import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
 
 // POST /api/auth/send-verification - Send email verification
 async function POST_Handler(request: NextRequest) {
   try {
-    const supabase: any = await createClient();
+    const supabase = await createClient();
 
     const {
       data: { user },
@@ -18,44 +17,35 @@ async function POST_Handler(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Check if email is already verified
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('email_verified, email')
-      .eq('id', user.id)
-      .single();
-
-    if (profile?.email_verified) {
+    // Check if email is already verified via Supabase Auth
+    if (user.email_confirmed_at) {
       return NextResponse.json({
         error: 'Email is already verified'
       }, { status: 400 });
     }
 
-    // Create verification token
-    const { data: token, error: tokenError } = await supabase
-      .rpc('create_email_verification', {
-        p_user_id: user.id,
-        p_email: profile?.email || user.email
-      });
+    // Use Supabase's built-in email verification resend
+    const { error: resendError } = await supabase.auth.resend({
+      type: 'signup',
+      email: user.email!,
+    });
 
-    if (tokenError) {
-      log.error('Error creating verification token', tokenError, { userId: user.id });
+    if (resendError) {
+      log.error('Error sending verification email', resendError, { userId: user.id });
+
+      // Handle specific errors
+      if (resendError.message?.includes('rate limit')) {
+        return NextResponse.json({
+          error: 'Please wait before requesting another verification email'
+        }, { status: 429 });
+      }
+
       return NextResponse.json({
-        error: 'Failed to create verification token'
+        error: 'Failed to send verification email. Please try again.'
       }, { status: 500 });
     }
 
-    // Send verification email
-    const targetEmail = profile?.email || user.email;
-    if (token && targetEmail) {
-      const emailResult = await sendVerificationEmail(targetEmail, token);
-
-      if (!emailResult.success) {
-        log.error('Failed to send verification email', new Error(emailResult.error), { email: targetEmail });
-      } else {
-        log.info('Verification email sent', { email: targetEmail, emailId: emailResult.id });
-      }
-    }
+    log.info('Verification email sent via Supabase Auth', { email: user.email });
 
     return NextResponse.json({
       success: true,
