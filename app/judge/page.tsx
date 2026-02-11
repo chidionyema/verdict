@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client';
 import type { Profile } from '@/lib/database.types';
 import JudgeProgression from '@/components/judge/JudgeProgression';
 import { CrossRolePrompt } from '@/components/ui/CrossRolePrompt';
+import { EmailVerificationGuard } from '@/components/auth/EmailVerificationGuard';
 
 import {
   LoadingState,
@@ -229,6 +230,16 @@ function JudgeDashboardContent() {
 
   if (loading) return <LoadingState />;
   if (!profile) return <NotAuthenticatedScreen redirectPath={judgeRedirectPath} />;
+
+  // Require email verification for judges
+  if (!(profile as any).email_verified) {
+    return (
+      <EmailVerificationGuard redirectTo="/judge" featureName="become a judge">
+        <div />
+      </EmailVerificationGuard>
+    );
+  }
+
   if (!profile.is_judge) return <NotQualifiedScreen />;
 
   const judgeLevel = getJudgeLevel(stats);

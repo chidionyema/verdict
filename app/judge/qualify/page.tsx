@@ -170,26 +170,66 @@ export default function JudgeQualificationPage() {
 
   const submitQualification = async () => {
     setIsSubmitting(true);
-    
-    // Calculate score
-    let correct = 0;
-    QUIZ_QUESTIONS.forEach(question => {
-      if (quizAnswers[question.id] === question.correctAnswer) {
-        correct++;
+
+    try {
+      // Convert answers to server format (question_id -> answer_id)
+      const serverAnswers: Record<string, string> = {};
+      QUIZ_QUESTIONS.forEach(question => {
+        const answerIndex = quizAnswers[question.id];
+        if (answerIndex !== undefined) {
+          // Map answer index to answer ID expected by server
+          const answerMap: Record<number, string> = {
+            0: question.id === '1' ? 'always_positive' : question.id === '2' ? 'skip_it' : question.id === '3' ? 'immediately' : 'guess_anyway',
+            1: question.id === '1' ? 'honest_and_constructive' : question.id === '2' ? 'professional_boundaries' : question.id === '3' ? 'within_24_hours' : 'acknowledge_limits',
+            2: question.id === '1' ? 'brief_and_quick' : question.id === '2' ? 'harsh_criticism' : question.id === '3' ? 'whenever_convenient' : 'refuse_entirely',
+            3: question.id === '1' ? 'agreeing_with_asker' : question.id === '2' ? 'only_positive' : question.id === '3' ? 'within_week' : 'pretend_expert',
+          };
+          // Map local question ID to server question ID
+          const serverQuestionMap: Record<string, string> = {
+            '1': 'q1',
+            '2': 'q2',
+            '3': 'q3',
+            '4': 'q4'
+          };
+          serverAnswers[serverQuestionMap[question.id]] = answerMap[answerIndex];
+        }
+      });
+
+      // Submit to server for validation
+      const response = await fetch('/api/judge/complete-quiz', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ answers: serverAnswers }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        if (response.status === 429) {
+          toast.error(result.error || 'Too many attempts. Try again tomorrow.');
+        } else {
+          toast.error(result.error || 'Quiz submission failed');
+        }
+        setIsSubmitting(false);
+        return;
       }
-    });
-    
-    const score = (correct / QUIZ_QUESTIONS.length) * 100;
-    setQualificationScore(score);
-    setShowResults(true);
-    
-    // If passed (75%+), show demographics step
-    if (score >= 75) {
-      setTimeout(() => {
-        setShowDemographics(true);
-      }, 2000);
+
+      // Update UI with results
+      const score = (result.score / result.total) * 100;
+      setQualificationScore(score);
+      setShowResults(true);
+
+      if (result.passed) {
+        // Quiz passed and judge status granted by server
+        setTimeout(() => {
+          setShowDemographics(true);
+        }, 2000);
+      }
+    } catch (error) {
+      console.error('Quiz submission error:', error);
+      toast.error('Failed to submit quiz. Please try again.');
     }
-    
+
     setIsSubmitting(false);
   };
 
@@ -220,27 +260,13 @@ export default function JudgeQualificationPage() {
         throw new Error(`Failed to save demographics: ${errorData.error || 'Unknown error'}`);
       }
 
-      // Update profile to judge status AND mark training as completed
-      // (since they passed the qualification quiz, they don't need training again)
-      const profileRes = await fetch('/api/profile', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          is_judge: true,
-          judge_training_completed: true,
-          judge_qualification_date: new Date().toISOString()
-        }),
-      });
-
-      if (profileRes.ok) {
-        setDemographicsCompleted(true);
-        setIsCompletingSetup(false);
-        setTimeout(() => {
-          router.push('/judge');
-        }, 3000);
-      } else {
-        throw new Error('Failed to update judge status');
-      }
+      // Judge status was already set by the quiz endpoint
+      // Just complete the setup
+      setDemographicsCompleted(true);
+      setIsCompletingSetup(false);
+      setTimeout(() => {
+        router.push('/judge');
+      }, 3000);
     } catch (error) {
       console.error('Error completing judge setup:', error);
       setSetupError(error instanceof Error ? error.message : 'There was an error completing your setup.');

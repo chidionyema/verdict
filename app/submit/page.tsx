@@ -23,6 +23,7 @@ import { LoadingOverlay } from '@/components/ui/LoadingOverlay';
 import { RoleIndicator } from '@/components/ui/RoleIndicator';
 import { ConfettiAnimation, MicroInteractionStyles } from '@/components/animations/DelightfulMicroInteractions';
 import { X, Clock, Coins, ArrowLeft, Mail, Bell } from 'lucide-react';
+import { EmailVerificationGuard } from '@/components/auth/EmailVerificationGuard';
 
 interface SubmissionStep {
   step: 'details' | 'mode' | 'payment' | 'processing' | 'success';
@@ -340,6 +341,7 @@ export default function SubmitPage() {
   }
 
   return (
+    <EmailVerificationGuard redirectTo="/submit" featureName="submit requests">
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 py-12">
       {/* Navigation & Role Indicator - Fixed position for visibility */}
       <div className="fixed top-4 left-4 z-20">
@@ -562,6 +564,7 @@ export default function SubmitPage() {
         </div>
       </div>
     </div>
+    </EmailVerificationGuard>
   );
 }
 
@@ -617,6 +620,32 @@ function DetailsStep({ submissionData, setSubmissionData, onNext, userCredits }:
 
   return (
     <div className="p-8">
+      {/* Zero Credits Warning Banner - Show early */}
+      {userCredits === 0 && (
+        <div className="mb-6 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-4">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
+              <Coins className="h-5 w-5 text-amber-600" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold text-amber-800 mb-1">You have no credits</h3>
+              <p className="text-sm text-amber-700 mb-3">
+                You can still create your request, but you will need to either earn a credit (quick, free) or pay for instant submission.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => router.push('/feed?earn=true&return=/submit')}
+                  className="px-4 py-2 bg-amber-600 text-white text-sm font-medium rounded-lg hover:bg-amber-700 transition-colors"
+                >
+                  Earn a Free Credit
+                </button>
+                <span className="text-amber-600 text-sm self-center">or continue below to pay</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Credit Balance - Always visible */}
       <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-100">
         <div>
@@ -1085,6 +1114,64 @@ function PaymentStep({ privatePrice, submissionData, onPaymentSuccess }: any) {
 }
 
 function ProcessingStep({ mode }: any) {
+  const router = useRouter();
+  const [elapsed, setElapsed] = useState(0);
+  const [showTimeout, setShowTimeout] = useState(false);
+  const TIMEOUT_SECONDS = 120; // 2 minutes
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setElapsed(prev => {
+        const next = prev + 1;
+        if (next >= TIMEOUT_SECONDS) {
+          setShowTimeout(true);
+        }
+        return next;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  if (showTimeout) {
+    return (
+      <div className="p-8 text-center">
+        <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-6">
+          <Clock className="h-8 w-8 text-amber-600" />
+        </div>
+        <h2 className="text-2xl font-bold text-gray-900 mb-4">
+          Taking Longer Than Expected
+        </h2>
+        <p className="text-gray-600 mb-6">
+          The processing is taking longer than usual. Your payment is safe - you can:
+        </p>
+
+        <div className="space-y-3 max-w-sm mx-auto">
+          <button
+            onClick={() => window.location.reload()}
+            className="w-full bg-indigo-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-indigo-700 transition-colors"
+          >
+            Refresh & Check Status
+          </button>
+          <button
+            onClick={() => router.push('/my-requests')}
+            className="w-full bg-gray-100 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:bg-gray-200 transition-colors"
+          >
+            View My Requests
+          </button>
+        </div>
+
+        <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <p className="text-sm text-blue-800">
+            <strong>Your payment is safe.</strong> If your request was created, it will appear in My Requests.
+            If you were charged but don&apos;t see your request, please{' '}
+            <a href="/support" className="underline font-medium">contact support</a>.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-8 text-center">
       <div className="w-16 h-16 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-6 relative">
@@ -1121,6 +1208,12 @@ function ProcessingStep({ mode }: any) {
           <span>Notifying reviewers</span>
         </div>
       </div>
+
+      {elapsed > 15 && (
+        <div className="mt-4 text-sm text-gray-500">
+          Processing... {elapsed}s
+        </div>
+      )}
 
       <div className="mt-6 bg-amber-50 border border-amber-200 rounded-lg p-3">
         <p className="text-sm text-amber-800 font-medium">
