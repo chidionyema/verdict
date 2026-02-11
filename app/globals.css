@@ -669,3 +669,241 @@ button, a {
 .wcag-compliant-form ::placeholder {
   color: #4b5563; /* gray-600 - 5.74:1 contrast ratio for better accessibility */
 }
+
+/* ============================================
+   Enhanced Dark Mode Support
+   ============================================ */
+
+/* Dark mode image adjustments */
+.dark img:not(.no-dark-adjust),
+[data-theme="dark"] img:not(.no-dark-adjust) {
+  filter: brightness(0.9) contrast(1.05);
+}
+
+/* Illustrations and decorative images in dark mode */
+.dark .dark-invert,
+[data-theme="dark"] .dark-invert {
+  filter: invert(1) hue-rotate(180deg);
+}
+
+/* Reduce brightness of animations in dark mode */
+.dark .dark-dim,
+[data-theme="dark"] .dark-dim {
+  opacity: 0.8;
+}
+
+/* Enhanced focus indicators for dark mode */
+.dark *:focus-visible,
+[data-theme="dark"] *:focus-visible {
+  outline: 2px solid #818cf8;
+  outline-offset: 2px;
+}
+
+/* Dark mode specific hover states */
+.dark .hover-glow:hover,
+[data-theme="dark"] .hover-glow:hover {
+  box-shadow: 0 0 20px rgba(129, 140, 248, 0.3);
+}
+
+/* Dark mode range input */
+.dark input[type='range']::-webkit-slider-runnable-track,
+[data-theme="dark"] input[type='range']::-webkit-slider-runnable-track {
+  background: #334155;
+}
+
+.dark input[type='range']::-webkit-slider-thumb,
+[data-theme="dark"] input[type='range']::-webkit-slider-thumb {
+  background-color: #818cf8;
+}
+
+/* Dark mode scrollbar */
+.dark ::-webkit-scrollbar,
+[data-theme="dark"] ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.dark ::-webkit-scrollbar-track,
+[data-theme="dark"] ::-webkit-scrollbar-track {
+  background: #1e293b;
+}
+
+.dark ::-webkit-scrollbar-thumb,
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 4px;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover,
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* Dark mode placeholder */
+.dark ::placeholder,
+[data-theme="dark"] ::placeholder {
+  color: #94a3b8;
+}
+
+/* Dark mode selection */
+.dark ::selection,
+[data-theme="dark"] ::selection {
+  background: rgba(129, 140, 248, 0.3);
+  color: #f8fafc;
+}
+
+/* ============================================
+   Accessibility Enhancements
+   ============================================ */
+
+/* Ensure adequate touch targets on mobile */
+@media (pointer: coarse) {
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    min-height: 44px;
+  }
+
+  /* Increase spacing for touch */
+  .touch-spacing > * + * {
+    margin-top: 12px;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  :root {
+    --border: #000000;
+    --muted-foreground: #000000;
+  }
+
+  .dark,
+  [data-theme="dark"] {
+    --border: #ffffff;
+    --muted-foreground: #ffffff;
+  }
+}
+
+/* Forced colors mode (Windows High Contrast) */
+@media (forced-colors: active) {
+  button,
+  a {
+    border: 2px solid currentColor;
+  }
+
+  *:focus-visible {
+    outline: 3px solid Highlight;
+  }
+}
+
+/* ============================================
+   Animation Utilities
+   ============================================ */
+
+/* Shimmer effect */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s ease-in-out infinite;
+}
+
+/* Pulse effect with reduced motion fallback */
+@keyframes pulse-subtle {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 2s ease-in-out infinite;
+}
+
+/* Scale in animation */
+@keyframes scale-in {
+  0% {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-scale-in {
+  animation: scale-in 0.2s ease-out;
+}
+
+/* Slide in from right */
+@keyframes slide-in-right {
+  0% {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.3s ease-out;
+}
+
+/* ============================================
+   Component-Specific Dark Mode Fixes
+   ============================================ */
+
+/* Cards in dark mode */
+.dark .glass-card,
+[data-theme="dark"] .glass-card {
+  background: rgba(30, 41, 59, 0.8);
+  backdrop-filter: blur(12px);
+  border-color: rgba(71, 85, 105, 0.5);
+}
+
+/* Gradient backgrounds in dark mode */
+.dark .gradient-bg,
+[data-theme="dark"] .gradient-bg {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+}
+
+/* Success states in dark mode */
+.dark .success-bg,
+[data-theme="dark"] .success-bg {
+  background: rgba(34, 197, 94, 0.15);
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
+/* Warning states in dark mode */
+.dark .warning-bg,
+[data-theme="dark"] .warning-bg {
+  background: rgba(251, 191, 36, 0.15);
+  border-color: rgba(251, 191, 36, 0.3);
+}
+
+/* Error states in dark mode */
+.dark .error-bg,
+[data-theme="dark"] .error-bg {
+  background: rgba(248, 113, 113, 0.15);
+  border-color: rgba(248, 113, 113, 0.3);
+}
+
+/* Info states in dark mode */
+.dark .info-bg,
+[data-theme="dark"] .info-bg {
+  background: rgba(96, 165, 250, 0.15);
+  border-color: rgba(96, 165, 250, 0.3);
+}
