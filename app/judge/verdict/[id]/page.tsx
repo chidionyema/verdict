@@ -94,6 +94,18 @@ export default function VerdictSubmissionPage({
         return;
       }
 
+      // Check and award any earned credits
+      try {
+        await fetch('/api/credits/check-earning', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        });
+        // Trigger credit balance refresh
+        window.dispatchEvent(new CustomEvent('credits-updated'));
+      } catch (creditError) {
+        console.error('Failed to check/award credits:', creditError);
+      }
+
       // Success - remove from available requests and redirect
       claimRequest(id);
       router.push('/judge?success=true');

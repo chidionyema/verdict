@@ -143,6 +143,12 @@ export default function FeedPage() {
     return () => document.removeEventListener('keydown', handleEscape);
   }, [showProgressiveProfile, showTraining, dismissProgressiveProfile]);
 
+  // Refs for keyboard handler to access latest state
+  const handlersRef = useRef<{
+    handleJudgment: typeof handleJudgment;
+    handleSkip: typeof handleSkip;
+  } | null>(null);
+
   // Keyboard shortcuts for feed navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -160,21 +166,21 @@ export default function FeedPage() {
       }
 
       const currentItem = feedItems[currentIndex];
-      if (!currentItem) return;
+      if (!currentItem || !handlersRef.current) return;
 
       switch (e.key) {
         case 'ArrowLeft':
           e.preventDefault();
-          handleJudgment('dislike', '👎 Not quite right');
+          handlersRef.current.handleJudgment('dislike', '👎 Not quite right');
           break;
         case 'ArrowRight':
           e.preventDefault();
-          handleJudgment('like', '👍 Looks good!');
+          handlersRef.current.handleJudgment('like', '👍 Looks good!');
           break;
         case 's':
         case 'S':
           e.preventDefault();
-          handleSkip();
+          handlersRef.current.handleSkip();
           break;
       }
     };
@@ -234,6 +240,7 @@ export default function FeedPage() {
     if (user && supabaseRef.current) {
       setLoading(true);
       setCurrentIndex(0);
+      setFeedError(null); // Clear any previous error
       loadFeedItems(supabaseRef.current, categoryFilter, user.id);
     }
   }, [categoryFilter, user]);
@@ -381,10 +388,32 @@ export default function FeedPage() {
       const newTotal = judgeStats.today + 1;
       const newCreditsEarned = Math.floor(newTotal / 3) - Math.floor(judgeStats.today / 3);
 
-      if (newCreditsEarned > 0) {
-        setCreditsEarned(prev => prev + newCreditsEarned);
-        triggerHaptic('success');
-        toast.success('🎉 You earned 1 credit!');
+      // Always check and award earned credits after judgment
+      try {
+        const creditCheckResponse = await fetch('/api/credits/check-earning', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        });
+
+        if (creditCheckResponse.ok) {
+          const creditData = await creditCheckResponse.json();
+          // If credits were actually awarded, show notification
+          if (newCreditsEarned > 0 || creditData.current_credits > 0) {
+            setCreditsEarned(prev => prev + newCreditsEarned);
+            triggerHaptic('success');
+            toast.success('🎉 You earned 1 credit!');
+            // Trigger credit balance refresh
+            window.dispatchEvent(new CustomEvent('credits-updated'));
+          }
+        }
+      } catch (creditError) {
+        console.error('Failed to check/award credits:', creditError);
+        // Still show toast for UX feedback even if credit check failed
+        if (newCreditsEarned > 0) {
+          setCreditsEarned(prev => prev + newCreditsEarned);
+          toast.success('🎉 You earned 1 credit!');
+          window.dispatchEvent(new CustomEvent('credits-updated'));
+        }
       }
 
       checkTrigger('credits_earned');
@@ -468,22 +497,43 @@ export default function FeedPage() {
     );
   }
 
-  // Cleanup pending verdict on unmount
+  // Store pending verdict in ref for cleanup
+  const pendingVerdictRef = useRef<PendingVerdict | null>(null);
+  useEffect(() => {
+    pendingVerdictRef.current = pendingVerdict;
+  }, [pendingVerdict]);
+
+  // Cleanup pending verdict on unmount only
   useEffect(() => {
     return () => {
-      if (pendingVerdict) {
-        clearTimeout(pendingVerdict.timeoutId);
+      const pending = pendingVerdictRef.current;
+      if (pending) {
+        clearTimeout(pending.timeoutId);
         // Submit immediately on unmount
-        submitVerdict(pendingVerdict.requestId, pendingVerdict.verdict, pendingVerdict.feedback);
+        fetch('/api/judge/respond', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            request_id: pending.requestId,
+            feedback: pending.feedback,
+            rating: pending.verdict === 'like' ? 7 : 4,
+            tone: 'honest'
+          })
+        }).catch(console.error);
       }
     };
-  }, [pendingVerdict]);
+  }, []);
 
 
   function handleSkip() {
     triggerHaptic('light');
     setCurrentIndex(prev => prev + 1);
   }
+
+  // Update refs for keyboard handler
+  useEffect(() => {
+    handlersRef.current = { handleJudgment, handleSkip };
+  });
 
   async function handleTrainingComplete() {
     if (!user || !supabaseRef.current) {

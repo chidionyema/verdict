@@ -209,6 +209,18 @@ export default function JudgeVerdictPage({
         throw new Error(data.error || 'Failed to submit verdict');
       }
 
+      // Check and award any earned credits
+      try {
+        await fetch('/api/credits/check-earning', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        });
+        // Trigger credit balance refresh
+        window.dispatchEvent(new CustomEvent('credits-updated'));
+      } catch (creditError) {
+        console.error('Failed to check/award credits:', creditError);
+      }
+
       // Clear draft and show celebration
       clearDraft();
       const earning = parseFloat(getJudgeEarningForTier((request as any)?.request_tier));

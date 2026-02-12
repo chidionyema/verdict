@@ -39,6 +39,19 @@ export function CreditBalance({ userId, showTransactions = false, compact = fals
     }
   }, [userId]);
 
+  // Listen for credit refresh events
+  useEffect(() => {
+    const handleCreditRefresh = () => {
+      const targetId = userId || user?.id;
+      if (targetId) {
+        fetchCredits(targetId);
+      }
+    };
+
+    window.addEventListener('credits-updated', handleCreditRefresh);
+    return () => window.removeEventListener('credits-updated', handleCreditRefresh);
+  }, [userId, user?.id]);
+
   async function fetchCredits(targetUserId: string) {
     try {
       setLoading(true);
