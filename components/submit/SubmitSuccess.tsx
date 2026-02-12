@@ -51,12 +51,44 @@ export function SubmitSuccess({ requestId, data, creditsUsed }: SubmitSuccessPro
         {/* Summary card */}
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-8 text-left">
           <div className="flex items-start gap-4 mb-4">
-            {data.mediaType === 'photo' && data.mediaUrls[0] && (
-              <img
-                src={data.mediaUrls[0]}
-                alt="Your submission"
-                className="w-16 h-16 rounded-xl object-cover"
-              />
+            {/* Display images based on request type */}
+            {data.mediaType === 'photo' && data.mediaUrls.length > 0 && (
+              data.requestType === 'comparison' || data.requestType === 'split_test' ? (
+                // Show both images side by side for comparisons and split tests
+                <div className="flex gap-2">
+                  {data.mediaUrls[0] && (
+                    <div className="relative">
+                      <img
+                        src={data.mediaUrls[0]}
+                        alt={data.requestType === 'comparison' ? 'Option A' : 'Photo A'}
+                        className="w-14 h-14 rounded-xl object-cover border-2 border-green-400"
+                      />
+                      <span className="absolute -top-1 -left-1 w-5 h-5 bg-green-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                        A
+                      </span>
+                    </div>
+                  )}
+                  {data.mediaUrls[1] && (
+                    <div className="relative">
+                      <img
+                        src={data.mediaUrls[1]}
+                        alt={data.requestType === 'comparison' ? 'Option B' : 'Photo B'}
+                        className="w-14 h-14 rounded-xl object-cover border-2 border-blue-400"
+                      />
+                      <span className="absolute -top-1 -left-1 w-5 h-5 bg-blue-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                        B
+                      </span>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                // Single image for standard requests
+                <img
+                  src={data.mediaUrls[0]}
+                  alt="Your submission"
+                  className="w-16 h-16 rounded-xl object-cover"
+                />
+              )
             )}
             {data.mediaType === 'text' && (
               <div className="w-16 h-16 rounded-xl bg-indigo-100 flex items-center justify-center">
@@ -67,6 +99,15 @@ export function SubmitSuccess({ requestId, data, creditsUsed }: SubmitSuccessPro
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-lg">{category?.icon}</span>
                 <span className="font-medium text-gray-900">{category?.name}</span>
+                {(data.requestType === 'comparison' || data.requestType === 'split_test') && (
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                    data.requestType === 'comparison'
+                      ? 'bg-purple-100 text-purple-700'
+                      : 'bg-orange-100 text-orange-700'
+                  }`}>
+                    {data.requestType === 'comparison' ? 'A/B Comparison' : 'Split Test'}
+                  </span>
+                )}
               </div>
               <p className="text-sm text-gray-600 line-clamp-2">{data.context}</p>
             </div>
@@ -110,10 +151,19 @@ export function SubmitSuccess({ requestId, data, creditsUsed }: SubmitSuccessPro
         {/* Action buttons */}
         <div className="space-y-3">
           <button
-            onClick={() => router.push(`/requests/${requestId}`)}
+            onClick={() => {
+              // Route to the correct page based on request type
+              if (data.requestType === 'comparison') {
+                router.push(`/comparisons/${requestId}`);
+              } else if (data.requestType === 'split_test') {
+                router.push(`/split-tests/${requestId}`);
+              } else {
+                router.push(`/requests/${requestId}`);
+              }
+            }}
             className="w-full py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all flex items-center justify-center gap-2"
           >
-            View Your Request
+            View Your {data.requestType === 'comparison' ? 'Comparison' : data.requestType === 'split_test' ? 'Split Test' : 'Request'}
             <ArrowRight className="h-5 w-5" />
           </button>
 
