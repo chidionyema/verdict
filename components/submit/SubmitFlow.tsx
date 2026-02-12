@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Check, AlertCircle } from 'lucide-react';
+import { Check, AlertCircle, CloudOff, Cloud } from 'lucide-react';
 import { toast } from '@/components/ui/toast';
 import { createClient } from '@/lib/supabase/client';
 
@@ -46,6 +46,10 @@ export function SubmitFlow({ initialStep, returnFrom }: SubmitFlowProps) {
 
   // Modals
   const [showCreditsModal, setShowCreditsModal] = useState(false);
+
+  // Draft save indicator
+  const [draftSaveStatus, setDraftSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const draftSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Hooks
   const { draft, saveDraft, clearDraft, wasMigrated } = useSubmissionDraft();
@@ -109,15 +113,32 @@ export function SubmitFlow({ initialStep, returnFrom }: SubmitFlowProps) {
     }
   }, [draft, isLoading, isSuccess, returnFrom, wasMigrated]);
 
-  // Auto-save draft
+  // Auto-save draft with visual indicator
   useEffect(() => {
     if (isLoading || isSuccess) return;
 
+    // Show "saving" indicator
+    setDraftSaveStatus('saving');
+
     const timer = setTimeout(() => {
       saveDraft(step, data);
+      setDraftSaveStatus('saved');
+
+      // Clear saved status after 2 seconds
+      if (draftSaveTimeoutRef.current) {
+        clearTimeout(draftSaveTimeoutRef.current);
+      }
+      draftSaveTimeoutRef.current = setTimeout(() => {
+        setDraftSaveStatus('idle');
+      }, 2000);
     }, 1000);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      if (draftSaveTimeoutRef.current) {
+        clearTimeout(draftSaveTimeoutRef.current);
+      }
+    };
   }, [step, data, isLoading, isSuccess, saveDraft]);
 
   // Update data
@@ -311,6 +332,26 @@ export function SubmitFlow({ initialStep, returnFrom }: SubmitFlowProps) {
 
   return (
     <div className="max-w-3xl mx-auto">
+      {/* Draft save status indicator */}
+      <div className="flex justify-end mb-2">
+        <div className={`flex items-center gap-1.5 text-xs transition-opacity duration-300 ${
+          draftSaveStatus === 'idle' ? 'opacity-0' : 'opacity-100'
+        }`}>
+          {draftSaveStatus === 'saving' && (
+            <>
+              <div className="w-3 h-3 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+              <span className="text-gray-500">Saving draft...</span>
+            </>
+          )}
+          {draftSaveStatus === 'saved' && (
+            <>
+              <Cloud className="h-3 w-3 text-green-500" />
+              <span className="text-green-600">Draft saved</span>
+            </>
+          )}
+        </div>
+      </div>
+
       {/* Progress indicator */}
       <nav aria-label="Submission progress" className="mb-8">
         <ol className="flex items-center justify-center">

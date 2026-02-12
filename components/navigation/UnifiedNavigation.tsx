@@ -444,10 +444,10 @@ function MobileBottomNav({ pathname }: { pathname: string | null }) {
       active: pathname === '/dashboard' || pathname === '/workspace',
     },
     {
-      href: '/feed',
+      href: '/judge',
       label: 'Earn',
       icon: Users,
-      active: pathname === '/feed',
+      active: pathname === '/judge' || pathname?.startsWith('/judge/'),
     },
     {
       href: '/submit',

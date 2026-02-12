@@ -1,12 +1,18 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { ArrowRight } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import type { Profile } from '@/lib/database.types';
 import JudgeProgression from '@/components/judge/JudgeProgression';
 import { CrossRolePrompt } from '@/components/ui/CrossRolePrompt';
 import { EmailVerificationGuard } from '@/components/auth/EmailVerificationGuard';
+import { NewJudgeWelcomeTour, useWelcomeTour } from '@/components/judge/NewJudgeWelcomeTour';
+import { MilestoneCelebration, useMilestoneCheck } from '@/components/judge/MilestoneCelebration';
+import { TierProgressIndicator } from '@/components/judge/TierProgressIndicator';
+import { StreakRewards } from '@/components/judge/StreakRewards';
 
 import {
   LoadingState,
@@ -245,9 +251,32 @@ function JudgeDashboardContent() {
   const judgeLevel = getJudgeLevel(stats);
   const achievements = getAchievements(stats);
 
+  // Check if this is a new judge (less than 5 verdicts)
+  const isNewJudge = stats.verdicts_given < 5;
+
   return (
+    <>
+      {/* Welcome tour for new judges */}
+      <NewJudgeTourWrapper userId={profile.id} />
+
+      {/* Milestone celebration */}
+      <MilestoneCelebrationWrapper stats={stats} />
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/50 to-purple-50/50">
       <div className="max-w-7xl mx-auto px-4 py-8">
+        {/* Navigation hint to unified dashboard */}
+        <div className="mb-4 flex items-center justify-between">
+          <Link
+            href="/dashboard"
+            className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700"
+          >
+            <ArrowRight className="h-3 w-3 rotate-180" />
+            Back to unified dashboard
+          </Link>
+          <span className="text-xs text-gray-400 hidden sm:block">
+            Tip: Use the unified dashboard to see both your requests and judging in one place
+          </span>
+        </div>
+
         {showSubmissionSuccess && (
           <SubmissionSuccessBanner
             onDismiss={() => setShowSubmissionSuccess(false)}
@@ -275,6 +304,15 @@ function JudgeDashboardContent() {
           />
         )}
 
+        {/* Tier Progress - compact version in header area */}
+        <div className="mb-6">
+          <TierProgressIndicator
+            currentTier={judgeLevel.name}
+            totalVerdicts={stats.verdicts_given}
+            variant="compact"
+          />
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           <EarningsOverview
             stats={stats}
@@ -284,7 +322,10 @@ function JudgeDashboardContent() {
           />
           <div className="space-y-6">
             <PerformanceMetrics stats={stats} />
-            <NextMilestone />
+            <StreakRewards
+              currentStreak={stats.streak_days}
+              longestStreak={stats.streak_days}
+            />
           </div>
         </div>
 
@@ -350,7 +391,7 @@ function JudgeDashboardContent() {
               {!queueLoading && !queueError && filteredQueue.length > 1 && (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                   {filteredQueue.slice(1).map((request) => (
-                    <RequestCard key={request.id} request={request} />
+                    <RequestCard key={request.id} request={request} isNewJudge={isNewJudge} />
                   ))}
                 </div>
               )}
@@ -369,6 +410,42 @@ function JudgeDashboardContent() {
 
       <DashboardStyles />
     </div>
+    </>
+  );
+}
+
+// Wrapper component for welcome tour (needs hooks)
+function NewJudgeTourWrapper({ userId }: { userId: string }) {
+  const { showTour, completeTour, skipTour } = useWelcomeTour(userId);
+
+  if (!showTour) return null;
+
+  return (
+    <NewJudgeWelcomeTour
+      onComplete={completeTour}
+      onSkip={skipTour}
+    />
+  );
+}
+
+// Wrapper component for milestone celebration (needs hooks)
+function MilestoneCelebrationWrapper({ stats }: { stats: JudgeStats }) {
+  const { milestone, clearMilestone } = useMilestoneCheck({
+    verdicts_given: stats.verdicts_given,
+    streak_days: stats.streak_days,
+  });
+
+  if (!milestone) return null;
+
+  return (
+    <MilestoneCelebration
+      type={milestone}
+      isOpen={true}
+      onClose={clearMilestone}
+      extraData={{
+        streakDays: stats.streak_days,
+      }}
+    />
   );
 }
 

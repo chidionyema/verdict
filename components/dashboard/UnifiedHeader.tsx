@@ -38,7 +38,7 @@ export function UnifiedHeader({
             {greeting}{displayName ? `, ${displayName.split(' ')[0]}` : ''}
           </h1>
           <p className="text-gray-600 mt-1">
-            Here's what's happening with your account
+            Submit requests for feedback <span className="text-gray-400 mx-1">or</span> judge others to earn
           </p>
         </div>
 

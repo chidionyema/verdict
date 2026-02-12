@@ -8,8 +8,17 @@ export const TERMINOLOGY = {
   // Primary Actions
   PRIMARY_ACTION: 'Get Feedback',
   SECONDARY_ACTION: 'Help Others & Earn',
-  
-  // Request Types  
+
+  // Role Names (use these consistently across the app)
+  ROLES: {
+    REQUESTER: 'Requester',        // Person who submits requests for feedback
+    REQUESTER_PLURAL: 'Requesters',
+    JUDGE: 'Judge',                // Person who reviews and provides feedback
+    JUDGE_PLURAL: 'Judges',
+    // Note: Users can be both roles simultaneously
+  },
+
+  // Request Types
   REQUEST_TYPES: {
     FEEDBACK: 'Feedback Request',
     COMPARISON: 'A/B Comparison', 

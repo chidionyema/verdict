@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Check, ArrowRight, Eye, Share2, Bell, Sparkles, Users } from 'lucide-react';
+import { Check, ArrowRight, Eye, Share2, Bell, Sparkles, Users, Gavel, DollarSign } from 'lucide-react';
 import { SubmissionData, TIERS, CATEGORIES } from './types';
 import { Confetti, playSuccessSound, triggerHaptic } from '@/components/ui/Confetti';
 
@@ -130,7 +130,7 @@ export function SubmitSuccess({ requestId, data, creditsUsed }: SubmitSuccessPro
         </div>
 
         {/* What happens next */}
-        <div className="bg-gray-50 rounded-xl p-4 mb-8 text-left">
+        <div className="bg-gray-50 rounded-xl p-4 mb-6 text-left">
           <h3 className="font-semibold text-gray-900 mb-3">What happens next?</h3>
           <ul className="space-y-2 text-sm text-gray-600">
             <li className="flex items-start gap-2">
@@ -146,6 +146,38 @@ export function SubmitSuccess({ requestId, data, creditsUsed }: SubmitSuccessPro
               <span>View all feedback on your request page</span>
             </li>
           </ul>
+        </div>
+
+        {/* Judge while you wait CTA */}
+        <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-5 mb-8">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
+              <Gavel className="h-6 w-6 text-green-600" />
+            </div>
+            <div className="flex-1 text-left">
+              <h3 className="font-semibold text-gray-900 mb-1">Earn while you wait</h3>
+              <p className="text-sm text-gray-600 mb-3">
+                Help others by judging their requests and earn money. Most verdicts take just 1-2 minutes.
+              </p>
+              <div className="flex items-center gap-4 text-xs text-gray-500 mb-3">
+                <span className="flex items-center gap-1">
+                  <DollarSign className="h-3 w-3" />
+                  Earn $0.60-$2.00 per verdict
+                </span>
+                <span className="flex items-center gap-1">
+                  <Users className="h-3 w-3" />
+                  Help real people get feedback
+                </span>
+              </div>
+              <button
+                onClick={() => router.push('/judge')}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition text-sm"
+              >
+                <Gavel className="h-4 w-4" />
+                Start Judging
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Action buttons */}

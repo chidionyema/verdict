@@ -37,6 +37,14 @@ interface QuizQuestion {
   explanation: string;
 }
 
+const QUALIFICATION_STORAGE_KEY = 'verdict_judge_qualification_progress';
+
+interface QualificationProgress {
+  currentStep: number;
+  quizAnswers: { [key: string]: number };
+  savedAt: number;
+}
+
 const QUIZ_QUESTIONS: QuizQuestion[] = [
   {
     id: '1',
@@ -105,6 +113,62 @@ export default function JudgeQualificationPage() {
   const [isCompletingSetup, setIsCompletingSetup] = useState(false);
   const [setupError, setSetupError] = useState<string | null>(null);
   const [lastDemographicsData, setLastDemographicsData] = useState<any>(null);
+  const [hasRestoredProgress, setHasRestoredProgress] = useState(false);
+
+  // Restore progress from localStorage
+  useEffect(() => {
+    if (typeof window === 'undefined' || hasRestoredProgress) return;
+
+    try {
+      const savedProgress = localStorage.getItem(QUALIFICATION_STORAGE_KEY);
+      if (savedProgress) {
+        const progress: QualificationProgress = JSON.parse(savedProgress);
+        // Only restore if saved within the last 24 hours
+        const twentyFourHours = 24 * 60 * 60 * 1000;
+        if (Date.now() - progress.savedAt < twentyFourHours) {
+          setCurrentStep(progress.currentStep);
+          setQuizAnswers(progress.quizAnswers);
+          if (Object.keys(progress.quizAnswers).length > 0) {
+            toast.success('Your progress has been restored');
+          }
+        } else {
+          // Clear stale progress
+          localStorage.removeItem(QUALIFICATION_STORAGE_KEY);
+        }
+      }
+    } catch (error) {
+      console.error('Error restoring qualification progress:', error);
+    }
+    setHasRestoredProgress(true);
+  }, [hasRestoredProgress]);
+
+  // Save progress to localStorage
+  useEffect(() => {
+    if (typeof window === 'undefined' || !hasRestoredProgress) return;
+    // Don't save after completion
+    if (showResults || showDemographics || demographicsCompleted) return;
+
+    const progress: QualificationProgress = {
+      currentStep,
+      quizAnswers,
+      savedAt: Date.now(),
+    };
+
+    try {
+      localStorage.setItem(QUALIFICATION_STORAGE_KEY, JSON.stringify(progress));
+    } catch (error) {
+      console.error('Error saving qualification progress:', error);
+    }
+  }, [currentStep, quizAnswers, hasRestoredProgress, showResults, showDemographics, demographicsCompleted]);
+
+  // Clear progress on successful completion
+  const clearProgress = () => {
+    try {
+      localStorage.removeItem(QUALIFICATION_STORAGE_KEY);
+    } catch (error) {
+      console.error('Error clearing qualification progress:', error);
+    }
+  };
 
   useEffect(() => {
     // Only run in browser
@@ -264,6 +328,7 @@ export default function JudgeQualificationPage() {
       // Just complete the setup
       setDemographicsCompleted(true);
       setIsCompletingSetup(false);
+      clearProgress(); // Clear saved progress on successful completion
       setTimeout(() => {
         router.push('/judge');
       }, 3000);
@@ -308,10 +373,17 @@ export default function JudgeQualificationPage() {
             Your life experience helps others (and pays). You don't need to be an expert, just share your perspective.
           </p>
 
+          {/* Dual-role clarification */}
+          <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-lg p-4 max-w-xl mx-auto mt-4">
+            <p className="text-indigo-800 text-sm">
+              <strong>You can always do both:</strong> Submit your own requests for feedback AND judge others to earn. These aren't separate accounts - it's all you!
+            </p>
+          </div>
+
           {/* Confidence Building Message */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 max-w-xl mx-auto mt-4">
             <p className="text-blue-800 text-sm">
-              <strong>Remember:</strong> Seekers value diverse viewpoints. Your unique experience and honest opinion are exactly what people need.
+              <strong>Remember:</strong> People value diverse viewpoints. Your unique experience and honest opinion are exactly what they need.
             </p>
           </div>
           

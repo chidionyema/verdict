@@ -11,12 +11,45 @@ import {
   Clock,
   DollarSign,
   ArrowRight,
+  Zap,
+  Leaf,
+  Flame,
+  Star,
 } from 'lucide-react';
 import type { QueueRequest } from '../types';
 import { getJudgeEarningForTier } from '../constants';
 
 interface RequestCardProps {
   request: QueueRequest;
+  isNewJudge?: boolean; // Show "good for beginners" badges
+}
+
+// Determine difficulty based on context length and type
+function getDifficulty(request: QueueRequest): 'easy' | 'medium' | 'hard' {
+  const contextLength = request.context?.length || 0;
+  const isComparison = request.request_type === 'comparison';
+  const isSplitTest = request.request_type === 'split_test';
+
+  if (isSplitTest) return 'hard';
+  if (isComparison) return 'medium';
+  if (contextLength < 100) return 'easy';
+  if (contextLength < 300) return 'medium';
+  return 'hard';
+}
+
+// Determine urgency based on time posted
+function getUrgency(createdAt: string): 'new' | 'recent' | 'waiting' {
+  const ageMinutes = (Date.now() - new Date(createdAt).getTime()) / (1000 * 60);
+  if (ageMinutes < 30) return 'new';
+  if (ageMinutes < 120) return 'recent';
+  return 'waiting';
+}
+
+// Check if good for beginners
+function isBeginnerFriendly(request: QueueRequest): boolean {
+  const difficulty = getDifficulty(request);
+  const isStandard = !request.request_type || request.request_type === 'verdict';
+  return difficulty === 'easy' && isStandard;
 }
 
 const CATEGORY_CONFIGS = {
@@ -26,8 +59,24 @@ const CATEGORY_CONFIGS = {
   decision: { icon: Target, color: 'from-green-500 to-emerald-500' },
 } as const;
 
-export function RequestCard({ request }: RequestCardProps) {
+export function RequestCard({ request, isNewJudge = false }: RequestCardProps) {
   const router = useRouter();
+
+  const difficulty = getDifficulty(request);
+  const urgency = getUrgency(request.created_at);
+  const beginnerFriendly = isBeginnerFriendly(request);
+
+  const difficultyConfig = {
+    easy: { label: 'Quick', icon: Leaf, color: 'text-green-600 bg-green-50' },
+    medium: { label: 'Standard', icon: Zap, color: 'text-blue-600 bg-blue-50' },
+    hard: { label: 'Detailed', icon: Flame, color: 'text-orange-600 bg-orange-50' },
+  };
+
+  const urgencyConfig = {
+    new: { label: 'Just posted', color: 'text-green-600' },
+    recent: { label: 'Recent', color: 'text-blue-600' },
+    waiting: { label: 'Needs help', color: 'text-amber-600' },
+  };
 
   const getRequestTypeConfig = () => {
     if (request.request_type === 'comparison') {
@@ -66,6 +115,25 @@ export function RequestCard({ request }: RequestCardProps) {
         className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${categoryConfig.color} rounded-full mix-blend-multiply filter blur-3xl opacity-5 group-hover:opacity-10 transition-opacity`}
       />
 
+      {/* Beginner-friendly badge */}
+      {isNewJudge && beginnerFriendly && (
+        <div className="absolute top-3 right-3 z-20">
+          <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full border border-green-200">
+            <Star className="h-3 w-3" />
+            Great for starters
+          </span>
+        </div>
+      )}
+
+      {/* Urgency indicator for waiting requests */}
+      {urgency === 'waiting' && (
+        <div className="absolute top-3 right-3 z-20">
+          <span className="inline-flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-700 text-xs font-medium rounded-full border border-amber-200 animate-pulse">
+            Needs help
+          </span>
+        </div>
+      )}
+
       <div className="relative z-10">
         <div className="flex items-start gap-4 mb-4">
           <div
@@ -74,7 +142,7 @@ export function RequestCard({ request }: RequestCardProps) {
             {categoryConfig.icon}
           </div>
           <div className="flex-1">
-            <div className="flex items-center gap-2 mb-1">
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
               <h4 className="font-bold text-gray-900 capitalize">{request.category}</h4>
               <span
                 className={`px-2 py-0.5 rounded-lg text-xs font-medium ${
@@ -87,8 +155,13 @@ export function RequestCard({ request }: RequestCardProps) {
               >
                 {categoryConfig.type}
               </span>
-              <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-lg text-xs font-medium">
-                {request.media_type}
+              {/* Difficulty badge */}
+              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-medium ${difficultyConfig[difficulty].color}`}>
+                {(() => {
+                  const DiffIcon = difficultyConfig[difficulty].icon;
+                  return <DiffIcon className="h-3 w-3" />;
+                })()}
+                {difficultyConfig[difficulty].label}
               </span>
             </div>
             <div className="flex items-center gap-3 text-xs text-gray-500">
@@ -96,9 +169,9 @@ export function RequestCard({ request }: RequestCardProps) {
                 <Users className="h-3.5 w-3.5" />
                 {request.received_verdict_count}/{request.target_verdict_count}
               </span>
-              <span className="flex items-center gap-1">
+              <span className={`flex items-center gap-1 ${urgencyConfig[urgency].color}`}>
                 <Clock className="h-3.5 w-3.5" />
-                {new Date(request.created_at).toLocaleTimeString([], {
+                {urgency === 'new' ? 'Just now' : new Date(request.created_at).toLocaleTimeString([], {
                   hour: '2-digit',
                   minute: '2-digit',
                 })}

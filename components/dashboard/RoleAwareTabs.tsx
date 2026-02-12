@@ -3,12 +3,12 @@
 import { motion } from 'framer-motion';
 import { FileText, Gavel } from 'lucide-react';
 
-type TabType = 'seeker' | 'judge';
+type TabType = 'requester' | 'judge';
 
 interface RoleAwareTabsProps {
   activeTab: TabType;
   onTabChange: (tab: TabType) => void;
-  seekerCount?: number;
+  requesterCount?: number;
   judgeCount?: number;
   className?: string;
 }
@@ -16,7 +16,7 @@ interface RoleAwareTabsProps {
 export function RoleAwareTabs({
   activeTab,
   onTabChange,
-  seekerCount,
+  requesterCount,
   judgeCount,
   className = '',
 }: RoleAwareTabsProps) {
@@ -28,10 +28,10 @@ export function RoleAwareTabs({
     description: string;
   }> = [
     {
-      id: 'seeker',
+      id: 'requester',
       label: 'My Requests',
       icon: FileText,
-      count: seekerCount,
+      count: requesterCount,
       description: 'View feedback on your submissions',
     },
     {
@@ -45,6 +45,10 @@ export function RoleAwareTabs({
 
   return (
     <div className={`bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg border border-white/50 p-1.5 ${className}`}>
+      {/* Dual-role hint */}
+      <p className="text-xs text-center text-gray-500 mb-2 px-2">
+        You can do both: get feedback on your requests and earn by judging others
+      </p>
       <div className="flex gap-1" role="tablist" aria-label="Dashboard views">
         {tabs.map((tab) => {
           const Icon = tab.icon;

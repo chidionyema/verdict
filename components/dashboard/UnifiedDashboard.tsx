@@ -25,6 +25,7 @@ import { UnifiedHeader } from './UnifiedHeader';
 import { RoleAwareTabs } from './RoleAwareTabs';
 import { InsightsSection } from './InsightsSection';
 import { RealEarningsChart } from './RealEarningsChart';
+import { EconomyExplainer } from './EconomyExplainer';
 import { useRoleDetection } from '@/hooks/useRoleDetection';
 
 // Import judge dashboard components
@@ -39,7 +40,7 @@ import {
   DEFAULT_STATS,
 } from '@/components/judge/dashboard';
 
-type TabType = 'seeker' | 'judge';
+type TabType = 'requester' | 'judge';
 
 interface UnifiedDashboardProps {
   initialTab?: TabType;
@@ -53,10 +54,10 @@ export function UnifiedDashboard({ initialTab }: UnifiedDashboardProps) {
   // Determine initial tab from URL or role detection
   const tabFromUrl = searchParams.get('tab') as TabType | null;
   const [activeTab, setActiveTab] = useState<TabType>(
-    tabFromUrl || initialTab || 'seeker'
+    tabFromUrl || initialTab || 'requester'
   );
 
-  // Seeker state
+  // Requester state
   const [profile, setProfile] = useState<Profile | null>(null);
   const [requests, setRequests] = useState<VerdictRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -92,7 +93,7 @@ export function UnifiedDashboard({ initialTab }: UnifiedDashboardProps) {
   };
 
   // Fetch seeker data
-  const fetchSeekerData = useCallback(async () => {
+  const fetchRequesterData = useCallback(async () => {
     try {
       const supabase = createClient();
       const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -128,7 +129,7 @@ export function UnifiedDashboard({ initialTab }: UnifiedDashboardProps) {
         setUnreadNotifications(unread_count || 0);
       }
     } catch (err) {
-      console.error('Error fetching seeker data:', err);
+      console.error('Error fetching requester data:', err);
       setError('Failed to load data.');
     }
   }, []);
@@ -162,7 +163,7 @@ export function UnifiedDashboard({ initialTab }: UnifiedDashboardProps) {
   useEffect(() => {
     const fetchAll = async () => {
       setLoading(true);
-      await fetchSeekerData();
+      await fetchRequesterData();
       if (roleMetrics.isJudge || activeTab === 'judge') {
         await fetchJudgeData();
       }
@@ -170,7 +171,7 @@ export function UnifiedDashboard({ initialTab }: UnifiedDashboardProps) {
     };
 
     fetchAll();
-  }, [fetchSeekerData, fetchJudgeData, roleMetrics.isJudge, activeTab]);
+  }, [fetchRequesterData, fetchJudgeData, roleMetrics.isJudge, activeTab]);
 
   // Filtered queue
   const filteredQueue = useMemo(() => {
@@ -240,28 +241,33 @@ export function UnifiedDashboard({ initialTab }: UnifiedDashboardProps) {
           maxInsights={3}
         />
 
+        {/* Economy Explainer */}
+        <div className="flex justify-center">
+          <EconomyExplainer credits={profile?.credits || 0} />
+        </div>
+
         {/* Role Tabs */}
         <RoleAwareTabs
           activeTab={activeTab}
           onTabChange={handleTabChange}
-          seekerCount={requestStats.active}
+          requesterCount={requestStats.active}
           judgeCount={filteredQueue.length}
         />
 
         {/* Tab Content */}
         <AnimatePresence mode="wait">
-          {activeTab === 'seeker' ? (
+          {activeTab === 'requester' ? (
             <motion.div
-              key="seeker"
+              key="requester"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.2 }}
             >
-              <SeekerContent
+              <RequesterContent
                 requests={requests}
                 stats={requestStats}
-                onRefresh={fetchSeekerData}
+                onRefresh={fetchRequesterData}
               />
             </motion.div>
           ) : (
@@ -292,8 +298,8 @@ export function UnifiedDashboard({ initialTab }: UnifiedDashboardProps) {
   );
 }
 
-// Seeker Content Component
-function SeekerContent({
+// Requester Content Component
+function RequesterContent({
   requests,
   stats,
   onRefresh,
@@ -449,8 +455,9 @@ function JudgeContent({
           </div>
         )}
 
-        {queue.length > 6 && (
-          <div className="text-center mt-6">
+        {/* Always show link to full judge dashboard */}
+        <div className="text-center mt-6 space-y-2">
+          {queue.length > 6 && (
             <Link
               href="/judge"
               className="inline-flex items-center gap-2 text-indigo-600 font-medium hover:text-indigo-700"
@@ -458,8 +465,17 @@ function JudgeContent({
               View full queue ({queue.length} available)
               <ArrowRight className="h-4 w-4" />
             </Link>
+          )}
+          <div>
+            <Link
+              href="/judge"
+              className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700"
+            >
+              Open full judge dashboard for earnings, progression & more
+              <ArrowRight className="h-3 w-3" />
+            </Link>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
