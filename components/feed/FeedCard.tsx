@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue, useTransform, PanInfo } from 'framer-motion';
 import {
   Heart,
   X,
@@ -91,7 +91,14 @@ export function FeedCard({ item, onJudge, onSkip, judging }: FeedCardProps) {
   const [customFeedback, setCustomFeedback] = useState('');
   const [showImageExpanded, setShowImageExpanded] = useState(false);
   const [animatingOut, setAnimatingOut] = useState<'left' | 'right' | null>(null);
+  const [dragDirection, setDragDirection] = useState<'left' | 'right' | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Drag gesture tracking
+  const x = useMotionValue(0);
+  const rotate = useTransform(x, [-200, 0, 200], [-15, 0, 15]);
+  const likeOpacity = useTransform(x, [0, 100], [0, 1]);
+  const dislikeOpacity = useTransform(x, [-100, 0], [1, 0]);
 
   const displayQuestion = item.question || item.text_content || '';
   const displayContext = item.context || '';
@@ -99,6 +106,38 @@ export function FeedCard({ item, onJudge, onSkip, judging }: FeedCardProps) {
   const responseCount = item.response_count ?? item.received_verdict_count ?? 0;
   const categoryConfig = CATEGORY_CONFIG[item.category] || CATEGORY_CONFIG.other;
   const CategoryIcon = categoryConfig.icon;
+
+  // Handle drag end - trigger verdict if dragged far enough
+  const handleDragEnd = async (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+    const threshold = 100;
+    if (judging) return;
+
+    if (info.offset.x > threshold) {
+      // Swiped right - like
+      triggerHaptic('medium');
+      setAnimatingOut('right');
+      await new Promise(resolve => setTimeout(resolve, 200));
+      await onJudge('like', isRoastMode ? '🔥 This is fire.' : '👍 Looks good!');
+    } else if (info.offset.x < -threshold) {
+      // Swiped left - dislike
+      triggerHaptic('medium');
+      setAnimatingOut('left');
+      await new Promise(resolve => setTimeout(resolve, 200));
+      await onJudge('dislike', isRoastMode ? '💀 This ain\'t it.' : '👎 Could be better.');
+    }
+    setDragDirection(null);
+  };
+
+  // Track drag direction for visual feedback
+  const handleDrag = (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+    if (info.offset.x > 50) {
+      setDragDirection('right');
+    } else if (info.offset.x < -50) {
+      setDragDirection('left');
+    } else {
+      setDragDirection(null);
+    }
+  };
 
   const getTimeSinceCreated = () => {
     const now = new Date();
@@ -173,11 +212,33 @@ export function FeedCard({ item, onJudge, onSkip, judging }: FeedCardProps) {
         opacity: animatingOut ? 0 : 1,
         y: 0,
         x: animatingOut === 'left' ? -100 : animatingOut === 'right' ? 100 : 0,
-        rotate: animatingOut === 'left' ? -5 : animatingOut === 'right' ? 5 : 0,
       }}
+      style={{ x: animatingOut ? undefined : x, rotate: animatingOut ? (animatingOut === 'left' ? -5 : 5) : rotate }}
+      drag={!judging && !animatingOut ? 'x' : false}
+      dragConstraints={{ left: 0, right: 0 }}
+      dragElastic={0.9}
+      onDrag={handleDrag}
+      onDragEnd={handleDragEnd}
       transition={{ duration: 0.2 }}
-      className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden"
+      className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden relative touch-pan-y cursor-grab active:cursor-grabbing"
     >
+      {/* Swipe feedback overlays */}
+      <motion.div
+        className="absolute inset-0 bg-gradient-to-r from-transparent to-green-500/20 rounded-2xl pointer-events-none z-10 flex items-center justify-end pr-8"
+        style={{ opacity: likeOpacity }}
+      >
+        <div className="bg-green-500 text-white p-3 rounded-full shadow-lg">
+          <Heart className="h-6 w-6" />
+        </div>
+      </motion.div>
+      <motion.div
+        className="absolute inset-0 bg-gradient-to-l from-transparent to-red-500/20 rounded-2xl pointer-events-none z-10 flex items-center justify-start pl-8"
+        style={{ opacity: dislikeOpacity }}
+      >
+        <div className="bg-red-500 text-white p-3 rounded-full shadow-lg">
+          <X className="h-6 w-6" />
+        </div>
+      </motion.div>
       {/* Header with category and time */}
       <div className="p-4 pb-3">
         <div className="flex items-center justify-between">
@@ -193,12 +254,22 @@ export function FeedCard({ item, onJudge, onSkip, judging }: FeedCardProps) {
               </div>
             </div>
           </div>
-          {isRoastMode && (
-            <div className="px-3 py-1.5 bg-gradient-to-r from-red-500 to-orange-500 text-white rounded-full text-xs font-bold shadow-lg flex items-center gap-1">
-              <span>🔥</span>
-              <span>ROAST</span>
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            {isRoastMode && (
+              <div className="px-3 py-1.5 bg-gradient-to-r from-red-500 to-orange-500 text-white rounded-full text-xs font-bold shadow-lg flex items-center gap-1">
+                <span>🔥</span>
+                <span>ROAST</span>
+              </div>
+            )}
+            <button
+              onClick={onSkip}
+              disabled={judging}
+              aria-label="Skip to next request"
+              className="p-2 min-h-[40px] min-w-[40px] flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 focus-visible:ring-offset-1 disabled:opacity-50"
+            >
+              <SkipForward className="h-5 w-5" aria-hidden="true" />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -212,24 +283,26 @@ export function FeedCard({ item, onJudge, onSkip, judging }: FeedCardProps) {
 
         {/* Photo display */}
         {item.media_type === 'photo' && item.media_url && (
-          <motion.div
-            className="relative rounded-2xl overflow-hidden bg-gray-100 mb-4 cursor-pointer"
+          <motion.button
+            className="relative rounded-2xl overflow-hidden bg-gray-100 mb-4 cursor-pointer w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
             onClick={() => setShowImageExpanded(!showImageExpanded)}
+            aria-expanded={showImageExpanded}
+            aria-label={showImageExpanded ? 'Collapse image' : 'Expand image to see full size'}
             layout
           >
             <img
               src={item.media_url}
-              alt="Submission for review"
+              alt="Submission image for review"
               className={`w-full object-cover transition-all duration-300 ${
                 showImageExpanded ? 'max-h-[600px]' : 'max-h-[300px]'
               }`}
               loading="lazy"
             />
-            <div className="absolute bottom-3 right-3 px-2.5 py-1 bg-black/60 backdrop-blur-sm rounded-full text-white text-xs font-medium flex items-center gap-1">
+            <div className="absolute bottom-3 right-3 px-2.5 py-1 bg-black/60 backdrop-blur-sm rounded-full text-white text-xs font-medium flex items-center gap-1" aria-hidden="true">
               <Eye className="h-3 w-3" />
               <span>{showImageExpanded ? 'Collapse' : 'Expand'}</span>
             </div>
-          </motion.div>
+          </motion.button>
         )}
 
         {/* Progress indicator */}
@@ -239,7 +312,7 @@ export function FeedCard({ item, onJudge, onSkip, judging }: FeedCardProps) {
               <span className="text-gray-500">{responseCount}/3 verdicts</span>
               <span className="text-gray-400">{3 - responseCount} more needed</span>
             </div>
-            <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+            <div className="h-2.5 bg-gray-200 rounded-full overflow-hidden shadow-inner">
               <motion.div
                 className={`h-full rounded-full bg-gradient-to-r ${categoryConfig.gradient}`}
                 initial={{ width: 0 }}
@@ -251,30 +324,36 @@ export function FeedCard({ item, onJudge, onSkip, judging }: FeedCardProps) {
         </div>
 
         {/* Mode Toggle */}
-        <div className="flex rounded-xl bg-gray-100 p-1 mb-4">
+        <div className="flex rounded-xl bg-gray-100 p-1 mb-4" role="tablist" aria-label="Feedback mode">
           <button
             onClick={() => setMode('quick')}
-            className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${
+            role="tab"
+            aria-selected={mode === 'quick'}
+            aria-controls="quick-feedback-panel"
+            className={`flex-1 py-2 px-4 min-h-[44px] rounded-lg text-sm font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1 ${
               mode === 'quick'
                 ? 'bg-white text-gray-900 shadow-sm'
                 : 'text-gray-500 hover:text-gray-700'
             }`}
           >
             <span className="flex items-center justify-center gap-1.5">
-              <Zap className="h-4 w-4" />
+              <Zap className="h-4 w-4" aria-hidden="true" />
               Quick Vote
             </span>
           </button>
           <button
             onClick={() => setMode('detailed')}
-            className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${
+            role="tab"
+            aria-selected={mode === 'detailed'}
+            aria-controls="detailed-feedback-panel"
+            className={`flex-1 py-2 px-4 min-h-[44px] rounded-lg text-sm font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-1 ${
               mode === 'detailed'
                 ? 'bg-white text-gray-900 shadow-sm'
                 : 'text-gray-500 hover:text-gray-700'
             }`}
           >
             <span className="flex items-center justify-center gap-1.5">
-              <MessageSquare className="h-4 w-4" />
+              <MessageSquare className="h-4 w-4" aria-hidden="true" />
               Write Feedback
             </span>
           </button>
@@ -305,9 +384,10 @@ export function FeedCard({ item, onJudge, onSkip, judging }: FeedCardProps) {
                       <button
                         key={i}
                         onClick={() => handleQuickSelect('positive', i)}
-                        className="p-3 rounded-xl border-2 border-green-200 bg-green-50 hover:bg-green-100 hover:border-green-300 transition-all text-left group"
+                        aria-label={`Positive response: ${response.text}`}
+                        className="p-3 min-h-[72px] rounded-xl border-2 border-green-200 bg-green-50 hover:bg-green-100 hover:border-green-300 transition-all text-left group focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:ring-offset-1"
                       >
-                        <span className="text-lg mb-1 block">{response.emoji}</span>
+                        <span className="text-lg mb-1 block" aria-hidden="true">{response.emoji}</span>
                         <span className="text-xs text-green-700 line-clamp-2">{response.text}</span>
                       </button>
                     ))}
@@ -325,9 +405,10 @@ export function FeedCard({ item, onJudge, onSkip, judging }: FeedCardProps) {
                       <button
                         key={i}
                         onClick={() => handleQuickSelect('negative', i)}
-                        className="p-3 rounded-xl border-2 border-red-200 bg-red-50 hover:bg-red-100 hover:border-red-300 transition-all text-left group"
+                        aria-label={`Negative response: ${response.text}`}
+                        className="p-3 min-h-[72px] rounded-xl border-2 border-red-200 bg-red-50 hover:bg-red-100 hover:border-red-300 transition-all text-left group focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-1"
                       >
-                        <span className="text-lg mb-1 block">{response.emoji}</span>
+                        <span className="text-lg mb-1 block" aria-hidden="true">{response.emoji}</span>
                         <span className="text-xs text-red-700 line-clamp-2">{response.text}</span>
                       </button>
                     ))}
@@ -336,30 +417,32 @@ export function FeedCard({ item, onJudge, onSkip, judging }: FeedCardProps) {
 
                 {/* Quick swipe actions */}
                 <div className="pt-2">
-                  <p className="text-xs text-gray-400 text-center mb-2">Or quick vote:</p>
-                  <div className="flex gap-3">
+                  <p className="text-xs text-gray-400 text-center mb-2" id="quick-vote-label">Or quick vote:</p>
+                  <div className="flex gap-3" role="group" aria-labelledby="quick-vote-label">
                     <button
                       onClick={() => handleSwipeAction('dislike')}
                       disabled={judging}
-                      className={`flex-1 py-3.5 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
+                      aria-label={isRoastMode ? 'Vote: Nope, not good' : 'Vote: Not good'}
+                      className={`flex-1 py-3.5 min-h-[48px] rounded-xl font-semibold transition-all flex items-center justify-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-red-600 ${
                         isRoastMode
                           ? 'bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600'
                           : 'bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600'
                       } text-white shadow-lg hover:shadow-xl disabled:opacity-50`}
                     >
-                      <X className="h-5 w-5" />
+                      <X className="h-5 w-5" aria-hidden="true" />
                       <span>{isRoastMode ? 'Nope' : 'Not Good'}</span>
                     </button>
                     <button
                       onClick={() => handleSwipeAction('like')}
                       disabled={judging}
-                      className={`flex-1 py-3.5 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
+                      aria-label={isRoastMode ? 'Vote: Fire, looks good' : 'Vote: Looks good'}
+                      className={`flex-1 py-3.5 min-h-[48px] rounded-xl font-semibold transition-all flex items-center justify-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-green-600 ${
                         isRoastMode
                           ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600'
                           : 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600'
                       } text-white shadow-lg hover:shadow-xl disabled:opacity-50`}
                     >
-                      <Heart className="h-5 w-5" />
+                      <Heart className="h-5 w-5" aria-hidden="true" />
                       <span>{isRoastMode ? 'Fire' : 'Looks Good'}</span>
                     </button>
                   </div>
@@ -405,24 +488,25 @@ export function FeedCard({ item, onJudge, onSkip, judging }: FeedCardProps) {
                 <div className="flex gap-3">
                   <button
                     onClick={() => setSelectedQuickResponse(null)}
-                    className="flex-1 py-3 rounded-xl border-2 border-gray-200 text-gray-600 font-medium hover:bg-gray-50 transition"
+                    className="flex-1 py-3 min-h-[48px] rounded-xl border-2 border-gray-200 text-gray-600 font-medium hover:bg-gray-50 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-1"
                   >
                     Change
                   </button>
                   <button
                     onClick={handleQuickSubmit}
                     disabled={judging}
-                    className={`flex-1 py-3 rounded-xl font-semibold transition flex items-center justify-center gap-2 ${
+                    aria-label="Submit your feedback"
+                    className={`flex-1 py-3 min-h-[48px] rounded-xl font-semibold transition flex items-center justify-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 ${
                       selectedQuickResponse.type === 'positive'
-                        ? 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600'
-                        : 'bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600'
+                        ? 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 focus-visible:ring-offset-green-600'
+                        : 'bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600 focus-visible:ring-offset-red-600'
                     } text-white shadow-lg disabled:opacity-50`}
                   >
                     {judging ? (
-                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" role="status" aria-label="Submitting verdict" />
                     ) : (
                       <>
-                        <Send className="h-4 w-4" />
+                        <Send className="h-4 w-4" aria-hidden="true" />
                         <span>Submit</span>
                       </>
                     )}
@@ -487,10 +571,10 @@ export function FeedCard({ item, onJudge, onSkip, judging }: FeedCardProps) {
                 </div>
 
                 {/* Progress bar */}
-                <div className="h-1 bg-gray-100 rounded-full mt-2 overflow-hidden">
+                <div className="h-1.5 bg-gray-200 rounded-full mt-2 overflow-hidden">
                   <motion.div
                     className={`h-full rounded-full ${
-                      customFeedback.length < 20 ? 'bg-amber-400' : 'bg-green-500'
+                      customFeedback.length < 20 ? 'bg-amber-500' : 'bg-green-500'
                     }`}
                     initial={{ width: 0 }}
                     animate={{ width: `${Math.min((customFeedback.length / 100) * 100, 100)}%` }}
@@ -499,33 +583,37 @@ export function FeedCard({ item, onJudge, onSkip, judging }: FeedCardProps) {
               </div>
 
               {/* Submit buttons */}
-              <div className="flex gap-3">
+              <div className="flex gap-3" role="group" aria-label="Submit your verdict">
                 <button
                   onClick={() => handleDetailedSubmit('dislike')}
                   disabled={!canSubmitDetailed || judging}
-                  className={`flex-1 py-3.5 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
+                  aria-label="Submit as not good"
+                  aria-disabled={!canSubmitDetailed || judging}
+                  className={`flex-1 py-3.5 min-h-[48px] rounded-xl font-semibold transition-all flex items-center justify-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 ${
                     canSubmitDetailed && !judging
-                      ? 'bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600 text-white shadow-lg'
+                      ? 'bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600 text-white shadow-lg focus-visible:ring-red-500'
                       : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                   }`}
                 >
-                  <ThumbsDown className="h-5 w-5" />
+                  <ThumbsDown className="h-5 w-5" aria-hidden="true" />
                   <span>Not Good</span>
                 </button>
                 <button
                   onClick={() => handleDetailedSubmit('like')}
                   disabled={!canSubmitDetailed || judging}
-                  className={`flex-1 py-3.5 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
+                  aria-label="Submit as looks good"
+                  aria-disabled={!canSubmitDetailed || judging}
+                  className={`flex-1 py-3.5 min-h-[48px] rounded-xl font-semibold transition-all flex items-center justify-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 ${
                     canSubmitDetailed && !judging
-                      ? 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white shadow-lg'
+                      ? 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white shadow-lg focus-visible:ring-green-500'
                       : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                   }`}
                 >
                   {judging ? (
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" role="status" aria-label="Submitting verdict" />
                   ) : (
                     <>
-                      <ThumbsUp className="h-5 w-5" />
+                      <ThumbsUp className="h-5 w-5" aria-hidden="true" />
                       <span>Looks Good</span>
                     </>
                   )}
@@ -536,20 +624,11 @@ export function FeedCard({ item, onJudge, onSkip, judging }: FeedCardProps) {
         )}
       </AnimatePresence>
 
-      {/* Footer - Skip and credit info */}
+      {/* Footer - Credit info */}
       <div className={`px-4 py-3 border-t ${isRoastMode ? 'border-red-100 bg-red-50/50' : 'border-gray-100 bg-gray-50/50'}`}>
-        <div className="flex items-center justify-between">
-          <button
-            onClick={onSkip}
-            disabled={judging}
-            className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 transition px-3 py-1.5 rounded-lg hover:bg-gray-100 disabled:opacity-50"
-          >
-            <SkipForward className="h-4 w-4" />
-            <span>Skip</span>
-          </button>
-
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-amber-100 to-yellow-100 rounded-full border border-amber-200">
-            <Zap className="h-3.5 w-3.5 text-amber-600" />
+        <div className="flex items-center justify-center">
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-amber-100 to-yellow-100 rounded-full border border-amber-200" aria-label="Earn credits: 3 reviews equals 1 credit">
+            <Zap className="h-3.5 w-3.5 text-amber-600" aria-hidden="true" />
             <span className="text-xs font-semibold text-amber-700">3 reviews = 1 credit</span>
           </div>
         </div>

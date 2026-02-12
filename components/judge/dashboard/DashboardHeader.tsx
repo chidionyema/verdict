@@ -28,7 +28,7 @@ export function DashboardHeader({
   const LevelIcon = judgeLevel.icon;
 
   return (
-    <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl border border-white/50 p-8 mb-8 relative overflow-hidden">
+    <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-xl border border-white/50 p-8 mb-8 relative overflow-hidden">
       {/* Background Pattern */}
       <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 via-purple-500/5 to-pink-500/5" />
       <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-indigo-400 to-purple-400 rounded-full mix-blend-multiply filter blur-3xl opacity-10" />
@@ -37,7 +37,7 @@ export function DashboardHeader({
         <div className="flex-1">
           <div className="flex items-center gap-4 mb-4">
             <div
-              className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${judgeLevel.color} p-3 text-white shadow-lg animate-pulse`}
+              className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${judgeLevel.color} p-3 text-white shadow-lg`}
             >
               <LevelIcon className="w-10 h-10" />
             </div>

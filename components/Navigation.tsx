@@ -264,14 +264,23 @@ export default function Navigation() {
   }
 
   return (
-    <nav className="bg-white/80 backdrop-blur-xl border-b border-gray-200/50 sticky top-0 z-50 shadow-sm">
+    <nav className="bg-white/80 backdrop-blur-xl border-b border-gray-200/50 sticky top-0 z-50 shadow-sm" role="navigation" aria-label="Main navigation">
+      {/* Skip to main content link for keyboard users */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-[100] focus:px-4 focus:py-2 focus:bg-indigo-600 focus:text-white focus:rounded-lg focus:shadow-lg focus:outline-none"
+      >
+        Skip to main content
+      </a>
+
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex justify-between h-16">
           {/* Logo */}
           <div className="flex items-center">
-            <Link 
+            <Link
               href={getLogoDestination()}
-              className="flex items-center space-x-2 hover:opacity-80 transition-opacity"
+              className="flex items-center space-x-2 hover:opacity-80 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded-lg"
+              aria-label="AskVerdict - Go to home"
             >
               <div className="w-8 h-8 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-lg flex items-center justify-center">
                 <Sparkles className="h-5 w-5 text-white" />
@@ -289,8 +298,8 @@ export default function Navigation() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center space-x-2 px-3 py-2 rounded-lg font-medium transition-all relative ${
-                  item.active 
+                className={`flex items-center space-x-2 px-3 py-2 rounded-lg font-medium transition-all relative focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 ${
+                  item.active
                     ? 'bg-indigo-100 text-indigo-700'
                     : 'text-gray-700 hover:bg-gray-100'
                 }`}
@@ -312,7 +321,7 @@ export default function Navigation() {
                 {/* Simple New Submission Button - Direct to unified flow */}
                 <Link
                   href="/submit"
-                  className="flex items-center space-x-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2 rounded-lg hover:shadow-lg transition-all font-medium group"
+                  className="flex items-center space-x-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2 rounded-lg hover:shadow-lg transition-all font-medium group focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-indigo-600"
                 >
                   <Plus className="h-4 w-4 group-hover:rotate-90 transition-transform" />
                   <span>New Submission</span>
@@ -321,8 +330,9 @@ export default function Navigation() {
                 {/* Credits Display - With label and context */}
                 <Link
                   href="/account"
-                  className="flex items-center space-x-2 bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 px-3 py-1.5 rounded-full hover:border-amber-300 transition-colors"
+                  className="flex items-center space-x-2 bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 px-3 py-1.5 rounded-full hover:border-amber-300 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2"
                   title="View your credits and account"
+                  aria-label={`${userProfile?.credits || 0} credits - view account`}
                 >
                   <div className="w-5 h-5 bg-gradient-to-br from-amber-400 to-yellow-500 rounded-full flex items-center justify-center">
                     <span className="text-white text-xs font-bold">{userProfile?.credits || 0}</span>
@@ -397,7 +407,7 @@ export default function Navigation() {
                       <Link
                         href="/dashboard"
                         onClick={() => setShowProfileDropdown(false)}
-                        className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 transition-colors"
+                        className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 transition-colors rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-inset"
                       >
                         <Grid className="h-4 w-4 text-gray-600" />
                         <span>My Dashboard</span>
@@ -407,7 +417,7 @@ export default function Navigation() {
                         <Link
                           href="/judge"
                           onClick={() => setShowProfileDropdown(false)}
-                          className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 transition-colors"
+                          className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 transition-colors rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-inset"
                         >
                           <Shield className="h-4 w-4 text-indigo-600" />
                           <span>Judge Dashboard</span>
@@ -422,7 +432,7 @@ export default function Navigation() {
                       <Link
                         href="/account"
                         onClick={() => setShowProfileDropdown(false)}
-                        className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 transition-colors"
+                        className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 transition-colors rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-inset"
                       >
                         <Settings className="h-4 w-4 text-gray-600" />
                         <span>Account Settings</span>
@@ -431,7 +441,7 @@ export default function Navigation() {
                       <Link
                         href="/help"
                         onClick={() => setShowProfileDropdown(false)}
-                        className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 transition-colors"
+                        className="flex items-center space-x-3 px-4 py-3 hover:bg-gray-50 transition-colors rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-inset"
                       >
                         <HelpCircle className="h-4 w-4 text-gray-600" />
                         <span>Help & Support</span>
@@ -443,7 +453,8 @@ export default function Navigation() {
                             handleSignOut();
                             setShowProfileDropdown(false);
                           }}
-                          className="flex items-center space-x-3 px-4 py-3 w-full text-left hover:bg-red-50 transition-colors text-red-600"
+                          className="flex items-center space-x-3 px-4 py-3 w-full text-left hover:bg-red-50 transition-colors text-red-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-inset rounded-lg"
+                          aria-label="Sign out of your account"
                         >
                           <LogOut className="h-4 w-4" />
                           <span>Sign Out</span>
@@ -460,13 +471,13 @@ export default function Navigation() {
               <div className="flex items-center space-x-4">
                 <Link
                   href="/auth/login"
-                  className="text-gray-700 hover:text-gray-900 font-medium transition-colors"
+                  className="text-gray-700 hover:text-gray-900 font-medium transition-colors px-3 py-2 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
                 >
                   Sign In
                 </Link>
                 <Link
                   href="/auth/signup"
-                  className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2 rounded-lg hover:shadow-lg transition-all font-medium"
+                  className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-4 py-2 rounded-lg hover:shadow-lg transition-all font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-indigo-600"
                 >
                   Get Started Free
                 </Link>
@@ -495,8 +506,8 @@ export default function Navigation() {
                   key={item.href}
                   href={item.href}
                   onClick={() => setMobileMenuOpen(false)}
-                  className={`flex items-center space-x-3 px-4 py-3 transition-colors ${
-                    item.active 
+                  className={`flex items-center space-x-3 px-4 py-3 min-h-[48px] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-inset ${
+                    item.active
                       ? 'bg-indigo-100 text-indigo-700'
                       : 'text-gray-700 hover:bg-gray-100'
                   }`}
@@ -516,7 +527,7 @@ export default function Navigation() {
                   <Link
                     href="/submit"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center space-x-3 px-4 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white mx-4 rounded-lg"
+                    className="flex items-center space-x-3 px-4 py-3 min-h-[48px] bg-gradient-to-r from-indigo-600 to-purple-600 text-white mx-4 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-indigo-600"
                   >
                     <Plus className="h-5 w-5" />
                     <span>New Submission</span>
@@ -544,7 +555,8 @@ export default function Navigation() {
                       handleSignOut();
                       setMobileMenuOpen(false);
                     }}
-                    className="flex items-center space-x-3 px-4 py-3 text-red-600 hover:bg-red-50 w-full text-left transition-colors"
+                    className="flex items-center space-x-3 px-4 py-3 min-h-[48px] text-red-600 hover:bg-red-50 w-full text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-inset rounded-lg mx-4"
+                    aria-label="Sign out of your account"
                   >
                     <LogOut className="h-5 w-5" />
                     <span>Sign Out</span>
@@ -555,14 +567,14 @@ export default function Navigation() {
                   <Link
                     href="/auth/login"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="block w-full text-center py-3 border border-indigo-600 text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors"
+                    className="block w-full text-center py-3 min-h-[48px] border border-indigo-600 text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
                   >
                     Sign In
                   </Link>
                   <Link
                     href="/auth/signup"
                     onClick={() => setMobileMenuOpen(false)}
-                    className="block w-full text-center py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition-all"
+                    className="block w-full text-center py-3 min-h-[48px] bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-indigo-600"
                   >
                     Get Started Free
                   </Link>

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
 import {
   Heart,
   X,
@@ -59,6 +60,37 @@ const CATEGORIES = [
   { id: 'other', label: 'Other', icon: MessageSquare, color: 'gray' },
 ];
 
+// Static Tailwind classes for category colors (dynamic classes don't compile)
+const CATEGORY_STYLES: Record<string, { active: string; inactive: string }> = {
+  indigo: {
+    active: 'bg-indigo-600 text-white shadow-sm',
+    inactive: 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100',
+  },
+  pink: {
+    active: 'bg-pink-600 text-white shadow-sm',
+    inactive: 'bg-pink-50 text-pink-700 hover:bg-pink-100',
+  },
+  green: {
+    active: 'bg-green-600 text-white shadow-sm',
+    inactive: 'bg-green-50 text-green-700 hover:bg-green-100',
+  },
+  blue: {
+    active: 'bg-blue-600 text-white shadow-sm',
+    inactive: 'bg-blue-50 text-blue-700 hover:bg-blue-100',
+  },
+  gray: {
+    active: 'bg-gray-600 text-white shadow-sm',
+    inactive: 'bg-gray-50 text-gray-700 hover:bg-gray-100',
+  },
+};
+
+interface PendingVerdict {
+  requestId: string;
+  verdict: 'like' | 'dislike';
+  feedback: string;
+  timeoutId: NodeJS.Timeout;
+}
+
 export default function FeedPage() {
   const [user, setUser] = useState<any>(null);
   const [feedItems, setFeedItems] = useState<FeedRequest[]>([]);
@@ -72,6 +104,7 @@ export default function FeedPage() {
   const [earnMode, setEarnMode] = useState(false);
   const [returnUrl, setReturnUrl] = useState<string | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
+  const [pendingVerdict, setPendingVerdict] = useState<PendingVerdict | null>(null);
 
   const { shouldShow: showProgressiveProfile, triggerType, dismiss: dismissProgressiveProfile, checkTrigger } = useProgressiveProfile();
   const supabaseRef = useRef<ReturnType<typeof createClient> | null>(null);
@@ -109,6 +142,46 @@ export default function FeedPage() {
     document.addEventListener('keydown', handleEscape);
     return () => document.removeEventListener('keydown', handleEscape);
   }, [showProgressiveProfile, showTraining, dismissProgressiveProfile]);
+
+  // Keyboard shortcuts for feed navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't trigger if user is typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+      // Don't trigger if modals are open
+      if (showTraining || showProgressiveProfile) {
+        return;
+      }
+      // Don't trigger if no items or already judging
+      if (loading || judging || currentIndex >= feedItems.length) {
+        return;
+      }
+
+      const currentItem = feedItems[currentIndex];
+      if (!currentItem) return;
+
+      switch (e.key) {
+        case 'ArrowLeft':
+          e.preventDefault();
+          handleJudgment('dislike', '👎 Not quite right');
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          handleJudgment('like', '👍 Looks good!');
+          break;
+        case 's':
+        case 'S':
+          e.preventDefault();
+          handleSkip();
+          break;
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [showTraining, showProgressiveProfile, loading, judging, currentIndex, feedItems]);
 
   // Initialize
   useEffect(() => {
@@ -275,30 +348,15 @@ export default function FeedPage() {
     }
   }
 
-  async function handleJudgment(verdict: 'like' | 'dislike', feedback?: string) {
-    if (!user || judging || currentIndex >= feedItems.length || !supabaseRef.current) return;
-
-    if (showTraining) {
-      toast.error('Please complete the training first.');
-      return;
-    }
-
-    const currentItem = feedItems[currentIndex];
-    if (!currentItem?.id) {
-      toast.error('Unable to find item. Please refresh.');
-      return;
-    }
-
-    setJudging(true);
-    triggerHaptic('light');
-
+  // Actually submit the verdict to the API
+  async function submitVerdict(requestId: string, verdict: 'like' | 'dislike', feedback: string) {
     try {
       const response = await fetch('/api/judge/respond', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          request_id: currentItem.id,
-          feedback: feedback || (verdict === 'like' ? '👍 Looks good' : '👎 Not quite right'),
+          request_id: requestId,
+          feedback: feedback,
           rating: verdict === 'like' ? 7 : 4,
           tone: 'honest'
         })
@@ -313,8 +371,7 @@ export default function FeedPage() {
           return;
         }
         if (response.status === 400 && data.error?.includes('already')) {
-          toast.error('Already judged this request.');
-          setCurrentIndex(prev => prev + 1);
+          // Already judged - this is fine, just continue
           return;
         }
         throw new Error(data.error || 'Failed to submit');
@@ -328,13 +385,6 @@ export default function FeedPage() {
         setCreditsEarned(prev => prev + newCreditsEarned);
         triggerHaptic('success');
         toast.success('🎉 You earned 1 credit!');
-      } else {
-        const remaining = 3 - (newTotal % 3);
-        if (remaining < 3 && remaining > 0) {
-          toast.success(`Done! ${remaining} more to earn a credit.`);
-        } else {
-          toast.success('Feedback submitted!');
-        }
       }
 
       checkTrigger('credits_earned');
@@ -345,15 +395,90 @@ export default function FeedPage() {
         totalJudgments: prev.totalJudgments + 1
       }));
 
-      setCurrentIndex(prev => prev + 1);
-
     } catch (error) {
       console.error('Error submitting judgment:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to submit.');
-    } finally {
-      setJudging(false);
     }
   }
+
+  // Handle undo - restore previous state
+  function handleUndo() {
+    if (!pendingVerdict) return;
+
+    // Cancel the pending submission
+    clearTimeout(pendingVerdict.timeoutId);
+    setPendingVerdict(null);
+
+    // Go back to the previous card
+    setCurrentIndex(prev => Math.max(0, prev - 1));
+
+    triggerHaptic('light');
+    toast.success('Verdict undone');
+  }
+
+  async function handleJudgment(verdict: 'like' | 'dislike', feedback?: string) {
+    if (!user || judging || currentIndex >= feedItems.length || !supabaseRef.current) return;
+
+    if (showTraining) {
+      toast.error('Please complete the training first.');
+      return;
+    }
+
+    const currentItem = feedItems[currentIndex];
+    if (!currentItem?.id) {
+      toast.error('Unable to find item. Please refresh.');
+      return;
+    }
+
+    // Cancel any existing pending verdict
+    if (pendingVerdict) {
+      clearTimeout(pendingVerdict.timeoutId);
+    }
+
+    setJudging(true);
+    triggerHaptic('light');
+
+    const feedbackText = feedback || (verdict === 'like' ? '👍 Looks good' : '👎 Not quite right');
+
+    // Move to next card immediately
+    setCurrentIndex(prev => prev + 1);
+    setJudging(false);
+
+    // Set up delayed submission with undo option
+    const timeoutId = setTimeout(() => {
+      submitVerdict(currentItem.id, verdict, feedbackText);
+      setPendingVerdict(null);
+    }, 3000);
+
+    setPendingVerdict({
+      requestId: currentItem.id,
+      verdict,
+      feedback: feedbackText,
+      timeoutId,
+    });
+
+    // Show undo toast
+    toast.success(
+      verdict === 'like' ? '👍 Liked!' : '👎 Disliked',
+      {
+        duration: 3000,
+        showProgress: true,
+        undoAction: handleUndo,
+      }
+    );
+  }
+
+  // Cleanup pending verdict on unmount
+  useEffect(() => {
+    return () => {
+      if (pendingVerdict) {
+        clearTimeout(pendingVerdict.timeoutId);
+        // Submit immediately on unmount
+        submitVerdict(pendingVerdict.requestId, pendingVerdict.verdict, pendingVerdict.feedback);
+      }
+    };
+  }, [pendingVerdict]);
+
 
   function handleSkip() {
     triggerHaptic('light');
@@ -483,9 +608,10 @@ export default function FeedPage() {
             <div className="flex items-center gap-3">
               <Link
                 href="/dashboard"
-                className="p-2 -ml-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition"
+                aria-label="Go back to dashboard"
+                className="p-2 -ml-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
               >
-                <Home className="h-5 w-5" />
+                <Home className="h-5 w-5" aria-hidden="true" />
               </Link>
               <div>
                 <h1 className="text-lg font-bold text-gray-900">Review Feed</h1>
@@ -508,7 +634,7 @@ export default function FeedPage() {
             {returnUrl && creditsEarned > 0 && (
               <button
                 onClick={() => router.push(returnUrl)}
-                className="bg-white/20 hover:bg-white/30 px-3 py-1 rounded-lg text-sm font-medium transition"
+                className="bg-white/20 hover:bg-white/30 px-3 py-1 rounded-lg text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
               >
                 Done ({creditsEarned} earned)
               </button>
@@ -538,30 +664,23 @@ export default function FeedPage() {
       {/* Category Filter */}
       <div className="bg-white border-b border-gray-100 sticky top-[57px] z-[9]">
         <div className="max-w-lg mx-auto px-4 py-2">
-          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide" role="tablist" aria-label="Filter by category">
             {CATEGORIES.map(cat => {
               const Icon = cat.icon;
               const isActive = categoryFilter === cat.id;
+              const colorStyles = CATEGORY_STYLES[cat.color] || CATEGORY_STYLES.gray;
               return (
                 <button
                   key={cat.id || 'all'}
                   onClick={() => handleCategoryChange(cat.id)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
-                    isActive
-                      ? `bg-${cat.color}-600 text-white shadow-sm`
-                      : `bg-${cat.color}-50 text-${cat.color}-700 hover:bg-${cat.color}-100`
+                  role="tab"
+                  aria-selected={isActive}
+                  aria-label={`Filter by ${cat.label}`}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 min-h-[36px] rounded-full text-sm font-medium whitespace-nowrap transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-indigo-500 ${
+                    isActive ? colorStyles.active : colorStyles.inactive
                   }`}
-                  style={{
-                    backgroundColor: isActive
-                      ? cat.color === 'indigo' ? '#4f46e5'
-                        : cat.color === 'pink' ? '#db2777'
-                        : cat.color === 'green' ? '#16a34a'
-                        : cat.color === 'blue' ? '#2563eb'
-                        : '#4b5563'
-                      : undefined
-                  }}
                 >
-                  <Icon className="h-3.5 w-3.5" />
+                  <Icon className="h-3.5 w-3.5" aria-hidden="true" />
                   {cat.label}
                 </button>
               );
@@ -593,7 +712,7 @@ export default function FeedPage() {
               {feedError === 'auth' ? (
                 <button
                   onClick={() => router.push('/auth/login')}
-                  className="w-full py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition"
+                  className="w-full py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
                 >
                   Log In
                 </button>
@@ -606,7 +725,7 @@ export default function FeedPage() {
                       loadFeedItems(supabaseRef.current, categoryFilter, user.id);
                     }
                   }}
-                  className="w-full py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition flex items-center justify-center gap-2"
+                  className="w-full py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition flex items-center justify-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
                 >
                   <RefreshCw className="h-5 w-5" />
                   Try Again
@@ -616,17 +735,32 @@ export default function FeedPage() {
           </div>
         ) : !hasMoreItems ? (
           /* Empty State - Beautiful and encouraging */
-          <div className="text-center py-8">
-            <div className="relative inline-block mb-6">
-              <div className="w-24 h-24 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-full flex items-center justify-center">
+          <motion.div
+            className="text-center py-8"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+          >
+            <motion.div
+              className="relative inline-block mb-6"
+              initial={{ scale: 0.8 }}
+              animate={{ scale: 1 }}
+              transition={{ type: 'spring', bounce: 0.4, delay: 0.1 }}
+            >
+              <div className="w-24 h-24 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-full flex items-center justify-center shadow-lg">
                 <Target className="h-12 w-12 text-indigo-500" />
               </div>
               {judgeStats.today > 0 && (
-                <div className="absolute -top-1 -right-1 w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-lg">
+                <motion.div
+                  className="absolute -top-1 -right-1 w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white text-sm font-bold shadow-lg"
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: 'spring', bounce: 0.5, delay: 0.3 }}
+                >
                   {judgeStats.today}
-                </div>
+                </motion.div>
               )}
-            </div>
+            </motion.div>
 
             <h2 className="text-2xl font-bold text-gray-900 mb-2">
               {categoryFilter ? 'No requests in this category' : "You're all caught up!"}
@@ -643,7 +777,7 @@ export default function FeedPage() {
               {categoryFilter && (
                 <button
                   onClick={() => handleCategoryChange(null)}
-                  className="w-full py-3 px-4 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition flex items-center justify-center gap-2"
+                  className="w-full py-3 px-4 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition flex items-center justify-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
                 >
                   <Sparkles className="h-5 w-5" />
                   View All Categories
@@ -652,7 +786,7 @@ export default function FeedPage() {
 
               <Link
                 href="/submit"
-                className="w-full py-3 px-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl font-semibold hover:from-purple-700 hover:to-indigo-700 transition flex items-center justify-center gap-2 shadow-lg"
+                className="w-full py-3 px-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl font-semibold hover:from-purple-700 hover:to-indigo-700 transition flex items-center justify-center gap-2 shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2"
               >
                 <Plus className="h-5 w-5" />
                 Submit Your Own Request
@@ -660,7 +794,7 @@ export default function FeedPage() {
 
               <Link
                 href="/dashboard"
-                className="w-full py-3 px-4 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition flex items-center justify-center gap-2"
+                className="w-full py-3 px-4 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition flex items-center justify-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2"
               >
                 <Home className="h-5 w-5" />
                 Back to Dashboard
@@ -669,7 +803,12 @@ export default function FeedPage() {
 
             {/* Stats summary if user has reviewed */}
             {judgeStats.totalJudgments > 0 && (
-              <div className="mt-8 p-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl">
+              <motion.div
+                className="mt-8 p-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl shadow-sm"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+              >
                 <p className="text-sm text-indigo-600 font-medium mb-2">Your Impact</p>
                 <div className="flex justify-around">
                   <div className="text-center">
@@ -685,9 +824,9 @@ export default function FeedPage() {
                     <p className="text-xs text-indigo-600">Today</p>
                   </div>
                 </div>
-              </div>
+              </motion.div>
             )}
-          </div>
+          </motion.div>
         ) : (
           /* Feed Card */
           <div>
@@ -700,42 +839,80 @@ export default function FeedPage() {
               </span>
             </div>
 
-            {/* The Card */}
+            {/* Card Stack */}
             {currentItem && (
-              <FeedCard
-                item={currentItem}
-                onJudge={handleJudgment}
-                onSkip={handleSkip}
-                judging={judging}
-              />
+              <div className="relative">
+                {/* Background cards for stack effect */}
+                {feedItems.length - currentIndex > 2 && (
+                  <div
+                    className="absolute inset-x-4 top-3 h-full bg-white rounded-2xl border border-gray-100 shadow-sm"
+                    aria-hidden="true"
+                  />
+                )}
+                {feedItems.length - currentIndex > 1 && (
+                  <div
+                    className="absolute inset-x-2 top-1.5 h-full bg-white rounded-2xl border border-gray-100 shadow-md"
+                    aria-hidden="true"
+                  />
+                )}
+                {/* Main card */}
+                <div className="relative z-10">
+                  <FeedCard
+                    item={currentItem}
+                    onJudge={handleJudgment}
+                    onSkip={handleSkip}
+                    judging={judging}
+                  />
+                </div>
+              </div>
             )}
+
+            {/* Keyboard shortcuts hint - hidden on mobile */}
+            <div className="hidden sm:flex items-center justify-center gap-4 mt-4 text-xs text-gray-400">
+              <span className="flex items-center gap-1">
+                <kbd className="px-1.5 py-0.5 bg-gray-100 border border-gray-200 rounded text-[10px] font-mono">←</kbd>
+                <span>Dislike</span>
+              </span>
+              <span className="flex items-center gap-1">
+                <kbd className="px-1.5 py-0.5 bg-gray-100 border border-gray-200 rounded text-[10px] font-mono">→</kbd>
+                <span>Like</span>
+              </span>
+              <span className="flex items-center gap-1">
+                <kbd className="px-1.5 py-0.5 bg-gray-100 border border-gray-200 rounded text-[10px] font-mono">S</kbd>
+                <span>Skip</span>
+              </span>
+            </div>
           </div>
         )}
       </main>
 
       {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 safe-area-pb z-20">
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 safe-area-pb z-20" aria-label="Bottom navigation">
         <div className="max-w-lg mx-auto px-6 py-2">
           <div className="flex items-center justify-around">
             <button
               onClick={() => router.push('/feed')}
-              className="flex flex-col items-center gap-0.5 py-2 px-4 text-indigo-600"
+              aria-current="page"
+              aria-label="Review feed - current page"
+              className="flex flex-col items-center gap-0.5 py-2 px-4 min-h-[48px] min-w-[64px] text-indigo-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded-lg"
             >
-              <Eye className="h-5 w-5" />
+              <Eye className="h-5 w-5" aria-hidden="true" />
               <span className="text-xs font-medium">Review</span>
             </button>
             <button
               onClick={() => router.push('/dashboard')}
-              className="flex flex-col items-center gap-0.5 py-2 px-4 text-gray-400 hover:text-gray-600 transition"
+              aria-label="Go to dashboard"
+              className="flex flex-col items-center gap-0.5 py-2 px-4 min-h-[48px] min-w-[64px] text-gray-400 hover:text-gray-600 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded-lg"
             >
-              <Home className="h-5 w-5" />
+              <Home className="h-5 w-5" aria-hidden="true" />
               <span className="text-xs">Home</span>
             </button>
             <button
               onClick={() => router.push('/submit')}
-              className="flex flex-col items-center gap-0.5 py-2 px-4 text-gray-400 hover:text-gray-600 transition"
+              aria-label="Submit a new request"
+              className="flex flex-col items-center gap-0.5 py-2 px-4 min-h-[48px] min-w-[64px] text-gray-400 hover:text-gray-600 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded-lg"
             >
-              <Plus className="h-5 w-5" />
+              <Plus className="h-5 w-5" aria-hidden="true" />
               <span className="text-xs">Submit</span>
             </button>
           </div>

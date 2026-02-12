@@ -9,7 +9,7 @@ interface PerformanceMetricsProps {
 
 export function PerformanceMetrics({ stats }: PerformanceMetricsProps) {
   return (
-    <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl border border-white/50 p-6">
+    <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-xl border border-white/50 p-6">
       <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
         <Activity className="h-5 w-5 text-indigo-600" />
         Today's Performance

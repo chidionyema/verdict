@@ -2,6 +2,7 @@
 
 import { Suspense } from 'react';
 import { UnifiedDashboard } from '@/components/dashboard';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,8 +29,10 @@ function DashboardLoading() {
 
 export default function DashboardPage() {
   return (
-    <Suspense fallback={<DashboardLoading />}>
-      <UnifiedDashboard />
-    </Suspense>
+    <ErrorBoundary>
+      <Suspense fallback={<DashboardLoading />}>
+        <UnifiedDashboard />
+      </Suspense>
+    </ErrorBoundary>
   );
 }

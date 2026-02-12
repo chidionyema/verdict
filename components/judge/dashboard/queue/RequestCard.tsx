@@ -193,7 +193,7 @@ export function RequestCard({ request, isNewJudge = false }: RequestCardProps) {
 
           <button
             onClick={handleClick}
-            className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-5 py-2.5 rounded-xl font-semibold hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 group/btn"
+            className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-5 py-2.5 rounded-xl font-semibold hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5 group/btn focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
           >
             {request.request_type === 'comparison' ? 'Compare Options' : 'Start Verdict'}
             <ArrowRight className="h-4 w-4 inline ml-1.5 group-hover/btn:translate-x-1 transition-transform" />

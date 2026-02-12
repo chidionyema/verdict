@@ -23,8 +23,8 @@ export function PremiumSpotlight({ request }: PremiumSpotlightProps) {
   };
 
   return (
-    <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 p-1 rounded-3xl shadow-xl">
-      <div className="bg-white rounded-[22px] p-6">
+    <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 p-1 rounded-2xl shadow-xl">
+      <div className="bg-white rounded-[14px] p-6">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-3 flex-wrap">

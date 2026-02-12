@@ -93,7 +93,7 @@ export function UnifiedDashboard({ initialTab }: UnifiedDashboardProps) {
   };
 
   // Fetch seeker data
-  const fetchRequesterData = useCallback(async () => {
+  const fetchRequesterData = useCallback(async (signal?: AbortSignal) => {
     try {
       const supabase = createClient();
       const { data: { user }, error: authError } = await supabase.auth.getUser();
@@ -115,8 +115,8 @@ export function UnifiedDashboard({ initialTab }: UnifiedDashboardProps) {
       }
 
       const [requestsRes, notificationsRes] = await Promise.all([
-        fetch('/api/requests'),
-        fetch('/api/notifications?unread_only=true&limit=50'),
+        fetch('/api/requests', { signal }),
+        fetch('/api/notifications?unread_only=true&limit=50', { signal }),
       ]);
 
       if (requestsRes.ok) {
@@ -129,18 +129,20 @@ export function UnifiedDashboard({ initialTab }: UnifiedDashboardProps) {
         setUnreadNotifications(unread_count || 0);
       }
     } catch (err) {
+      // Ignore abort errors
+      if (err instanceof Error && err.name === 'AbortError') return;
       console.error('Error fetching requester data:', err);
       setError('Failed to load data.');
     }
   }, []);
 
   // Fetch judge data
-  const fetchJudgeData = useCallback(async () => {
+  const fetchJudgeData = useCallback(async (signal?: AbortSignal) => {
     setQueueLoading(true);
     try {
       const [queueRes, statsRes] = await Promise.all([
-        fetch('/api/judge/queue'),
-        fetch('/api/judge/stats'),
+        fetch('/api/judge/queue', { signal }),
+        fetch('/api/judge/stats', { signal }),
       ]);
 
       if (queueRes.ok) {
@@ -153,24 +155,30 @@ export function UnifiedDashboard({ initialTab }: UnifiedDashboardProps) {
         setJudgeStats(stats);
       }
     } catch (err) {
+      // Ignore abort errors
+      if (err instanceof Error && err.name === 'AbortError') return;
       console.error('Error fetching judge data:', err);
     } finally {
       setQueueLoading(false);
     }
   }, []);
 
-  // Initial data fetch
+  // Initial data fetch with AbortController for cleanup
   useEffect(() => {
+    const controller = new AbortController();
+
     const fetchAll = async () => {
       setLoading(true);
-      await fetchRequesterData();
+      await fetchRequesterData(controller.signal);
       if (roleMetrics.isJudge || activeTab === 'judge') {
-        await fetchJudgeData();
+        await fetchJudgeData(controller.signal);
       }
       setLoading(false);
     };
 
     fetchAll();
+
+    return () => controller.abort();
   }, [fetchRequesterData, fetchJudgeData, roleMetrics.isJudge, activeTab]);
 
   // Filtered queue
@@ -214,7 +222,7 @@ export function UnifiedDashboard({ initialTab }: UnifiedDashboardProps) {
             <p className="text-gray-600 mb-6">{error}</p>
             <Link
               href="/auth/login"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 min-h-[48px]"
             >
               Log In
             </Link>
@@ -320,7 +328,7 @@ function RequesterContent({
         </p>
         <Link
           href="/submit"
-          className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-medium hover:shadow-lg"
+          className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-medium hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 min-h-[48px]"
         >
           <Plus className="h-5 w-5" />
           Create Your First Request
@@ -349,7 +357,7 @@ function RequesterContent({
         <div className="text-center">
           <Link
             href="/requests"
-            className="inline-flex items-center gap-2 text-indigo-600 font-medium hover:text-indigo-700"
+            className="inline-flex items-center gap-2 text-indigo-600 font-medium hover:text-indigo-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded-lg px-2 py-1"
           >
             View all {requests.length} requests
             <ArrowRight className="h-4 w-4" />
@@ -412,7 +420,8 @@ function JudgeContent({
           <button
             onClick={onRefresh}
             disabled={queueLoading}
-            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50"
+            aria-label="Refresh queue"
+            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 min-h-[44px] min-w-[44px]"
           >
             <RefreshCw className={`h-5 w-5 ${queueLoading ? 'animate-spin' : ''}`} />
           </button>
@@ -460,7 +469,7 @@ function JudgeContent({
           {queue.length > 6 && (
             <Link
               href="/judge"
-              className="inline-flex items-center gap-2 text-indigo-600 font-medium hover:text-indigo-700"
+              className="inline-flex items-center gap-2 text-indigo-600 font-medium hover:text-indigo-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded-lg px-2 py-1"
             >
               View full queue ({queue.length} available)
               <ArrowRight className="h-4 w-4" />
@@ -469,7 +478,7 @@ function JudgeContent({
           <div>
             <Link
               href="/judge"
-              className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700"
+              className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded-lg px-2 py-1"
             >
               Open full judge dashboard for earnings, progression & more
               <ArrowRight className="h-3 w-3" />
@@ -514,7 +523,7 @@ function RequestPreviewCard({ request }: { request: VerdictRequest }) {
   return (
     <Link
       href={`/requests/${request.id}`}
-      className="block bg-white/80 backdrop-blur-sm border border-gray-200 rounded-2xl p-4 hover:shadow-md hover:-translate-y-0.5 transition-all"
+      className="block bg-white/80 backdrop-blur-sm border border-gray-200 rounded-2xl p-4 hover:shadow-md hover:-translate-y-0.5 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
     >
       <div className="flex items-start gap-3">
         <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center shrink-0">

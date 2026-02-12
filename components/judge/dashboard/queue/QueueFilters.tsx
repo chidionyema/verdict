@@ -59,7 +59,7 @@ export function QueueFilters({
   onRefresh,
 }: QueueFiltersProps) {
   return (
-    <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl border border-white/50 p-6">
+    <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-xl border border-white/50 p-4 transition-shadow">
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-6">
         <div>
           <div className="flex items-center gap-3 mb-2">
@@ -163,7 +163,7 @@ export function QueueFilters({
           </span>
           <button
             onClick={onRefresh}
-            className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white px-4 py-2 rounded-xl font-medium hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5"
+            className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white px-4 py-2 rounded-xl font-medium hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
           >
             <Clock className="h-4 w-4 inline mr-2" />
             Refresh
@@ -179,7 +179,7 @@ export function QueueFilters({
             <button
               key={category.value}
               onClick={() => setQueueFilter(category.value)}
-              className={`relative p-4 rounded-2xl border-2 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 ${
+              className={`relative p-4 rounded-2xl border-2 transition-all duration-300 hover:shadow-xl hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 ${
                 queueFilter === category.value
                   ? 'border-transparent shadow-lg'
                   : 'border-gray-200 hover:border-gray-300'

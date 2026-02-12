@@ -13,6 +13,7 @@ import { NewJudgeWelcomeTour, useWelcomeTour } from '@/components/judge/NewJudge
 import { MilestoneCelebration, useMilestoneCheck } from '@/components/judge/MilestoneCelebration';
 import { TierProgressIndicator } from '@/components/judge/TierProgressIndicator';
 import { StreakRewards } from '@/components/judge/StreakRewards';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 import {
   LoadingState,
@@ -35,6 +36,8 @@ import {
   EmptyQueue,
   NoMatchingResults,
   RequestCard,
+  JudgeDashboardTabs,
+  CollapsibleStatsSection,
   DEFAULT_STATS,
   getJudgeLevel,
   getAchievements,
@@ -43,6 +46,7 @@ import {
   type QueueFilter,
   type QueueSort,
   type EarningsTimeframe,
+  type JudgeTabType,
 } from '@/components/judge/dashboard';
 
 export const dynamic = 'force-dynamic';
@@ -67,9 +71,12 @@ function JudgeDashboardContent() {
   const [showAchievements, setShowAchievements] = useState(false);
   const [selectedTimeframe, setSelectedTimeframe] = useState<EarningsTimeframe>('weekly');
   const [earningsData, setEarningsData] = useState<Array<{ date: string; amount: number }>>([]);
+  const [earningsLoading, setEarningsLoading] = useState(false);
   const [queueLoading, setQueueLoading] = useState(false);
   const [queueError, setQueueError] = useState<string | null>(null);
+  const [statsError, setStatsError] = useState<string | null>(null);
   const [showQueueInfo, setShowQueueInfo] = useState(false);
+  const [activeTab, setActiveTab] = useState<JudgeTabType>('queue');
 
   // Check for submission success param
   useEffect(() => {
@@ -95,7 +102,16 @@ function JudgeDashboardContent() {
         case 'oldest':
           return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
         case 'earnings':
-          return 0;
+          // Sort by request tier (expert > pro > standard > community)
+          const tierPriority: Record<string, number> = {
+            expert: 4,
+            pro: 3,
+            standard: 2,
+            community: 1,
+          };
+          const aTier = tierPriority[a.request_tier || 'community'] || 1;
+          const bTier = tierPriority[b.request_tier || 'community'] || 1;
+          return bTier - aTier;
         default:
           return 0;
       }
@@ -154,13 +170,19 @@ function JudgeDashboardContent() {
           }
 
           try {
+            setStatsError(null);
             const statsRes = await fetch('/api/judge/stats', { signal: AbortSignal.timeout(10000) });
             if (statsRes.ok) {
               const statsData = await statsRes.json();
               setStats((prev) => ({ ...prev, ...statsData }));
+            } else {
+              setStatsError('Unable to load your stats. Some data may be outdated.');
             }
           } catch (statsError) {
             console.error('Stats fetch error:', statsError);
+            setStatsError(statsError instanceof Error && statsError.name === 'AbortError'
+              ? 'Stats request timed out'
+              : 'Failed to load stats');
           }
         }
       }
@@ -172,7 +194,9 @@ function JudgeDashboardContent() {
   };
 
   useEffect(() => {
+    const controller = new AbortController();
     fetchData();
+    return () => controller.abort();
   }, []);
 
   useEffect(() => {
@@ -183,24 +207,47 @@ function JudgeDashboardContent() {
     }
   }, [profile?.is_judge]);
 
-  // Generate mock earnings data
+  // Fetch real earnings data from API
   useEffect(() => {
-    const days = selectedTimeframe === 'daily' ? 24 : selectedTimeframe === 'weekly' ? 7 : 30;
-    const data = [];
-    for (let i = days - 1; i >= 0; i--) {
-      const date = new Date();
-      if (selectedTimeframe === 'daily') {
-        date.setHours(date.getHours() - i);
-      } else {
-        date.setDate(date.getDate() - i);
+    const controller = new AbortController();
+
+    async function fetchEarnings() {
+      if (!profile?.is_judge) return;
+
+      setEarningsLoading(true);
+      try {
+        const timeframeMap: Record<EarningsTimeframe, string> = {
+          daily: '7d',
+          weekly: '7d',
+          monthly: '30d',
+        };
+        const apiTimeframe = timeframeMap[selectedTimeframe] || '30d';
+
+        const res = await fetch(`/api/judge/earnings/chart?timeframe=${apiTimeframe}`, {
+          signal: controller.signal,
+        });
+
+        if (res.ok) {
+          const { data } = await res.json();
+          setEarningsData(data || []);
+        } else {
+          // Fallback to empty data on error - don't break the UI
+          setEarningsData([]);
+        }
+      } catch (err) {
+        if (err instanceof Error && err.name !== 'AbortError') {
+          console.error('Earnings fetch error:', err);
+          setEarningsData([]);
+        }
+      } finally {
+        setEarningsLoading(false);
       }
-      data.push({
-        date: date.toISOString(),
-        amount: Math.random() * 10 + 5 + (days - i) * 0.5,
-      });
     }
-    setEarningsData(data);
-  }, [selectedTimeframe]);
+
+    fetchEarnings();
+
+    return () => controller.abort();
+  }, [selectedTimeframe, profile?.is_judge]);
 
   const toggleJudge = async () => {
     if (!profile) return;
@@ -313,98 +360,141 @@ function JudgeDashboardContent() {
           />
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          <EarningsOverview
-            stats={stats}
-            selectedTimeframe={selectedTimeframe}
-            onTimeframeChange={setSelectedTimeframe}
-            earningsData={earningsData}
-          />
-          <div className="space-y-6">
-            <PerformanceMetrics stats={stats} />
-            <StreakRewards
-              currentStreak={stats.streak_days}
-              longestStreak={stats.streak_days}
-            />
-          </div>
-        </div>
-
-        <div className="mb-8">
-          <JudgeProgression
-            userId={profile?.id || ''}
-            currentStats={{
-              totalVerdicts: stats.verdicts_given,
-              avgRating: stats.average_quality_score || 4.0,
-              helpfulnessScore: stats.completion_rate,
-              specializations: [stats.best_category],
-            }}
-          />
-        </div>
-
-        {!profile?.is_judge ? (
-          <NotReadyToJudge />
-        ) : (
-          <div className="space-y-6">
-            <QueueFilters
-              isExpert={isExpert}
-              expertInfo={expertInfo}
-              queueType={queueType}
-              queueFilter={queueFilter}
-              setQueueFilter={setQueueFilter}
-              queueSort={queueSort}
-              setQueueSort={setQueueSort}
-              searchQuery={searchQuery}
-              setSearchQuery={setSearchQuery}
-              showQueueInfo={showQueueInfo}
-              setShowQueueInfo={setShowQueueInfo}
-              queue={queue}
-              filteredQueueLength={filteredQueue.length}
-              onRefresh={fetchData}
-            />
-
-            <div className="space-y-4">
-              {filteredQueue.length > 0 && <PremiumSpotlight request={filteredQueue[0]} />}
-
-              {queueLoading && <QueueLoading />}
-
-              {queueError && !queueLoading && (
-                <QueueError
-                  error={queueError}
-                  onRetry={() => {
-                    setQueueError(null);
-                    fetchData();
-                  }}
-                />
-              )}
-
-              {!queueLoading && !queueError && queue.length === 0 && <EmptyQueue onRefresh={fetchData} />}
-
-              {!queueLoading && !queueError && queue.length > 0 && filteredQueue.length === 0 && (
-                <NoMatchingResults
-                  onClearFilters={() => {
-                    setQueueFilter('all');
-                    setSearchQuery('');
-                  }}
-                />
-              )}
-
-              {!queueLoading && !queueError && filteredQueue.length > 1 && (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  {filteredQueue.slice(1).map((request) => (
-                    <RequestCard key={request.id} request={request} isNewJudge={isNewJudge} />
-                  ))}
-                </div>
-              )}
-            </div>
+        {/* Stats error notification */}
+        {statsError && (
+          <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-3" role="alert">
+            <svg className="h-5 w-5 text-amber-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <p className="text-sm text-amber-800">{statsError}</p>
+            <button
+              onClick={() => setStatsError(null)}
+              className="ml-auto p-1 text-amber-600 hover:text-amber-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 rounded"
+              aria-label="Dismiss stats error"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           </div>
         )}
 
-        {profile?.is_judge && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
-            <VerdictHistoryCard stats={stats} />
-            <ProTipsCard />
-            {profile && <CrossRolePrompt currentRole="judge" userId={profile.id} variant="card" />}
-          </div>
+        {/* Section Tabs - Queue is now primary */}
+        <JudgeDashboardTabs
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          queueCount={filteredQueue.length}
+          className="mb-6"
+        />
+
+        {/* Tab Content */}
+        {!profile?.is_judge ? (
+          <NotReadyToJudge />
+        ) : (
+          <>
+            {/* QUEUE TAB - Primary work area */}
+            {activeTab === 'queue' && (
+              <div className="space-y-6">
+                <QueueFilters
+                  isExpert={isExpert}
+                  expertInfo={expertInfo}
+                  queueType={queueType}
+                  queueFilter={queueFilter}
+                  setQueueFilter={setQueueFilter}
+                  queueSort={queueSort}
+                  setQueueSort={setQueueSort}
+                  searchQuery={searchQuery}
+                  setSearchQuery={setSearchQuery}
+                  showQueueInfo={showQueueInfo}
+                  setShowQueueInfo={setShowQueueInfo}
+                  queue={queue}
+                  filteredQueueLength={filteredQueue.length}
+                  onRefresh={fetchData}
+                />
+
+                <div className="space-y-4">
+                  {filteredQueue.length > 0 && <PremiumSpotlight request={filteredQueue[0]} />}
+
+                  {queueLoading && <QueueLoading />}
+
+                  {queueError && !queueLoading && (
+                    <QueueError
+                      error={queueError}
+                      onRetry={() => {
+                        setQueueError(null);
+                        fetchData();
+                      }}
+                    />
+                  )}
+
+                  {!queueLoading && !queueError && queue.length === 0 && <EmptyQueue onRefresh={fetchData} />}
+
+                  {!queueLoading && !queueError && queue.length > 0 && filteredQueue.length === 0 && (
+                    <NoMatchingResults
+                      onClearFilters={() => {
+                        setQueueFilter('all');
+                        setSearchQuery('');
+                      }}
+                    />
+                  )}
+
+                  {!queueLoading && !queueError && filteredQueue.length > 1 && (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      {filteredQueue.slice(1).map((request) => (
+                        <RequestCard key={request.id} request={request} isNewJudge={isNewJudge} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* STATS TAB - Earnings & Performance */}
+            {activeTab === 'stats' && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  <EarningsOverview
+                    stats={stats}
+                    selectedTimeframe={selectedTimeframe}
+                    onTimeframeChange={setSelectedTimeframe}
+                    earningsData={earningsData}
+                    isLoading={earningsLoading}
+                  />
+                  <div className="space-y-6">
+                    <PerformanceMetrics stats={stats} />
+                    <StreakRewards
+                      currentStreak={stats.streak_days}
+                      longestStreak={stats.streak_days}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <VerdictHistoryCard stats={stats} />
+                  <ProTipsCard />
+                </div>
+
+                {profile && (
+                  <CrossRolePrompt currentRole="judge" userId={profile.id} variant="card" />
+                )}
+              </div>
+            )}
+
+            {/* PROGRESSION TAB - Level & Achievements */}
+            {activeTab === 'progression' && (
+              <div className="space-y-6">
+                <JudgeProgression
+                  userId={profile?.id || ''}
+                  currentStats={{
+                    totalVerdicts: stats.verdicts_given,
+                    avgRating: stats.average_quality_score || 4.0,
+                    helpfulnessScore: stats.completion_rate,
+                    specializations: [stats.best_category],
+                  }}
+                />
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -451,17 +541,19 @@ function MilestoneCelebrationWrapper({ stats }: { stats: JudgeStats }) {
 
 export default function JudgeDashboardPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto mb-4" />
-            <p className="text-gray-500">Loading judge dashboard...</p>
+    <ErrorBoundary>
+      <Suspense
+        fallback={
+          <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto mb-4" />
+              <p className="text-gray-500">Loading judge dashboard...</p>
+            </div>
           </div>
-        </div>
-      }
-    >
-      <JudgeDashboardContent />
-    </Suspense>
+        }
+      >
+        <JudgeDashboardContent />
+      </Suspense>
+    </ErrorBoundary>
   );
 }
