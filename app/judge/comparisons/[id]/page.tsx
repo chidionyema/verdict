@@ -5,12 +5,16 @@ import { useRouter } from 'next/navigation';
 import {
   Clock, DollarSign, Send, ArrowLeft, Scale, CheckCircle,
   ThumbsUp, ThumbsDown, Plus, X, Star, Zap, Target,
-  AlertCircle, Lightbulb, Crown
+  AlertCircle, Lightbulb, Crown, Eye
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
 import { toast } from '@/components/ui/toast';
 import { TIER_CONFIGURATIONS, getTierConfig } from '@/lib/pricing/dynamic-pricing';
+import { useVerdictDraft, DraftSaveIndicator, DraftRestorationBanner } from '@/lib/hooks/useVerdictDraft';
+import { VerdictSubmittedCelebration } from '@/components/judge/VerdictSubmittedCelebration';
+import { CharacterGuidance, ResponseTemplates, InlineHelp } from '@/components/judge/SmartFeedbackGuidance';
+import { MobileStickySubmit } from '@/components/judge/MobileStickySubmit';
 
 // Helper to get judge earning for a request tier
 function getJudgeEarningForTier(tier?: string): string {
@@ -80,9 +84,78 @@ export default function JudgeComparisonPage({
   const [submitting, setSubmitting] = useState(false);
   const [startTime] = useState(Date.now());
 
+  // New features state
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [earnedAmount, setEarnedAmount] = useState(0);
+  const [showDraftBanner, setShowDraftBanner] = useState(false);
+  const [judgeStats, setJudgeStats] = useState({ verdicts: 0, streak: 0 });
+
+  // Draft management
+  const { saveDraft, restoreDraft, clearDraft, saveStatus, hasDraft, lastSaved } = useVerdictDraft(id);
+
   useEffect(() => {
     fetchComparison();
+    fetchJudgeStats();
   }, [id]);
+
+  // Check for existing draft on mount
+  useEffect(() => {
+    if (hasDraft) {
+      setShowDraftBanner(true);
+    }
+  }, [hasDraft]);
+
+  // Auto-save draft when form changes
+  useEffect(() => {
+    if (chosenOption || reasoning || optionAFeedback || optionBFeedback) {
+      saveDraft({
+        chosenOption: chosenOption || undefined,
+        reasoning,
+        optionAFeedback,
+        optionBFeedback,
+        optionARating,
+        optionBRating,
+      });
+    }
+  }, [chosenOption, reasoning, optionAFeedback, optionBFeedback, optionARating, optionBRating, saveDraft]);
+
+  const fetchJudgeStats = async () => {
+    try {
+      const res = await fetch('/api/judge/stats');
+      if (res.ok) {
+        const data = await res.json();
+        setJudgeStats({
+          verdicts: data.verdicts_given || 0,
+          streak: data.streak_days || 0,
+        });
+      }
+    } catch (err) {
+      // Non-critical, ignore errors
+    }
+  };
+
+  const handleRestoreDraft = () => {
+    const draft = restoreDraft();
+    if (draft) {
+      if (draft.chosenOption) setChosenOption(draft.chosenOption as 'A' | 'B');
+      if (draft.reasoning) setReasoning(draft.reasoning);
+      if (draft.optionAFeedback) setOptionAFeedback(draft.optionAFeedback);
+      if (draft.optionBFeedback) setOptionBFeedback(draft.optionBFeedback);
+      if (draft.optionARating) setOptionARating(draft.optionARating);
+      if (draft.optionBRating) setOptionBRating(draft.optionBRating);
+    }
+    setShowDraftBanner(false);
+  };
+
+  const handleDiscardDraft = () => {
+    clearDraft();
+    setShowDraftBanner(false);
+  };
+
+  const handleCloseCelebration = () => {
+    setShowCelebration(false);
+    router.push('/judge?success=comparison');
+  };
 
   useEffect(() => {
     if (timeRemaining > 0) {
@@ -251,7 +324,11 @@ export default function JudgeComparisonPage({
         throw new Error(error.error || 'Failed to submit verdict');
       }
 
-      router.push('/judge?success=comparison');
+      // Clear draft and show celebration
+      clearDraft();
+      const earning = parseFloat(getEarningAmount());
+      setEarnedAmount(earning);
+      setShowCelebration(true);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to submit verdict');
       setSubmitting(false);
@@ -315,9 +392,23 @@ export default function JudgeComparisonPage({
       </div>
 
       <div className="max-w-6xl mx-auto px-4 py-8">
+        {/* Draft restoration banner */}
+        {showDraftBanner && (
+          <div className="mb-6">
+            <DraftRestorationBanner
+              onRestore={handleRestoreDraft}
+              onDiscard={handleDiscardDraft}
+              lastSaved={lastSaved}
+            />
+          </div>
+        )}
+
         {/* Question */}
         <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
-          <h1 className="text-xl font-bold text-gray-900 mb-2">{comparison.question}</h1>
+          <div className="flex items-center justify-between mb-2">
+            <h1 className="text-xl font-bold text-gray-900">{comparison.question}</h1>
+            <DraftSaveIndicator status={saveStatus} lastSaved={lastSaved} />
+          </div>
           <div className="flex flex-wrap gap-2">
             <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm">
               {comparison.category}
@@ -554,21 +645,48 @@ export default function JudgeComparisonPage({
 
           {/* Main Reasoning */}
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Why do you recommend this option? (min 20 characters)
-            </label>
+            <div className="flex items-center gap-2 mb-2">
+              <label className="block text-sm font-medium text-gray-700">
+                Why do you recommend this option?
+              </label>
+              <InlineHelp topic="reasoning" />
+            </div>
+
+            {/* Response Templates */}
+            <div className="mb-3">
+              <ResponseTemplates
+                category={comparison.category}
+                verdictType="comparison"
+                onSelectTemplate={(template) => {
+                  if (reasoning.trim()) {
+                    setReasoning(reasoning + '\n\n' + template);
+                  } else {
+                    setReasoning(template);
+                  }
+                }}
+              />
+            </div>
+
             <textarea
               value={reasoning}
               onChange={(e) => setReasoning(e.target.value)}
               placeholder="Explain your reasoning clearly so the person can make an informed decision..."
               rows={4}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              maxLength={500}
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 ${
+                reasoning.length === 0 ? 'border-gray-300' :
+                reasoning.length < 20 ? 'border-red-300' :
+                reasoning.length < 100 ? 'border-amber-300' : 'border-green-300'
+              }`}
             />
-            <p className={`text-sm mt-1 ${
-              reasoning.length < 20 ? 'text-red-500' : reasoning.length > 100 ? 'text-green-600' : 'text-blue-600'
-            }`}>
-              {reasoning.length}/500 characters {reasoning.length < 20 ? '(min 20)' : reasoning.length > 100 ? '- Great detail!' : '- Good start'}
-            </p>
+            <CharacterGuidance
+              value={reasoning}
+              minLength={20}
+              goodLength={100}
+              excellentLength={200}
+              maxLength={500}
+              fieldName="reasoning"
+            />
           </div>
 
           {/* Budget Consideration */}
@@ -738,6 +856,28 @@ export default function JudgeComparisonPage({
           </ul>
         </div>
       </div>
+
+      {/* Verdict Submitted Celebration */}
+      <VerdictSubmittedCelebration
+        isOpen={showCelebration}
+        onClose={handleCloseCelebration}
+        earnings={earnedAmount}
+        verdictType="comparison"
+        verdictSummary={reasoning.slice(0, 100)}
+        currentStreak={judgeStats.streak}
+        totalVerdicts={judgeStats.verdicts + 1}
+        requestCategory={comparison?.category}
+      />
+
+      {/* Mobile Sticky Submit Button */}
+      <MobileStickySubmit
+        canSubmit={canSubmit()}
+        isSubmitting={submitting}
+        earnings={getEarningAmount()}
+        onSubmit={handleSubmit}
+        submitLabel="Submit Comparison Verdict"
+        verdictType="comparison"
+      />
     </div>
   );
 }

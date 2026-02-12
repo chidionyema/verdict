@@ -9,6 +9,10 @@ import {
 import Image from 'next/image';
 import { toast } from '@/components/ui/toast';
 import { TIER_CONFIGURATIONS, getTierConfig } from '@/lib/pricing/dynamic-pricing';
+import { useVerdictDraft, DraftSaveIndicator, DraftRestorationBanner } from '@/lib/hooks/useVerdictDraft';
+import { VerdictSubmittedCelebration } from '@/components/judge/VerdictSubmittedCelebration';
+import { CharacterGuidance, ResponseTemplates, InlineHelp } from '@/components/judge/SmartFeedbackGuidance';
+import { MobileStickySubmit } from '@/components/judge/MobileStickySubmit';
 
 // Helper to get judge earning for a request tier
 function getJudgeEarningForTier(tier?: string): string {
@@ -72,9 +76,78 @@ export default function JudgeSplitTestPage({
   const [submitting, setSubmitting] = useState(false);
   const [startTime] = useState(Date.now());
 
+  // New features state
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [earnedAmount, setEarnedAmount] = useState(0);
+  const [showDraftBanner, setShowDraftBanner] = useState(false);
+  const [judgeStats, setJudgeStats] = useState({ verdicts: 0, streak: 0 });
+
+  // Draft management
+  const { saveDraft, restoreDraft, clearDraft, saveStatus, hasDraft, lastSaved } = useVerdictDraft(id);
+
   useEffect(() => {
     fetchSplitTest();
+    fetchJudgeStats();
   }, [id]);
+
+  // Check for existing draft on mount
+  useEffect(() => {
+    if (hasDraft) {
+      setShowDraftBanner(true);
+    }
+  }, [hasDraft]);
+
+  // Auto-save draft when form changes
+  useEffect(() => {
+    if (winnerVariant || reasoning || variantAStrengths || variantBStrengths) {
+      saveDraft({
+        winner: winnerVariant || undefined,
+        reasoning,
+        variantAScore,
+        variantBScore,
+        hypothesisValidation: hypothesisValidation || undefined,
+        confidence: confidenceScore,
+      });
+    }
+  }, [winnerVariant, reasoning, variantAScore, variantBScore, hypothesisValidation, confidenceScore, saveDraft]);
+
+  const fetchJudgeStats = async () => {
+    try {
+      const res = await fetch('/api/judge/stats');
+      if (res.ok) {
+        const data = await res.json();
+        setJudgeStats({
+          verdicts: data.verdicts_given || 0,
+          streak: data.streak_days || 0,
+        });
+      }
+    } catch (err) {
+      // Non-critical, ignore errors
+    }
+  };
+
+  const handleRestoreDraft = () => {
+    const draft = restoreDraft();
+    if (draft) {
+      if (draft.winner) setWinnerVariant(draft.winner as 'A' | 'B' | 'tie');
+      if (draft.reasoning) setReasoning(draft.reasoning);
+      if (draft.variantAScore) setVariantAScore(draft.variantAScore);
+      if (draft.variantBScore) setVariantBScore(draft.variantBScore);
+      if (draft.hypothesisValidation) setHypothesisValidation(draft.hypothesisValidation as any);
+      if (draft.confidence) setConfidenceScore(draft.confidence);
+    }
+    setShowDraftBanner(false);
+  };
+
+  const handleDiscardDraft = () => {
+    clearDraft();
+    setShowDraftBanner(false);
+  };
+
+  const handleCloseCelebration = () => {
+    setShowCelebration(false);
+    router.push('/judge?success=split_test');
+  };
 
   useEffect(() => {
     if (timeRemaining > 0) {
@@ -142,8 +215,11 @@ export default function JudgeSplitTestPage({
         throw new Error(error.error || 'Failed to submit verdict');
       }
 
-      toast.success('Split test verdict submitted successfully!');
-      router.push('/judge?success=split_test');
+      // Clear draft and show celebration
+      clearDraft();
+      const earning = parseFloat(getEarningAmount());
+      setEarnedAmount(earning);
+      setShowCelebration(true);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to submit verdict');
       setSubmitting(false);
@@ -210,9 +286,23 @@ export default function JudgeSplitTestPage({
       </div>
 
       <div className="max-w-6xl mx-auto px-4 py-8">
+        {/* Draft restoration banner */}
+        {showDraftBanner && (
+          <div className="mb-6">
+            <DraftRestorationBanner
+              onRestore={handleRestoreDraft}
+              onDiscard={handleDiscardDraft}
+              lastSaved={lastSaved}
+            />
+          </div>
+        )}
+
         {/* Test Overview */}
         <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
-          <h1 className="text-xl font-bold text-gray-900 mb-2">{splitTest.title}</h1>
+          <div className="flex items-center justify-between mb-2">
+            <h1 className="text-xl font-bold text-gray-900">{splitTest.title}</h1>
+            <DraftSaveIndicator status={saveStatus} lastSaved={lastSaved} />
+          </div>
           <p className="text-gray-600 mb-4">{splitTest.description}</p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -436,21 +526,48 @@ export default function JudgeSplitTestPage({
 
           {/* Main Reasoning */}
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Explain your reasoning (min 30 characters)
-            </label>
+            <div className="flex items-center gap-2 mb-2">
+              <label className="block text-sm font-medium text-gray-700">
+                Explain your reasoning
+              </label>
+              <InlineHelp topic="reasoning" />
+            </div>
+
+            {/* Response Templates */}
+            <div className="mb-3">
+              <ResponseTemplates
+                category={splitTest.category}
+                verdictType="split_test"
+                onSelectTemplate={(template) => {
+                  if (reasoning.trim()) {
+                    setReasoning(reasoning + '\n\n' + template);
+                  } else {
+                    setReasoning(template);
+                  }
+                }}
+              />
+            </div>
+
             <textarea
               value={reasoning}
               onChange={(e) => setReasoning(e.target.value)}
               placeholder="Why did you choose this winner? What evidence supports your decision?"
               rows={4}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+              maxLength={500}
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 ${
+                reasoning.length === 0 ? 'border-gray-300' :
+                reasoning.length < 30 ? 'border-red-300' :
+                reasoning.length < 150 ? 'border-amber-300' : 'border-green-300'
+              }`}
             />
-            <p className={`text-sm mt-1 ${
-              reasoning.length < 30 ? 'text-red-500' : reasoning.length > 150 ? 'text-green-600' : 'text-blue-600'
-            }`}>
-              {reasoning.length}/500 characters {reasoning.length < 30 ? '(min 30)' : reasoning.length > 150 ? '- Great detail!' : ''}
-            </p>
+            <CharacterGuidance
+              value={reasoning}
+              minLength={30}
+              goodLength={100}
+              excellentLength={200}
+              maxLength={500}
+              fieldName="reasoning"
+            />
           </div>
 
           {/* Additional Insights */}
@@ -515,6 +632,28 @@ export default function JudgeSplitTestPage({
           </ul>
         </div>
       </div>
+
+      {/* Verdict Submitted Celebration */}
+      <VerdictSubmittedCelebration
+        isOpen={showCelebration}
+        onClose={handleCloseCelebration}
+        earnings={earnedAmount}
+        verdictType="split_test"
+        verdictSummary={reasoning.slice(0, 100)}
+        currentStreak={judgeStats.streak}
+        totalVerdicts={judgeStats.verdicts + 1}
+        requestCategory={splitTest?.category}
+      />
+
+      {/* Mobile Sticky Submit Button */}
+      <MobileStickySubmit
+        canSubmit={canSubmit()}
+        isSubmitting={submitting}
+        earnings={getEarningAmount()}
+        onSubmit={handleSubmit}
+        submitLabel="Submit Split Test Verdict"
+        verdictType="split_test"
+      />
     </div>
   );
 }

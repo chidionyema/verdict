@@ -3,10 +3,19 @@
 import { useState, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Clock, DollarSign, Send, ArrowLeft, Maximize2, Info, CheckCircle, Award } from 'lucide-react';
+import { Clock, DollarSign, Send, ArrowLeft, Maximize2, Info, CheckCircle, Award, Eye } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import type { VerdictRequest } from '@/lib/database.types';
 import { TIER_CONFIGURATIONS, getTierConfig } from '@/lib/pricing/dynamic-pricing';
+import { useVerdictDraft, DraftSaveIndicator, DraftRestorationBanner } from '@/lib/hooks/useVerdictDraft';
+import { VerdictPreviewModal } from '@/components/judge/VerdictPreviewModal';
+import { VerdictSubmittedCelebration } from '@/components/judge/VerdictSubmittedCelebration';
+import {
+  TonePreSelector,
+  SmartTextarea,
+  InlineHelp,
+} from '@/components/judge/SmartFeedbackGuidance';
+import { MobileStickySubmit } from '@/components/judge/MobileStickySubmit';
 
 // Helper to get judge earning for a request tier
 function getJudgeEarningForTier(tier?: string): string {
@@ -40,10 +49,78 @@ export default function JudgeVerdictPage({
   const [alreadyJudged, setAlreadyJudged] = useState(false);
   const [existingVerdictId, setExistingVerdictId] = useState<string | null>(null);
 
+  // New features state
+  const [showPreview, setShowPreview] = useState(false);
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [earnedAmount, setEarnedAmount] = useState(0);
+  const [showDraftBanner, setShowDraftBanner] = useState(false);
+  const [judgeStats, setJudgeStats] = useState({ verdicts: 0, streak: 0 });
+
+  // Draft management
+  const { saveDraft, restoreDraft, clearDraft, saveStatus, hasDraft, lastSaved } = useVerdictDraft(id);
+
   useEffect(() => {
     fetchRequest();
     checkAlreadyJudged();
+    fetchJudgeStats();
   }, [id]);
+
+  // Check for existing draft on mount
+  useEffect(() => {
+    if (hasDraft && !alreadyJudged) {
+      setShowDraftBanner(true);
+    }
+  }, [hasDraft, alreadyJudged]);
+
+  // Auto-save draft when form changes
+  useEffect(() => {
+    if (feedback || rating !== 7 || tone !== 'constructive') {
+      saveDraft({ rating, feedback, tone });
+    }
+  }, [rating, feedback, tone, saveDraft]);
+
+  // Pre-select tone based on requested tone
+  useEffect(() => {
+    if (request?.requested_tone && !hasDraft) {
+      if (request.requested_tone === 'encouraging') {
+        setTone('encouraging');
+      } else if (request.requested_tone === 'brutally_honest') {
+        setTone('honest');
+      } else {
+        setTone('constructive');
+      }
+    }
+  }, [request?.requested_tone, hasDraft]);
+
+  const fetchJudgeStats = async () => {
+    try {
+      const res = await fetch('/api/judge/stats');
+      if (res.ok) {
+        const data = await res.json();
+        setJudgeStats({
+          verdicts: data.verdicts_given || 0,
+          streak: data.streak_days || 0,
+        });
+      }
+    } catch (err) {
+      // Non-critical, ignore errors
+    }
+  };
+
+  const handleRestoreDraft = () => {
+    const draft = restoreDraft();
+    if (draft) {
+      if (draft.rating) setRating(draft.rating);
+      if (draft.feedback) setFeedback(draft.feedback);
+      if (draft.tone) setTone(draft.tone);
+    }
+    setShowDraftBanner(false);
+  };
+
+  const handleDiscardDraft = () => {
+    clearDraft();
+    setShowDraftBanner(false);
+  };
 
   const checkAlreadyJudged = async () => {
     try {
@@ -97,6 +174,14 @@ export default function JudgeVerdictPage({
     }
   };
 
+  const handlePreviewSubmit = () => {
+    if (feedback.length < 50) {
+      setError('Please provide at least 50 characters of feedback');
+      return;
+    }
+    setShowPreview(true);
+  };
+
   const handleSubmit = async () => {
     if (feedback.length < 50) {
       setError('Please provide at least 50 characters of feedback');
@@ -105,6 +190,7 @@ export default function JudgeVerdictPage({
 
     setSubmitting(true);
     setError('');
+    setShowPreview(false);
 
     try {
       const res = await fetch('/api/judge/respond', {
@@ -123,11 +209,20 @@ export default function JudgeVerdictPage({
         throw new Error(data.error || 'Failed to submit verdict');
       }
 
-      router.push('/judge?submitted=true');
+      // Clear draft and show celebration
+      clearDraft();
+      const earning = parseFloat(getJudgeEarningForTier((request as any)?.request_tier));
+      setEarnedAmount(earning);
+      setShowCelebration(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong');
       setSubmitting(false);
     }
+  };
+
+  const handleCloseCelebration = () => {
+    setShowCelebration(false);
+    router.push('/judge?submitted=true');
   };
 
   if (loading) {
@@ -323,22 +418,37 @@ export default function JudgeVerdictPage({
             ) : (
               /* Verdict Form */
               <>
-                <h2 className="text-sm font-semibold text-gray-900 mb-1">
-                  Your Verdict
-                </h2>
+                {/* Draft restoration banner */}
+                {showDraftBanner && (
+                  <DraftRestorationBanner
+                    onRestore={handleRestoreDraft}
+                    onDiscard={handleDiscardDraft}
+                    lastSaved={lastSaved}
+                  />
+                )}
+
+                <div className="flex items-center justify-between mb-1">
+                  <h2 className="text-sm font-semibold text-gray-900">
+                    Your Verdict
+                  </h2>
+                  <DraftSaveIndicator status={saveStatus} lastSaved={lastSaved} />
+                </div>
                 <p className="text-xs text-gray-500 mb-4">
                   {request.requested_tone === 'encouraging'
-                    ? 'The seeker wants encouraging, supportive feedback. Be gentle and focus on positives while still being helpful.'
+                    ? 'The requester wants encouraging, supportive feedback. Be gentle and focus on positives while still being helpful.'
                     : request.requested_tone === 'brutally_honest'
-                    ? 'The seeker wants brutally honest feedback with no sugar-coating. Be direct and straightforward in your assessment.'
+                    ? 'The requester wants brutally honest feedback with no sugar-coating. Be direct and straightforward in your assessment.'
                     : 'Give one clear recommendation, explain why in a few sentences, and keep your tone kind and direct.'}
                 </p>
 
             {/* Rating */}
             <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Step 1 · Overall rating: {rating}/10
-              </label>
+              <div className="flex items-center gap-2 mb-1">
+                <label className="block text-sm font-medium text-gray-700">
+                  Step 1 · Overall rating: {rating}/10
+                </label>
+                <InlineHelp topic="rating" />
+              </div>
               <p className="text-xs text-gray-500 mb-2">
                 Use your gut: 1–3 = not working, 4–6 = mixed, 7–10 = strong.
               </p>
@@ -348,7 +458,7 @@ export default function JudgeVerdictPage({
                 max="10"
                 value={rating}
                 onChange={(e) => setRating(parseInt(e.target.value))}
-                className="w-full"
+                className="w-full accent-indigo-600"
               />
               <div className="flex justify-between text-xs text-gray-500 mt-1">
                 <span>Poor</span>
@@ -356,142 +466,76 @@ export default function JudgeVerdictPage({
               </div>
             </div>
 
-            {/* Tone Selection */}
+            {/* Tone Selection - Enhanced */}
             <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Step 2 · Feedback tone
-              </label>
-              <div className="flex space-x-2">
-                {(['honest', 'constructive', 'encouraging'] as const).map((t) => (
-                  <button
-                    key={t}
-                    onClick={() => setTone(t)}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition cursor-pointer ${
-                      tone === t
-                        ? t === 'honest'
-                          ? 'bg-blue-100 text-blue-700 border-2 border-blue-500'
-                          : t === 'constructive'
-                          ? 'bg-yellow-100 text-yellow-700 border-2 border-yellow-500'
-                          : 'bg-green-100 text-green-700 border-2 border-green-500'
-                        : 'bg-gray-100 text-gray-600 border-2 border-transparent'
-                    }`}
-                  >
-                    {t.charAt(0).toUpperCase() + t.slice(1)}
-                  </button>
-                ))}
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-sm font-medium text-gray-700">Step 2 · Feedback tone</span>
               </div>
-
-              {/* Tone mismatch warning */}
-              {request.requested_tone && (() => {
-                const requestedTone = request.requested_tone;
-                const isMismatch =
-                  (requestedTone === 'encouraging' && tone === 'honest') ||
-                  (requestedTone === 'brutally_honest' && tone === 'encouraging') ||
-                  (requestedTone === 'honest' && tone === 'encouraging');
-
-                if (isMismatch) {
-                  return (
-                    <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-start gap-2">
-                      <Info className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
-                      <p className="text-sm text-amber-800">
-                        <strong>Note:</strong> The seeker requested{' '}
-                        <span className="font-semibold">
-                          {requestedTone === 'encouraging' ? 'encouraging' :
-                           requestedTone === 'brutally_honest' ? 'brutally honest' : 'honest'}
-                        </span>{' '}
-                        feedback. Your "{tone}" tone may not match their preference.
-                      </p>
-                    </div>
-                  );
-                }
-                return null;
-              })()}
-            </div>
-
-            {/* Feedback Text */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Step 3 · Your written feedback
-              </label>
-              <textarea
-                value={feedback}
-                onChange={(e) => setFeedback(e.target.value)}
-                placeholder="Provide specific, helpful feedback based on the context..."
-                className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${
-                  feedback.length > 0 && feedback.length < 50
-                    ? 'border-red-300'
-                    : feedback.length >= 120
-                      ? 'border-green-300'
-                      : 'border-gray-300'
-                }`}
-                rows={5}
-                maxLength={500}
+              <TonePreSelector
+                requestedTone={request.requested_tone || undefined}
+                selectedTone={tone}
+                onToneChange={setTone}
               />
-
-              {/* Enhanced Character Counter */}
-              <div className="mt-2 space-y-2">
-                {/* Progress Bar */}
-                <div className="flex items-center gap-3">
-                  <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full transition-all duration-300 ${
-                        feedback.length < 50
-                          ? 'bg-red-400'
-                          : feedback.length < 200
-                            ? 'bg-green-400'
-                            : 'bg-green-500'
-                      }`}
-                      style={{ width: `${Math.min((feedback.length / 500) * 100, 100)}%` }}
-                    />
-                  </div>
-                  <span className={`text-sm font-medium ${
-                    feedback.length < 50 ? 'text-red-600' : 'text-green-600'
-                  }`}>
-                    {feedback.length}/500
-                  </span>
-                </div>
-
-                {/* Status Message */}
-                <div className="flex items-center justify-between text-xs">
-                  {feedback.length < 50 ? (
-                    <span className="text-red-600">
-                      Need {50 - feedback.length} more characters (minimum 50)
-                    </span>
-                  ) : feedback.length < 120 ? (
-                    <span className="text-green-600 flex items-center gap-1">
-                      <CheckCircle className="h-3 w-3" />
-                      Good! More detail = better quality.
-                    </span>
-                  ) : (
-                    <span className="text-green-600 flex items-center gap-1">
-                      <CheckCircle className="h-3 w-3" />
-                      Excellent detailed feedback!
-                    </span>
-                  )}
-                  <span className="text-gray-400">{feedback.length >= 50 ? 'Ready to submit' : ''}</span>
-                </div>
-              </div>
             </div>
 
-            {/* Submit Button - Shows earnings */}
-            <button
-              onClick={handleSubmit}
-              disabled={feedback.length < 50 || submitting}
-              className={`w-full py-4 min-h-[56px] rounded-xl font-bold transition flex items-center justify-center cursor-pointer ${
-                feedback.length < 50 || submitting
-                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 shadow-lg hover:shadow-xl'
-              }`}
-            >
-              {submitting ? (
-                'Submitting...'
-              ) : (
-                <>
-                  <Send className="h-5 w-5 mr-2" />
-                  Submit & Earn ${getJudgeEarningForTier((request as any)?.request_tier)}
-                </>
-              )}
-            </button>
+            {/* Feedback Text - Enhanced */}
+            <div className="mb-6">
+              <SmartTextarea
+                value={feedback}
+                onChange={setFeedback}
+                placeholder="Provide specific, helpful feedback based on the context..."
+                minLength={50}
+                goodLength={120}
+                excellentLength={200}
+                maxLength={500}
+                rows={5}
+                category={request.category}
+                verdictType="standard"
+                showTemplates={true}
+                helpTopic="feedback"
+                label="Step 3 · Your written feedback"
+              />
+            </div>
+
+            {/* Action Buttons */}
+            <div className="space-y-3">
+              {/* Preview Button */}
+              <button
+                onClick={handlePreviewSubmit}
+                disabled={feedback.length < 50}
+                className={`w-full py-3 rounded-xl font-medium transition flex items-center justify-center cursor-pointer ${
+                  feedback.length < 50
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100'
+                }`}
+              >
+                <Eye className="h-4 w-4 mr-2" />
+                Preview Before Submitting
+              </button>
+
+              {/* Submit Button - Shows earnings */}
+              <button
+                onClick={handleSubmit}
+                disabled={feedback.length < 50 || submitting}
+                className={`w-full py-4 min-h-[56px] rounded-xl font-bold transition flex items-center justify-center cursor-pointer ${
+                  feedback.length < 50 || submitting
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-green-500 to-emerald-600 text-white hover:from-green-600 hover:to-emerald-700 shadow-lg hover:shadow-xl'
+                }`}
+              >
+                {submitting ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+                    Submitting...
+                  </>
+                ) : (
+                  <>
+                    <Send className="h-5 w-5 mr-2" />
+                    Submit & Earn ${getJudgeEarningForTier((request as any)?.request_tier)}
+                  </>
+                )}
+              </button>
+            </div>
 
             {/* Earnings Info */}
             <div className="mt-4 p-3 rounded-lg bg-green-50 border border-green-200 text-xs text-green-800">
@@ -552,6 +596,42 @@ export default function JudgeVerdictPage({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Verdict Preview Modal */}
+      <VerdictPreviewModal
+        isOpen={showPreview}
+        onClose={() => setShowPreview(false)}
+        onSubmit={handleSubmit}
+        rating={rating}
+        feedback={feedback}
+        tone={tone}
+        isSubmitting={submitting}
+      />
+
+      {/* Verdict Submitted Celebration */}
+      <VerdictSubmittedCelebration
+        isOpen={showCelebration}
+        onClose={handleCloseCelebration}
+        earnings={earnedAmount}
+        verdictType="standard"
+        verdictSummary={feedback.slice(0, 100)}
+        currentStreak={judgeStats.streak}
+        totalVerdicts={judgeStats.verdicts + 1}
+        requestCategory={request?.category}
+      />
+
+      {/* Mobile Sticky Submit Button */}
+      {!alreadyJudged && (
+        <MobileStickySubmit
+          canSubmit={feedback.length >= 50}
+          isSubmitting={submitting}
+          earnings={getJudgeEarningForTier((request as any)?.request_tier)}
+          onSubmit={handleSubmit}
+          onPreview={handlePreviewSubmit}
+          submitLabel={`Submit & Earn $${getJudgeEarningForTier((request as any)?.request_tier)}`}
+          verdictType="standard"
+        />
       )}
     </div>
   );
