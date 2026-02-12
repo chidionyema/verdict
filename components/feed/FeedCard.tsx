@@ -1,10 +1,31 @@
 'use client';
 
-import { useState } from 'react';
-import { Heart, X, MessageSquare, Clock, Eye, Camera, FileText, Zap, SkipForward, Sparkles } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Heart,
+  X,
+  MessageSquare,
+  Clock,
+  Eye,
+  Camera,
+  FileText,
+  Zap,
+  SkipForward,
+  Sparkles,
+  ChevronUp,
+  ChevronDown,
+  ThumbsUp,
+  ThumbsDown,
+  Send,
+  Lightbulb,
+  Check,
+  AlertCircle,
+  Star,
+  Users,
+} from 'lucide-react';
 import { triggerHaptic } from '@/components/ui/Confetti';
 
-// Flexible type that works with both feedback_requests and verdict_requests
 interface FeedRequest {
   id: string;
   user_id: string;
@@ -30,266 +51,509 @@ interface FeedCardProps {
   judging: boolean;
 }
 
-export function FeedCard({ item, onJudge, onSkip, judging }: FeedCardProps) {
-  const [showDetailedFeedback, setShowDetailedFeedback] = useState(false);
-  const [detailedFeedback, setDetailedFeedback] = useState('');
+const QUICK_RESPONSES = {
+  positive: [
+    { emoji: '🔥', text: 'This looks great! Really strong overall.' },
+    { emoji: '👍', text: 'Nice work! This is well done.' },
+    { emoji: '✨', text: 'Love this! Keep it up.' },
+    { emoji: '💯', text: 'Solid choice, this works well.' },
+  ],
+  negative: [
+    { emoji: '🤔', text: 'This could use some work. Consider making changes.' },
+    { emoji: '💡', text: 'Not quite there yet. Try a different approach.' },
+    { emoji: '📝', text: 'Room for improvement here.' },
+    { emoji: '🔄', text: 'I\'d suggest trying something different.' },
+  ],
+  roastPositive: [
+    { emoji: '🔥', text: 'Okay, I\'ll admit it - this is actually fire.' },
+    { emoji: '😤', text: 'Damn, you didn\'t have to go this hard.' },
+    { emoji: '💪', text: 'Not bad at all. Respect.' },
+  ],
+  roastNegative: [
+    { emoji: '💀', text: 'This ain\'t it, chief. Back to the drawing board.' },
+    { emoji: '😬', text: 'Yikes. This needs serious work.' },
+    { emoji: '🗑️', text: 'Delete this and start over.' },
+  ],
+};
 
-  // Handle both feedback_requests (question) and verdict_requests (text_content)
+const CATEGORY_CONFIG: Record<string, { icon: typeof Camera; gradient: string; lightBg: string; color: string }> = {
+  appearance: { icon: Camera, gradient: 'from-pink-500 to-rose-500', lightBg: 'bg-pink-50', color: 'text-pink-600' },
+  writing: { icon: FileText, gradient: 'from-emerald-500 to-green-500', lightBg: 'bg-emerald-50', color: 'text-emerald-600' },
+  career: { icon: MessageSquare, gradient: 'from-blue-500 to-indigo-500', lightBg: 'bg-blue-50', color: 'text-blue-600' },
+  profile: { icon: Users, gradient: 'from-purple-500 to-violet-500', lightBg: 'bg-purple-50', color: 'text-purple-600' },
+  decision: { icon: Lightbulb, gradient: 'from-amber-500 to-orange-500', lightBg: 'bg-amber-50', color: 'text-amber-600' },
+  other: { icon: Star, gradient: 'from-gray-500 to-slate-500', lightBg: 'bg-gray-50', color: 'text-gray-600' },
+};
+
+export function FeedCard({ item, onJudge, onSkip, judging }: FeedCardProps) {
+  const [mode, setMode] = useState<'quick' | 'detailed'>('quick');
+  const [selectedQuickResponse, setSelectedQuickResponse] = useState<{ type: 'positive' | 'negative'; index: number } | null>(null);
+  const [customFeedback, setCustomFeedback] = useState('');
+  const [showImageExpanded, setShowImageExpanded] = useState(false);
+  const [animatingOut, setAnimatingOut] = useState<'left' | 'right' | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
   const displayQuestion = item.question || item.text_content || '';
   const displayContext = item.context || '';
   const isRoastMode = item.roast_mode || item.requested_tone === 'brutally_honest';
   const responseCount = item.response_count ?? item.received_verdict_count ?? 0;
-
-  const getCategoryIcon = () => {
-    switch (item.category) {
-      case 'appearance': return <Camera className="h-4 w-4" />;
-      case 'writing': return <FileText className="h-4 w-4" />;
-      case 'career': return <MessageSquare className="h-4 w-4" />;
-      default: return <Eye className="h-4 w-4" />;
-    }
-  };
-
-  const getCategoryColor = () => {
-    switch (item.category) {
-      case 'appearance': return 'bg-pink-100 text-pink-700';
-      case 'writing': return 'bg-green-100 text-green-700';
-      case 'career': return 'bg-blue-100 text-blue-700';
-      default: return 'bg-gray-100 text-gray-700';
-    }
-  };
+  const categoryConfig = CATEGORY_CONFIG[item.category] || CATEGORY_CONFIG.other;
+  const CategoryIcon = categoryConfig.icon;
 
   const getTimeSinceCreated = () => {
     const now = new Date();
     const created = new Date(item.created_at);
     const diffMinutes = Math.floor((now.getTime() - created.getTime()) / (1000 * 60));
-    
+
+    if (diffMinutes < 1) return 'Just now';
     if (diffMinutes < 60) return `${diffMinutes}m ago`;
     if (diffMinutes < 1440) return `${Math.floor(diffMinutes / 60)}h ago`;
     return `${Math.floor(diffMinutes / 1440)}d ago`;
   };
 
-  async function handleQuickJudge(verdict: 'like' | 'dislike') {
-    if (judging) return;
-    // Haptic feedback for tactile response
+  // Auto-focus textarea when switching to detailed mode
+  useEffect(() => {
+    if (mode === 'detailed' && textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  }, [mode]);
+
+  const handleQuickSelect = (type: 'positive' | 'negative', index: number) => {
+    triggerHaptic('light');
+    setSelectedQuickResponse({ type, index });
+  };
+
+  const handleQuickSubmit = async () => {
+    if (!selectedQuickResponse || judging) return;
+
+    const responseSet = isRoastMode
+      ? (selectedQuickResponse.type === 'positive' ? QUICK_RESPONSES.roastPositive : QUICK_RESPONSES.roastNegative)
+      : (selectedQuickResponse.type === 'positive' ? QUICK_RESPONSES.positive : QUICK_RESPONSES.negative);
+    const response = responseSet[selectedQuickResponse.index];
+
+    // Animate out
+    setAnimatingOut(selectedQuickResponse.type === 'positive' ? 'right' : 'left');
     triggerHaptic('medium');
 
-    // For roast mode, provide harsher feedback templates
-    const roastFeedback = isRoastMode ?
-      (verdict === 'like' ? '🔥 This is actually decent' : '💀 This ain\'t it chief') :
-      (verdict === 'like' ? '👍 Looks good' : '👎 Could be better');
+    await new Promise(resolve => setTimeout(resolve, 200));
+    await onJudge(selectedQuickResponse.type === 'positive' ? 'like' : 'dislike', response.text);
+  };
 
-    await onJudge(verdict, roastFeedback);
-  }
+  const handleDetailedSubmit = async (verdict: 'like' | 'dislike') => {
+    if (judging || customFeedback.trim().length < 20) return;
 
-  async function handleDetailedJudge(verdict: 'like' | 'dislike') {
-    if (judging || detailedFeedback.trim().length < 50) return;
-    // Haptic feedback for successful submission
+    setAnimatingOut(verdict === 'like' ? 'right' : 'left');
     triggerHaptic('success');
-    await onJudge(verdict, detailedFeedback);
-    setDetailedFeedback('');
-    setShowDetailedFeedback(false);
-  }
+
+    await new Promise(resolve => setTimeout(resolve, 200));
+    await onJudge(verdict, customFeedback);
+  };
+
+  const handleSwipeAction = async (verdict: 'like' | 'dislike') => {
+    if (judging) return;
+
+    const feedback = isRoastMode
+      ? (verdict === 'like' ? '🔥 This is actually fire.' : '💀 This ain\'t it.')
+      : (verdict === 'like' ? '👍 Looks good!' : '👎 Could be better.');
+
+    setAnimatingOut(verdict === 'like' ? 'right' : 'left');
+    triggerHaptic('medium');
+
+    await new Promise(resolve => setTimeout(resolve, 200));
+    await onJudge(verdict, feedback);
+  };
+
+  const canSubmitDetailed = customFeedback.trim().length >= 20;
+  const progressPercent = (responseCount / 3) * 100;
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
-      {/* Header */}
-      <div className="p-4 border-b border-gray-100">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{
+        opacity: animatingOut ? 0 : 1,
+        y: 0,
+        x: animatingOut === 'left' ? -100 : animatingOut === 'right' ? 100 : 0,
+        rotate: animatingOut === 'left' ? -5 : animatingOut === 'right' ? 5 : 0,
+      }}
+      transition={{ duration: 0.2 }}
+      className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden"
+    >
+      {/* Header with category and time */}
+      <div className="p-4 pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className={`px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1 ${getCategoryColor()}`}>
-              {getCategoryIcon()}
-              <span className="capitalize">{item.category}</span>
+            <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${categoryConfig.gradient} flex items-center justify-center shadow-lg`}>
+              <CategoryIcon className="h-5 w-5 text-white" />
             </div>
-            {isRoastMode && (
-              <div className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs font-bold">
-                🔥 ROAST MODE
+            <div>
+              <span className="font-semibold text-gray-900 capitalize">{item.category}</span>
+              <div className="flex items-center gap-2 text-xs text-gray-500">
+                <Clock className="h-3 w-3" />
+                <span>{getTimeSinceCreated()}</span>
               </div>
-            )}
+            </div>
           </div>
-          <div className="flex items-center gap-2 text-sm text-gray-500">
-            <Clock className="h-4 w-4" />
-            {getTimeSinceCreated()}
-          </div>
+          {isRoastMode && (
+            <div className="px-3 py-1.5 bg-gradient-to-r from-red-500 to-orange-500 text-white rounded-full text-xs font-bold shadow-lg flex items-center gap-1">
+              <span>🔥</span>
+              <span>ROAST</span>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Content */}
-      <div className="p-4 space-y-4">
+      <div className="px-4 pb-4">
         {/* Question */}
-        <div>
-          <h3 className="font-semibold text-gray-900 mb-2">{displayQuestion}</h3>
-          {displayContext && (
-            <p className="text-gray-600 text-sm leading-relaxed">{displayContext}</p>
-          )}
-        </div>
+        <h3 className="font-semibold text-gray-900 text-lg mb-2 leading-tight">{displayQuestion}</h3>
+        {displayContext && (
+          <p className="text-gray-600 text-sm leading-relaxed mb-4">{displayContext}</p>
+        )}
 
         {/* Photo display */}
         {item.media_type === 'photo' && item.media_url && (
-          <div className="relative rounded-xl overflow-hidden bg-gray-100">
+          <motion.div
+            className="relative rounded-2xl overflow-hidden bg-gray-100 mb-4 cursor-pointer"
+            onClick={() => setShowImageExpanded(!showImageExpanded)}
+            layout
+          >
             <img
               src={item.media_url}
               alt="Submission for review"
-              className="w-full h-auto max-h-[500px] object-contain"
+              className={`w-full object-cover transition-all duration-300 ${
+                showImageExpanded ? 'max-h-[600px]' : 'max-h-[300px]'
+              }`}
               loading="lazy"
             />
-          </div>
-        )}
-
-        {/* Photo placeholder if no URL */}
-        {item.media_type === 'photo' && !item.media_url && (
-          <div className="bg-gray-100 rounded-lg aspect-square flex items-center justify-center">
-            <div className="text-center text-gray-500">
-              <Camera className="h-8 w-8 mx-auto mb-2" />
-              <p className="text-sm">Photo not available</p>
+            <div className="absolute bottom-3 right-3 px-2.5 py-1 bg-black/60 backdrop-blur-sm rounded-full text-white text-xs font-medium flex items-center gap-1">
+              <Eye className="h-3 w-3" />
+              <span>{showImageExpanded ? 'Collapse' : 'Expand'}</span>
             </div>
-          </div>
+          </motion.div>
         )}
 
         {/* Progress indicator */}
-        <div className="flex items-center gap-2 text-sm text-gray-500">
-          <Eye className="h-4 w-4" />
-          <span>{responseCount}/3 judgments</span>
-          <div className="flex-1 bg-gray-200 rounded-full h-2 ml-2">
-            <div 
-              className="bg-indigo-600 h-2 rounded-full transition-all duration-300"
-              style={{ width: `${((responseCount) / 3) * 100}%` }}
-            ></div>
+        <div className="flex items-center gap-3 mb-4">
+          <div className="flex-1">
+            <div className="flex items-center justify-between text-xs mb-1.5">
+              <span className="text-gray-500">{responseCount}/3 verdicts</span>
+              <span className="text-gray-400">{3 - responseCount} more needed</span>
+            </div>
+            <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+              <motion.div
+                className={`h-full rounded-full bg-gradient-to-r ${categoryConfig.gradient}`}
+                initial={{ width: 0 }}
+                animate={{ width: `${progressPercent}%` }}
+                transition={{ duration: 0.5, ease: 'easeOut' }}
+              />
+            </div>
           </div>
+        </div>
+
+        {/* Mode Toggle */}
+        <div className="flex rounded-xl bg-gray-100 p-1 mb-4">
+          <button
+            onClick={() => setMode('quick')}
+            className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${
+              mode === 'quick'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <span className="flex items-center justify-center gap-1.5">
+              <Zap className="h-4 w-4" />
+              Quick Vote
+            </span>
+          </button>
+          <button
+            onClick={() => setMode('detailed')}
+            className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${
+              mode === 'detailed'
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <span className="flex items-center justify-center gap-1.5">
+              <MessageSquare className="h-4 w-4" />
+              Write Feedback
+            </span>
+          </button>
         </div>
       </div>
 
-      {/* Action buttons */}
-      {!showDetailedFeedback ? (
-        <div className={`p-4 space-y-3 ${isRoastMode ? 'bg-red-50' : 'bg-gray-50'}`}>
-          {/* Quick judgment */}
-          <div className="flex gap-3">
-            <button
-              onClick={() => handleQuickJudge('dislike')}
-              disabled={judging}
-              className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2 text-white disabled:bg-gray-300 min-h-[48px] ${
-                isRoastMode
-                  ? 'bg-red-600 hover:bg-red-700'
-                  : 'bg-red-500 hover:bg-red-600'
-              }`}
-            >
-              <X className="h-5 w-5" />
-              {judging ? 'Judging...' : isRoastMode ? '💀 Destroy' : 'Not Good'}
-            </button>
-            <button
-              onClick={() => handleQuickJudge('like')}
-              disabled={judging}
-              className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2 text-white disabled:bg-gray-300 min-h-[48px] ${
-                isRoastMode
-                  ? 'bg-orange-500 hover:bg-orange-600'
-                  : 'bg-green-500 hover:bg-green-600'
-              }`}
-            >
-              <Heart className="h-5 w-5" />
-              {judging ? 'Judging...' : isRoastMode ? '🔥 Fire' : 'Looks Good'}
-            </button>
-          </div>
-
-          {/* Secondary actions */}
-          <div className="flex gap-2">
-            <button
-              onClick={() => setShowDetailedFeedback(true)}
-              className="flex-1 bg-indigo-100 text-indigo-700 py-3 px-4 rounded-lg text-sm font-medium hover:bg-indigo-200 transition-colors flex items-center justify-center gap-1 min-h-[44px]"
-            >
-              <MessageSquare className="h-4 w-4" />
-              Write Feedback
-            </button>
-            <button
-              onClick={onSkip}
-              className="flex-1 bg-gray-100 text-gray-600 py-3 px-4 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors flex items-center justify-center gap-1 min-h-[44px]"
-            >
-              <SkipForward className="h-4 w-4" />
-              Skip
-            </button>
-          </div>
-
-          {/* Credit indicator */}
-          <div className="text-center">
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-yellow-100 rounded-full">
-              <Zap className="h-3 w-3 text-yellow-600" />
-              <span className="text-xs text-yellow-700 font-medium">Judge 3 = Earn 1 credit</span>
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div className="p-4 bg-gray-50 space-y-3">
-          <div>
-            <label htmlFor="detailed-feedback" className="block text-sm font-medium text-gray-700 mb-1">
-              Detailed Feedback
-            </label>
-            <p id="feedback-hint" className="text-xs text-gray-500 mb-2">
-              Write at least 50 characters to submit your feedback
-            </p>
-            <textarea
-              id="detailed-feedback"
-              value={detailedFeedback}
-              onChange={(e) => setDetailedFeedback(e.target.value)}
-              placeholder={isRoastMode
-                ? "Let them have it! Be brutal, be honest, be savage... 🔥"
-                : "Share specific thoughts, suggestions, or observations..."}
-              className={`w-full p-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none ${
-                isRoastMode ? 'border-red-300 bg-red-50' : 'border-gray-300'
-              }`}
-              rows={3}
-              maxLength={500}
-              aria-label="Write detailed feedback"
-              aria-describedby="feedback-hint feedback-counter"
-            />
-            <div className="flex justify-between items-center mt-1">
-              <span className={`text-xs ${detailedFeedback.trim().length < 50 && detailedFeedback.length > 0 ? 'text-amber-600' : 'text-gray-500'}`}>
-                {detailedFeedback.trim().length < 50 && detailedFeedback.length > 0
-                  ? `${50 - detailedFeedback.trim().length} more characters needed`
-                  : detailedFeedback.trim().length >= 10
-                  ? '✓ Ready to submit'
-                  : ''}
-              </span>
-              <span
-                id="feedback-counter"
-                className="text-xs text-gray-400"
-                aria-live="polite"
-                aria-atomic="true"
-              >
-                {detailedFeedback.length}/500
-              </span>
-            </div>
-          </div>
-          
-          <div className="flex gap-3">
-            <button
-              onClick={() => handleDetailedJudge('dislike')}
-              disabled={judging || detailedFeedback.trim().length < 50}
-              className="flex-1 bg-red-500 hover:bg-red-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white py-3 px-4 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2 min-h-[48px]"
-            >
-              <X className="h-5 w-5" />
-              Not Good
-            </button>
-            <button
-              onClick={() => handleDetailedJudge('like')}
-              disabled={judging || detailedFeedback.trim().length < 50}
-              className="flex-1 bg-green-500 hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white py-3 px-4 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2 min-h-[48px]"
-            >
-              <Heart className="h-5 w-5" />
-              Looks Good
-            </button>
-          </div>
-          {detailedFeedback.trim().length > 0 && detailedFeedback.trim().length < 50 && (
-            <p className="text-xs text-amber-600 text-center" role="alert">
-              Add {50 - detailedFeedback.trim().length} more characters to submit
-            </p>
-          )}
-          
-          <button
-            onClick={() => setShowDetailedFeedback(false)}
-            className="w-full bg-gray-100 text-gray-600 py-3 px-4 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors min-h-[44px]"
+      {/* Actions Area */}
+      <AnimatePresence mode="wait">
+        {mode === 'quick' ? (
+          <motion.div
+            key="quick"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className={`px-4 pb-4 pt-0 ${isRoastMode ? 'bg-gradient-to-b from-white to-red-50' : ''}`}
           >
-            Back to Quick Judge
+            {/* Quick Response Selection */}
+            {!selectedQuickResponse ? (
+              <div className="space-y-3">
+                {/* Positive responses */}
+                <div>
+                  <p className="text-xs text-gray-500 mb-2 font-medium flex items-center gap-1">
+                    <ThumbsUp className="h-3 w-3 text-green-500" />
+                    {isRoastMode ? 'Actually good' : 'Positive feedback'}
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {(isRoastMode ? QUICK_RESPONSES.roastPositive : QUICK_RESPONSES.positive).map((response, i) => (
+                      <button
+                        key={i}
+                        onClick={() => handleQuickSelect('positive', i)}
+                        className="p-3 rounded-xl border-2 border-green-200 bg-green-50 hover:bg-green-100 hover:border-green-300 transition-all text-left group"
+                      >
+                        <span className="text-lg mb-1 block">{response.emoji}</span>
+                        <span className="text-xs text-green-700 line-clamp-2">{response.text}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Negative responses */}
+                <div>
+                  <p className="text-xs text-gray-500 mb-2 font-medium flex items-center gap-1">
+                    <ThumbsDown className="h-3 w-3 text-red-500" />
+                    {isRoastMode ? 'Needs work' : 'Constructive criticism'}
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {(isRoastMode ? QUICK_RESPONSES.roastNegative : QUICK_RESPONSES.negative).map((response, i) => (
+                      <button
+                        key={i}
+                        onClick={() => handleQuickSelect('negative', i)}
+                        className="p-3 rounded-xl border-2 border-red-200 bg-red-50 hover:bg-red-100 hover:border-red-300 transition-all text-left group"
+                      >
+                        <span className="text-lg mb-1 block">{response.emoji}</span>
+                        <span className="text-xs text-red-700 line-clamp-2">{response.text}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Quick swipe actions */}
+                <div className="pt-2">
+                  <p className="text-xs text-gray-400 text-center mb-2">Or quick vote:</p>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => handleSwipeAction('dislike')}
+                      disabled={judging}
+                      className={`flex-1 py-3.5 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
+                        isRoastMode
+                          ? 'bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600'
+                          : 'bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600'
+                      } text-white shadow-lg hover:shadow-xl disabled:opacity-50`}
+                    >
+                      <X className="h-5 w-5" />
+                      <span>{isRoastMode ? 'Nope' : 'Not Good'}</span>
+                    </button>
+                    <button
+                      onClick={() => handleSwipeAction('like')}
+                      disabled={judging}
+                      className={`flex-1 py-3.5 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
+                        isRoastMode
+                          ? 'bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600'
+                          : 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600'
+                      } text-white shadow-lg hover:shadow-xl disabled:opacity-50`}
+                    >
+                      <Heart className="h-5 w-5" />
+                      <span>{isRoastMode ? 'Fire' : 'Looks Good'}</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              /* Confirmation state */
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="space-y-3"
+              >
+                <div className={`p-4 rounded-xl border-2 ${
+                  selectedQuickResponse.type === 'positive'
+                    ? 'border-green-300 bg-green-50'
+                    : 'border-red-300 bg-red-50'
+                }`}>
+                  <div className="flex items-start gap-3">
+                    <span className="text-2xl">
+                      {(isRoastMode
+                        ? (selectedQuickResponse.type === 'positive' ? QUICK_RESPONSES.roastPositive : QUICK_RESPONSES.roastNegative)
+                        : (selectedQuickResponse.type === 'positive' ? QUICK_RESPONSES.positive : QUICK_RESPONSES.negative)
+                      )[selectedQuickResponse.index].emoji}
+                    </span>
+                    <div>
+                      <p className={`text-sm font-medium ${
+                        selectedQuickResponse.type === 'positive' ? 'text-green-800' : 'text-red-800'
+                      }`}>
+                        Your feedback:
+                      </p>
+                      <p className={`text-sm ${
+                        selectedQuickResponse.type === 'positive' ? 'text-green-700' : 'text-red-700'
+                      }`}>
+                        {(isRoastMode
+                          ? (selectedQuickResponse.type === 'positive' ? QUICK_RESPONSES.roastPositive : QUICK_RESPONSES.roastNegative)
+                          : (selectedQuickResponse.type === 'positive' ? QUICK_RESPONSES.positive : QUICK_RESPONSES.negative)
+                        )[selectedQuickResponse.index].text}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setSelectedQuickResponse(null)}
+                    className="flex-1 py-3 rounded-xl border-2 border-gray-200 text-gray-600 font-medium hover:bg-gray-50 transition"
+                  >
+                    Change
+                  </button>
+                  <button
+                    onClick={handleQuickSubmit}
+                    disabled={judging}
+                    className={`flex-1 py-3 rounded-xl font-semibold transition flex items-center justify-center gap-2 ${
+                      selectedQuickResponse.type === 'positive'
+                        ? 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600'
+                        : 'bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600'
+                    } text-white shadow-lg disabled:opacity-50`}
+                  >
+                    {judging ? (
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        <Send className="h-4 w-4" />
+                        <span>Submit</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </motion.div>
+        ) : (
+          /* Detailed feedback mode */
+          <motion.div
+            key="detailed"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="px-4 pb-4 pt-0"
+          >
+            <div className="space-y-3">
+              {/* Feedback textarea */}
+              <div>
+                <textarea
+                  ref={textareaRef}
+                  value={customFeedback}
+                  onChange={(e) => setCustomFeedback(e.target.value)}
+                  placeholder={isRoastMode
+                    ? "Let them have it! Be brutal but helpful... 🔥"
+                    : "Share your thoughts - be specific and helpful..."
+                  }
+                  className={`w-full p-4 border-2 rounded-xl focus:ring-2 focus:ring-offset-1 resize-none transition-all ${
+                    customFeedback.length > 0 && customFeedback.length < 20
+                      ? 'border-amber-300 focus:ring-amber-500 focus:border-amber-500'
+                      : customFeedback.length >= 20
+                        ? 'border-green-300 focus:ring-green-500 focus:border-green-500'
+                        : 'border-gray-200 focus:ring-indigo-500 focus:border-indigo-500'
+                  } ${isRoastMode ? 'bg-red-50/50' : ''}`}
+                  rows={4}
+                  maxLength={500}
+                />
+
+                {/* Character guidance */}
+                <div className="flex items-center justify-between mt-2">
+                  <div className="flex items-center gap-2">
+                    {customFeedback.length === 0 ? (
+                      <span className="text-xs text-gray-400">Min 20 characters</span>
+                    ) : customFeedback.length < 20 ? (
+                      <span className="text-xs text-amber-600 flex items-center gap-1">
+                        <AlertCircle className="h-3 w-3" />
+                        {20 - customFeedback.length} more needed
+                      </span>
+                    ) : (
+                      <span className="text-xs text-green-600 flex items-center gap-1">
+                        <Check className="h-3 w-3" />
+                        Ready to submit!
+                      </span>
+                    )}
+                  </div>
+                  <span className={`text-xs ${
+                    customFeedback.length > 450 ? 'text-amber-600' : 'text-gray-400'
+                  }`}>
+                    {customFeedback.length}/500
+                  </span>
+                </div>
+
+                {/* Progress bar */}
+                <div className="h-1 bg-gray-100 rounded-full mt-2 overflow-hidden">
+                  <motion.div
+                    className={`h-full rounded-full ${
+                      customFeedback.length < 20 ? 'bg-amber-400' : 'bg-green-500'
+                    }`}
+                    initial={{ width: 0 }}
+                    animate={{ width: `${Math.min((customFeedback.length / 100) * 100, 100)}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Submit buttons */}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => handleDetailedSubmit('dislike')}
+                  disabled={!canSubmitDetailed || judging}
+                  className={`flex-1 py-3.5 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
+                    canSubmitDetailed && !judging
+                      ? 'bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600 text-white shadow-lg'
+                      : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  }`}
+                >
+                  <ThumbsDown className="h-5 w-5" />
+                  <span>Not Good</span>
+                </button>
+                <button
+                  onClick={() => handleDetailedSubmit('like')}
+                  disabled={!canSubmitDetailed || judging}
+                  className={`flex-1 py-3.5 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
+                    canSubmitDetailed && !judging
+                      ? 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white shadow-lg'
+                      : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  }`}
+                >
+                  {judging ? (
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      <ThumbsUp className="h-5 w-5" />
+                      <span>Looks Good</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Footer - Skip and credit info */}
+      <div className={`px-4 py-3 border-t ${isRoastMode ? 'border-red-100 bg-red-50/50' : 'border-gray-100 bg-gray-50/50'}`}>
+        <div className="flex items-center justify-between">
+          <button
+            onClick={onSkip}
+            disabled={judging}
+            className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 transition px-3 py-1.5 rounded-lg hover:bg-gray-100 disabled:opacity-50"
+          >
+            <SkipForward className="h-4 w-4" />
+            <span>Skip</span>
           </button>
+
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-amber-100 to-yellow-100 rounded-full border border-amber-200">
+            <Zap className="h-3.5 w-3.5 text-amber-600" />
+            <span className="text-xs font-semibold text-amber-700">3 reviews = 1 credit</span>
+          </div>
         </div>
-      )}
-    </div>
+      </div>
+    </motion.div>
   );
 }

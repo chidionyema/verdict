@@ -51,12 +51,14 @@ export function validateContext(context: string): { valid: boolean; error?: stri
   return { valid: true };
 }
 
-export function validateFeedback(feedback: string): { valid: boolean; error?: string } {
+export function validateFeedback(feedback: string, options?: { minLength?: number }): { valid: boolean; error?: string } {
+  const minLength = options?.minLength ?? 120;
+
   if (!feedback || typeof feedback !== 'string') {
     return { valid: false, error: 'Feedback is required' };
   }
-  if (feedback.length < 120) {
-    return { valid: false, error: 'Feedback must be at least 120 characters (about 20 words)' };
+  if (feedback.length < minLength) {
+    return { valid: false, error: `Feedback must be at least ${minLength} characters` };
   }
   if (feedback.length > 500) {
     return { valid: false, error: 'Feedback must be 500 characters or less' };
@@ -65,6 +67,11 @@ export function validateFeedback(feedback: string): { valid: boolean; error?: st
     return { valid: false, error: 'Content contains inappropriate language' };
   }
   return { valid: true };
+}
+
+// Quick feedback for community feed - lower minimum for faster interactions
+export function validateQuickFeedback(feedback: string): { valid: boolean; error?: string } {
+  return validateFeedback(feedback, { minLength: 20 });
 }
 
 export function validateCategory(category: string): category is Category {

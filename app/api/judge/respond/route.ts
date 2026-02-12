@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { validateFeedback, validateRating, validateTone } from '@/lib/validations';
+import { validateFeedback, validateQuickFeedback, validateRating, validateTone } from '@/lib/validations';
 import { getTierConfig, TIER_CONFIGURATIONS } from '@/lib/pricing/dynamic-pricing';
 import { addJudgeVerdict } from '@/lib/verdicts';
 import { verdictRateLimiter, checkRateLimit } from '@/lib/rate-limiter';
@@ -63,8 +63,27 @@ const POST_Handler = async (request: NextRequest) => {
       );
     }
 
-    // Validate feedback
-    const feedbackValidation = validateFeedback(feedback);
+    // First, get the request to check its type (public vs private)
+    const { data: targetRequest, error: requestCheckError } = await (supabase as any)
+      .from('verdict_requests')
+      .select('visibility, request_tier')
+      .eq('id', request_id)
+      .single();
+
+    if (requestCheckError || !targetRequest) {
+      return NextResponse.json(
+        { error: 'Request not found' },
+        { status: 404 }
+      );
+    }
+
+    // Use quick validation for public/community requests, strict for private/paid
+    const isQuickFeedbackAllowed = targetRequest.visibility === 'public' ||
+                                    targetRequest.request_tier === 'community';
+    const feedbackValidation = isQuickFeedbackAllowed
+      ? validateQuickFeedback(feedback)
+      : validateFeedback(feedback);
+
     if (!feedbackValidation.valid) {
       return NextResponse.json(
         { error: feedbackValidation.error },
