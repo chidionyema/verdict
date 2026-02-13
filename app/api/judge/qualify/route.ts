@@ -17,6 +17,18 @@ async function POST_Handler(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // SECURITY: Require email verification before qualifying as a judge
+    if (!user.email_confirmed_at) {
+      return NextResponse.json(
+        {
+          error: 'Email verification required',
+          message: 'Please verify your email address before applying to become a judge.',
+          code: 'EMAIL_NOT_VERIFIED'
+        },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
     const { experience_level, specialties, motivation_text } = body;
 

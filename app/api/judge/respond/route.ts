@@ -23,6 +23,19 @@ const POST_Handler = async (request: NextRequest) => {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // SECURITY: Require email verification before submitting verdicts
+    // This ensures we can contact judges for payouts and platform communications
+    if (!user.email_confirmed_at) {
+      return NextResponse.json(
+        {
+          error: 'Email verification required',
+          message: 'Please verify your email address before submitting verdicts. Check your inbox for the verification link.',
+          code: 'EMAIL_NOT_VERIFIED'
+        },
+        { status: 403 }
+      );
+    }
+
     // Rate limiting for verdict submission
     const rateLimitCheck = await checkRateLimit(verdictRateLimiter, user.id);
     if (!rateLimitCheck.allowed) {

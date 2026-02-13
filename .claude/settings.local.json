@@ -48,7 +48,8 @@
       "Bash(if grep -q '\"\"type\"\":\"\"result\"\"' \"$file\")",
       "Bash(echo:*)",
       "Bash(else)",
-      "Bash(fi:*)"
+      "Bash(fi:*)",
+      "Bash(wc:*)"
     ],
     "deny": [],
     "ask": []

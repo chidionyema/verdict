@@ -104,6 +104,18 @@ async function POST_Handler(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // SECURITY: Require email verification before requesting payouts
+    if (!user.email_confirmed_at) {
+      return NextResponse.json(
+        {
+          error: 'Email verification required',
+          message: 'Please verify your email address before requesting payouts.',
+          code: 'EMAIL_NOT_VERIFIED'
+        },
+        { status: 403 }
+      );
+    }
+
     // Verify user is a judge
     const { data: profile } = await (supabase as any)
       .from('profiles')
