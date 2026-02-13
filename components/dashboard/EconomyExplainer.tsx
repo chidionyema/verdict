@@ -17,21 +17,38 @@ import {
 interface EconomyExplainerProps {
   credits?: number;
   className?: string;
+  /** Controlled mode - external state management */
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  /** Hide the trigger button (for controlled mode) */
+  hideTrigger?: boolean;
 }
 
-export function EconomyExplainer({ credits = 0, className = '' }: EconomyExplainerProps) {
-  const [isExpanded, setIsExpanded] = useState(false);
+export function EconomyExplainer({
+  credits = 0,
+  className = '',
+  isOpen,
+  onOpenChange,
+  hideTrigger = false,
+}: EconomyExplainerProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
+
+  // Support both controlled and uncontrolled modes
+  const isExpanded = isOpen !== undefined ? isOpen : internalOpen;
+  const setIsExpanded = onOpenChange || setInternalOpen;
 
   return (
     <>
-      {/* Compact trigger */}
-      <button
-        onClick={() => setIsExpanded(true)}
-        className={`flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-amber-50 to-green-50 border border-amber-200 rounded-lg text-sm hover:shadow-md transition-all ${className}`}
-      >
-        <HelpCircle className="h-4 w-4 text-amber-600" />
-        <span className="text-gray-700">How credits & earnings work</span>
-      </button>
+      {/* Compact trigger - hidden in controlled mode */}
+      {!hideTrigger && (
+        <button
+          onClick={() => setIsExpanded(true)}
+          className={`flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-amber-50 to-green-50 border border-amber-200 rounded-lg text-sm hover:shadow-md transition-all ${className}`}
+        >
+          <HelpCircle className="h-4 w-4 text-amber-600" />
+          <span className="text-gray-700">How credits & earnings work</span>
+        </button>
+      )}
 
       {/* Expanded modal */}
       <AnimatePresence>

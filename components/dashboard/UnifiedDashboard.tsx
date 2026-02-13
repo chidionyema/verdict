@@ -25,7 +25,6 @@ import { UnifiedHeader } from './UnifiedHeader';
 import { RoleAwareTabs } from './RoleAwareTabs';
 import { InsightsSection } from './InsightsSection';
 import { RealEarningsChart } from './RealEarningsChart';
-import { EconomyExplainer } from './EconomyExplainer';
 import { useRoleDetection } from '@/hooks/useRoleDetection';
 
 // Import judge dashboard components
@@ -241,18 +240,8 @@ export function UnifiedDashboard({ initialTab }: UnifiedDashboardProps) {
           unreadNotifications={unreadNotifications}
           displayName={profile?.display_name || undefined}
           onBuyCredits={() => setShowCreditsModal(true)}
+          showEconomyExplainer
         />
-
-        {/* Smart Insights */}
-        <InsightsSection
-          userType={activeTab === 'judge' ? 'judge' : 'requester'}
-          maxInsights={3}
-        />
-
-        {/* Economy Explainer */}
-        <div className="flex justify-center">
-          <EconomyExplainer credits={profile?.credits || 0} />
-        </div>
 
         {/* Role Tabs */}
         <RoleAwareTabs
@@ -301,6 +290,12 @@ export function UnifiedDashboard({ initialTab }: UnifiedDashboardProps) {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Smart Insights - Below content for less cognitive load */}
+        <InsightsSection
+          userType={activeTab === 'judge' ? 'judge' : 'requester'}
+          maxInsights={3}
+        />
       </div>
     </div>
   );
@@ -455,7 +450,7 @@ function JudgeContent({
         {queueLoading ? (
           <QueueLoading />
         ) : queue.length === 0 ? (
-          <EmptyQueue onRefresh={onRefresh} />
+          <EmptyQueue onRefresh={onRefresh} totalVerdicts={stats.verdicts_given} />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
             {queue.slice(0, 6).map((request) => (
@@ -464,43 +459,36 @@ function JudgeContent({
           </div>
         )}
 
-        {/* Always show link to full judge dashboard */}
-        <div className="text-center mt-6 space-y-2">
-          {queue.length > 6 && (
+        {/* Single clear CTA to full judge dashboard */}
+        {queue.length > 6 && (
+          <div className="text-center mt-6">
             <Link
               href="/judge"
               className="inline-flex items-center gap-2 text-indigo-600 font-medium hover:text-indigo-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded-lg px-2 py-1"
             >
-              View full queue ({queue.length} available)
+              View all {queue.length} requests
               <ArrowRight className="h-4 w-4" />
             </Link>
-          )}
-          <div>
-            <Link
-              href="/judge"
-              className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded-lg px-2 py-1"
-            >
-              Open full judge dashboard for earnings, progression & more
-              <ArrowRight className="h-3 w-3" />
-            </Link>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
 }
 
-// Helper Components
+// Helper Components - Unified styling
 function StatCard({ label, value, color }: { label: string; value: number; color: string }) {
   const colorClasses = {
-    blue: 'from-blue-50 to-indigo-50 border-blue-200',
-    green: 'from-green-50 to-emerald-50 border-green-200',
-    gray: 'from-gray-50 to-slate-50 border-gray-200',
+    blue: 'from-blue-50 to-indigo-50 border-blue-200 text-blue-600',
+    green: 'from-green-50 to-emerald-50 border-green-200 text-green-600',
+    gray: 'from-gray-50 to-slate-50 border-gray-200 text-gray-600',
   };
 
+  const config = colorClasses[color as keyof typeof colorClasses] || colorClasses.gray;
+
   return (
-    <div className={`bg-gradient-to-br ${colorClasses[color as keyof typeof colorClasses]} border rounded-2xl p-4`}>
-      <p className="text-3xl font-bold text-gray-900">{value}</p>
+    <div className={`bg-gradient-to-br ${config} border rounded-2xl p-4`}>
+      <p className="text-2xl font-bold text-gray-900">{value}</p>
       <p className="text-sm text-gray-600">{label}</p>
     </div>
   );
@@ -508,9 +496,9 @@ function StatCard({ label, value, color }: { label: string; value: number; color
 
 function QuickStat({ label, value, suffix }: { label: string; value: string | number; suffix?: string }) {
   return (
-    <div className="flex items-center justify-between">
+    <div className="flex items-center justify-between py-1">
       <span className="text-gray-600 text-sm">{label}</span>
-      <span className="font-semibold text-gray-900">
+      <span className="font-semibold text-gray-900 tabular-nums">
         {value}{suffix}
       </span>
     </div>

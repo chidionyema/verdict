@@ -77,13 +77,11 @@ export function InsightsSection({
     }
   };
 
-  // Don't render anything if no insights and not loading
-  if (!loading && !error && insights.length === 0) {
-    return null;
-  }
+  // Always render container to prevent layout shift, but hide visually when empty
+  const isEmpty = !loading && !error && insights.length === 0;
 
   return (
-    <div className={className}>
+    <div className={`${className} ${isEmpty ? 'hidden' : ''}`}>
       {showHeader && (
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">

@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import {
@@ -10,13 +11,16 @@ import {
   AlertTriangle,
   Zap,
   ArrowRight,
+  HelpCircle,
 } from 'lucide-react';
+import { EconomyExplainer } from './EconomyExplainer';
 
 interface UnifiedHeaderProps {
   credits: number;
   unreadNotifications: number;
   displayName?: string;
   onBuyCredits?: () => void;
+  showEconomyExplainer?: boolean;
   className?: string;
 }
 
@@ -25,8 +29,10 @@ export function UnifiedHeader({
   unreadNotifications,
   displayName,
   onBuyCredits,
+  showEconomyExplainer = false,
   className = '',
 }: UnifiedHeaderProps) {
+  const [showEconomyModal, setShowEconomyModal] = useState(false);
   const greeting = getGreeting();
   const isLowCredits = credits <= 2;
   const isZeroCredits = credits === 0;
@@ -48,6 +54,17 @@ export function UnifiedHeader({
 
           {/* Right: Stats and Actions */}
           <div className="flex items-center gap-3 flex-wrap">
+            {/* Help button - How it works */}
+            {showEconomyExplainer && (
+              <button
+                onClick={() => setShowEconomyModal(true)}
+                className="p-2.5 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
+                aria-label="How credits and earnings work"
+              >
+                <HelpCircle className="h-5 w-5 text-gray-600" aria-hidden="true" />
+              </button>
+            )}
+
             {/* Credits - Enhanced with status indication */}
             <Link
               href="/credits"
@@ -165,6 +182,16 @@ export function UnifiedHeader({
             </div>
           </div>
         </motion.div>
+      )}
+
+      {/* Economy Explainer Modal - controlled mode */}
+      {showEconomyExplainer && (
+        <EconomyExplainer
+          credits={credits}
+          isOpen={showEconomyModal}
+          onOpenChange={setShowEconomyModal}
+          hideTrigger
+        />
       )}
     </div>
   );

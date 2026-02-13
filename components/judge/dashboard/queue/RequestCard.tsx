@@ -14,11 +14,9 @@ import {
   Zap,
   Leaf,
   Flame,
-  Star,
   Crown,
   Award,
   Timer,
-  CheckCircle,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import type { QueueRequest } from '../types';
@@ -26,8 +24,6 @@ import { getJudgeEarningForTier } from '../constants';
 
 interface RequestCardProps {
   request: QueueRequest;
-  isNewJudge?: boolean; // Show "good for beginners" badges
-  userExpertise?: string[]; // User's expertise areas for matching
 }
 
 // Determine difficulty based on context length and type
@@ -49,22 +45,6 @@ function getUrgency(createdAt: string): 'new' | 'recent' | 'waiting' {
   if (ageMinutes < 30) return 'new';
   if (ageMinutes < 120) return 'recent';
   return 'waiting';
-}
-
-// Check if good for beginners
-function isBeginnerFriendly(request: QueueRequest): boolean {
-  const difficulty = getDifficulty(request);
-  const isStandard = !request.request_type || request.request_type === 'verdict';
-  return difficulty === 'easy' && isStandard;
-}
-
-// Check if matches user expertise
-function matchesExpertise(request: QueueRequest, userExpertise?: string[]): boolean {
-  if (!userExpertise || userExpertise.length === 0) return false;
-  return userExpertise.some(exp =>
-    exp.toLowerCase() === request.category.toLowerCase() ||
-    (request.subcategory && exp.toLowerCase() === request.subcategory.toLowerCase())
-  );
 }
 
 // Get estimated completion time
@@ -96,13 +76,11 @@ const CATEGORY_CONFIGS = {
   decision: { icon: Target, color: 'from-green-500 to-emerald-500' },
 } as const;
 
-export function RequestCard({ request, isNewJudge = false, userExpertise }: RequestCardProps) {
+export function RequestCard({ request }: RequestCardProps) {
   const router = useRouter();
 
   const difficulty = getDifficulty(request);
   const urgency = getUrgency(request.created_at);
-  const beginnerFriendly = isBeginnerFriendly(request);
-  const expertiseMatch = matchesExpertise(request, userExpertise);
   const estimatedTime = getEstimatedTime(request);
   const tierInfo = getTierInfo(request.request_tier);
 
@@ -153,18 +131,15 @@ export function RequestCard({ request, isNewJudge = false, userExpertise }: Requ
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg border border-white/50 p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5 group relative overflow-hidden ${
-        expertiseMatch ? 'ring-2 ring-indigo-200' : ''
-      }`}
+      className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg border border-white/50 p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5 group relative overflow-hidden"
     >
       <div
         className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${categoryConfig.color} rounded-full mix-blend-multiply filter blur-3xl opacity-5 group-hover:opacity-10 transition-opacity`}
       />
 
-      {/* Top badges row */}
-      <div className="absolute top-3 right-3 z-20 flex flex-wrap gap-1.5 justify-end max-w-[60%]">
-        {/* Premium tier badge */}
-        {tierInfo && (
+      {/* Single most important badge - show only the most relevant one */}
+      <div className="absolute top-3 right-3 z-20">
+        {tierInfo ? (
           <span className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full border ${
             tierInfo.color === 'purple'
               ? 'bg-purple-100 text-purple-700 border-purple-200'
@@ -173,30 +148,11 @@ export function RequestCard({ request, isNewJudge = false, userExpertise }: Requ
             <tierInfo.icon className="h-3 w-3" />
             {tierInfo.label}
           </span>
-        )}
-
-        {/* Expertise match badge */}
-        {expertiseMatch && (
-          <span className="inline-flex items-center gap-1 px-2 py-1 bg-indigo-100 text-indigo-700 text-xs font-medium rounded-full border border-indigo-200">
-            <CheckCircle className="h-3 w-3" />
-            Matches expertise
-          </span>
-        )}
-
-        {/* Beginner-friendly badge */}
-        {isNewJudge && beginnerFriendly && !expertiseMatch && (
-          <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full border border-green-200">
-            <Star className="h-3 w-3" />
-            Great for starters
-          </span>
-        )}
-
-        {/* Urgency indicator for waiting requests */}
-        {urgency === 'waiting' && !tierInfo && !expertiseMatch && !beginnerFriendly && (
-          <span className="inline-flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-700 text-xs font-medium rounded-full border border-amber-200 animate-pulse">
+        ) : urgency === 'waiting' ? (
+          <span className="inline-flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-700 text-xs font-medium rounded-full border border-amber-200">
             Needs help
           </span>
-        )}
+        ) : null}
       </div>
 
       <div className="relative z-10">
@@ -268,9 +224,7 @@ export function RequestCard({ request, isNewJudge = false, userExpertise }: Requ
             className={`px-5 py-2.5 rounded-xl font-semibold hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5 group/btn focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${
               tierInfo?.color === 'purple'
                 ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white focus-visible:ring-purple-500'
-                : expertiseMatch
-                  ? 'bg-gradient-to-r from-indigo-600 to-blue-600 text-white focus-visible:ring-indigo-500'
-                  : 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white focus-visible:ring-indigo-500'
+                : 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white focus-visible:ring-indigo-500'
             }`}
           >
             {request.request_type === 'comparison' ? 'Compare Options' :
