@@ -78,6 +78,10 @@ export function ContextualVerificationPrompt({
   const nextMultiplier = multipliers[Math.min(currentTier + 1, multipliers.length - 1)] || currentMultiplier;
   const weeklyIncrease = weeklyVerdicts * baseRate * (nextMultiplier - currentMultiplier);
 
+  // Calculate concrete amounts
+  const currentPerVerdict = (baseRate * currentMultiplier).toFixed(2);
+  const nextPerVerdict = (baseRate * nextMultiplier).toFixed(2);
+
   // Context-specific content
   const getContent = () => {
     switch (context) {
@@ -87,8 +91,8 @@ export function ContextualVerificationPrompt({
           iconBg: 'bg-purple-100',
           iconColor: 'text-purple-600',
           title: 'Great first verdict!',
-          subtitle: `Complete your profile to earn ${((nextMultiplier - 1) * 100).toFixed(0)}% more on every verdict`,
-          cta: 'Unlock Bonus',
+          subtitle: `Get verified to earn $${nextPerVerdict} instead of $${currentPerVerdict} per verdict`,
+          cta: 'Unlock Bonus (2 min)',
           gradient: 'from-purple-500 to-indigo-600',
         };
 
@@ -98,8 +102,8 @@ export function ContextualVerificationPrompt({
           iconBg: 'bg-amber-100',
           iconColor: 'text-amber-600',
           title: 'Nice work!',
-          subtitle: `You could've earned £${(baseRate * (nextMultiplier - currentMultiplier)).toFixed(2)} more on that verdict`,
-          cta: 'Boost Earnings',
+          subtitle: `Verified judges earn $${nextPerVerdict}/verdict instead of $${currentPerVerdict}`,
+          cta: 'Get Verified',
           gradient: 'from-amber-500 to-orange-600',
         };
 
@@ -108,8 +112,8 @@ export function ContextualVerificationPrompt({
           icon: TrendingUp,
           iconBg: 'bg-green-100',
           iconColor: 'text-green-600',
-          title: `You're missing £${weeklyIncrease.toFixed(2)}/week`,
-          subtitle: 'Complete verification to unlock higher earnings',
+          title: `Earn $${nextPerVerdict} per verdict`,
+          subtitle: `You're currently at $${currentPerVerdict}. Verification takes 2 minutes.`,
           cta: 'Unlock Now',
           gradient: 'from-green-500 to-emerald-600',
         };
@@ -119,9 +123,9 @@ export function ContextualVerificationPrompt({
           icon: Sparkles,
           iconBg: 'bg-indigo-100',
           iconColor: 'text-indigo-600',
-          title: 'Earn more per verdict',
-          subtitle: `Unlock +£${weeklyIncrease.toFixed(2)}/week with quick profile verification`,
-          cta: 'Get Started',
+          title: `Earn $${nextPerVerdict}/verdict`,
+          subtitle: `You're at $${currentPerVerdict}. Quick 2-minute verification unlocks higher rate.`,
+          cta: 'Get Verified',
           gradient: 'from-indigo-500 to-purple-600',
         };
     }

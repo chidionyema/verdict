@@ -87,14 +87,48 @@ export default function JudgeVerifyPage() {
         <div className="grid gap-8 lg:grid-cols-3">
           {/* Main Verification Area */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Verification Progress */}
-            {user && (
-              <VerificationProgress
-                userId={user.id}
-                variant="full"
-                showCTA={true}
-                onVerificationChange={setVerificationStatus}
-              />
+            {/* Show current status summary - not the full step list */}
+            {verificationStatus && (
+              <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h2 className="text-lg font-bold text-gray-900">Your Verification Status</h2>
+                    <p className="text-sm text-gray-600">
+                      {isExpertVerified
+                        ? "You've reached the highest tier!"
+                        : isLinkedInVerified
+                        ? "One more step to maximize earnings"
+                        : isProfileComplete
+                        ? "Connect LinkedIn to unlock +25% bonus"
+                        : "Complete your profile to get started"}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-3xl font-bold text-indigo-600">
+                      {verificationStatus.earnMultiplier > 1 ? `${verificationStatus.earnMultiplier}x` : '1x'}
+                    </p>
+                    <p className="text-xs text-gray-500">earnings multiplier</p>
+                  </div>
+                </div>
+                {/* Simple progress bar */}
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all"
+                      style={{ width: `${(verificationStatus.tierIndex / 5) * 100}%` }}
+                    />
+                  </div>
+                  <span className="text-xs text-gray-500 whitespace-nowrap">
+                    {verificationStatus.tierIndex}/5 complete
+                  </span>
+                </div>
+                {/* Concrete earnings example */}
+                {!isLinkedInVerified && (
+                  <p className="mt-3 text-sm text-amber-700 bg-amber-50 rounded-lg px-3 py-2">
+                    💡 At 10 verdicts/week, verification adds <strong>$1.50-$3.00/week</strong> to your earnings
+                  </p>
+                )}
+              </div>
             )}
 
             {/* Profile Completion (if profile not done yet) */}
@@ -107,10 +141,10 @@ export default function JudgeVerifyPage() {
             )}
 
             {/* LinkedIn Connection (if profile complete but LinkedIn not connected) */}
-            {isProfileComplete && !isLinkedInConnected && (
+            {isProfileComplete && !isLinkedInVerified && (
               <StreamlinedLinkedInVerification
                 userId={user?.id || ''}
-                isVerified={!!isLinkedInConnected}
+                isVerified={!!isLinkedInVerified}
                 onVerificationComplete={handleVerificationUpdate}
               />
             )}

@@ -134,12 +134,12 @@ export function EmptyQueue({ onRefresh, totalVerdicts = 0, verificationTierIndex
 
         {/* Context-aware messaging */}
         <h3 className="text-xl font-bold text-gray-900 mb-2">
-          {isNewJudge ? 'Queue is empty right now' : 'All caught up!'}
+          {isNewJudge ? 'Waiting for your first request' : 'All caught up!'}
         </h3>
         <p className="text-gray-600 max-w-md mx-auto mb-4">
           {isNewJudge
-            ? 'No requests available at the moment. New requests come in throughout the day — check back soon!'
-            : 'You\'ve reviewed everything available. Great work! New requests come in constantly.'}
+            ? 'Requests come in throughout the day. While you wait, use this time to complete verification and boost your earnings.'
+            : 'Great work! New requests come in constantly. Check back soon.'}
         </p>
 
         {/* Auto-refresh indicator */}
@@ -185,17 +185,17 @@ export function EmptyQueue({ onRefresh, totalVerdicts = 0, verificationTierIndex
               </div>
               <div className="flex-1 text-left">
                 <p className="font-semibold text-amber-900 text-sm">
-                  Boost your earnings while you wait
+                  Perfect time to get verified
                 </p>
                 <p className="text-xs text-amber-700 mt-0.5">
-                  Verified judges earn up to 50% more per verdict
+                  Takes 2 minutes. Earn <strong>$0.75</strong> instead of $0.60 per verdict.
                 </p>
                 <button
                   onClick={onVerificationClick}
-                  className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 text-white text-xs font-semibold rounded-lg hover:bg-amber-700 transition"
+                  className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 text-white text-xs font-semibold rounded-lg hover:bg-amber-700 transition min-h-[36px]"
                 >
                   <Shield className="h-3.5 w-3.5" />
-                  Get Verified Now
+                  Get Verified (2 min)
                 </button>
               </div>
             </div>

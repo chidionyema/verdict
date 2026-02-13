@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { Shield, Linkedin, CheckCircle, AlertCircle, ExternalLink, Zap } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Shield, Linkedin, CheckCircle, AlertCircle, ExternalLink, Zap, Lock, RefreshCw, HelpCircle, Copy, Clipboard } from 'lucide-react';
 import { TouchButton } from '@/components/ui/touch-button';
 import { Badge } from '@/components/ui/badge';
 
@@ -11,29 +11,147 @@ interface StreamlinedLinkedInVerificationProps {
   onVerificationComplete?: (verified: boolean, expertise?: string) => void;
 }
 
-export function StreamlinedLinkedInVerification({ 
-  userId, 
-  isVerified = false, 
-  onVerificationComplete 
+type ErrorType = 'validation' | 'network' | 'not_found' | 'private' | 'generic';
+
+interface ErrorState {
+  type: ErrorType;
+  message: string;
+}
+
+// Smart LinkedIn URL normalization - handles all input formats
+function normalizeLinkedInUrl(input: string): string {
+  const trimmed = input.trim();
+  if (!trimmed) return '';
+
+  // Already a full URL
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    return trimmed;
+  }
+
+  // Starts with linkedin.com
+  if (trimmed.startsWith('linkedin.com') || trimmed.startsWith('www.linkedin.com')) {
+    return `https://${trimmed}`;
+  }
+
+  // Just the username or /in/username
+  if (trimmed.startsWith('/in/')) {
+    return `https://linkedin.com${trimmed}`;
+  }
+
+  if (trimmed.startsWith('in/')) {
+    return `https://linkedin.com/${trimmed}`;
+  }
+
+  // Plain username - could be "john-doe" or "johndoe123"
+  // Only prepend if it looks like a username (alphanumeric with dashes)
+  if (/^[a-zA-Z0-9-]+$/.test(trimmed) && trimmed.length >= 2) {
+    return `https://linkedin.com/in/${trimmed}`;
+  }
+
+  // Return as-is for validation to catch
+  return trimmed;
+}
+
+// Extract username for display
+function extractUsername(url: string): string | null {
+  const match = url.match(/linkedin\.com\/in\/([a-zA-Z0-9-]+)/i);
+  return match ? match[1] : null;
+}
+
+// Real-time validation
+function validateLinkedInInput(input: string): { valid: boolean; hint?: string; normalized?: string } {
+  if (!input.trim()) {
+    return { valid: false };
+  }
+
+  const normalized = normalizeLinkedInUrl(input);
+  const username = extractUsername(normalized);
+
+  if (username) {
+    return { valid: true, normalized, hint: `Will verify: linkedin.com/in/${username}` };
+  }
+
+  // Partial input hints
+  if (input.length < 3) {
+    return { valid: false, hint: 'Enter your LinkedIn username or profile URL' };
+  }
+
+  return { valid: false, hint: 'Example: linkedin.com/in/your-name or just your-name' };
+}
+
+// Error type detection for better recovery suggestions
+function categorizeError(errorMessage: string, statusCode?: number): ErrorType {
+  if (statusCode === 404 || errorMessage.toLowerCase().includes('not found')) {
+    return 'not_found';
+  }
+  if (errorMessage.toLowerCase().includes('private') || errorMessage.toLowerCase().includes('restricted')) {
+    return 'private';
+  }
+  if (errorMessage.toLowerCase().includes('network') || errorMessage.toLowerCase().includes('connection')) {
+    return 'network';
+  }
+  return 'generic';
+}
+
+export function StreamlinedLinkedInVerification({
+  userId,
+  isVerified = false,
+  onVerificationComplete
 }: StreamlinedLinkedInVerificationProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [verificationStep, setVerificationStep] = useState<'start' | 'processing' | 'verified' | 'failed'>('start');
-  const [linkedinProfile, setLinkedinProfile] = useState('');
+  const [linkedinInput, setLinkedinInput] = useState('');
   const [detectedExpertise, setDetectedExpertise] = useState<string>('');
-  const [errorMessage, setErrorMessage] = useState<string>('');
+  const [errorState, setErrorState] = useState<ErrorState | null>(null);
+  const [validationState, setValidationState] = useState<{ valid: boolean; hint?: string; normalized?: string }>({ valid: false });
+  const [showPrivacyInfo, setShowPrivacyInfo] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Real-time validation as user types
+  useEffect(() => {
+    const state = validateLinkedInInput(linkedinInput);
+    setValidationState(state);
+    // Clear errors when user starts typing valid input
+    if (state.valid && errorState?.type === 'validation') {
+      setErrorState(null);
+    }
+  }, [linkedinInput, errorState?.type]);
+
+  // Handle paste - smart normalization
+  const handlePaste = async (e: React.ClipboardEvent) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData('text');
+    const normalized = normalizeLinkedInUrl(pasted);
+    setLinkedinInput(normalized);
+  };
+
+  // Mobile paste button
+  const handlePasteButton = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      const normalized = normalizeLinkedInUrl(text);
+      setLinkedinInput(normalized);
+      inputRef.current?.focus();
+    } catch {
+      // Clipboard API not available or permission denied
+      inputRef.current?.focus();
+    }
+  };
 
   const handleInstantVerification = async () => {
-    if (!linkedinProfile.trim()) return;
+    const normalized = validationState.normalized || normalizeLinkedInUrl(linkedinInput);
 
-    // Basic URL validation before submission
-    if (!linkedinProfile.includes('linkedin.com/in/')) {
-      setErrorMessage('Please enter a valid LinkedIn profile URL (e.g., linkedin.com/in/your-name)');
+    if (!normalized || !validationState.valid) {
+      setErrorState({
+        type: 'validation',
+        message: 'Please enter a valid LinkedIn profile URL or username'
+      });
       return;
     }
 
     setIsSubmitting(true);
     setVerificationStep('processing');
-    setErrorMessage('');
+    setErrorState(null);
 
     try {
       const response = await fetch('/api/judge/instant-verify-linkedin', {
@@ -41,7 +159,7 @@ export function StreamlinedLinkedInVerification({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId,
-          linkedinUrl: linkedinProfile,
+          linkedinUrl: normalized,
         }),
       });
 
@@ -52,13 +170,20 @@ export function StreamlinedLinkedInVerification({
         setDetectedExpertise(data.expertise || 'Professional');
         onVerificationComplete?.(true, data.expertise);
       } else {
+        const errorType = categorizeError(data.error || '', response.status);
         setVerificationStep('failed');
-        setErrorMessage(data.error || 'Unable to verify this LinkedIn profile. Please check the URL and try again.');
+        setErrorState({
+          type: errorType,
+          message: data.error || 'Unable to verify this LinkedIn profile'
+        });
       }
     } catch (error) {
       console.error('Verification failed:', error);
       setVerificationStep('failed');
-      setErrorMessage('Connection error. Please check your internet and try again.');
+      setErrorState({
+        type: 'network',
+        message: 'Connection error. Please check your internet connection.'
+      });
     } finally {
       setIsSubmitting(false);
     }
