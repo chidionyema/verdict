@@ -342,8 +342,8 @@ function SignupContent() {
             </Link>
           </p>
 
-          {/* Intent switch */}
-          {intent !== 'general' && (
+          {/* Intent switch - only show if user hasn't started filling the form */}
+          {intent !== 'general' && !email && !password && (
             <p className="text-xs text-gray-500 mt-4 text-center">
               {intent === 'judge' ? (
                 <>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Star, X, ThumbsUp, Target, MessageCircle, Award } from 'lucide-react';
 
 interface VerdictRatingModalProps {
@@ -11,12 +11,12 @@ interface VerdictRatingModalProps {
   onSubmit: () => void;
 }
 
-export default function VerdictRatingModal({ 
-  verdictId, 
-  judgeId, 
-  isOpen, 
-  onClose, 
-  onSubmit 
+export default function VerdictRatingModal({
+  verdictId,
+  judgeId,
+  isOpen,
+  onClose,
+  onSubmit
 }: VerdictRatingModalProps) {
   const [helpfulness, setHelpfulness] = useState(0);
   const [accuracy, setAccuracy] = useState(0);
@@ -28,16 +28,57 @@ export default function VerdictRatingModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  // Escape key to close modal (WCAG accessibility)
+  const modalRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const previouslyFocusedElement = useRef<HTMLElement | null>(null);
+
+  // Store previously focused element and focus close button on open
   useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
+    if (isOpen) {
+      previouslyFocusedElement.current = document.activeElement as HTMLElement;
+      setTimeout(() => closeButtonRef.current?.focus(), 50);
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+      if (previouslyFocusedElement.current) {
+        previouslyFocusedElement.current.focus();
+      }
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
+
+  // Escape key and focus trap (WCAG accessibility)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!isOpen) return;
+
+      if (e.key === 'Escape' && !isSubmitting) {
         onClose();
+        return;
+      }
+
+      // Focus trap
+      if (e.key === 'Tab' && modalRef.current) {
+        const focusableElements = modalRef.current.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        );
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
+
+        if (e.shiftKey && document.activeElement === firstElement) {
+          e.preventDefault();
+          lastElement?.focus();
+        } else if (!e.shiftKey && document.activeElement === lastElement) {
+          e.preventDefault();
+          firstElement?.focus();
+        }
       }
     };
-    document.addEventListener('keydown', handleEscape);
-    return () => document.removeEventListener('keydown', handleEscape);
-  }, [isOpen, onClose]);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, isSubmitting, onClose]);
 
   const StarRating = ({ 
     value, 
@@ -137,13 +178,23 @@ export default function VerdictRatingModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
+    <div
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="rating-modal-title"
+    >
+      <div
+        ref={modalRef}
+        className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto"
+      >
         <div className="flex items-center justify-between p-6 border-b">
-          <h3 className="text-lg font-semibold">Rate This Verdict</h3>
+          <h3 id="rating-modal-title" className="text-lg font-semibold">Rate This Verdict</h3>
           <button
+            ref={closeButtonRef}
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 min-h-[44px] min-w-[44px] p-2 flex items-center justify-center"
+            disabled={isSubmitting}
+            className="text-gray-400 hover:text-gray-600 min-h-[44px] min-w-[44px] p-2 flex items-center justify-center disabled:opacity-50"
             aria-label="Close modal"
           >
             <X className="h-5 w-5" />

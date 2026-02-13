@@ -54,19 +54,19 @@ const TOUR_STEPS = [
     tips: [
       'Community requests: $0.60 per verdict',
       'Standard requests: $1.00 per verdict',
-      'Expert requests: $2.00+ per verdict',
+      'Verified judges earn up to 50% more!',
     ],
   },
   {
     id: 'progress',
-    title: 'Level Up & Earn More',
-    description: 'As you submit more verdicts, you\'ll unlock higher tiers with bonus earnings and access to premium requests.',
+    title: 'Unlock Higher Earnings',
+    description: 'Complete your profile verification to unlock bonus earnings. The more verified you are, the more you earn per verdict.',
     icon: TrendingUp,
     color: 'purple',
     tips: [
-      '10 verdicts = Bronze Judge (+5% bonus)',
-      '25 verdicts = Silver Judge (+10% bonus)',
-      'Daily streaks unlock extra rewards',
+      'Complete profile = qualify for all requests',
+      'LinkedIn verified = +25% bonus earnings',
+      'Expert verified = +50% bonus earnings',
     ],
   },
   {

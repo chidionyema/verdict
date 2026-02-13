@@ -1,26 +1,18 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { StreamlinedLinkedInVerification } from '@/components/verification/StreamlinedLinkedInVerification';
-import { VerifiedBadge } from '@/components/verification/VerifiedBadge';
-import { Shield, CheckCircle, Star, TrendingUp, Users, Award } from 'lucide-react';
-import { TouchButton } from '@/components/ui/touch-button';
+import { VerificationProgress } from '@/components/judge/VerificationProgress';
+import { Shield, CheckCircle, Star, TrendingUp, Users, Award, ArrowRight, Sparkles } from 'lucide-react';
 import { BackButton } from '@/components/ui/BackButton';
 import { useRouter } from 'next/navigation';
-
-interface VerificationStatus {
-  isVerified: boolean;
-  verificationLevel?: 'linkedin' | 'expert' | 'elite';
-  verifiedCategory?: 'hr' | 'tech' | 'design' | 'marketing' | 'finance' | 'general';
-  verificationDate?: string;
-}
+import type { VerificationStatus } from '@/lib/judge/verification';
 
 export default function JudgeVerifyPage() {
   const [user, setUser] = useState<any>(null);
-  const [verificationStatus, setVerificationStatus] = useState<VerificationStatus>({
-    isVerified: false
-  });
+  const [verificationStatus, setVerificationStatus] = useState<VerificationStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
@@ -31,30 +23,21 @@ export default function JudgeVerifyPage() {
   const loadUserAndVerification = async () => {
     try {
       const supabase = createClient();
-      
+
       // Get current user
       const { data: { user: currentUser }, error: userError } = await supabase.auth.getUser();
       if (userError || !currentUser) {
-        router.push('/auth/login');
+        router.push('/auth/login?redirect=/judge/verify');
         return;
       }
-      
+
       setUser(currentUser);
 
-      // Get verification status from judge_reputation
-      const { data: reputation, error: repError } = await supabase
-        .from('judge_reputation')
-        .select('verification_status, verified_category, verified_level, verification_date')
-        .eq('user_id', currentUser.id)
-        .single();
-
-      if (!repError && reputation) {
-        setVerificationStatus({
-          isVerified: (reputation as any).verification_status === 'verified',
-          verificationLevel: (reputation as any).verified_level || 'linkedin',
-          verifiedCategory: (reputation as any).verified_category || 'general',
-          verificationDate: (reputation as any).verification_date,
-        });
+      // Get verification status from API
+      const statusRes = await fetch('/api/judge/verification-status');
+      if (statusRes.ok) {
+        const status = await statusRes.json();
+        setVerificationStatus(status);
       }
     } catch (error) {
       console.error('Error loading verification status:', error);
@@ -64,9 +47,8 @@ export default function JudgeVerifyPage() {
   };
 
   const handleVerificationUpdate = (verified: boolean) => {
-    if (verified) {
-      setVerificationStatus(prev => ({ ...prev, isVerified: true }));
-    }
+    // Reload verification status after LinkedIn connection
+    loadUserAndVerification();
   };
 
   if (loading) {
@@ -77,20 +59,24 @@ export default function JudgeVerifyPage() {
     );
   }
 
+  const isLinkedInConnected = verificationStatus && verificationStatus.tierIndex >= 3;
+  const isLinkedInVerified = verificationStatus && verificationStatus.tierIndex >= 4;
+  const isExpertVerified = verificationStatus && verificationStatus.tierIndex >= 5;
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/50 to-purple-50/50">
+      <div className="max-w-5xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8">
           <BackButton href="/judge" label="Back to Dashboard" className="mb-4" />
-          
+
           <div className="flex items-center gap-4 mb-4">
-            <div className="bg-indigo-600 text-white rounded-full p-3">
+            <div className="bg-gradient-to-br from-indigo-600 to-purple-600 text-white rounded-2xl p-4 shadow-lg">
               <Shield className="h-8 w-8" />
             </div>
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Professional Verification</h1>
-              <p className="text-gray-600">Increase trust and earn higher tips by verifying your professional credentials</p>
+              <p className="text-gray-600">Build trust and unlock higher earnings through verification</p>
             </div>
           </div>
         </div>
@@ -98,28 +84,70 @@ export default function JudgeVerifyPage() {
         <div className="grid gap-8 lg:grid-cols-3">
           {/* Main Verification Area */}
           <div className="lg:col-span-2 space-y-6">
-            {/* LinkedIn Verification */}
-            <StreamlinedLinkedInVerification
-              userId={user?.id || ''}
-              isVerified={verificationStatus.isVerified}
-              onVerificationComplete={handleVerificationUpdate}
-            />
+            {/* Verification Progress */}
+            {user && (
+              <VerificationProgress
+                userId={user.id}
+                variant="full"
+                showCTA={true}
+                onVerificationChange={setVerificationStatus}
+              />
+            )}
 
-            {/* Future Verification Methods */}
-            {verificationStatus.isVerified && (
-              <div className="bg-white rounded-xl border border-gray-200 p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  <Award className="h-5 w-5 text-purple-600" />
-                  Level Up Your Verification
-                </h3>
-                <div className="space-y-4">
-                  <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 opacity-75">
-                    <h4 className="font-medium text-purple-900">Expert Level (Coming Soon)</h4>
-                    <p className="text-sm text-purple-700">Industry certifications, advanced credentials</p>
+            {/* LinkedIn Connection (if not yet connected) */}
+            {!isLinkedInConnected && (
+              <StreamlinedLinkedInVerification
+                userId={user?.id || ''}
+                isVerified={!!isLinkedInConnected}
+                onVerificationComplete={handleVerificationUpdate}
+              />
+            )}
+
+            {/* Expert Verification CTA (if LinkedIn verified but not expert) */}
+            {isLinkedInVerified && !isExpertVerified && (
+              <div className="bg-gradient-to-br from-purple-600 to-indigo-600 rounded-2xl p-6 text-white shadow-lg">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
+                    <Award className="h-6 w-6" />
                   </div>
-                  <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 opacity-75">
-                    <h4 className="font-medium text-purple-900">Elite Level (Coming Soon)</h4>
-                    <p className="text-sm text-purple-700">Published work, speaking engagements, leadership roles</p>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-bold mb-2">Ready for Expert Verification?</h3>
+                    <p className="text-purple-100 text-sm mb-4">
+                      You've completed LinkedIn verification. Apply for Expert status to unlock
+                      50% bonus earnings and access to premium requests.
+                    </p>
+                    <Link
+                      href="/judge/become-expert"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-white text-purple-700 rounded-lg font-medium hover:bg-purple-50 transition"
+                    >
+                      Apply for Expert
+                      <ArrowRight className="h-4 w-4" />
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Expert Verified Success */}
+            {isExpertVerified && (
+              <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-2xl p-6">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-12 h-12 bg-green-600 rounded-xl flex items-center justify-center">
+                    <CheckCircle className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-green-900">Expert Verified</h3>
+                    <p className="text-sm text-green-700">You've reached the highest verification tier!</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4 p-4 bg-white/50 rounded-xl">
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-green-600">50%</p>
+                    <p className="text-xs text-green-700">Bonus Earnings</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-green-600">100</p>
+                    <p className="text-xs text-green-700">Max Daily Verdicts</p>
                   </div>
                 </div>
               </div>
@@ -128,81 +156,94 @@ export default function JudgeVerifyPage() {
 
           {/* Benefits Sidebar */}
           <div className="space-y-6">
-            {/* Current Status */}
-            <div className="bg-white rounded-xl border border-gray-200 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Your Status</h3>
-              {verificationStatus.isVerified ? (
-                <div className="space-y-3">
-                  <VerifiedBadge
-                    isVerified={true}
-                    level={verificationStatus.verificationLevel}
-                    category={verificationStatus.verifiedCategory}
-                    size="lg"
-                  />
-                  <p className="text-sm text-green-700">
-                    Verified on {new Date(verificationStatus.verificationDate!).toLocaleDateString()}
+            {/* Earnings Multiplier */}
+            {verificationStatus && (
+              <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Your Earnings Multiplier</h3>
+                <div className="text-center py-4">
+                  <div className="text-4xl font-bold text-indigo-600 mb-1">
+                    {verificationStatus.earnMultiplier > 1
+                      ? `${verificationStatus.earnMultiplier}x`
+                      : '1x'}
+                  </div>
+                  <p className="text-sm text-gray-600">
+                    {verificationStatus.earnMultiplier > 1
+                      ? `+${((verificationStatus.earnMultiplier - 1) * 100).toFixed(0)}% bonus on all verdicts`
+                      : 'Complete verification to earn bonus'}
                   </p>
                 </div>
-              ) : (
-                <div className="text-center py-4">
-                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <Shield className="h-8 w-8 text-gray-400" />
-                  </div>
-                  <p className="text-gray-600">Not yet verified</p>
-                </div>
-              )}
-            </div>
+              </div>
+            )}
 
-            {/* Benefits */}
-            <div className="bg-white rounded-xl border border-gray-200 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Verification Benefits</h3>
-              <div className="space-y-3">
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">Higher Tips</p>
-                    <p className="text-xs text-gray-600">Verified judges earn 40% more in tips</p>
+            {/* Tier Benefits */}
+            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Tier Benefits</h3>
+              <div className="space-y-4">
+                <div className={`p-3 rounded-xl border ${isLinkedInConnected ? 'bg-sky-50 border-sky-200' : 'bg-gray-50 border-gray-200'}`}>
+                  <div className="flex items-center gap-2 mb-1">
+                    {isLinkedInConnected && <CheckCircle className="h-4 w-4 text-sky-600" />}
+                    <p className={`font-medium ${isLinkedInConnected ? 'text-sky-900' : 'text-gray-600'}`}>
+                      LinkedIn Connected
+                    </p>
                   </div>
+                  <p className="text-xs text-gray-600">+15% earnings, verified badge</p>
                 </div>
-                <div className="flex items-start gap-3">
-                  <Star className="h-5 w-5 text-green-600 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">Trust Badge</p>
-                    <p className="text-xs text-gray-600">Display expertise on your reviews</p>
+
+                <div className={`p-3 rounded-xl border ${isLinkedInVerified ? 'bg-indigo-50 border-indigo-200' : 'bg-gray-50 border-gray-200'}`}>
+                  <div className="flex items-center gap-2 mb-1">
+                    {isLinkedInVerified && <CheckCircle className="h-4 w-4 text-indigo-600" />}
+                    <p className={`font-medium ${isLinkedInVerified ? 'text-indigo-900' : 'text-gray-600'}`}>
+                      LinkedIn Verified
+                    </p>
                   </div>
+                  <p className="text-xs text-gray-600">+25% earnings, priority queue</p>
                 </div>
-                <div className="flex items-start gap-3">
-                  <TrendingUp className="h-5 w-5 text-green-600 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">Priority Access</p>
-                    <p className="text-xs text-gray-600">First access to relevant submissions</p>
+
+                <div className={`p-3 rounded-xl border ${isExpertVerified ? 'bg-purple-50 border-purple-200' : 'bg-gray-50 border-gray-200'}`}>
+                  <div className="flex items-center gap-2 mb-1">
+                    {isExpertVerified && <CheckCircle className="h-4 w-4 text-purple-600" />}
+                    <p className={`font-medium ${isExpertVerified ? 'text-purple-900' : 'text-gray-600'}`}>
+                      Expert Verified
+                    </p>
                   </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <Users className="h-5 w-5 text-green-600 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">Expert Status</p>
-                    <p className="text-xs text-gray-600">Be featured as a professional reviewer</p>
-                  </div>
+                  <p className="text-xs text-gray-600">+50% earnings, expert badge, premium access</p>
                 </div>
               </div>
             </div>
 
-            {/* Stats */}
-            <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl border border-indigo-200 p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Platform Impact</h3>
-              <div className="space-y-3">
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-indigo-600">85%</div>
-                  <p className="text-sm text-gray-600">Users prefer verified reviewers</p>
+            {/* Platform Stats */}
+            <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl border border-indigo-200 p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-indigo-600" />
+                Why Get Verified?
+              </h3>
+              <div className="space-y-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center shrink-0">
+                    <TrendingUp className="h-4 w-4 text-indigo-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">Higher Earnings</p>
+                    <p className="text-xs text-gray-600">Up to 50% bonus on all verdicts</p>
+                  </div>
                 </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-indigo-600">40%</div>
-                  <p className="text-sm text-gray-600">Higher tips for verified judges</p>
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center shrink-0">
+                    <Star className="h-4 w-4 text-indigo-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">Premium Requests</p>
+                    <p className="text-xs text-gray-600">Access to expert-tier submissions</p>
+                  </div>
                 </div>
-                <div className="text-center">
-                  <div className="text-2xl font-bold text-indigo-600">2.3x</div>
-                  <p className="text-sm text-gray-600">More feedback requests</p>
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center shrink-0">
+                    <Users className="h-4 w-4 text-indigo-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">User Trust</p>
+                    <p className="text-xs text-gray-600">85% prefer verified judges</p>
+                  </div>
                 </div>
               </div>
             </div>

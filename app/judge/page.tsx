@@ -13,7 +13,8 @@ import { NewJudgeWelcomeTour, useWelcomeTour } from '@/components/judge/NewJudge
 import { MilestoneCelebration, useMilestoneCheck } from '@/components/judge/MilestoneCelebration';
 import { TierProgressIndicator } from '@/components/judge/TierProgressIndicator';
 import { StreakRewards } from '@/components/judge/StreakRewards';
-import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { ContextualVerificationPrompt } from '@/components/judge/ContextualVerificationPrompt';
+import { PageErrorBoundary as ErrorBoundary } from '@/components/ui/error-boundary';
 
 import {
   LoadingState,
@@ -77,6 +78,7 @@ function JudgeDashboardContent() {
   const [statsError, setStatsError] = useState<string | null>(null);
   const [showQueueInfo, setShowQueueInfo] = useState(false);
   const [activeTab, setActiveTab] = useState<JudgeTabType>('queue');
+  const [verificationTierIndex, setVerificationTierIndex] = useState(0);
 
   // Check for submission success param
   useEffect(() => {
@@ -183,6 +185,17 @@ function JudgeDashboardContent() {
             setStatsError(statsError instanceof Error && statsError.name === 'AbortError'
               ? 'Stats request timed out'
               : 'Failed to load stats');
+          }
+
+          // Fetch verification status for earnings prompts
+          try {
+            const verifyRes = await fetch('/api/judge/verification-status', { signal: AbortSignal.timeout(5000) });
+            if (verifyRes.ok) {
+              const verifyData = await verifyRes.json();
+              setVerificationTierIndex(verifyData.tierIndex || 0);
+            }
+          } catch (verifyError) {
+            console.error('Verification status fetch error:', verifyError);
           }
         }
       }
@@ -360,6 +373,25 @@ function JudgeDashboardContent() {
           />
         </div>
 
+        {/* Verification prompt - shows earnings unlock opportunity */}
+        {profile && verificationTierIndex < 4 && (
+          <div className="mb-6">
+            <ContextualVerificationPrompt
+              userId={profile.id}
+              currentTier={verificationTierIndex}
+              weeklyVerdicts={Math.max(stats.verdicts_given / 4, 10)} // Estimate weekly based on total
+              context={isNewJudge ? 'first-verdict' : 'dashboard'}
+              onComplete={() => {
+                // Refresh verification status after completion
+                fetch('/api/judge/verification-status')
+                  .then(res => res.json())
+                  .then(data => setVerificationTierIndex(data.tierIndex || 0))
+                  .catch(console.error);
+              }}
+            />
+          </div>
+        )}
+
         {/* Stats error notification */}
         {statsError && (
           <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-3" role="alert">
@@ -459,6 +491,8 @@ function JudgeDashboardContent() {
                     onTimeframeChange={setSelectedTimeframe}
                     earningsData={earningsData}
                     isLoading={earningsLoading}
+                    verificationTierIndex={verificationTierIndex}
+                    onVerificationClick={() => router.push('/judge/verify')}
                   />
                   <div className="space-y-6">
                     <PerformanceMetrics stats={stats} />

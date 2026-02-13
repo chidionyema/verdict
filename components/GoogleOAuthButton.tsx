@@ -6,11 +6,14 @@ import { createClient } from '@/lib/supabase/client';
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL;
 
 const getRedirectUrl = () => {
-  if (SITE_URL) {
-    return `${SITE_URL}/auth/callback`;
-  }
+  // For client-side, always use the current origin to handle preview deployments
+  // This ensures OAuth redirects back to verdict-theta.vercel.app instead of askverdict.com
   if (typeof window !== 'undefined') {
     return `${window.location.origin}/auth/callback`;
+  }
+  // Fallback to configured SITE_URL for server-side (shouldn't happen for OAuth)
+  if (SITE_URL) {
+    return `${SITE_URL}/auth/callback`;
   }
   throw new Error('APP_URL not configured - required for OAuth callback in production');
 };

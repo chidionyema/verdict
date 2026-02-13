@@ -1,6 +1,6 @@
 'use client';
 
-import { BarChart3, Coins, DollarSign, Activity, ChevronUp, ChevronDown, Calendar, Clock, TrendingUp, Sparkles } from 'lucide-react';
+import { BarChart3, Coins, DollarSign, Activity, ChevronUp, ChevronDown, Calendar, Clock, TrendingUp, Sparkles, Award } from 'lucide-react';
 import { motion } from 'framer-motion';
 import type { JudgeStats, EarningsTimeframe } from './types';
 
@@ -10,6 +10,8 @@ interface EarningsOverviewProps {
   onTimeframeChange: (timeframe: EarningsTimeframe) => void;
   earningsData: Array<{ date: string; amount: number }>;
   isLoading?: boolean;
+  verificationTierIndex?: number;
+  onVerificationClick?: () => void;
 }
 
 // Helper to format next payout date
@@ -41,7 +43,15 @@ export function EarningsOverview({
   onTimeframeChange,
   earningsData,
   isLoading = false,
+  verificationTierIndex = 0,
+  onVerificationClick,
 }: EarningsOverviewProps) {
+  // Calculate potential earnings boost from verification
+  const currentMultiplier = [1, 1, 1, 1.15, 1.25, 1.5][verificationTierIndex] || 1;
+  const maxMultiplier = 1.5;
+  const potentialBoost = maxMultiplier - currentMultiplier;
+  const weeklyVerdicts = Math.max(stats.verdicts_given / 4, 10);
+  const potentialWeeklyIncrease = weeklyVerdicts * 0.60 * potentialBoost;
   const getTimeframeEarnings = () => {
     switch (selectedTimeframe) {
       case 'daily':
@@ -162,6 +172,38 @@ export function EarningsOverview({
             </div>
           </div>
         </div>
+
+        {/* Verification Earnings Boost Banner - Show when not fully verified */}
+        {verificationTierIndex < 4 && potentialWeeklyIncrease > 0.5 && onVerificationClick && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-4 p-4 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl"
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center">
+                  <TrendingUp className="h-5 w-5 text-amber-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-amber-900">
+                    You're missing +${potentialWeeklyIncrease.toFixed(2)}/week
+                  </p>
+                  <p className="text-xs text-amber-700">
+                    Complete verification to unlock up to 50% higher earnings
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={onVerificationClick}
+                className="px-4 py-2 bg-amber-600 text-white text-sm font-medium rounded-lg hover:bg-amber-700 transition flex items-center gap-1.5 shrink-0"
+              >
+                <Award className="h-4 w-4" />
+                Boost Earnings
+              </button>
+            </div>
+          </motion.div>
+        )}
 
         {/* Pending Earnings Banner - Show when there are pending earnings */}
         {(stats.pending_earnings ?? 0) > 0 && (

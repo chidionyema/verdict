@@ -10,6 +10,7 @@ import { TIER_CONFIGURATIONS, getTierConfig } from '@/lib/pricing/dynamic-pricin
 import { useVerdictDraft, DraftSaveIndicator, DraftRestorationBanner } from '@/lib/hooks/useVerdictDraft';
 import { VerdictPreviewModal } from '@/components/judge/VerdictPreviewModal';
 import { VerdictSubmittedCelebration } from '@/components/judge/VerdictSubmittedCelebration';
+import { PostVerdictVerificationNudge } from '@/components/judge/ContextualVerificationPrompt';
 import {
   TonePreSelector,
   SmartTextarea,
@@ -55,6 +56,9 @@ export default function JudgeVerdictPage({
   const [earnedAmount, setEarnedAmount] = useState(0);
   const [showDraftBanner, setShowDraftBanner] = useState(false);
   const [judgeStats, setJudgeStats] = useState({ verdicts: 0, streak: 0 });
+  const [showPostVerdictNudge, setShowPostVerdictNudge] = useState(false);
+  const [verificationTierIndex, setVerificationTierIndex] = useState(0);
+  const [userId, setUserId] = useState<string | null>(null);
 
   // Draft management
   const { saveDraft, restoreDraft, clearDraft, saveStatus, hasDraft, lastSaved } = useVerdictDraft(id);
@@ -94,6 +98,12 @@ export default function JudgeVerdictPage({
 
   const fetchJudgeStats = async () => {
     try {
+      // Get user ID for verification nudge
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setUserId(user.id);
+      }
+
       const res = await fetch('/api/judge/stats');
       if (res.ok) {
         const data = await res.json();
@@ -101,6 +111,13 @@ export default function JudgeVerdictPage({
           verdicts: data.verdicts_given || 0,
           streak: data.streak_days || 0,
         });
+      }
+
+      // Fetch verification status for post-verdict nudge
+      const verifyRes = await fetch('/api/judge/verification-status');
+      if (verifyRes.ok) {
+        const verifyData = await verifyRes.json();
+        setVerificationTierIndex(verifyData.tierIndex || 0);
       }
     } catch (err) {
       // Non-critical, ignore errors
@@ -244,6 +261,16 @@ export default function JudgeVerdictPage({
 
   const handleCloseCelebration = () => {
     setShowCelebration(false);
+    // Show verification nudge if user isn't fully verified (tier < 4)
+    if (verificationTierIndex < 4 && userId) {
+      setShowPostVerdictNudge(true);
+    } else {
+      router.push('/judge?submitted=true');
+    }
+  };
+
+  const handleDismissNudge = () => {
+    setShowPostVerdictNudge(false);
     router.push('/judge?submitted=true');
   };
 
@@ -642,6 +669,16 @@ export default function JudgeVerdictPage({
         totalVerdicts={judgeStats.verdicts + 1}
         requestCategory={request?.category}
       />
+
+      {/* Post-Verdict Verification Nudge */}
+      {userId && (
+        <PostVerdictVerificationNudge
+          userId={userId}
+          currentTier={verificationTierIndex}
+          show={showPostVerdictNudge}
+          onDismiss={handleDismissNudge}
+        />
+      )}
 
       {/* Mobile Sticky Submit Button */}
       {!alreadyJudged && (

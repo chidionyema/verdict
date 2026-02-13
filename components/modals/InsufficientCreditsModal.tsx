@@ -256,11 +256,18 @@ export function InsufficientCreditsModal({
 
         {/* Content */}
         <div className="p-6">
-          {/* Credit explanation */}
-          <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 mb-4 text-center">
-            <p className="text-sm text-indigo-800">
-              <strong>1 credit = 1 submission with 3 honest feedback reports</strong>
-            </p>
+          {/* Credit explanation with value breakdown */}
+          <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 mb-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-semibold text-indigo-900">What you get per credit</p>
+                <p className="text-xs text-indigo-700 mt-0.5">1 submission + 3 feedback reports</p>
+              </div>
+              <div className="text-right">
+                <p className="text-sm font-bold text-indigo-900">~$3.49/credit</p>
+                <p className="text-xs text-indigo-700">~$1.16 per review</p>
+              </div>
+            </div>
           </div>
 
           {/* Credits needed indicator */}

@@ -1172,16 +1172,28 @@ export default function RequestDetailPage({
                           {verdict.rating}/10
                         </div>
                         <div className="flex">
-                          {[...Array(5)].map((_, i) => (
-                            <Star
-                              key={i}
-                              className={`h-4 w-4 ${
-                                i < verdict.rating! / 2
-                                  ? 'text-yellow-400 fill-current'
-                                  : 'text-gray-300'
-                              }`}
-                            />
-                          ))}
+                          {[...Array(5)].map((_, i) => {
+                            // Convert 10-point scale to 5 stars with half-star support
+                            const starValue = verdict.rating! / 2;
+                            const isFilled = i < Math.floor(starValue);
+                            const isHalf = !isFilled && i < starValue;
+
+                            return (
+                              <div key={i} className="relative">
+                                {/* Background empty star */}
+                                <Star className="h-4 w-4 text-gray-300" />
+                                {/* Filled or half-filled overlay */}
+                                {(isFilled || isHalf) && (
+                                  <div
+                                    className="absolute inset-0 overflow-hidden"
+                                    style={{ width: isHalf ? '50%' : '100%' }}
+                                  >
+                                    <Star className="h-4 w-4 text-yellow-400 fill-current" />
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
                     )}

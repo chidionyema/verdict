@@ -154,15 +154,21 @@ export function ContentStep({
                 {userCredits === 0 ? 'You have 0 credits' : `You have ${userCredits} credit${userCredits !== 1 ? 's' : ''}`}
               </p>
               <p className="text-sm text-gray-600">
-                Submissions cost 1 credit and get 3 reviews
+                1-4 credits per submission (3-10 reviews)
               </p>
             </div>
           </div>
-          {userCredits === 0 && (
-            <div className="text-xs text-amber-700 bg-amber-100 px-2 py-1 rounded-full">
-              Earn or buy at checkout
-            </div>
-          )}
+          <div className="text-right">
+            {userCredits === 0 ? (
+              <div className="text-xs text-amber-700 bg-amber-100 px-2 py-1 rounded-full">
+                Earn or buy at checkout
+              </div>
+            ) : (
+              <div className="text-xs text-gray-500">
+                Choose tier at final step
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

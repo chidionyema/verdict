@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
+import { getVerificationStatus } from '@/lib/judge/verification';
 
 // UUID validation regex
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -9,58 +10,58 @@ function isValidUUID(id: string): boolean {
   return typeof id === 'string' && UUID_REGEX.test(id);
 }
 
-// Simple LinkedIn profile validation patterns
+// Expertise detection patterns based on LinkedIn URL username hints
 const EXPERTISE_PATTERNS = [
-  { pattern: /\b(software|developer|engineer|programming|tech|IT)\b/i, expertise: 'Tech Professional' },
-  { pattern: /\b(marketing|brand|advertising|campaign|social media)\b/i, expertise: 'Marketing Professional' },
-  { pattern: /\b(design|creative|UI|UX|graphic|visual)\b/i, expertise: 'Design Professional' },
-  { pattern: /\b(hr|human resources|talent|recruiting|people)\b/i, expertise: 'HR Professional' },
-  { pattern: /\b(finance|accounting|financial|analyst|controller)\b/i, expertise: 'Finance Professional' },
-  { pattern: /\b(sales|business development|account|client|customer)\b/i, expertise: 'Sales Professional' },
-  { pattern: /\b(manager|director|leader|executive|VP|president|CEO)\b/i, expertise: 'Leadership Professional' },
-  { pattern: /\b(consultant|advisory|strategy|strategic)\b/i, expertise: 'Consulting Professional' },
-  { pattern: /\b(teacher|education|professor|instructor|trainer)\b/i, expertise: 'Education Professional' },
-  { pattern: /\b(legal|lawyer|attorney|counsel|law)\b/i, expertise: 'Legal Professional' },
+  { pattern: /\b(software|developer|engineer|programming|tech|IT|frontend|backend|fullstack|devops)\b/i, expertise: 'tech' },
+  { pattern: /\b(marketing|brand|advertising|campaign|social|content|seo|growth)\b/i, expertise: 'marketing' },
+  { pattern: /\b(design|creative|UI|UX|graphic|visual|product)\b/i, expertise: 'design' },
+  { pattern: /\b(hr|human|talent|recruiting|people|workforce)\b/i, expertise: 'hr' },
+  { pattern: /\b(finance|accounting|financial|analyst|controller|cfo)\b/i, expertise: 'finance' },
+  { pattern: /\b(sales|business|account|client|customer|revenue)\b/i, expertise: 'business' },
+  { pattern: /\b(manager|director|leader|executive|VP|president|CEO|founder)\b/i, expertise: 'business' },
+  { pattern: /\b(legal|lawyer|attorney|counsel|law|compliance)\b/i, expertise: 'legal' },
+  { pattern: /\b(writer|editor|content|copywriter|journalist|author)\b/i, expertise: 'writing' },
 ];
 
-function validateLinkedInUrl(url: string): boolean {
-  const linkedinUrlPattern = /^https?:\/\/(www\.)?linkedin\.com\/in\/[a-zA-Z0-9-]+\/?$/;
-  return linkedinUrlPattern.test(url);
+const EXPERTISE_LABELS: Record<string, string> = {
+  tech: 'Tech Professional',
+  marketing: 'Marketing Professional',
+  design: 'Design Professional',
+  hr: 'HR Professional',
+  finance: 'Finance Professional',
+  business: 'Business Professional',
+  legal: 'Legal Professional',
+  writing: 'Writing Professional',
+  general: 'Verified Professional',
+};
+
+function validateLinkedInUrl(url: string): { valid: boolean; username: string | null } {
+  // Support various LinkedIn URL formats
+  const patterns = [
+    /^https?:\/\/(www\.)?linkedin\.com\/in\/([a-zA-Z0-9_-]+)\/?(\?.*)?$/,
+    /^https?:\/\/(www\.)?linkedin\.com\/pub\/([a-zA-Z0-9_-]+)\/?/,
+  ];
+
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match) {
+      return { valid: true, username: match[2] };
+    }
+  }
+
+  return { valid: false, username: null };
 }
 
-function detectExpertiseFromUrl(url: string): string {
-  // Extract username from LinkedIn URL for basic validation
-  const match = url.match(/linkedin\.com\/in\/([a-zA-Z0-9-]+)/);
-  if (!match) return 'Professional';
-  
-  const username = match[1];
-  
-  // Basic heuristics based on username patterns
+function detectExpertiseFromUrl(username: string): string {
+  const lowerUsername = username.toLowerCase();
+
   for (const { pattern, expertise } of EXPERTISE_PATTERNS) {
-    if (pattern.test(username)) {
+    if (pattern.test(lowerUsername)) {
       return expertise;
     }
   }
-  
-  // Default for valid LinkedIn profiles
-  return 'Verified Professional';
-}
 
-async function simulateProfileScraping(url: string): Promise<{ valid: boolean; expertise: string }> {
-  // In a real implementation, this would:
-  // 1. Use LinkedIn API or web scraping (with proper permissions)
-  // 2. Validate profile exists and is public
-  // 3. Extract job title, company, experience
-  // 4. Use AI to categorize expertise
-  
-  // For now, simulate with URL validation and pattern matching
-  const valid = validateLinkedInUrl(url);
-  const expertise = valid ? detectExpertiseFromUrl(url) : 'Professional';
-  
-  // Simulate processing delay (remove in production)
-  await new Promise(resolve => setTimeout(resolve, 2000));
-  
-  return { valid, expertise };
+  return 'general';
 }
 
 async function POST_Handler(request: NextRequest) {
@@ -93,52 +94,70 @@ async function POST_Handler(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // Validate and analyze LinkedIn profile
-    const { valid, expertise } = await simulateProfileScraping(linkedinUrl);
+    // Validate LinkedIn URL format
+    const { valid, username } = validateLinkedInUrl(linkedinUrl);
 
-    if (!valid) {
+    if (!valid || !username) {
       return NextResponse.json({
         verified: false,
-        error: 'Invalid or private LinkedIn profile'
+        error: 'Invalid LinkedIn profile URL. Please use the format: https://linkedin.com/in/your-username'
       });
     }
 
-    // Update user profile with verification status
-    const { error: updateError } = await (supabase
+    // Detect expertise from URL (basic heuristic)
+    const expertiseCategory = detectExpertiseFromUrl(username);
+    const expertiseLabel = EXPERTISE_LABELS[expertiseCategory] || 'Verified Professional';
+
+    // Update profile with LinkedIn URL (this makes them "linkedin_connected" tier)
+    const { error: updateError } = await (supabase as any)
       .from('profiles')
-      .update as any)({
-        linkedin_verified: true,
+      .update({
         linkedin_url: linkedinUrl,
-        expertise_area: expertise,
-        verified_at: new Date().toISOString(),
-        verification_method: 'instant_linkedin'
+        expertise_area: expertiseCategory,
+        updated_at: new Date().toISOString(),
       })
       .eq('id', userId);
 
     if (updateError) {
       console.error('Error updating profile:', updateError);
-      return NextResponse.json({ 
-        error: 'Failed to update verification status' 
+      return NextResponse.json({
+        error: 'Failed to update profile with LinkedIn URL'
       }, { status: 500 });
     }
 
-    // Create verification record for audit trail
-    await (supabase
-      .from('verifications')
-      .insert as any)({
+    // Create/update judge_verifications record
+    // Note: This marks them as "linkedin_connected" but not "linkedin_verified"
+    // Full LinkedIn verification would require OAuth + actual profile data validation
+    const { error: verificationError } = await (supabase as any)
+      .from('judge_verifications')
+      .upsert({
         user_id: userId,
-        type: 'linkedin',
-        status: 'verified',
-        platform_url: linkedinUrl,
-        expertise_detected: expertise,
-        verification_method: 'instant',
-        verified_at: new Date().toISOString()
-      });
+        linkedin_profile_data: { username, url: linkedinUrl },
+        verification_attempts: 1,
+        last_verification_attempt: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'user_id' });
+
+    if (verificationError) {
+      // Log but don't fail - the profile update succeeded
+      console.error('Error creating verification record:', verificationError);
+    }
+
+    // Get updated verification status
+    const verificationStatus = await getVerificationStatus(supabase, userId);
 
     return NextResponse.json({
       verified: true,
-      expertise,
-      message: 'LinkedIn profile verified successfully'
+      expertise: expertiseLabel,
+      expertiseCategory,
+      currentTier: verificationStatus.currentTier,
+      tierIndex: verificationStatus.tierIndex,
+      message: 'LinkedIn profile connected successfully',
+      // Note: To unlock "linkedin_verified" tier, users would need to complete
+      // proper OAuth verification to validate connections, tenure, etc.
+      nextStepHint: verificationStatus.tierIndex < 4
+        ? 'Complete full LinkedIn OAuth verification to unlock higher earnings multiplier'
+        : null,
     });
 
   } catch (error) {

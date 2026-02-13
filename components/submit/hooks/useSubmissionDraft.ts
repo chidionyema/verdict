@@ -207,6 +207,12 @@ function convertLegacyFormat(legacy: any, sourceKey: string): SubmissionDraft | 
 
   // Format from verdict_request_draft (create/page.tsx)
   if (legacy.requestType !== undefined || legacy.tier !== undefined) {
+    // Restore media URLs - these are string URLs which ARE serializable
+    // Note: File objects cannot be serialized, but uploaded URLs can be restored
+    const restoredMediaUrls: string[] = legacy.mediaUrls && Array.isArray(legacy.mediaUrls)
+      ? legacy.mediaUrls.filter((url: unknown) => typeof url === 'string' && url.length > 0)
+      : [];
+
     return {
       version: 2,
       savedAt: Date.now(),
@@ -214,7 +220,7 @@ function convertLegacyFormat(legacy: any, sourceKey: string): SubmissionDraft | 
       data: {
         requestType: legacy.requestType || 'standard',
         mediaType: legacy.mediaType === 'text' ? 'text' : 'photo',
-        mediaUrls: legacy.mediaFiles?.length > 0 ? [] : [], // Files can't be serialized
+        mediaUrls: restoredMediaUrls,
         textContent: legacy.textContent || '',
         category: legacy.category || '',
         context: legacy.context || '',

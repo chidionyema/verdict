@@ -63,12 +63,12 @@ export function DashboardHeader({
             </div>
           </div>
 
-          {/* Level Progress Bar */}
+          {/* Activity Progress Bar - shows progress based on verdicts given */}
           <div className="mt-4">
             <div className="flex items-center justify-between text-sm mb-2">
-              <span className="text-gray-600 font-medium">Level {judgeLevel.level} Progress</span>
+              <span className="text-gray-600 font-medium">Rank Progress</span>
               <span className="text-indigo-600 font-bold">
-                {stats.next_level_progress}% to Level {judgeLevel.level + 1}
+                {stats.next_level_progress}% to next rank
               </span>
             </div>
             <div className="h-3 bg-gray-200 rounded-full overflow-hidden shadow-inner">

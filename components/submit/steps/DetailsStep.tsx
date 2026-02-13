@@ -232,35 +232,43 @@ export function DetailsStep({
 }
 
 // Helper: Detect category from context text
+// Must return valid category IDs: 'appearance', 'profile', 'writing', 'decision'
 function detectCategoryFromContext(text: string): string | null {
   const lower = text.toLowerCase();
 
-  if (/dating|tinder|bumble|hinge|profile|match|swipe/.test(lower)) return 'dating';
-  if (/linkedin|resume|job|career|interview|professional/.test(lower)) return 'career';
-  if (/outfit|clothes|style|hair|look|appearance|photo/.test(lower)) return 'appearance';
-  if (/essay|writing|copy|message|email|text|bio/.test(lower)) return 'writing';
-  if (/decision|choose|should i|advice|help me decide/.test(lower)) return 'decision';
+  // Profile category - dating profiles, LinkedIn, resumes
+  if (/dating|tinder|bumble|hinge|match|swipe|linkedin|resume|job|career|interview|professional|portfolio/.test(lower)) {
+    return 'profile';
+  }
+  // Appearance category - style, outfits, photos, looks
+  if (/outfit|clothes|style|hair|look|appearance|photo|selfie|headshot|fashion/.test(lower)) {
+    return 'appearance';
+  }
+  // Writing category - content, copy, creative work
+  if (/essay|writing|copy|message|email|bio|content|creative|draft|text/.test(lower)) {
+    return 'writing';
+  }
+  // Decision category - life choices, dilemmas
+  if (/decision|choose|should i|advice|help me decide|dilemma|option|which one/.test(lower)) {
+    return 'decision';
+  }
 
   return null;
 }
 
 // Helper: Get quick prompts based on category and media type
+// Valid category IDs: 'appearance', 'profile', 'writing', 'decision'
 function getQuickPrompts(category: string, mediaType: string): string[] {
   const prompts: Record<string, string[]> = {
     appearance: [
       "Rate this photo 1-10 and tell me how to improve it",
-      "Would this photo work for a dating profile?",
       "Does this outfit look put together and stylish?",
+      "What's the first impression this gives?",
     ],
-    dating: [
+    profile: [
       "Is this a good main photo for my dating profile?",
-      "How can I improve my bio to get more matches?",
-      "Does this message come across as interesting?",
-    ],
-    career: [
       "Does this look professional for LinkedIn?",
-      "How can I improve this resume section?",
-      "Would you hire someone with this profile photo?",
+      "How can I improve this to get better results?",
     ],
     writing: [
       "Is this clear and engaging? How can I improve the tone?",

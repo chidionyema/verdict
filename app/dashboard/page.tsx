@@ -2,7 +2,7 @@
 
 import { Suspense } from 'react';
 import { UnifiedDashboard } from '@/components/dashboard';
-import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { PageErrorBoundary as ErrorBoundary } from '@/components/ui/error-boundary';
 
 export const dynamic = 'force-dynamic';
 

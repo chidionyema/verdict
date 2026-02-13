@@ -9,11 +9,13 @@
 --   - For NEW deployments: Run this entire script on a fresh Supabase project
 --   - For EXISTING databases: Use individual migrations in database/migrations/
 --
--- Last consolidated: 2026-02-11
+-- Last consolidated: 2026-02-13
+-- Includes migrations: 002, 003, 004, 005
 -- Includes:
 --   - Core schema (profiles, requests, responses)
 --   - Credit system (transactions, atomic operations)
 --   - Judge system (earnings, reputation, payouts, qualifications)
+--   - Multi-tier judge verification system (email → profile → linkedin → expert)
 --   - Comparison & Split Test features
 --   - Authentication (email verification, password reset)
 --   - Subscriptions & Payment methods
@@ -128,8 +130,9 @@ CREATE TABLE IF NOT EXISTS profiles (
   preferred_path VARCHAR(20) CHECK (preferred_path IN ('community', 'private')),
 
   -- Judge status
-  is_judge BOOLEAN DEFAULT FALSE,
+  is_judge BOOLEAN DEFAULT TRUE, -- Everyone can judge by default
   is_admin BOOLEAN DEFAULT FALSE,
+  is_expert BOOLEAN DEFAULT FALSE,
   judge_since TIMESTAMP WITH TIME ZONE,
   judge_training_completed BOOLEAN DEFAULT FALSE,
   judge_qualification_date TIMESTAMP WITH TIME ZONE,
@@ -745,19 +748,55 @@ CREATE TABLE IF NOT EXISTS verdict_quality_ratings (
   CONSTRAINT unique_verdict_rating UNIQUE (verdict_response_id, rater_id)
 );
 
--- Judge verifications
+-- Judge verifications (multi-tier verification system)
 CREATE TABLE IF NOT EXISTS judge_verifications (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-  linkedin_url TEXT NOT NULL,
-  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
-  submitted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  reviewed_at TIMESTAMPTZ NULL,
-  reviewed_by UUID NULL REFERENCES profiles(id) ON DELETE SET NULL,
-  verification_type TEXT NOT NULL DEFAULT 'linkedin',
-  notes TEXT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  CONSTRAINT unique_user_verification UNIQUE (user_id, verification_type)
+
+  -- LinkedIn verification data
+  linkedin_profile_data JSONB,
+  linkedin_connections INTEGER,
+  linkedin_tenure_years INTEGER,
+  linkedin_positions_count INTEGER,
+  linkedin_verified_at TIMESTAMPTZ,
+  linkedin_verification_reasons TEXT[],
+
+  -- Verification metadata
+  verification_attempts INTEGER DEFAULT 0,
+  last_verification_attempt TIMESTAMPTZ,
+
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+
+  CONSTRAINT unique_user_verification UNIQUE (user_id)
+);
+
+-- Expert verification requests (for expert tier applications)
+CREATE TABLE IF NOT EXISTS expert_verification_requests (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+
+  -- Application details
+  expertise_category TEXT NOT NULL,
+  proof_type TEXT NOT NULL
+    CHECK (proof_type IN ('portfolio', 'certification', 'reference', 'work_sample')),
+  proof_url TEXT,
+  proof_description TEXT NOT NULL,
+  years_experience INTEGER NOT NULL,
+
+  -- Status
+  status TEXT NOT NULL DEFAULT 'pending'
+    CHECK (status IN ('pending', 'approved', 'rejected', 'more_info_needed')),
+  rejection_reason TEXT,
+  admin_notes TEXT,
+
+  -- Processing
+  submitted_at TIMESTAMPTZ DEFAULT NOW(),
+  reviewed_at TIMESTAMPTZ,
+  reviewed_by UUID REFERENCES profiles(id),
+
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Expert verifications (for expert routing)
@@ -1364,7 +1403,12 @@ CREATE INDEX IF NOT EXISTS idx_judge_earnings_status ON judge_earnings(payout_st
 CREATE INDEX IF NOT EXISTS idx_judge_earnings_payout ON judge_earnings(payout_id);
 CREATE INDEX IF NOT EXISTS idx_judge_ratings_judge ON judge_ratings(judge_id);
 CREATE INDEX IF NOT EXISTS idx_judge_verifications_user ON judge_verifications(user_id);
-CREATE INDEX IF NOT EXISTS idx_judge_verifications_status ON judge_verifications(status);
+CREATE INDEX IF NOT EXISTS idx_judge_verifications_linkedin ON judge_verifications(linkedin_verified_at) WHERE linkedin_verified_at IS NOT NULL;
+
+-- Expert verification request indexes
+CREATE INDEX IF NOT EXISTS idx_expert_verification_user ON expert_verification_requests(user_id);
+CREATE INDEX IF NOT EXISTS idx_expert_verification_status ON expert_verification_requests(status);
+CREATE INDEX IF NOT EXISTS idx_expert_verification_pending ON expert_verification_requests(status, submitted_at) WHERE status = 'pending';
 CREATE INDEX IF NOT EXISTS idx_judge_payout_accounts_judge ON judge_payout_accounts(judge_id);
 CREATE INDEX IF NOT EXISTS idx_payouts_judge ON payouts(judge_id);
 CREATE INDEX IF NOT EXISTS idx_payouts_status ON payouts(status);
@@ -2308,6 +2352,263 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- ============================================================================
+-- PART 32B: FUNCTIONS - JUDGE VERIFICATION SYSTEM
+-- ============================================================================
+
+-- Get verification status for a judge (multi-tier system)
+CREATE OR REPLACE FUNCTION get_judge_verification_status(p_user_id UUID)
+RETURNS JSONB AS $$
+DECLARE
+  v_profile profiles%ROWTYPE;
+  v_verification judge_verifications%ROWTYPE;
+  v_expert expert_verification_requests%ROWTYPE;
+  v_tier TEXT;
+  v_tier_index INTEGER;
+  v_multiplier NUMERIC;
+BEGIN
+  -- Get profile
+  SELECT * INTO v_profile
+  FROM profiles
+  WHERE id = p_user_id;
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('error', 'Profile not found');
+  END IF;
+
+  -- Get verification record
+  SELECT * INTO v_verification
+  FROM judge_verifications
+  WHERE user_id = p_user_id;
+
+  -- Get approved expert application
+  SELECT * INTO v_expert
+  FROM expert_verification_requests
+  WHERE user_id = p_user_id AND status = 'approved'
+  ORDER BY reviewed_at DESC
+  LIMIT 1;
+
+  -- Calculate tier based on verification status
+  IF v_expert.id IS NOT NULL THEN
+    v_tier := 'expert_verified';
+    v_tier_index := 5;
+    v_multiplier := 1.5;
+  ELSIF v_verification.linkedin_verified_at IS NOT NULL THEN
+    v_tier := 'linkedin_verified';
+    v_tier_index := 4;
+    v_multiplier := 1.25;
+  ELSIF v_profile.linkedin_url IS NOT NULL AND v_profile.linkedin_url != '' THEN
+    v_tier := 'linkedin_connected';
+    v_tier_index := 3;
+    v_multiplier := 1.15;
+  ELSIF v_profile.avatar_url IS NOT NULL AND v_profile.bio IS NOT NULL
+        AND v_profile.expertise_area IS NOT NULL AND v_profile.country IS NOT NULL THEN
+    v_tier := 'profile_complete';
+    v_tier_index := 2;
+    v_multiplier := 1.0;
+  ELSIF v_profile.email_verified = TRUE THEN
+    v_tier := 'email_verified';
+    v_tier_index := 1;
+    v_multiplier := 1.0;
+  ELSE
+    v_tier := 'none';
+    v_tier_index := 0;
+    v_multiplier := 1.0;
+  END IF;
+
+  RETURN jsonb_build_object(
+    'user_id', p_user_id,
+    'current_tier', v_tier,
+    'tier_index', v_tier_index,
+    'earn_multiplier', v_multiplier,
+    'email_verified', COALESCE(v_profile.email_verified, FALSE),
+    'profile_complete', (
+      v_profile.avatar_url IS NOT NULL AND
+      v_profile.bio IS NOT NULL AND
+      v_profile.expertise_area IS NOT NULL AND
+      v_profile.country IS NOT NULL
+    ),
+    'linkedin_connected', (v_profile.linkedin_url IS NOT NULL AND v_profile.linkedin_url != ''),
+    'linkedin_verified', (v_verification.linkedin_verified_at IS NOT NULL),
+    'expert_verified', (v_expert.id IS NOT NULL),
+    'linkedin_data', CASE WHEN v_verification.id IS NOT NULL THEN
+      jsonb_build_object(
+        'connections', v_verification.linkedin_connections,
+        'tenure_years', v_verification.linkedin_tenure_years,
+        'positions', v_verification.linkedin_positions_count,
+        'verified_at', v_verification.linkedin_verified_at,
+        'reasons', v_verification.linkedin_verification_reasons
+      )
+    ELSE NULL END,
+    'expert_category', v_expert.expertise_category
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Submit LinkedIn verification with validation
+CREATE OR REPLACE FUNCTION submit_linkedin_verification(
+  p_user_id UUID,
+  p_linkedin_url TEXT,
+  p_connections INTEGER DEFAULT NULL,
+  p_tenure_years INTEGER DEFAULT NULL,
+  p_positions_count INTEGER DEFAULT NULL,
+  p_profile_data JSONB DEFAULT NULL
+)
+RETURNS JSONB AS $$
+DECLARE
+  v_verified BOOLEAN := FALSE;
+  v_reasons TEXT[] := ARRAY[]::TEXT[];
+  v_min_connections INTEGER := 100;
+  v_min_tenure INTEGER := 1;
+  v_min_positions INTEGER := 1;
+BEGIN
+  -- Update profile with LinkedIn URL
+  UPDATE profiles
+  SET linkedin_url = p_linkedin_url,
+      updated_at = NOW()
+  WHERE id = p_user_id;
+
+  -- Check verification criteria
+  IF p_connections IS NOT NULL AND p_connections < v_min_connections THEN
+    v_reasons := array_append(v_reasons,
+      format('Need %s+ connections (you have %s)', v_min_connections, p_connections));
+  END IF;
+
+  IF p_tenure_years IS NOT NULL AND p_tenure_years < v_min_tenure THEN
+    v_reasons := array_append(v_reasons,
+      format('LinkedIn profile must be %s+ years old', v_min_tenure));
+  END IF;
+
+  IF p_positions_count IS NOT NULL AND p_positions_count < v_min_positions THEN
+    v_reasons := array_append(v_reasons, 'Must have at least one work position listed');
+  END IF;
+
+  -- Determine if verified (all criteria met)
+  v_verified := (array_length(v_reasons, 1) IS NULL OR array_length(v_reasons, 1) = 0)
+    AND p_connections IS NOT NULL
+    AND p_tenure_years IS NOT NULL
+    AND p_positions_count IS NOT NULL;
+
+  -- Upsert verification record
+  INSERT INTO judge_verifications (
+    user_id,
+    linkedin_profile_data,
+    linkedin_connections,
+    linkedin_tenure_years,
+    linkedin_positions_count,
+    linkedin_verified_at,
+    linkedin_verification_reasons,
+    verification_attempts,
+    last_verification_attempt
+  )
+  VALUES (
+    p_user_id,
+    p_profile_data,
+    p_connections,
+    p_tenure_years,
+    p_positions_count,
+    CASE WHEN v_verified THEN NOW() ELSE NULL END,
+    v_reasons,
+    1,
+    NOW()
+  )
+  ON CONFLICT (user_id) DO UPDATE
+  SET linkedin_profile_data = EXCLUDED.linkedin_profile_data,
+      linkedin_connections = EXCLUDED.linkedin_connections,
+      linkedin_tenure_years = EXCLUDED.linkedin_tenure_years,
+      linkedin_positions_count = EXCLUDED.linkedin_positions_count,
+      linkedin_verified_at = CASE WHEN v_verified THEN NOW() ELSE judge_verifications.linkedin_verified_at END,
+      linkedin_verification_reasons = EXCLUDED.linkedin_verification_reasons,
+      verification_attempts = judge_verifications.verification_attempts + 1,
+      last_verification_attempt = NOW(),
+      updated_at = NOW();
+
+  -- Update profile linkedin_verified flag
+  UPDATE profiles
+  SET linkedin_verified = v_verified,
+      updated_at = NOW()
+  WHERE id = p_user_id;
+
+  RETURN jsonb_build_object(
+    'verified', v_verified,
+    'reasons', v_reasons,
+    'connections', p_connections,
+    'tenure_years', p_tenure_years,
+    'positions_count', p_positions_count
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Process expert verification (admin function)
+CREATE OR REPLACE FUNCTION process_expert_verification(
+  p_request_id UUID,
+  p_admin_id UUID,
+  p_approved BOOLEAN,
+  p_reason TEXT DEFAULT NULL
+)
+RETURNS JSONB AS $$
+DECLARE
+  v_request expert_verification_requests%ROWTYPE;
+BEGIN
+  -- Check admin status
+  IF NOT EXISTS (SELECT 1 FROM profiles WHERE id = p_admin_id AND is_admin = TRUE) THEN
+    RETURN jsonb_build_object('error', 'Unauthorized');
+  END IF;
+
+  -- Get request
+  SELECT * INTO v_request
+  FROM expert_verification_requests
+  WHERE id = p_request_id;
+
+  IF NOT FOUND THEN
+    RETURN jsonb_build_object('error', 'Request not found');
+  END IF;
+
+  -- Update request status
+  UPDATE expert_verification_requests
+  SET status = CASE WHEN p_approved THEN 'approved' ELSE 'rejected' END,
+      rejection_reason = CASE WHEN NOT p_approved THEN p_reason ELSE NULL END,
+      reviewed_at = NOW(),
+      reviewed_by = p_admin_id,
+      updated_at = NOW()
+  WHERE id = p_request_id;
+
+  -- If approved, update profile to expert status
+  IF p_approved THEN
+    UPDATE profiles
+    SET is_expert = TRUE,
+        expertise_area = COALESCE(v_request.expertise_category, expertise_area),
+        updated_at = NOW()
+    WHERE id = v_request.user_id;
+  END IF;
+
+  RETURN jsonb_build_object(
+    'success', TRUE,
+    'request_id', p_request_id,
+    'user_id', v_request.user_id,
+    'status', CASE WHEN p_approved THEN 'approved' ELSE 'rejected' END
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Calculate judge earnings with tier multiplier
+CREATE OR REPLACE FUNCTION calculate_judge_earnings(
+  p_judge_id UUID,
+  p_base_amount NUMERIC
+)
+RETURNS NUMERIC AS $$
+DECLARE
+  v_status JSONB;
+  v_multiplier NUMERIC;
+BEGIN
+  -- Get verification status
+  v_status := get_judge_verification_status(p_judge_id);
+  v_multiplier := COALESCE((v_status->>'earn_multiplier')::NUMERIC, 1.0);
+
+  RETURN ROUND(p_base_amount * v_multiplier, 2);
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- ============================================================================
 -- PART 33: TRIGGERS - ONBOARDING COMPLETION
 -- ============================================================================
 
@@ -2361,6 +2662,7 @@ ALTER TABLE judge_verifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE judge_payout_accounts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE payouts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE expert_verifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE expert_verification_requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE verdict_quality_ratings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE feedback_responses ENABLE ROW LEVEL SECURITY;
 
@@ -2402,9 +2704,27 @@ DROP POLICY IF EXISTS "Users can view own requests" ON verdict_requests;
 CREATE POLICY "Users can view own requests" ON verdict_requests FOR SELECT USING (auth.uid() = user_id);
 DROP POLICY IF EXISTS "Users can create requests" ON verdict_requests;
 CREATE POLICY "Users can create requests" ON verdict_requests FOR INSERT WITH CHECK (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Users can update own requests" ON verdict_requests;
+CREATE POLICY "Users can update own requests" ON verdict_requests
+  FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+
+-- Inclusive policy: Allow any authenticated user to view public open requests (for the feed)
+-- This replaces the old restrictive "Judges can view open requests" policy
 DROP POLICY IF EXISTS "Judges can view open requests" ON verdict_requests;
-CREATE POLICY "Judges can view open requests" ON verdict_requests FOR SELECT
-  USING (status IN ('open', 'in_progress') AND deleted_at IS NULL AND EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_judge = true));
+DROP POLICY IF EXISTS "Users can view public open requests" ON verdict_requests;
+CREATE POLICY "Users can view public open requests" ON verdict_requests
+  FOR SELECT TO authenticated
+  USING (
+    -- Public requests available for judging
+    (visibility = 'public' AND status IN ('open', 'in_progress') AND deleted_at IS NULL)
+    -- OR user's own requests
+    OR (auth.uid() = user_id)
+  );
+
+-- Service role policy for system updates
+DROP POLICY IF EXISTS "System can update verdict counts" ON verdict_requests;
+CREATE POLICY "System can update verdict counts" ON verdict_requests
+  FOR UPDATE TO service_role USING (true) WITH CHECK (true);
 
 -- Response policies
 DROP POLICY IF EXISTS "Judges can create responses" ON verdict_responses;
@@ -2414,10 +2734,29 @@ CREATE POLICY "Users can view responses on own requests" ON verdict_responses FO
   USING (auth.uid() = judge_id OR auth.uid() = (SELECT user_id FROM verdict_requests WHERE id = request_id));
 
 -- Judge verification policies
-DROP POLICY IF EXISTS "Users can view own verifications" ON judge_verifications;
-CREATE POLICY "Users can view own verifications" ON judge_verifications FOR SELECT USING (user_id = auth.uid());
-DROP POLICY IF EXISTS "Users can create own verifications" ON judge_verifications;
-CREATE POLICY "Users can create own verifications" ON judge_verifications FOR INSERT WITH CHECK (user_id = auth.uid());
+DROP POLICY IF EXISTS "Users can view own verification" ON judge_verifications;
+CREATE POLICY "Users can view own verification" ON judge_verifications
+  FOR SELECT USING (user_id = auth.uid());
+DROP POLICY IF EXISTS "Users can insert own verification" ON judge_verifications;
+CREATE POLICY "Users can insert own verification" ON judge_verifications
+  FOR INSERT WITH CHECK (user_id = auth.uid());
+DROP POLICY IF EXISTS "Users can update own verification" ON judge_verifications;
+CREATE POLICY "Users can update own verification" ON judge_verifications
+  FOR UPDATE USING (user_id = auth.uid());
+
+-- Expert verification request policies
+DROP POLICY IF EXISTS "Users can view own expert requests" ON expert_verification_requests;
+CREATE POLICY "Users can view own expert requests" ON expert_verification_requests
+  FOR SELECT USING (user_id = auth.uid());
+DROP POLICY IF EXISTS "Users can insert own expert requests" ON expert_verification_requests;
+CREATE POLICY "Users can insert own expert requests" ON expert_verification_requests
+  FOR INSERT WITH CHECK (user_id = auth.uid());
+DROP POLICY IF EXISTS "Admins can view all expert requests" ON expert_verification_requests;
+CREATE POLICY "Admins can view all expert requests" ON expert_verification_requests
+  FOR SELECT USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_admin = TRUE));
+DROP POLICY IF EXISTS "Admins can update expert requests" ON expert_verification_requests;
+CREATE POLICY "Admins can update expert requests" ON expert_verification_requests
+  FOR UPDATE USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_admin = TRUE));
 
 -- Expert verification policies
 DROP POLICY IF EXISTS "Users can view own expert verification" ON expert_verifications;
@@ -2714,8 +3053,8 @@ BEGIN
   RAISE NOTICE '===========================================';
   RAISE NOTICE 'VERDICT DATABASE SCHEMA - COMPLETE';
   RAISE NOTICE '===========================================';
-  RAISE NOTICE 'Tables: 55+';
-  RAISE NOTICE 'Functions: 30+';
+  RAISE NOTICE 'Tables: 57+';
+  RAISE NOTICE 'Functions: 35+';
   RAISE NOTICE 'Storage Buckets: 4';
   RAISE NOTICE 'RLS Policies: Enabled';
   RAISE NOTICE 'Default Data: Inserted';
@@ -2724,6 +3063,7 @@ BEGIN
   RAISE NOTICE '  - Core tables (profiles, requests, responses)';
   RAISE NOTICE '  - Credit system (transactions, atomic operations)';
   RAISE NOTICE '  - Judge system (earnings, reputation, payouts)';
+  RAISE NOTICE '  - Multi-tier verification (email/profile/linkedin/expert)';
   RAISE NOTICE '  - Comparison & Split Test features';
   RAISE NOTICE '  - Authentication (email verification, password reset)';
   RAISE NOTICE '  - Subscriptions & Payment methods';
@@ -2733,6 +3073,7 @@ BEGIN
   RAISE NOTICE '  - Content Moderation';
   RAISE NOTICE '  - Admin & Audit logs';
   RAISE NOTICE '===========================================';
-  RAISE NOTICE 'Consolidated: 2026-02-11';
+  RAISE NOTICE 'Consolidated: 2026-02-13';
+  RAISE NOTICE 'Merged migrations: 002, 003, 004, 005';
   RAISE NOTICE 'Ready for production deployment!';
 END $$;
