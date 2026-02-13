@@ -1,8 +1,48 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createServiceClient, hasServiceKey } from '@/lib/supabase/server';
 import { log } from '@/lib/logger';
 import { AGE_RANGES, GENDERS } from '@/lib/validations';
 import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
+import { ensureProfile } from '@/lib/profile';
+
+/**
+ * GET /api/profile
+ * Returns the current user's profile, creating it if it doesn't exist.
+ * This ensures users always have a profile with 3 initial credits.
+ */
+async function GET_Handler(request: NextRequest) {
+  try {
+    const supabase = await createClient();
+
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Use service client for profile operations to ensure it works
+    const profileClient = hasServiceKey() ? createServiceClient() : supabase;
+
+    // Ensure profile exists with initial credits
+    const profileResult = await ensureProfile(profileClient, user);
+
+    if (!profileResult.success) {
+      log.error('Profile ensure failed in GET', profileResult.error);
+      return NextResponse.json(
+        { error: 'Failed to load profile' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ profile: profileResult.data });
+  } catch (error) {
+    log.error('Profile GET endpoint error', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
 
 async function PATCH_Handler(request: NextRequest) {
   try {
@@ -110,5 +150,6 @@ async function PATCH_Handler(request: NextRequest) {
   }
 }
 
-// Apply rate limiting to profile endpoint
+// Apply rate limiting to profile endpoints
+export const GET = withRateLimit(GET_Handler, rateLimitPresets.default);
 export const PATCH = withRateLimit(PATCH_Handler, rateLimitPresets.default);

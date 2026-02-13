@@ -102,21 +102,19 @@ export function UnifiedDashboard({ initialTab }: UnifiedDashboardProps) {
         return;
       }
 
-      // Fetch profile separately to handle types correctly
-      const { data: profileData } = await (supabase as any)
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-
-      if (profileData) {
-        setProfile(profileData as Profile);
-      }
-
-      const [requestsRes, notificationsRes] = await Promise.all([
+      // Fetch profile via API endpoint (ensures profile exists with initial credits)
+      const [profileRes, requestsRes, notificationsRes] = await Promise.all([
+        fetch('/api/profile', { signal }),
         fetch('/api/requests', { signal }),
         fetch('/api/notifications?unread_only=true&limit=50', { signal }),
       ]);
+
+      if (profileRes.ok) {
+        const { profile: profileData } = await profileRes.json();
+        if (profileData) {
+          setProfile(profileData as Profile);
+        }
+      }
 
       if (requestsRes.ok) {
         const { requests: requestsData } = await requestsRes.json();

@@ -27,25 +27,19 @@ export interface ABEvent {
 }
 
 // Active experiments configuration
+// Add new experiments here when needed
 export const EXPERIMENTS: Record<string, Experiment> = {
-  'landing-page-v2': {
-    id: 'landing-page-v2',
-    name: 'Streamlined Landing Page',
-    description: 'Test new 4-section landing page vs current',
-    variants: ['A', 'B'],
-    trafficAllocation: 50, // 50% see new version
-    startDate: new Date('2026-02-12'),
-    isActive: true,
-  },
-  'hero-copy': {
-    id: 'hero-copy',
-    name: 'Hero Copy Test',
-    description: 'Emotional hook vs benefit-focused copy',
-    variants: ['A', 'B'],
-    trafficAllocation: 100, // All users in streamlined page
-    startDate: new Date('2026-02-12'),
-    isActive: true,
-  },
+  // No active experiments currently
+  // Example:
+  // 'experiment-id': {
+  //   id: 'experiment-id',
+  //   name: 'Experiment Name',
+  //   description: 'What this experiment tests',
+  //   variants: ['A', 'B'],
+  //   trafficAllocation: 50,
+  //   startDate: new Date('2026-02-13'),
+  //   isActive: true,
+  // },
 };
 
 // Storage keys

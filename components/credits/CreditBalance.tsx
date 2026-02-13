@@ -44,7 +44,22 @@ export function CreditBalance({
     try {
       setLoading(true);
 
-      // Fetch credits from profiles table (single source of truth)
+      // Use /api/profile to ensure profile exists with initial credits
+      // This is critical for new users who signed up via email
+      const profileRes = await fetch('/api/profile');
+      if (profileRes.ok) {
+        const { profile: profileData } = await profileRes.json();
+        if (profileData) {
+          setProfile({
+            id: profileData.id,
+            credits: profileData.credits,
+            display_name: profileData.display_name
+          });
+          return;
+        }
+      }
+
+      // Fallback: direct query (profile should exist by now)
       const { data: profileData, error } = await supabase
         .from('profiles')
         .select('id, credits, display_name')

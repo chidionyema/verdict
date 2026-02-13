@@ -72,15 +72,25 @@ export default function Navigation() {
       setFetchError(false);
       const supabase = createClient();
 
-      // Fetch enhanced profile
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('credits, is_judge, display_name, avatar_url')
-        .eq('id', userId)
-        .single();
+      // Use /api/profile to ensure profile exists with initial credits
+      // This is critical for new users who signed up via email
+      const profileRes = await fetch('/api/profile');
+      if (profileRes.ok) {
+        const { profile } = await profileRes.json();
+        if (profile) {
+          setUserProfile(profile);
+        }
+      } else {
+        // Fallback: direct query (profile should exist by now)
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('credits, is_judge, display_name, avatar_url')
+          .eq('id', userId)
+          .single();
 
-      if (profile) {
-        setUserProfile(profile);
+        if (profile) {
+          setUserProfile(profile);
+        }
       }
 
       // Fetch enhanced stats

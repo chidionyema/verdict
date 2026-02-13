@@ -44,15 +44,24 @@ export default function CreditsPage() {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     setUser(user);
-    
+
     if (user) {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('credits')
-        .eq('id', user.id)
-        .single();
-      
-      setCurrentCredits((profile as { credits: number } | null)?.credits || 0);
+      // Use /api/profile to ensure profile exists with initial credits
+      // This is critical for new users who signed up via email
+      const profileRes = await fetch('/api/profile');
+      if (profileRes.ok) {
+        const { profile } = await profileRes.json();
+        setCurrentCredits(profile?.credits ?? 0);
+      } else {
+        // Fallback: direct query
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('credits')
+          .eq('id', user.id)
+          .single();
+
+        setCurrentCredits((profile as { credits: number } | null)?.credits || 0);
+      }
     }
   };
 

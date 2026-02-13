@@ -99,8 +99,8 @@ CREATE TABLE IF NOT EXISTS profiles (
   gender TEXT,
   bio TEXT,
 
-  -- Credit system
-  credits INTEGER DEFAULT 1 CONSTRAINT chk_credits_non_negative CHECK (credits >= 0),
+  -- Credit system (3 free credits for new users)
+  credits INTEGER DEFAULT 3 CONSTRAINT chk_credits_non_negative CHECK (credits >= 0),
   total_earned INTEGER DEFAULT 0,
   total_spent INTEGER DEFAULT 0,
 

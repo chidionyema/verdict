@@ -73,14 +73,20 @@ export function SubmitFlow({ initialStep, returnFrom }: SubmitFlowProps) {
         if (user) {
           setUser(user);
 
-          // Get credits from profiles table (same source as dashboard)
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('credits')
-            .eq('id', user.id)
-            .single();
-
-          setUserCredits((profile as any)?.credits ?? 0);
+          // Fetch profile via API (ensures profile exists with initial credits)
+          const res = await fetch('/api/profile');
+          if (res.ok) {
+            const { profile } = await res.json();
+            setUserCredits(profile?.credits ?? 0);
+          } else {
+            // Fallback: try direct query (shouldn't happen)
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('credits')
+              .eq('id', user.id)
+              .single();
+            setUserCredits((profile as any)?.credits ?? 0);
+          }
         }
       } catch (error) {
         console.error('Failed to initialize:', error);

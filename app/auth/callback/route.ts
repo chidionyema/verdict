@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createServiceClient, hasServiceKey } from '@/lib/supabase/server';
 import { ensureProfile, getProfile } from '@/lib/profile';
 
 /**
@@ -48,15 +48,21 @@ export async function GET(request: NextRequest) {
     console.log(`[Auth Callback] User authenticated: ${user.id}`);
 
     // Step 2: Check if profile exists before ensuring (for welcome detection)
-    const existingResult = await getProfile(supabase, user.id);
+    // Use service client for profile operations to bypass RLS issues during callback
+    const profileClient = hasServiceKey() ? createServiceClient() : supabase;
+
+    const existingResult = await getProfile(profileClient, user.id);
     const isNewUser = existingResult.success && !existingResult.data;
 
     // Step 3: Ensure profile exists using profile service
-    const profileResult = await ensureProfile(supabase, user);
+    // Using service client ensures we can insert even before cookies are fully committed
+    const profileResult = await ensureProfile(profileClient, user);
 
     if (!profileResult.success) {
       console.error('[Auth Callback] Profile ensure failed:', profileResult.error);
-      // Don't fail auth - continue but log the issue
+      // Critical: profile creation failed - this is a problem
+      // Log details for debugging
+      console.error('[Auth Callback] Error details:', JSON.stringify(profileResult.error));
     } else {
       console.log(`[Auth Callback] Profile ready: ${user.id} with ${profileResult.data.credits} credits`);
     }
