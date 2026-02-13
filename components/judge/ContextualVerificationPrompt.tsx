@@ -11,6 +11,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { UnifiedVerificationFlow } from './UnifiedVerificationFlow';
+import { getMultiplierArray, getTierMultiplier } from '@/lib/judge/multipliers';
 
 interface ContextualVerificationPromptProps {
   userId: string;
@@ -65,15 +66,16 @@ export function ContextualVerificationPrompt({
     onComplete?.();
   };
 
-  // Don't show if already at max tier or dismissed
-  if (currentTier >= 4 || dismissed || !hasSeenPrompt) {
+  // Don't show if already at max tier, dismissed, or tier is unknown (-1 means API failed)
+  if (currentTier >= 4 || currentTier < 0 || dismissed || !hasSeenPrompt) {
     return null;
   }
 
-  // Calculate earnings impact
+  // Calculate earnings impact using single source of truth
   const baseRate = 0.60;
-  const currentMultiplier = [1, 1, 1, 1.15, 1.25, 1.5][currentTier] || 1;
-  const nextMultiplier = [1, 1, 1.15, 1.25, 1.5, 1.5][currentTier + 1] || currentMultiplier;
+  const multipliers = getMultiplierArray();
+  const currentMultiplier = multipliers[currentTier] || 1;
+  const nextMultiplier = multipliers[Math.min(currentTier + 1, multipliers.length - 1)] || currentMultiplier;
   const weeklyIncrease = weeklyVerdicts * baseRate * (nextMultiplier - currentMultiplier);
 
   // Context-specific content

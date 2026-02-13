@@ -5,10 +5,11 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { StreamlinedLinkedInVerification } from '@/components/verification/StreamlinedLinkedInVerification';
 import { VerificationProgress } from '@/components/judge/VerificationProgress';
-import { Shield, CheckCircle, Star, TrendingUp, Users, Award, ArrowRight, Sparkles } from 'lucide-react';
+import { Shield, CheckCircle, Star, TrendingUp, Users, Award, ArrowRight, Sparkles, Linkedin } from 'lucide-react';
 import { BackButton } from '@/components/ui/BackButton';
 import { useRouter } from 'next/navigation';
 import type { VerificationStatus } from '@/lib/judge/verification';
+import { TIER_BENEFITS, getTierConfig } from '@/lib/judge/multipliers';
 
 export default function JudgeVerifyPage() {
   const [user, setUser] = useState<any>(null);
@@ -175,38 +176,52 @@ export default function JudgeVerifyPage() {
               </div>
             )}
 
-            {/* Tier Benefits */}
+            {/* Tier Benefits - Using single source of truth */}
             <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Tier Benefits</h3>
-              <div className="space-y-4">
-                <div className={`p-3 rounded-xl border ${isLinkedInConnected ? 'bg-sky-50 border-sky-200' : 'bg-gray-50 border-gray-200'}`}>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Earnings Tiers</h3>
+              <div className="space-y-3">
+                {/* LinkedIn Verified (combines connected + verified since they happen together) */}
+                <div className={`p-3 rounded-xl border ${isLinkedInVerified ? 'bg-sky-50 border-sky-200' : 'bg-gray-50 border-gray-200'}`}>
                   <div className="flex items-center gap-2 mb-1">
-                    {isLinkedInConnected && <CheckCircle className="h-4 w-4 text-sky-600" />}
-                    <p className={`font-medium ${isLinkedInConnected ? 'text-sky-900' : 'text-gray-600'}`}>
-                      LinkedIn Connected
+                    {isLinkedInVerified ? (
+                      <CheckCircle className="h-4 w-4 text-sky-600" />
+                    ) : (
+                      <Linkedin className="h-4 w-4 text-gray-400" />
+                    )}
+                    <p className={`font-medium ${isLinkedInVerified ? 'text-sky-900' : 'text-gray-600'}`}>
+                      {TIER_BENEFITS.linkedin_verified.title}
                     </p>
+                    <span className={`ml-auto text-xs font-bold ${isLinkedInVerified ? 'text-sky-600' : 'text-gray-400'}`}>
+                      {TIER_BENEFITS.linkedin_verified.bonus}
+                    </span>
                   </div>
-                  <p className="text-xs text-gray-600">+15% earnings, verified badge</p>
+                  <ul className="text-xs text-gray-600 space-y-0.5 ml-6">
+                    {TIER_BENEFITS.linkedin_verified.benefits.map((benefit, i) => (
+                      <li key={i}>• {benefit}</li>
+                    ))}
+                  </ul>
                 </div>
 
-                <div className={`p-3 rounded-xl border ${isLinkedInVerified ? 'bg-indigo-50 border-indigo-200' : 'bg-gray-50 border-gray-200'}`}>
-                  <div className="flex items-center gap-2 mb-1">
-                    {isLinkedInVerified && <CheckCircle className="h-4 w-4 text-indigo-600" />}
-                    <p className={`font-medium ${isLinkedInVerified ? 'text-indigo-900' : 'text-gray-600'}`}>
-                      LinkedIn Verified
-                    </p>
-                  </div>
-                  <p className="text-xs text-gray-600">+25% earnings, priority queue</p>
-                </div>
-
+                {/* Expert Verified */}
                 <div className={`p-3 rounded-xl border ${isExpertVerified ? 'bg-purple-50 border-purple-200' : 'bg-gray-50 border-gray-200'}`}>
                   <div className="flex items-center gap-2 mb-1">
-                    {isExpertVerified && <CheckCircle className="h-4 w-4 text-purple-600" />}
+                    {isExpertVerified ? (
+                      <CheckCircle className="h-4 w-4 text-purple-600" />
+                    ) : (
+                      <Award className="h-4 w-4 text-gray-400" />
+                    )}
                     <p className={`font-medium ${isExpertVerified ? 'text-purple-900' : 'text-gray-600'}`}>
-                      Expert Verified
+                      {TIER_BENEFITS.expert_verified.title}
                     </p>
+                    <span className={`ml-auto text-xs font-bold ${isExpertVerified ? 'text-purple-600' : 'text-gray-400'}`}>
+                      {TIER_BENEFITS.expert_verified.bonus}
+                    </span>
                   </div>
-                  <p className="text-xs text-gray-600">+50% earnings, expert badge, premium access</p>
+                  <ul className="text-xs text-gray-600 space-y-0.5 ml-6">
+                    {TIER_BENEFITS.expert_verified.benefits.map((benefit, i) => (
+                      <li key={i}>• {benefit}</li>
+                    ))}
+                  </ul>
                 </div>
               </div>
             </div>

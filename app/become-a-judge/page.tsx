@@ -72,27 +72,27 @@ export default function BecomeJudgePage() {
 
   const stats: JudgeStat[] = [
     {
-      label: 'Active Judges',
-      value: '2,847',
-      icon: <Users className="h-5 w-5" />,
-      color: 'from-blue-500 to-indigo-600'
-    },
-    {
-      label: 'Avg Weekly Earnings',
-      value: '$127',
+      label: 'Per Verdict',
+      value: '$0.60-$2',
       icon: <DollarSign className="h-5 w-5" />,
       color: 'from-green-500 to-emerald-600'
     },
     {
-      label: 'Top Judge This Week',
-      value: '$412',
+      label: 'Avg Time Per Verdict',
+      value: '3-5 min',
+      icon: <Clock className="h-5 w-5" />,
+      color: 'from-blue-500 to-indigo-600'
+    },
+    {
+      label: 'Weekly Payouts',
+      value: 'Via Stripe',
       icon: <TrendingUp className="h-5 w-5" />,
       color: 'from-purple-500 to-pink-600'
     },
     {
-      label: 'Avg Response Time',
-      value: '4.2 min',
-      icon: <Clock className="h-5 w-5" />,
+      label: 'No Minimums',
+      value: 'Flexible',
+      icon: <Award className="h-5 w-5" />,
       color: 'from-orange-500 to-red-600'
     }
   ];
@@ -139,23 +139,23 @@ export default function BecomeJudgePage() {
   const testimonials = [
     {
       name: 'Sarah M.',
-      role: 'Expert Judge',
-      earnings: '$1,847/month',
-      quote: "I judge during my commute and lunch breaks. Last month I made enough to cover my car payment!",
+      role: 'Regular Judge',
+      earnings: '15-20 verdicts/week',
+      quote: "I judge during my commute and lunch breaks. It's a great way to earn extra money on my own schedule.",
       avatar: '👩‍💼'
     },
     {
       name: 'Mike R.',
       role: 'Weekend Judge',
-      earnings: '$320/month',
+      earnings: '5-10 verdicts/week',
       quote: "Perfect weekend side hustle. I enjoy helping people and the extra income is great for my savings.",
       avatar: '👨‍🏫'
     },
     {
       name: 'Emma L.',
-      role: 'Top Judge',
-      earnings: '$2,400/month',
-      quote: "Started as a side gig, now it's a significant income stream. The flexibility is unmatched.",
+      role: 'Active Judge',
+      earnings: '30+ verdicts/week',
+      quote: "The flexibility is what I love most. Work when I want, help real people with real decisions.",
       avatar: '👩‍⚖️'
     }
   ];
@@ -187,19 +187,19 @@ export default function BecomeJudgePage() {
           >
             <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm rounded-full px-4 py-2 mb-6">
               <Sparkles className="h-5 w-5" />
-              <span className="font-semibold">Join 2,847 Active Judges</span>
+              <span className="font-semibold">Become a Verdict Judge</span>
             </div>
-            
+
             <h1 className="text-5xl md:text-6xl font-bold mb-6">
               Turn Your Opinion Into
               <span className="block bg-gradient-to-r from-yellow-300 to-orange-300 bg-clip-text text-transparent">
                 Real Income
               </span>
             </h1>
-            
+
             <p className="text-xl md:text-2xl text-white/90 mb-8 max-w-3xl mx-auto">
-              Help people make better decisions while earning $50-$400+ per week. 
-              Work on your schedule, get paid weekly.
+              Help people make better decisions. Earn $0.60-$2.00 per verdict.
+              Work on your schedule, get paid weekly via Stripe.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">

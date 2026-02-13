@@ -498,9 +498,22 @@ export default function JudgeVerdictPage({
                 </label>
                 <InlineHelp topic="rating" />
               </div>
-              <p className="text-xs text-gray-500 mb-2">
-                Use your gut: 1–3 = not working, 4–6 = mixed, 7–10 = strong.
-              </p>
+
+              {/* Rating context badge */}
+              <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium mb-3 ${
+                rating <= 3 ? 'bg-red-100 text-red-700' :
+                rating <= 5 ? 'bg-amber-100 text-amber-700' :
+                rating <= 7 ? 'bg-blue-100 text-blue-700' :
+                rating <= 8 ? 'bg-green-100 text-green-700' :
+                'bg-emerald-100 text-emerald-700'
+              }`}>
+                {rating <= 3 ? 'Needs significant improvement' :
+                 rating <= 5 ? 'Below average / Mixed results' :
+                 rating <= 7 ? 'Good / Solid choice' :
+                 rating <= 8 ? 'Very good / Strong option' :
+                 'Excellent / Highly recommended'}
+              </div>
+
               <input
                 type="range"
                 min="1"
@@ -508,10 +521,27 @@ export default function JudgeVerdictPage({
                 value={rating}
                 onChange={(e) => setRating(parseInt(e.target.value))}
                 className="w-full accent-indigo-600"
+                aria-label={`Rating: ${rating} out of 10`}
               />
-              <div className="flex justify-between text-xs text-gray-500 mt-1">
-                <span>Poor</span>
-                <span>Excellent</span>
+
+              {/* Clear scale labels */}
+              <div className="flex justify-between text-xs mt-2">
+                <div className="text-center">
+                  <span className="text-red-600 font-medium">1-3</span>
+                  <p className="text-gray-400">Needs work</p>
+                </div>
+                <div className="text-center">
+                  <span className="text-amber-600 font-medium">4-5</span>
+                  <p className="text-gray-400">Mixed</p>
+                </div>
+                <div className="text-center">
+                  <span className="text-blue-600 font-medium">6-7</span>
+                  <p className="text-gray-400">Good</p>
+                </div>
+                <div className="text-center">
+                  <span className="text-green-600 font-medium">8-10</span>
+                  <p className="text-gray-400">Excellent</p>
+                </div>
               </div>
             </div>
 

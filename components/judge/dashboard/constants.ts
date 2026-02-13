@@ -136,3 +136,72 @@ export const CATEGORY_CONFIGS = {
   writing: { color: 'from-blue-500 to-cyan-500' },
   decision: { color: 'from-green-500 to-emerald-500' },
 } as const;
+
+/**
+ * Verification tier display info
+ * Maps tier index (0-5) to user-friendly names and details
+ */
+export interface VerificationTierInfo {
+  name: string;
+  shortName: string;
+  multiplier: number;
+  description: string;
+  color: string;
+}
+
+export const VERIFICATION_TIER_INFO: Record<number, VerificationTierInfo> = {
+  0: {
+    name: 'Getting Started',
+    shortName: 'New',
+    multiplier: 1.0,
+    description: 'Verify your email to start judging',
+    color: 'gray',
+  },
+  1: {
+    name: 'Email Verified',
+    shortName: 'Basic',
+    multiplier: 1.0,
+    description: 'Email confirmed - ready to judge community requests',
+    color: 'blue',
+  },
+  2: {
+    name: 'Profile Complete',
+    shortName: 'Standard',
+    multiplier: 1.0,
+    description: 'Complete profile - access to more request types',
+    color: 'indigo',
+  },
+  3: {
+    name: 'LinkedIn Connected',
+    shortName: 'Verified',
+    multiplier: 1.15,
+    description: 'LinkedIn linked - 15% earnings boost',
+    color: 'purple',
+  },
+  4: {
+    name: 'LinkedIn Verified',
+    shortName: 'Pro',
+    multiplier: 1.25,
+    description: 'Fully verified - 25% earnings boost + priority queue',
+    color: 'green',
+  },
+  5: {
+    name: 'Expert Verified',
+    shortName: 'Expert',
+    multiplier: 1.5,
+    description: 'Domain expert - 50% earnings boost + expert requests',
+    color: 'amber',
+  },
+};
+
+export function getVerificationTierInfo(tierIndex: number): VerificationTierInfo {
+  return VERIFICATION_TIER_INFO[tierIndex] || VERIFICATION_TIER_INFO[0];
+}
+
+export function getVerificationTierName(tierIndex: number): string {
+  return getVerificationTierInfo(tierIndex).name;
+}
+
+export function getVerificationMultiplier(tierIndex: number): number {
+  return getVerificationTierInfo(tierIndex).multiplier;
+}

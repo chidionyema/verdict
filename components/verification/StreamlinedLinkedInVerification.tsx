@@ -20,13 +20,21 @@ export function StreamlinedLinkedInVerification({
   const [verificationStep, setVerificationStep] = useState<'start' | 'processing' | 'verified' | 'failed'>('start');
   const [linkedinProfile, setLinkedinProfile] = useState('');
   const [detectedExpertise, setDetectedExpertise] = useState<string>('');
+  const [errorMessage, setErrorMessage] = useState<string>('');
 
   const handleInstantVerification = async () => {
     if (!linkedinProfile.trim()) return;
-    
+
+    // Basic URL validation before submission
+    if (!linkedinProfile.includes('linkedin.com/in/')) {
+      setErrorMessage('Please enter a valid LinkedIn profile URL (e.g., linkedin.com/in/your-name)');
+      return;
+    }
+
     setIsSubmitting(true);
     setVerificationStep('processing');
-    
+    setErrorMessage('');
+
     try {
       const response = await fetch('/api/judge/instant-verify-linkedin', {
         method: 'POST',
@@ -45,10 +53,12 @@ export function StreamlinedLinkedInVerification({
         onVerificationComplete?.(true, data.expertise);
       } else {
         setVerificationStep('failed');
+        setErrorMessage(data.error || 'Unable to verify this LinkedIn profile. Please check the URL and try again.');
       }
     } catch (error) {
       console.error('Verification failed:', error);
       setVerificationStep('failed');
+      setErrorMessage('Connection error. Please check your internet and try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -159,10 +169,13 @@ export function StreamlinedLinkedInVerification({
           </div>
         </div>
         <p className="text-sm text-orange-700 mb-4">
-          Please ensure your LinkedIn profile is public and includes professional experience information.
+          {errorMessage || 'Please ensure your LinkedIn profile URL is correct and includes /in/ followed by your username.'}
         </p>
         <button
-          onClick={() => setVerificationStep('start')}
+          onClick={() => {
+            setVerificationStep('start');
+            setErrorMessage('');
+          }}
           className="w-full py-2 px-4 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition"
         >
           Try Again
@@ -172,31 +185,31 @@ export function StreamlinedLinkedInVerification({
   }
 
   return (
-    <div className="bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-200 rounded-xl p-6">
+    <div className="bg-gradient-to-br from-sky-50 to-indigo-50 border border-sky-200 rounded-xl p-6">
       <div className="flex items-center gap-3 mb-4">
-        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-full p-2">
-          <Zap className="h-5 w-5" />
+        <div className="bg-gradient-to-r from-sky-600 to-indigo-600 text-white rounded-full p-2">
+          <Linkedin className="h-5 w-5" />
         </div>
         <div>
-          <h3 className="font-semibold text-indigo-900">Instant Expert Verification</h3>
-          <p className="text-sm text-indigo-700">Get verified in seconds, not days</p>
+          <h3 className="font-semibold text-sky-900">Connect Your LinkedIn</h3>
+          <p className="text-sm text-sky-700">Instant verification, unlock higher earnings</p>
         </div>
       </div>
 
       <div className="mb-4">
-        <h4 className="font-medium text-gray-900 mb-2">Why become a verified expert?</h4>
+        <h4 className="font-medium text-gray-900 mb-2">Why connect LinkedIn?</h4>
         <ul className="space-y-2 text-sm text-gray-700">
           <li className="flex items-center gap-2">
-            <Zap className="h-4 w-4 text-indigo-600" />
-            <span><strong>2x higher compensation</strong> for expert judgments</span>
+            <Zap className="h-4 w-4 text-sky-600" />
+            <span><strong>+25% earnings</strong> on all verdicts</span>
           </li>
           <li className="flex items-center gap-2">
-            <Shield className="h-4 w-4 text-indigo-600" />
-            <span><strong>Trust badge</strong> increases your credibility</span>
+            <Shield className="h-4 w-4 text-sky-600" />
+            <span><strong>Verified badge</strong> increases your credibility</span>
           </li>
           <li className="flex items-center gap-2">
-            <CheckCircle className="h-4 w-4 text-indigo-600" />
-            <span><strong>Priority routing</strong> to your expertise areas</span>
+            <CheckCircle className="h-4 w-4 text-sky-600" />
+            <span><strong>Priority queue</strong> access to more requests</span>
           </li>
         </ul>
       </div>
@@ -211,38 +224,50 @@ export function StreamlinedLinkedInVerification({
               type="url"
               id="linkedin-url"
               value={linkedinProfile}
-              onChange={(e) => setLinkedinProfile(e.target.value)}
+              onChange={(e) => {
+                setLinkedinProfile(e.target.value);
+                if (errorMessage) setErrorMessage(''); // Clear error on input change
+              }}
               placeholder="https://linkedin.com/in/your-profile"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${
+                errorMessage ? 'border-red-300 bg-red-50' : 'border-gray-300'
+              }`}
             />
             <ExternalLink className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
           </div>
-          <p className="mt-1 text-xs text-gray-600">
-            We'll automatically detect your professional expertise from your profile
-          </p>
+          {errorMessage ? (
+            <p className="mt-2 text-sm text-red-600 flex items-center gap-1.5">
+              <AlertCircle className="h-4 w-4 flex-shrink-0" />
+              {errorMessage}
+            </p>
+          ) : (
+            <p className="mt-1 text-xs text-gray-600">
+              We'll automatically detect your professional expertise from your profile
+            </p>
+          )}
         </div>
 
         <TouchButton
           onClick={handleInstantVerification}
           disabled={!linkedinProfile.trim() || isSubmitting}
-          className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white disabled:opacity-50"
+          className="w-full bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-700 hover:to-indigo-700 text-white disabled:opacity-50"
         >
           {isSubmitting ? (
             <>
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-              Verifying...
+              Connecting...
             </>
           ) : (
             <>
-              <Zap className="h-4 w-4 mr-2" />
-              Instant Verification (Free)
+              <Linkedin className="h-4 w-4 mr-2" />
+              Connect LinkedIn
             </>
           )}
         </TouchButton>
 
         <div className="flex items-center justify-center gap-2 text-xs text-gray-500">
-          <Zap className="h-3 w-3 text-indigo-600" />
-          <span>Instant • Automatic • No manual review needed</span>
+          <CheckCircle className="h-3 w-3 text-sky-600" />
+          <span>Instant verification • Unlocks +25% earnings</span>
         </div>
       </div>
     </div>

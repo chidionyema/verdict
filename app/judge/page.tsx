@@ -189,13 +189,18 @@ function JudgeDashboardContent() {
 
           // Fetch verification status for earnings prompts
           try {
-            const verifyRes = await fetch('/api/judge/verification-status', { signal: AbortSignal.timeout(5000) });
+            const verifyRes = await fetch('/api/judge/verification-status', { signal: AbortSignal.timeout(15000) });
             if (verifyRes.ok) {
               const verifyData = await verifyRes.json();
-              setVerificationTierIndex(verifyData.tierIndex || 0);
+              setVerificationTierIndex(verifyData.tierIndex ?? 0);
+            } else {
+              // On error, set to -1 to indicate "unknown" state (won't show prompts)
+              setVerificationTierIndex(-1);
             }
           } catch (verifyError) {
             console.error('Verification status fetch error:', verifyError);
+            // On timeout/network error, set to -1 to avoid spamming verification prompts
+            setVerificationTierIndex(-1);
           }
         }
       }

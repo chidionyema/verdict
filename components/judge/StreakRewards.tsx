@@ -153,7 +153,7 @@ export function StreakRewards({
           </div>
           <div>
             <h3 className="font-bold text-gray-900">Streak Rewards</h3>
-            <p className="text-xs text-gray-500">Judge daily to unlock bonuses</p>
+            <p className="text-xs text-gray-500">Judge at least once every 24 hours</p>
           </div>
         </div>
         <div className="text-right">
@@ -164,13 +164,26 @@ export function StreakRewards({
         </div>
       </div>
 
+      {/* How streaks work - for new users or when streak is 0 */}
+      {currentStreak === 0 && (
+        <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+          <p className="text-xs text-gray-600">
+            <strong>How streaks work:</strong> Submit at least 1 verdict every 24 hours to build your streak.
+            The longer your streak, the higher your bonus earnings on each verdict.
+          </p>
+        </div>
+      )}
+
       {/* Streak Shield Info - Shows if user has protection */}
       {currentStreak >= 7 && !isAtRisk && (
-        <div className="mb-4 p-2 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-2">
-          <Shield className="h-4 w-4 text-blue-600" />
-          <span className="text-xs text-blue-700">
-            <strong>Streak Shield Active:</strong> You&apos;re protected for one missed day per week
-          </span>
+        <div className="mb-4 p-2.5 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="flex items-center gap-2 mb-1">
+            <Shield className="h-4 w-4 text-blue-600" />
+            <span className="text-xs text-blue-900 font-semibold">Streak Shield Active</span>
+          </div>
+          <p className="text-xs text-blue-700">
+            Miss one day this week without losing your streak. Shield resets every Monday.
+          </p>
         </div>
       )}
 

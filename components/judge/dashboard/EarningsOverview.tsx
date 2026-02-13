@@ -3,6 +3,7 @@
 import { BarChart3, Coins, DollarSign, Activity, ChevronUp, ChevronDown, Calendar, Clock, TrendingUp, Sparkles, Award } from 'lucide-react';
 import { motion } from 'framer-motion';
 import type { JudgeStats, EarningsTimeframe } from './types';
+import { getTierMultiplier, MAX_MULTIPLIER } from '@/lib/judge/multipliers';
 
 interface EarningsOverviewProps {
   stats: JudgeStats;
@@ -46,10 +47,9 @@ export function EarningsOverview({
   verificationTierIndex = 0,
   onVerificationClick,
 }: EarningsOverviewProps) {
-  // Calculate potential earnings boost from verification
-  const currentMultiplier = [1, 1, 1, 1.15, 1.25, 1.5][verificationTierIndex] || 1;
-  const maxMultiplier = 1.5;
-  const potentialBoost = maxMultiplier - currentMultiplier;
+  // Calculate potential earnings boost from verification using single source of truth
+  const currentMultiplier = getTierMultiplier(verificationTierIndex);
+  const potentialBoost = MAX_MULTIPLIER - currentMultiplier;
   const weeklyVerdicts = Math.max(stats.verdicts_given / 4, 10);
   const potentialWeeklyIncrease = weeklyVerdicts * 0.60 * potentialBoost;
   const getTimeframeEarnings = () => {

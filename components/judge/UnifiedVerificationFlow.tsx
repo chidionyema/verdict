@@ -18,6 +18,7 @@ import {
   Globe,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { getTierConfig } from '@/lib/judge/multipliers';
 
 interface UnifiedVerificationFlowProps {
   userId: string;
@@ -75,6 +76,7 @@ export function UnifiedVerificationFlow({
     bio: '',
     avatarUrl: null,
   });
+  const [linkedinError, setLinkedinError] = useState<string | null>(null);
 
   // Load current state
   useEffect(() => {
@@ -162,11 +164,17 @@ export function UnifiedVerificationFlow({
   };
 
   const connectLinkedIn = async () => {
-    if (!state.linkedinUrl) return;
+    // Clear any previous error
+    setLinkedinError(null);
+
+    if (!state.linkedinUrl) {
+      setLinkedinError('Please enter your LinkedIn profile URL');
+      return;
+    }
 
     // Basic URL validation
     if (!state.linkedinUrl.includes('linkedin.com/in/')) {
-      alert('Please enter a valid LinkedIn profile URL');
+      setLinkedinError('Please enter a valid LinkedIn profile URL (e.g., linkedin.com/in/your-name)');
       return;
     }
 
@@ -181,7 +189,14 @@ export function UnifiedVerificationFlow({
         }),
       });
 
-      if (res.ok) {
+      const data = await res.json();
+
+      if (!res.ok || data.error) {
+        setLinkedinError(data.error || 'Failed to verify LinkedIn. Please try again.');
+        return;
+      }
+
+      if (data.verified) {
         setState(prev => ({ ...prev, linkedinConnected: true }));
         setShowCelebration('linkedin');
         setTimeout(() => {
@@ -189,9 +204,12 @@ export function UnifiedVerificationFlow({
           setActiveStep('complete');
           onComplete?.();
         }, 1500);
+      } else {
+        setLinkedinError(data.error || 'Invalid LinkedIn URL format');
       }
     } catch (error) {
       console.error('Error connecting LinkedIn:', error);
+      setLinkedinError('Connection error. Please check your internet and try again.');
     } finally {
       setSaving(false);
     }
@@ -230,7 +248,9 @@ export function UnifiedVerificationFlow({
           {type === 'profile' ? 'Profile Complete!' : 'LinkedIn Connected!'}
         </p>
         <p className="text-green-100 mt-1">
-          {type === 'profile' ? '+15% earnings unlocked' : '+25% earnings unlocked'}
+          {type === 'profile'
+            ? 'Profile verified - ready for LinkedIn!'
+            : `${getTierConfig(4).bonus} earnings unlocked`}
         </p>
       </div>
     </motion.div>
@@ -388,10 +408,23 @@ export function UnifiedVerificationFlow({
                 <input
                   type="url"
                   value={state.linkedinUrl}
-                  onChange={e => setState(prev => ({ ...prev, linkedinUrl: e.target.value }))}
+                  onChange={e => {
+                    setState(prev => ({ ...prev, linkedinUrl: e.target.value }));
+                    if (linkedinError) setLinkedinError(null); // Clear error on input change
+                  }}
                   placeholder="https://linkedin.com/in/your-profile"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                  className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm ${
+                    linkedinError ? 'border-red-300 bg-red-50' : 'border-gray-300'
+                  }`}
                 />
+                {linkedinError && (
+                  <p className="mt-2 text-sm text-red-600 flex items-center gap-1.5">
+                    <svg className="h-4 w-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                    {linkedinError}
+                  </p>
+                )}
               </div>
 
               <button
@@ -443,8 +476,15 @@ export function UnifiedVerificationFlow({
               <div className="bg-gray-50 rounded-xl p-4 mb-6">
                 <p className="text-sm text-gray-600 mb-2">Your current earnings multiplier</p>
                 <p className="text-3xl font-bold text-indigo-600">
-                  {state.linkedinConnected ? '1.25x' : state.profileComplete ? '1.15x' : '1x'}
+                  {state.linkedinConnected
+                    ? `${getTierConfig(4).multiplier}x`
+                    : state.profileComplete
+                    ? `${getTierConfig(2).multiplier}x`
+                    : '1x'}
                 </p>
+                {state.linkedinConnected && (
+                  <p className="text-xs text-green-600 mt-1">{getTierConfig(4).bonus} bonus on all verdicts</p>
+                )}
               </div>
 
               <button

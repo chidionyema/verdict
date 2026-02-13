@@ -89,6 +89,13 @@ export function EmptyQueue({ onRefresh, totalVerdicts = 0 }: EmptyQueueProps) {
   const currentHour = new Date().getHours();
   const isPeakHour = currentHour >= 18 && currentHour <= 22;
 
+  // Tips for while waiting
+  const waitingTips = [
+    'Requests typically arrive every few minutes during active hours',
+    'Higher-quality verdicts lead to more expert queue invitations',
+    'Your first few verdicts help calibrate your quality score',
+  ];
+
   const handleRefresh = async () => {
     setIsRefreshing(true);
     await onRefresh();
@@ -122,21 +129,45 @@ export function EmptyQueue({ onRefresh, totalVerdicts = 0 }: EmptyQueueProps) {
 
         {/* Context-aware messaging */}
         <h3 className="text-xl font-bold text-gray-900 mb-2">
-          {isNewJudge ? 'No requests available' : 'All caught up!'}
+          {isNewJudge ? 'Queue is empty right now' : 'All caught up!'}
         </h3>
-        <p className="text-gray-600 max-w-md mx-auto mb-6">
+        <p className="text-gray-600 max-w-md mx-auto mb-4">
           {isNewJudge
-            ? 'There are no requests in the queue right now. Check back soon — new requests come in throughout the day.'
+            ? 'No requests available at the moment. New requests come in throughout the day — check back soon!'
             : 'You\'ve reviewed everything available. Great work! New requests come in constantly.'}
         </p>
 
+        {/* Auto-refresh indicator */}
+        <p className="text-xs text-gray-400 mb-6">
+          This page refreshes automatically every 15 seconds
+        </p>
+
         {/* Time hint */}
-        {!isPeakHour && (
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-xl mb-6">
-            <Clock className="h-4 w-4 text-blue-600" />
-            <span className="text-sm text-blue-700">
-              Peak time is 6-10 PM — more requests available then
-            </span>
+        <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl mb-6 ${
+          isPeakHour
+            ? 'bg-green-50 border border-green-200'
+            : 'bg-blue-50 border border-blue-200'
+        }`}>
+          <Clock className={`h-4 w-4 ${isPeakHour ? 'text-green-600' : 'text-blue-600'}`} />
+          <span className={`text-sm ${isPeakHour ? 'text-green-700' : 'text-blue-700'}`}>
+            {isPeakHour
+              ? 'Peak hours now — requests should arrive soon'
+              : 'Peak time is 6-10 PM — more requests available then'}
+          </span>
+        </div>
+
+        {/* New judge tips */}
+        {isNewJudge && (
+          <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 mb-6 text-left max-w-md mx-auto">
+            <h4 className="font-semibold text-indigo-900 mb-2 text-sm">While you wait:</h4>
+            <ul className="space-y-1.5">
+              {waitingTips.map((tip, i) => (
+                <li key={i} className="text-xs text-indigo-700 flex items-start gap-2">
+                  <span className="text-indigo-400 mt-0.5">•</span>
+                  {tip}
+                </li>
+              ))}
+            </ul>
           </div>
         )}
 
@@ -151,10 +182,10 @@ export function EmptyQueue({ onRefresh, totalVerdicts = 0 }: EmptyQueueProps) {
             {isRefreshing ? 'Checking...' : 'Check for New'}
           </button>
           <button
-            onClick={() => router.push('/feed')}
+            onClick={() => router.push('/dashboard')}
             className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition min-h-[48px] inline-flex items-center justify-center gap-2"
           >
-            Browse Feed
+            View Dashboard
             <ArrowRight className="h-4 w-4" />
           </button>
         </div>

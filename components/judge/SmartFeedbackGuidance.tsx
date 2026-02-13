@@ -36,8 +36,10 @@ export function CharacterGuidance({
   fieldName = 'feedback',
 }: CharacterGuidanceProps) {
   const length = value.length;
+  const isEmpty = length === 0;
 
   const getStatus = () => {
+    if (isEmpty) return { color: 'gray', label: 'Not started', message: `Write at least ${minLength} characters to submit` };
     if (length < minLength) return { color: 'red', label: 'Too short', message: `Need ${minLength - length} more characters` };
     if (length < goodLength) return { color: 'yellow', label: 'Good start', message: 'Add more detail for better quality' };
     if (length < excellentLength) return { color: 'blue', label: 'Good', message: 'Nice work! A bit more detail helps' };
@@ -48,6 +50,7 @@ export function CharacterGuidance({
   const percentage = Math.min((length / excellentLength) * 100, 100);
 
   const colorClasses = {
+    gray: { bg: 'bg-gray-300', text: 'text-gray-500', border: 'border-gray-300' },
     red: { bg: 'bg-red-400', text: 'text-red-600', border: 'border-red-300' },
     yellow: { bg: 'bg-amber-400', text: 'text-amber-600', border: 'border-amber-300' },
     blue: { bg: 'bg-blue-400', text: 'text-blue-600', border: 'border-blue-300' },
@@ -58,6 +61,16 @@ export function CharacterGuidance({
 
   return (
     <div className="mt-2 space-y-2">
+      {/* Initial state hint - more prominent */}
+      {isEmpty && (
+        <div className="p-2.5 bg-indigo-50 border border-indigo-200 rounded-lg">
+          <p className="text-xs text-indigo-700 flex items-center gap-2">
+            <MessageSquare className="h-3.5 w-3.5 flex-shrink-0" />
+            <span><strong>Minimum {minLength} characters</strong> required. Aim for {excellentLength}+ for excellent quality.</span>
+          </p>
+        </div>
+      )}
+
       {/* Progress Bar */}
       <div className="flex items-center gap-3">
         <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
@@ -84,11 +97,11 @@ export function CharacterGuidance({
           {status.message}
         </span>
         {length >= minLength && (
-          <span className="text-gray-400">Ready to submit</span>
+          <span className="text-green-600 font-medium">Ready to submit</span>
         )}
       </div>
 
-      {/* Quality milestones */}
+      {/* Quality milestones - always visible */}
       <div className="flex items-center gap-2 text-[10px] text-gray-400">
         <span className={length >= minLength ? 'text-green-500 font-medium' : ''}>
           {minLength} min
