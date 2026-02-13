@@ -1,10 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { DollarSign, Trophy, ToggleLeft, ToggleRight, Flame } from 'lucide-react';
+import { DollarSign, Trophy, ToggleLeft, ToggleRight, Flame, Shield, Sparkles } from 'lucide-react';
 import { RoleIndicator } from '@/components/ui/RoleIndicator';
 import type { Profile } from '@/lib/database.types';
 import type { JudgeStats, JudgeLevel, Achievement } from './types';
+import { getTierConfig } from '@/lib/judge/multipliers';
 
 interface DashboardHeaderProps {
   profile: Profile;
@@ -14,6 +15,8 @@ interface DashboardHeaderProps {
   toggling: boolean;
   onToggleJudge: () => void;
   onShowAchievements: () => void;
+  /** Verification tier index (0-5), -1 means unknown */
+  verificationTierIndex?: number;
 }
 
 export function DashboardHeader({
@@ -24,8 +27,12 @@ export function DashboardHeader({
   toggling,
   onToggleJudge,
   onShowAchievements,
+  verificationTierIndex = -1,
 }: DashboardHeaderProps) {
   const LevelIcon = judgeLevel.icon;
+  const tierConfig = getTierConfig(Math.max(0, verificationTierIndex));
+  const isFullyVerified = verificationTierIndex >= 4;
+  const canVerify = verificationTierIndex >= 0 && verificationTierIndex < 4;
 
   return (
     <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-xl border border-white/50 p-8 mb-8 relative overflow-hidden">
@@ -59,6 +66,24 @@ export function DashboardHeader({
                     {stats.streak_days} day streak
                   </span>
                 )}
+                {/* Verification badge - shows current tier or prompts to verify */}
+                {isFullyVerified ? (
+                  <Link
+                    href="/judge/verify"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green-500 text-white text-sm font-semibold shadow-lg"
+                  >
+                    <Shield className="h-4 w-4" />
+                    Verified {tierConfig.bonus}
+                  </Link>
+                ) : canVerify ? (
+                  <Link
+                    href="/judge/verify"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500 text-white text-sm font-semibold shadow-lg hover:bg-amber-600 transition"
+                  >
+                    <Sparkles className="h-4 w-4" />
+                    Get Verified
+                  </Link>
+                ) : null}
               </div>
             </div>
           </div>

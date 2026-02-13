@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Clock, XCircle, RefreshCw, Inbox, Sparkles, ArrowRight } from 'lucide-react';
+import { Clock, XCircle, RefreshCw, Inbox, Sparkles, ArrowRight, TrendingUp, Shield } from 'lucide-react';
 
 export function QueueLoading() {
   return (
@@ -79,15 +79,20 @@ interface EmptyQueueProps {
   onRefresh: () => void;
   /** Total verdicts the user has submitted (0 = new judge) */
   totalVerdicts?: number;
+  /** Current verification tier (0-5) */
+  verificationTierIndex?: number;
+  /** Callback when verification CTA is clicked */
+  onVerificationClick?: () => void;
 }
 
-export function EmptyQueue({ onRefresh, totalVerdicts = 0 }: EmptyQueueProps) {
+export function EmptyQueue({ onRefresh, totalVerdicts = 0, verificationTierIndex = 0, onVerificationClick }: EmptyQueueProps) {
   const router = useRouter();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const isNewJudge = totalVerdicts === 0;
   const currentHour = new Date().getHours();
   const isPeakHour = currentHour >= 18 && currentHour <= 22;
+  const canVerify = verificationTierIndex >= 0 && verificationTierIndex < 4;
 
   // Tips for while waiting
   const waitingTips = [
@@ -168,6 +173,32 @@ export function EmptyQueue({ onRefresh, totalVerdicts = 0 }: EmptyQueueProps) {
                 </li>
               ))}
             </ul>
+          </div>
+        )}
+
+        {/* Verification prompt - great time to verify while waiting */}
+        {canVerify && onVerificationClick && (
+          <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-4 mb-6 max-w-md mx-auto">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center shrink-0">
+                <TrendingUp className="h-5 w-5 text-amber-600" />
+              </div>
+              <div className="flex-1 text-left">
+                <p className="font-semibold text-amber-900 text-sm">
+                  Boost your earnings while you wait
+                </p>
+                <p className="text-xs text-amber-700 mt-0.5">
+                  Verified judges earn up to 50% more per verdict
+                </p>
+                <button
+                  onClick={onVerificationClick}
+                  className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 text-white text-xs font-semibold rounded-lg hover:bg-amber-700 transition"
+                >
+                  <Shield className="h-3.5 w-3.5" />
+                  Get Verified Now
+                </button>
+              </div>
+            </div>
           </div>
         )}
 

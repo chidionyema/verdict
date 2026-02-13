@@ -360,6 +360,7 @@ function JudgeDashboardContent() {
           toggling={toggling}
           onToggleJudge={toggleJudge}
           onShowAchievements={() => setShowAchievements(true)}
+          verificationTierIndex={verificationTierIndex}
         />
 
         {showAchievements && (
@@ -464,7 +465,14 @@ function JudgeDashboardContent() {
                     />
                   )}
 
-                  {!queueLoading && !queueError && queue.length === 0 && <EmptyQueue onRefresh={fetchData} />}
+                  {!queueLoading && !queueError && queue.length === 0 && (
+                    <EmptyQueue
+                      onRefresh={fetchData}
+                      totalVerdicts={stats.verdicts_given}
+                      verificationTierIndex={verificationTierIndex}
+                      onVerificationClick={() => router.push('/judge/verify')}
+                    />
+                  )}
 
                   {!queueLoading && !queueError && queue.length > 0 && filteredQueue.length === 0 && (
                     <NoMatchingResults
