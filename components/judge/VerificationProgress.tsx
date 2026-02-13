@@ -218,9 +218,9 @@ export function VerificationProgress({
       id: 'profile',
       tier: 'profile_complete',
       title: 'Complete Profile',
-      description: 'Add photo, bio, and expertise area',
+      description: 'Add bio and expertise area',
       completed: status.tierIndex >= 2,
-      actionUrl: '/account',
+      actionUrl: '/judge/verify',
       actionLabel: 'Complete Profile',
     },
     {

@@ -233,14 +233,12 @@ export async function getVerificationStatus(
       id: 'profile',
       tier: 'profile_complete',
       title: 'Complete Profile',
-      description: 'Add photo, bio, and expertise area',
+      description: 'Add bio and expertise area',
       completed: !!(
-        profile?.avatar_url &&
         profile?.bio &&
-        profile?.expertise_area &&
-        profile?.country
+        profile?.expertise_area
       ),
-      actionUrl: '/account',
+      actionUrl: '/judge/verify',
       actionLabel: 'Complete Profile',
     },
     {

@@ -101,11 +101,10 @@ export function UnifiedVerificationFlow({
       } | null;
 
       if (profile) {
+        // Profile complete requires bio and expertise area (simplified from avatar + country)
         const profileComplete = !!(
           profile.bio &&
-          profile.expertise_area &&
-          profile.avatar_url &&
-          profile.country
+          profile.expertise_area
         );
         const linkedinConnected = !!(profile.linkedin_url);
 
@@ -216,8 +215,14 @@ export function UnifiedVerificationFlow({
   };
 
   const skipLinkedIn = () => {
-    setActiveStep('complete');
-    onComplete?.();
+    // Only mark complete if profile is actually done
+    if (state.profileComplete) {
+      setActiveStep('complete');
+      onComplete?.();
+    } else {
+      // If profile not complete, go back to profile step
+      setActiveStep('profile');
+    }
   };
 
   if (loading) {

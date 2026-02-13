@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { StreamlinedLinkedInVerification } from '@/components/verification/StreamlinedLinkedInVerification';
 import { VerificationProgress } from '@/components/judge/VerificationProgress';
+import { UnifiedVerificationFlow } from '@/components/judge/UnifiedVerificationFlow';
 import { Shield, CheckCircle, Star, TrendingUp, Users, Award, ArrowRight, Sparkles, Linkedin } from 'lucide-react';
 import { BackButton } from '@/components/ui/BackButton';
 import { useRouter } from 'next/navigation';
@@ -60,6 +61,7 @@ export default function JudgeVerifyPage() {
     );
   }
 
+  const isProfileComplete = verificationStatus && verificationStatus.tierIndex >= 2;
   const isLinkedInConnected = verificationStatus && verificationStatus.tierIndex >= 3;
   const isLinkedInVerified = verificationStatus && verificationStatus.tierIndex >= 4;
   const isExpertVerified = verificationStatus && verificationStatus.tierIndex >= 5;
@@ -95,8 +97,17 @@ export default function JudgeVerifyPage() {
               />
             )}
 
-            {/* LinkedIn Connection (if not yet connected) */}
-            {!isLinkedInConnected && (
+            {/* Profile Completion (if profile not done yet) */}
+            {!isProfileComplete && user && (
+              <UnifiedVerificationFlow
+                userId={user.id}
+                mode="inline"
+                onComplete={loadUserAndVerification}
+              />
+            )}
+
+            {/* LinkedIn Connection (if profile complete but LinkedIn not connected) */}
+            {isProfileComplete && !isLinkedInConnected && (
               <StreamlinedLinkedInVerification
                 userId={user?.id || ''}
                 isVerified={!!isLinkedInConnected}
