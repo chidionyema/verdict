@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database, VerdictRequest, VerdictResponse } from './database.types';
 import { createClient } from '@/lib/supabase/client';
 import { createServiceClient } from '@/lib/supabase/server';
+import { ensureProfile, deductCredits, addCredits } from '@/lib/profile';
 
 type DbClient = SupabaseClient<Database>;
 
@@ -82,73 +83,30 @@ export async function createVerdictRequest(
   const targetCount = targetVerdictCount ?? 3;
   const creditsToUse = creditsToCharge ?? 1;
 
-  // Ensure profile exists first
-  let { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('id, credits')
-    .eq('id', userId)
-    .single();
+  // Ensure profile exists using profile service
+  const profileResult = await ensureProfile(supabase, {
+    id: userId,
+    email: email || undefined,
+  });
 
-  if (profileError && profileError.code !== 'PGRST116') {
-    // PGRST116 is "row not found"
-    throw new Error(`Failed to fetch profile: ${profileError.message}`);
+  if (!profileResult.success) {
+    throw new Error(`Failed to ensure profile: ${profileResult.error.message}`);
   }
 
-  // Create profile with starter credits if it doesn't exist (fallback - primary is auth callback)
-  if (!profile) {
-    // Use service role client to bypass RLS for profile creation
-    const serviceClient = createServiceClient();
-    // Use upsert to avoid race condition with auth callback
-    const { data: newProfile, error: createError } = await (serviceClient as any)
-      .from('profiles')
-      .upsert({
-        id: userId,
-        email,
-        display_name: email?.split('@')[0] || 'User',
-        credits: 3,
-        is_judge: true,  // All users can judge by default
-        is_admin: false,
-      }, { onConflict: 'id', ignoreDuplicates: true })
-      .select('id, credits')
-      .single();
+  // Deduct credits using atomic profile service
+  const deductResult = await deductCredits(supabase, userId, creditsToUse);
 
-    if (createError) {
-      // If upsert failed, try to fetch existing profile
-      const { data: existingProfile } = await supabase
-        .from('profiles')
-        .select('id, credits')
-        .eq('id', userId)
-        .single();
-
-      if (existingProfile) {
-        profile = existingProfile;
-      } else {
-        throw new Error(`Failed to create user profile: ${createError?.message}`);
-      }
-    } else {
-      profile = newProfile;
+  if (!deductResult.success) {
+    if (deductResult.error.code === 'INSUFFICIENT_CREDITS') {
+      const err = new Error(deductResult.error.message);
+      // @ts-expect-error augment error
+      err.code = 'INSUFFICIENT_CREDITS';
+      throw err;
     }
+    throw new Error(`Failed to deduct credits: ${deductResult.error.message}`);
   }
 
-  // Simple credit check and deduction
-  const currentCredits = (profile as any)?.credits ?? 0;
-
-  if (currentCredits < creditsToUse) {
-    const err = new Error('Insufficient credits');
-    // @ts-expect-error augment error
-    err.code = 'INSUFFICIENT_CREDITS';
-    throw err;
-  }
-
-  // Deduct credits directly from profiles table
-  const { error: deductError } = await (supabase as any)
-    .from('profiles')
-    .update({ credits: currentCredits - creditsToUse })
-    .eq('id', userId);
-
-  if (deductError) {
-    throw new Error(`Failed to deduct credits: ${deductError.message}`);
-  }
+  const creditsAfterDeduction = deductResult.data.newBalance;
 
   // Create the request (only include columns that exist in the database schema)
   const { data: newRequest, error: createRequestError } = await (supabase as any)
@@ -172,11 +130,8 @@ export async function createVerdictRequest(
     .single();
 
   if (createRequestError || !newRequest) {
-    // Refund credits on failure by restoring the balance
-    await (supabase as any)
-      .from('profiles')
-      .update({ credits: currentCredits })
-      .eq('id', userId);
+    // Refund credits on failure using profile service
+    await addCredits(supabase, userId, creditsToUse, 'Refund: request creation failed');
 
     throw new Error(`Failed to create request: ${createRequestError?.message}`);
   }

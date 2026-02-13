@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { ensureProfile, getProfile } from '@/lib/profile';
 
-const INITIAL_FREE_CREDITS = 3;
-
+/**
+ * Auth Callback Handler
+ *
+ * Handles OAuth/magic-link callbacks from Supabase Auth.
+ * Uses the profile service to ensure a profile exists for the user.
+ */
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get('code');
@@ -42,63 +47,30 @@ export async function GET(request: NextRequest) {
     const user = data.user;
     console.log(`[Auth Callback] User authenticated: ${user.id}`);
 
-    // Step 2: Check if profile exists
-    const { data: existingProfile, error: selectError } = await supabase
-      .from('profiles')
-      .select('id, credits')
-      .eq('id', user.id)
-      .single();
+    // Step 2: Check if profile exists before ensuring (for welcome detection)
+    const existingResult = await getProfile(supabase, user.id);
+    const isNewUser = existingResult.success && !existingResult.data;
 
-    if (selectError && selectError.code !== 'PGRST116') {
-      // PGRST116 = "No rows found" - that's expected for new users
-      console.error('[Auth Callback] Profile check failed:', selectError.message);
-    }
+    // Step 3: Ensure profile exists using profile service
+    const profileResult = await ensureProfile(supabase, user);
 
-    // Step 3: Create profile if it doesn't exist
-    if (!existingProfile) {
-      console.log(`[Auth Callback] Creating profile for new user: ${user.id}`);
-
-      const profileData = {
-        id: user.id,
-        email: user.email,
-        display_name: user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split('@')[0] || 'User',
-        avatar_url: user.user_metadata?.avatar_url || null,
-        credits: INITIAL_FREE_CREDITS,
-        is_judge: true, // Everyone can review by default
-        is_admin: false,
-        onboarding_completed: false,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-
-      // Use upsert to handle race conditions
-      const { error: insertError } = await (supabase as any)
-        .from('profiles')
-        .upsert(profileData, { onConflict: 'id' });
-
-      if (insertError) {
-        console.error('[Auth Callback] Profile creation failed:', insertError.message, insertError.code, insertError.details);
-        // Still redirect but with a warning flag so the app can show appropriate messaging
-        const destination = getSafeRedirect(redirectParam);
-        const redirectUrl = new URL(destination, requestUrl.origin);
-        redirectUrl.searchParams.set('profile_setup', 'pending');
-        console.log(`[Auth Callback] Redirecting with pending profile: ${redirectUrl.pathname}`);
-        return NextResponse.redirect(redirectUrl);
-      } else {
-        console.log(`[Auth Callback] Profile created successfully for ${user.id} with ${INITIAL_FREE_CREDITS} credits`);
-      }
+    if (!profileResult.success) {
+      console.error('[Auth Callback] Profile ensure failed:', profileResult.error);
+      // Don't fail auth - continue but log the issue
     } else {
-      console.log(`[Auth Callback] Existing profile found: ${(existingProfile as any).id} with ${(existingProfile as any).credits} credits`);
+      console.log(`[Auth Callback] Profile ready: ${user.id} with ${profileResult.data.credits} credits`);
     }
 
-    // Step 4: Redirect to destination with success indicator for new users
+    // Step 4: Redirect to destination
     const destination = getSafeRedirect(redirectParam);
     const redirectUrl = new URL(destination, requestUrl.origin);
-    if (!existingProfile) {
+
+    // Add welcome flag for new users
+    if (isNewUser) {
       redirectUrl.searchParams.set('welcome', 'true');
     }
-    console.log(`[Auth Callback] Redirecting to: ${redirectUrl.pathname}`);
 
+    console.log(`[Auth Callback] Redirecting to: ${redirectUrl.pathname}`);
     return NextResponse.redirect(redirectUrl);
 
   } catch (error) {

@@ -33,7 +33,7 @@ function AccountContent() {
 
   const [error, setError] = useState<string | null>(null);
 
-  const fetchProfile = async () => {
+  const fetchProfile = async (retryCount = 0) => {
     try {
       const res = await fetch('/api/me');
       const data = await res.json();
@@ -45,8 +45,21 @@ function AccountContent() {
           router.push('/auth/login?redirect=/account');
           return;
         }
+
+        // Retry once on 500 errors (profile creation might be in progress)
+        if (res.status === 500 && retryCount < 1) {
+          console.log('Retrying profile fetch...');
+          setTimeout(() => fetchProfile(retryCount + 1), 1000);
+          return;
+        }
+
         setError(data.error || 'Failed to load profile');
         return;
+      }
+
+      // Handle case where profile was just created
+      if (data.created) {
+        toast.success('Welcome! Your profile has been set up.');
       }
 
       setProfile(data.profile);
@@ -146,15 +159,32 @@ function AccountContent() {
         )}
 
         {error && (
-          <div className="bg-red-50 text-red-700 p-4 rounded-lg mb-8 flex items-center">
-            <AlertCircle className="h-5 w-5 mr-2" />
-            {error}
-            <button
-              onClick={() => { setError(null); fetchProfile(); }}
-              className="ml-auto text-sm underline hover:no-underline"
-            >
-              Retry
-            </button>
+          <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg mb-8">
+            <div className="flex items-start">
+              <AlertCircle className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="font-medium">Unable to load profile</p>
+                <p className="text-sm mt-1 text-red-600">{error}</p>
+              </div>
+            </div>
+            <div className="mt-3 flex gap-3">
+              <button
+                onClick={() => {
+                  setError(null);
+                  setLoading(true);
+                  fetchProfile();
+                }}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition"
+              >
+                Try Again
+              </button>
+              <button
+                onClick={handleLogout}
+                className="px-4 py-2 bg-white border border-red-300 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50 transition"
+              >
+                Sign Out & Back In
+              </button>
+            </div>
           </div>
         )}
 
