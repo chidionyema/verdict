@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence, useMotionValue, useTransform, PanInfo } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue, useTransform, PanInfo, useReducedMotion } from 'framer-motion';
 import {
   Heart,
   X,
@@ -23,6 +23,8 @@ import {
   AlertCircle,
   Star,
   Users,
+  DollarSign,
+  Coins,
 } from 'lucide-react';
 import { triggerHaptic } from '@/components/ui/Confetti';
 
@@ -42,7 +44,16 @@ interface FeedRequest {
   response_count?: number;
   received_verdict_count?: number;
   user_has_judged?: boolean;
+  request_tier?: 'community' | 'standard' | 'priority' | 'premium' | null;
 }
+
+// Tier configuration for visual badges
+const TIER_BADGES: Record<string, { label: string; className: string; icon: typeof DollarSign }> = {
+  premium: { label: 'Premium', className: 'bg-gradient-to-r from-amber-500 to-yellow-500 text-white', icon: Star },
+  priority: { label: 'Priority', className: 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white', icon: Zap },
+  standard: { label: 'Paid', className: 'bg-gradient-to-r from-emerald-500 to-green-500 text-white', icon: DollarSign },
+  community: { label: 'Free', className: 'bg-gray-100 text-gray-600', icon: Users },
+};
 
 interface FeedCardProps {
   item: FeedRequest;
@@ -94,6 +105,9 @@ export function FeedCard({ item, onJudge, onSkip, judging }: FeedCardProps) {
   const [dragDirection, setDragDirection] = useState<'left' | 'right' | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // Accessibility: Reduced motion preference
+  const prefersReducedMotion = useReducedMotion();
+
   // Drag gesture tracking
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-200, 0, 200], [-15, 0, 15]);
@@ -106,6 +120,12 @@ export function FeedCard({ item, onJudge, onSkip, judging }: FeedCardProps) {
   const responseCount = item.response_count ?? item.received_verdict_count ?? 0;
   const categoryConfig = CATEGORY_CONFIG[item.category] || CATEGORY_CONFIG.other;
   const CategoryIcon = categoryConfig.icon;
+
+  // Determine tier badge (paid tiers earn more)
+  const requestTier = item.request_tier || 'community';
+  const tierBadge = TIER_BADGES[requestTier] || TIER_BADGES.community;
+  const isPaidTier = requestTier !== 'community';
+  const TierIcon = tierBadge.icon;
 
   // Handle drag end - trigger verdict if dragged far enough
   const handleDragEnd = async (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
@@ -207,19 +227,19 @@ export function FeedCard({ item, onJudge, onSkip, judging }: FeedCardProps) {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={prefersReducedMotion ? false : { opacity: 0, y: 20 }}
       animate={{
         opacity: animatingOut ? 0 : 1,
         y: 0,
         x: animatingOut === 'left' ? -100 : animatingOut === 'right' ? 100 : 0,
       }}
-      style={{ x: animatingOut ? undefined : x, rotate: animatingOut ? (animatingOut === 'left' ? -5 : 5) : rotate }}
-      drag={!judging && !animatingOut ? 'x' : false}
+      style={prefersReducedMotion ? undefined : { x: animatingOut ? undefined : x, rotate: animatingOut ? (animatingOut === 'left' ? -5 : 5) : rotate }}
+      drag={!prefersReducedMotion && !judging && !animatingOut ? 'x' : false}
       dragConstraints={{ left: 0, right: 0 }}
       dragElastic={0.9}
-      onDrag={handleDrag}
-      onDragEnd={handleDragEnd}
-      transition={{ duration: 0.2 }}
+      onDrag={prefersReducedMotion ? undefined : handleDrag}
+      onDragEnd={prefersReducedMotion ? undefined : handleDragEnd}
+      transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.2 }}
       className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden relative touch-pan-y cursor-grab active:cursor-grabbing"
     >
       {/* Swipe feedback overlays */}
@@ -255,6 +275,13 @@ export function FeedCard({ item, onJudge, onSkip, judging }: FeedCardProps) {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {/* Tier badge - shows earning potential */}
+            {isPaidTier && (
+              <div className={`px-2.5 py-1 rounded-full text-xs font-semibold flex items-center gap-1 shadow-sm ${tierBadge.className}`}>
+                <TierIcon className="h-3 w-3" aria-hidden="true" />
+                <span>{tierBadge.label}</span>
+              </div>
+            )}
             {isRoastMode && (
               <div className="px-3 py-1.5 bg-gradient-to-r from-red-500 to-orange-500 text-white rounded-full text-xs font-bold shadow-lg flex items-center gap-1">
                 <span>🔥</span>
@@ -288,7 +315,7 @@ export function FeedCard({ item, onJudge, onSkip, judging }: FeedCardProps) {
             onClick={() => setShowImageExpanded(!showImageExpanded)}
             aria-expanded={showImageExpanded}
             aria-label={showImageExpanded ? 'Collapse image' : 'Expand image to see full size'}
-            layout
+            layout={!prefersReducedMotion}
           >
             <img
               src={item.media_url}
@@ -315,9 +342,9 @@ export function FeedCard({ item, onJudge, onSkip, judging }: FeedCardProps) {
             <div className="h-2.5 bg-gray-200 rounded-full overflow-hidden shadow-inner">
               <motion.div
                 className={`h-full rounded-full bg-gradient-to-r ${categoryConfig.gradient}`}
-                initial={{ width: 0 }}
+                initial={prefersReducedMotion ? false : { width: 0 }}
                 animate={{ width: `${progressPercent}%` }}
-                transition={{ duration: 0.5, ease: 'easeOut' }}
+                transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.5, ease: 'easeOut' }}
               />
             </div>
           </div>
@@ -365,9 +392,10 @@ export function FeedCard({ item, onJudge, onSkip, judging }: FeedCardProps) {
         {mode === 'quick' ? (
           <motion.div
             key="quick"
-            initial={{ opacity: 0, y: 10 }}
+            initial={prefersReducedMotion ? false : { opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
+            exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: -10 }}
+            transition={prefersReducedMotion ? { duration: 0 } : undefined}
             className={`px-4 pb-4 pt-0 ${isRoastMode ? 'bg-gradient-to-b from-white to-red-50' : ''}`}
           >
             {/* Quick Response Selection */}
@@ -451,8 +479,9 @@ export function FeedCard({ item, onJudge, onSkip, judging }: FeedCardProps) {
             ) : (
               /* Confirmation state */
               <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
+                initial={prefersReducedMotion ? false : { opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
+                transition={prefersReducedMotion ? { duration: 0 } : undefined}
                 className="space-y-3"
               >
                 <div className={`p-4 rounded-xl border-2 ${
@@ -519,9 +548,10 @@ export function FeedCard({ item, onJudge, onSkip, judging }: FeedCardProps) {
           /* Detailed feedback mode */
           <motion.div
             key="detailed"
-            initial={{ opacity: 0, y: 10 }}
+            initial={prefersReducedMotion ? false : { opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
+            exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: -10 }}
+            transition={prefersReducedMotion ? { duration: 0 } : undefined}
             className="px-4 pb-4 pt-0"
           >
             <div className="space-y-3">
@@ -576,8 +606,9 @@ export function FeedCard({ item, onJudge, onSkip, judging }: FeedCardProps) {
                     className={`h-full rounded-full ${
                       customFeedback.length < 20 ? 'bg-amber-500' : 'bg-green-500'
                     }`}
-                    initial={{ width: 0 }}
+                    initial={prefersReducedMotion ? false : { width: 0 }}
                     animate={{ width: `${Math.min((customFeedback.length / 100) * 100, 100)}%` }}
+                    transition={prefersReducedMotion ? { duration: 0 } : undefined}
                   />
                 </div>
               </div>
