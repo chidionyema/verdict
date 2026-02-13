@@ -1107,7 +1107,7 @@ export default function RequestDetailPage({
                       </button>
                     </div>
                   )}
-                  {userContext.isJudge && request.status !== 'closed' && (
+                  {userContext.isJudge && !userContext.isSeeker && request.status !== 'closed' && (
                     <Link
                       href={`/judge/requests/${request.id}`}
                       className="inline-block mt-4 px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium"
