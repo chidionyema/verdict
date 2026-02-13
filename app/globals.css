@@ -207,9 +207,41 @@ input[type='range']::-webkit-slider-thumb {
 }
 
 /* Touch target sizes - ensure minimum 44x44px for mobile */
-button, a {
-  min-height: 44px;
-  min-width: 44px;
+/* Note: Applied via utility classes on individual buttons for more control */
+
+/* Safe area utilities for notch and home indicator */
+.safe-area-pt {
+  padding-top: env(safe-area-inset-top);
+}
+
+.safe-area-pb {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.safe-area-pl {
+  padding-left: env(safe-area-inset-left);
+}
+
+.safe-area-pr {
+  padding-right: env(safe-area-inset-right);
+}
+
+.safe-area-inset {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* Bottom fixed element safe area - accounts for home indicator */
+.fixed-bottom-safe {
+  padding-bottom: max(env(safe-area-inset-bottom), 16px);
+}
+
+/* Prevent horizontal scroll on mobile */
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
 }
 
 /* Better focus indicators for accessibility */
@@ -668,6 +700,72 @@ button, a {
 /* For critical forms, use enhanced contrast */
 .wcag-compliant-form ::placeholder {
   color: #4b5563; /* gray-600 - 5.74:1 contrast ratio for better accessibility */
+}
+
+/* Mobile form input improvements */
+@media (max-width: 640px) {
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="tel"],
+  input[type="number"],
+  input[type="search"],
+  input[type="url"],
+  textarea,
+  select {
+    font-size: 16px; /* Prevents iOS zoom on focus */
+    min-height: 48px;
+    padding: 12px 16px;
+  }
+
+  /* Better touch spacing for form fields */
+  input + input,
+  input + textarea,
+  input + select,
+  textarea + input,
+  textarea + textarea,
+  select + input {
+    margin-top: 12px;
+  }
+}
+
+/* Fast tap response - remove 300ms delay */
+* {
+  touch-action: manipulation;
+}
+
+/* Prevent text selection on buttons during tap */
+button,
+[role="button"] {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Active state for better tap feedback */
+button:active:not(:disabled),
+[role="button"]:active:not(:disabled),
+a:active {
+  transform: scale(0.98);
+}
+
+/* Scroll snap for horizontal scrollers */
+.scroll-snap-x {
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+
+.scroll-snap-item {
+  scroll-snap-align: start;
+}
+
+/* Hide scrollbar but keep functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }
 
 /* ============================================

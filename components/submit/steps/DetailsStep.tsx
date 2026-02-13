@@ -106,7 +106,7 @@ export function DetailsStep({
               onClick={() => handleCategorySelect(category.id)}
               role="radio"
               aria-checked={data.category === category.id}
-              className={`p-4 rounded-xl border-2 text-left transition-all duration-200 ${
+              className={`p-4 min-h-[80px] rounded-xl border-2 text-left transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 active:scale-[0.98] ${
                 data.category === category.id
                   ? 'border-indigo-500 bg-indigo-50 shadow-md scale-[1.02]'
                   : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
@@ -184,7 +184,7 @@ export function DetailsStep({
                 <button
                   key={i}
                   onClick={() => onUpdate({ context: prompt })}
-                  className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm rounded-full transition"
+                  className="px-4 py-2 min-h-[44px] bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm rounded-full transition focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2 active:scale-[0.97]"
                 >
                   {prompt.slice(0, 40)}...
                 </button>
@@ -199,9 +199,9 @@ export function DetailsStep({
         {onBack && (
           <button
             onClick={onBack}
-            className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-900 transition"
+            className="flex items-center gap-2 px-4 py-3 min-h-[48px] text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2"
           >
-            <ChevronLeft className="h-4 w-4" />
+            <ChevronLeft className="h-5 w-5" />
             Back
           </button>
         )}
@@ -209,9 +209,9 @@ export function DetailsStep({
         <button
           onClick={handleContinue}
           disabled={!isValid || !isOnline}
-          className={`ml-auto px-8 py-3 rounded-xl font-semibold text-white transition-all flex items-center gap-2 ${
+          className={`ml-auto px-8 py-3 min-h-[48px] rounded-xl font-semibold text-white transition-all flex items-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 ${
             isValid && isOnline
-              ? 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:shadow-lg hover:-translate-y-0.5'
+              ? 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98]'
               : 'bg-gray-300 cursor-not-allowed'
           }`}
         >

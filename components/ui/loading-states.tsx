@@ -152,8 +152,8 @@ export function ErrorState({
       default:
         return {
           icon: AlertCircle,
-          defaultTitle: 'Something went wrong',
-          defaultDescription: 'An unexpected error occurred. Please try again.',
+          defaultTitle: 'Unable to Load',
+          defaultDescription: 'We encountered an issue loading this content. Please try again or check back later.',
           iconColor: 'text-red-600',
           bgColor: 'bg-red-50'
         };

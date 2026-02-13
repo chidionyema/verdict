@@ -97,7 +97,12 @@ export default function WelcomePage() {
       router.push('/dashboard');
     } catch (error) {
       console.error('Save error:', error);
-      toast.error('Failed to save profile. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : '';
+      if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
+        toast.error('Unable to save profile. Please check your connection and try again.');
+      } else {
+        toast.error('We couldn\'t save your profile. Please try again in a moment.');
+      }
     } finally {
       setSaving(false);
     }

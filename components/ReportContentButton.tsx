@@ -65,7 +65,15 @@ export default function ReportContentButton({ contentType, contentId, className 
       }, 2000);
 
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong');
+      const errorMessage = err instanceof Error ? err.message : '';
+      // Provide user-friendly error based on what went wrong
+      if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
+        setError('Unable to submit report. Please check your internet connection and try again.');
+      } else if (errorMessage.includes('unauthorized') || errorMessage.includes('401')) {
+        setError('Please sign in to report content.');
+      } else {
+        setError('We couldn\'t submit your report. Please try again later.');
+      }
     } finally {
       setIsSubmitting(false);
     }

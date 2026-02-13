@@ -271,7 +271,17 @@ export function SubmitFlow({ initialStep, returnFrom }: SubmitFlowProps) {
 
     } catch (error) {
       console.error('Submit error:', error);
-      toast.error(error instanceof Error ? error.message : 'Something went wrong');
+      const errorMessage = error instanceof Error ? error.message : '';
+      // Provide user-friendly error based on what went wrong
+      if (errorMessage.includes('network') || errorMessage.includes('fetch') || errorMessage.includes('Failed to fetch')) {
+        toast.error('Unable to submit. Please check your internet connection and try again. Your draft has been saved.');
+      } else if (errorMessage.includes('unauthorized') || errorMessage.includes('401') || errorMessage.includes('session')) {
+        toast.error('Your session has expired. Please sign in again to submit your request.');
+      } else if (errorMessage.includes('upload') || errorMessage.includes('file')) {
+        toast.error('Failed to upload your content. Please try again or use a different file.');
+      } else {
+        toast.error('We couldn\'t submit your request. Please try again. Your draft has been saved.');
+      }
       endSubmit();
     }
   }, [data, startSubmit, endSubmit, clearDraft]);

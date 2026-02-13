@@ -383,75 +383,180 @@ export default function JudgeEarningsPage() {
           <div className="p-6">
             {payoutAccount ? (
               <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <CheckCircle className="h-5 w-5 text-green-600" />
-                    <div>
-                      <p className="font-medium text-green-800">Stripe Connected</p>
-                      <p className="text-sm text-green-600">
-                        {payoutAccount.payouts_enabled ? 'Ready for payouts' : 'Verification pending'}
-                      </p>
+                {/* Account Status Card */}
+                <div className={`p-4 rounded-xl border ${
+                  payoutAccount.payouts_enabled
+                    ? 'bg-green-50 border-green-200'
+                    : 'bg-yellow-50 border-yellow-200'
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      {payoutAccount.payouts_enabled ? (
+                        <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                          <CheckCircle className="h-5 w-5 text-green-600" />
+                        </div>
+                      ) : (
+                        <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
+                          <Clock className="h-5 w-5 text-yellow-600" />
+                        </div>
+                      )}
+                      <div>
+                        <p className={`font-semibold ${payoutAccount.payouts_enabled ? 'text-green-800' : 'text-yellow-800'}`}>
+                          {payoutAccount.payouts_enabled ? 'Stripe Connected' : 'Verification In Progress'}
+                        </p>
+                        <p className={`text-sm ${payoutAccount.payouts_enabled ? 'text-green-600' : 'text-yellow-600'}`}>
+                          {payoutAccount.payouts_enabled
+                            ? 'Your account is ready to receive payouts'
+                            : 'Please complete verification to receive payouts'}
+                        </p>
+                      </div>
                     </div>
+                    <a
+                      href="https://dashboard.stripe.com/express"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`flex items-center gap-1 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 rounded px-2 py-1 ${
+                        payoutAccount.payouts_enabled
+                          ? 'text-green-700 hover:text-green-800 focus-visible:ring-green-500'
+                          : 'text-yellow-700 hover:text-yellow-800 focus-visible:ring-yellow-500'
+                      }`}
+                      aria-label="Manage Stripe account (opens in new tab)"
+                    >
+                      {payoutAccount.payouts_enabled ? 'Manage' : 'Complete Setup'} <ExternalLink className="h-4 w-4" aria-hidden="true" />
+                    </a>
                   </div>
-                  <a
-                    href="https://dashboard.stripe.com/express"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1 text-sm text-green-700 hover:text-green-800"
-                  >
-                    Manage <ExternalLink className="h-4 w-4" />
-                  </a>
+
+                  {/* Verification Steps - Show if not fully verified */}
+                  {!payoutAccount.payouts_enabled && (
+                    <div className="mt-4 pt-4 border-t border-yellow-200">
+                      <p className="text-sm text-yellow-700 mb-3">Complete these steps to start receiving payouts:</p>
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm">
+                          <CheckCircle className="h-4 w-4 text-green-500" />
+                          <span className="text-gray-700">Create Stripe account</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm">
+                          <div className="h-4 w-4 border-2 border-yellow-400 rounded-full" />
+                          <span className="text-gray-700">Verify your identity</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm">
+                          <div className="h-4 w-4 border-2 border-gray-300 rounded-full" />
+                          <span className="text-gray-400">Add bank account</span>
+                        </div>
+                      </div>
+                      <a
+                        href="https://dashboard.stripe.com/express"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-4 w-full flex items-center justify-center gap-2 py-2 bg-yellow-600 text-white rounded-lg font-medium hover:bg-yellow-700 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-500 focus-visible:ring-offset-2"
+                      >
+                        Continue Verification
+                        <ExternalLink className="h-4 w-4" />
+                      </a>
+                    </div>
+                  )}
                 </div>
 
+                {/* Payout Button - Only when verified and has enough */}
                 {payoutAccount.payouts_enabled && availableAmount >= minimumPayout && (
                   <button
                     onClick={handleRequestPayout}
                     disabled={requestingPayout}
-                    className="w-full py-3 px-4 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    className="w-full py-4 px-4 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-semibold hover:from-green-700 hover:to-emerald-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:ring-offset-2"
+                    aria-label={requestingPayout ? 'Processing payout request' : `Request payout of ${formatCurrency(availableAmount)}`}
                   >
                     {requestingPayout ? (
                       <>
-                        <RefreshCw className="h-4 w-4 animate-spin" />
-                        Processing...
+                        <RefreshCw className="h-5 w-5 animate-spin" aria-hidden="true" />
+                        Processing your payout...
                       </>
                     ) : (
                       <>
-                        <DollarSign className="h-4 w-4" />
+                        <DollarSign className="h-5 w-5" aria-hidden="true" />
                         Request Payout ({formatCurrency(availableAmount)})
                       </>
                     )}
                   </button>
                 )}
 
-                {availableAmount < minimumPayout && (
-                  <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
-                    <p className="text-sm text-gray-600">
-                      Minimum payout: {formatCurrency(minimumPayout)}. You need {formatCurrency(minimumPayout - availableAmount)} more.
-                    </p>
+                {/* Progress to minimum payout */}
+                {payoutAccount.payouts_enabled && availableAmount < minimumPayout && (
+                  <div className="p-4 bg-indigo-50 border border-indigo-200 rounded-xl">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <TrendingUp className="h-5 w-5 text-indigo-600" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-semibold text-indigo-800">Almost there!</p>
+                        <p className="text-sm text-indigo-700 mb-3">
+                          You need {formatCurrency(minimumPayout - availableAmount)} more to reach the {formatCurrency(minimumPayout)} minimum payout.
+                        </p>
+                        <div className="w-full bg-indigo-200 rounded-full h-2 mb-2">
+                          <div
+                            className="bg-indigo-600 h-2 rounded-full transition-all"
+                            style={{ width: `${Math.min((availableAmount / minimumPayout) * 100, 100)}%` }}
+                          />
+                        </div>
+                        <p className="text-xs text-indigo-600">
+                          {Math.round((availableAmount / minimumPayout) * 100)}% to minimum payout
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
             ) : (
-              <div className="text-center py-8">
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <CreditCard className="h-8 w-8 text-gray-400" />
+              <div className="py-8">
+                {/* Icon and Title */}
+                <div className="text-center mb-8">
+                  <div className="w-20 h-20 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                    <Banknote className="h-10 w-10 text-indigo-600" />
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">Set Up Payouts</h3>
+                  <p className="text-gray-600 max-w-sm mx-auto">
+                    Connect your bank account through Stripe to receive your judge earnings securely.
+                  </p>
                 </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No Payout Account</h3>
-                <p className="text-gray-600 mb-6 max-w-md mx-auto">
-                  Connect your Stripe account to receive payouts for your judge work.
-                </p>
+
+                {/* Benefits List */}
+                <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-6 max-w-sm mx-auto">
+                  <h4 className="font-semibold text-green-800 mb-3 flex items-center gap-2">
+                    <Shield className="h-4 w-4" />
+                    Secure & Fast Payouts
+                  </h4>
+                  <ul className="space-y-2 text-sm text-green-700">
+                    <li className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 flex-shrink-0" />
+                      Direct deposit to your bank
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 flex-shrink-0" />
+                      2-3 business day transfers
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 flex-shrink-0" />
+                      Powered by Stripe (trusted by millions)
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 flex-shrink-0" />
+                      No monthly fees
+                    </li>
+                  </ul>
+                </div>
 
                 {/* Country Selector */}
-                <div className="mb-6 max-w-xs mx-auto">
-                  <label className="block text-sm font-medium text-gray-700 mb-2 text-left">
-                    <Globe className="h-4 w-4 inline mr-1" />
+                <div className="mb-6 max-w-sm mx-auto">
+                  <label htmlFor="country-select" className="block text-sm font-medium text-gray-700 mb-2 text-left">
+                    <Globe className="h-4 w-4 inline mr-1" aria-hidden="true" />
                     Select your country
                   </label>
                   <div className="relative">
                     <select
+                      id="country-select"
                       value={selectedCountry}
                       onChange={(e) => setSelectedCountry(e.target.value)}
-                      className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 appearance-none cursor-pointer focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                      className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl text-gray-900 appearance-none cursor-pointer focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:outline-none"
+                      aria-describedby="country-help"
                     >
                       {SUPPORTED_COUNTRIES.map((country) => (
                         <option key={country.code} value={country.code}>
@@ -459,30 +564,37 @@ export default function JudgeEarningsPage() {
                         </option>
                       ))}
                     </select>
-                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" aria-hidden="true" />
                   </div>
-                  <p className="text-xs text-gray-500 mt-2 text-left">
+                  <p id="country-help" className="text-xs text-gray-500 mt-2 text-left">
                     This determines which bank accounts you can connect.
                   </p>
                 </div>
 
-                <button
-                  onClick={handleConnectStripe}
-                  disabled={connectingStripe}
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition disabled:bg-gray-300"
-                >
-                  {connectingStripe ? (
-                    <>
-                      <RefreshCw className="h-4 w-4 animate-spin" />
-                      Connecting...
-                    </>
-                  ) : (
-                    <>
-                      <CreditCard className="h-4 w-4" />
-                      Connect Stripe Account
-                    </>
-                  )}
-                </button>
+                {/* Connect Button */}
+                <div className="text-center">
+                  <button
+                    onClick={handleConnectStripe}
+                    disabled={connectingStripe}
+                    className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold hover:from-indigo-700 hover:to-purple-700 transition disabled:opacity-50 disabled:cursor-not-allowed shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
+                    aria-label={connectingStripe ? 'Setting up Stripe account' : 'Connect Stripe account to receive payouts'}
+                  >
+                    {connectingStripe ? (
+                      <>
+                        <RefreshCw className="h-5 w-5 animate-spin" aria-hidden="true" />
+                        Setting up...
+                      </>
+                    ) : (
+                      <>
+                        <CreditCard className="h-5 w-5" aria-hidden="true" />
+                        Connect Stripe Account
+                      </>
+                    )}
+                  </button>
+                  <p className="text-xs text-gray-500 mt-3">
+                    Takes about 5 minutes to complete
+                  </p>
+                </div>
               </div>
             )}
           </div>

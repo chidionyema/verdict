@@ -2,8 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { Gavel, BarChart3, TrendingUp } from 'lucide-react';
-
-export type JudgeTabType = 'queue' | 'stats' | 'progression';
+import type { JudgeTabType } from './types';
 
 interface JudgeDashboardTabsProps {
   activeTab: JudgeTabType;

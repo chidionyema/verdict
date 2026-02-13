@@ -41,10 +41,10 @@ export default function GlobalError({
             width: '100%',
           }}>
             <h1 style={{ fontSize: '24px', marginBottom: '16px', color: '#111827' }}>
-              Something went wrong
+              We Hit a Snag
             </h1>
             <p style={{ color: '#6b7280', marginBottom: '24px', lineHeight: '1.5' }}>
-              We apologize for the inconvenience. Our team has been notified and is working on a fix.
+              An unexpected error occurred. This might be a temporary issue with our servers. Our team has been automatically notified. You can try refreshing the page or going back to continue using Verdict.
             </p>
             <div style={{
               display: 'flex',

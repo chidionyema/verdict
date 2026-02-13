@@ -120,7 +120,15 @@ export default function VerdictRatingModal({
       setIsFeatured(false);
 
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong');
+      const errorMessage = err instanceof Error ? err.message : '';
+      // Provide user-friendly error based on what went wrong
+      if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
+        setError('Unable to submit rating. Please check your connection and try again.');
+      } else if (errorMessage.includes('already rated') || errorMessage.includes('duplicate')) {
+        setError('You\'ve already rated this verdict. Your feedback has been recorded.');
+      } else {
+        setError('We couldn\'t submit your rating. Please try again in a moment.');
+      }
     } finally {
       setIsSubmitting(false);
     }

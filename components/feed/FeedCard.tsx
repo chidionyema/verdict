@@ -265,7 +265,7 @@ export function FeedCard({ item, onJudge, onSkip, judging }: FeedCardProps) {
               onClick={onSkip}
               disabled={judging}
               aria-label="Skip to next request"
-              className="p-2 min-h-[40px] min-w-[40px] flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 focus-visible:ring-offset-1 disabled:opacity-50"
+              className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 focus-visible:ring-offset-1 disabled:opacity-50 active:scale-95"
             >
               <SkipForward className="h-5 w-5" aria-hidden="true" />
             </button>

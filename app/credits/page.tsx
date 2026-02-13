@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import { Check, Star, Zap, Shield } from 'lucide-react';
+import { Check, Star, Zap, Shield, Clock, RefreshCw, ArrowRight, Coins, CheckCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { toast } from '@/components/ui/toast';
+import { CreditHistory } from '@/components/credits';
 
 interface CreditPackage {
   id: string;
@@ -16,17 +18,17 @@ interface CreditPackage {
 }
 
 const features = [
-  'Get feedback from real people in minutes',
-  'Anonymous and honest opinions',
-  'No subscription required',
-  '100% money-back guarantee'
+  { text: 'Get feedback from real people in minutes', icon: 'clock' },
+  { text: 'Anonymous and honest opinions', icon: 'shield' },
+  { text: 'No subscription required', icon: 'check' },
+  { text: '100% money-back guarantee', icon: 'refund' },
 ];
 
 export default function CreditsPage() {
   const [packages, setPackages] = useState<CreditPackage[]>([]);
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState<string | null>(null);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
   const [currentCredits, setCurrentCredits] = useState(0);
   const router = useRouter();
 
@@ -160,7 +162,15 @@ export default function CreditsPage() {
       }
     } catch (error) {
       console.error('Purchase error:', error);
-      toast.error('Failed to start purchase. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : '';
+      // Provide user-friendly error based on what went wrong
+      if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
+        toast.error('Unable to connect to payment processor. Please check your internet connection and try again.');
+      } else if (errorMessage.includes('card') || errorMessage.includes('payment')) {
+        toast.error('Payment could not be processed. Please try a different payment method or contact your bank.');
+      } else {
+        toast.error('We couldn\'t start the checkout. Please refresh the page and try again.');
+      }
     } finally {
       setPurchasing(null);
     }
@@ -202,17 +212,42 @@ export default function CreditsPage() {
 
         {/* Features */}
         <div className="mb-12">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-4xl mx-auto">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
             {features.map((feature, index) => (
-              <div key={index} className="flex items-center text-center">
-                <div className="flex-shrink-0 mx-auto mb-2">
-                  <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                    <Check className="w-5 h-5 text-green-600" />
-                  </div>
+              <div key={index} className="flex flex-col items-center text-center p-4 bg-white rounded-xl border border-gray-100 shadow-sm">
+                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mb-3">
+                  {feature.icon === 'clock' && <Clock className="w-5 h-5 text-green-600" />}
+                  {feature.icon === 'shield' && <Shield className="w-5 h-5 text-green-600" />}
+                  {feature.icon === 'check' && <Check className="w-5 h-5 text-green-600" />}
+                  {feature.icon === 'refund' && <RefreshCw className="w-5 h-5 text-green-600" />}
                 </div>
-                <p className="text-sm text-gray-600">{feature}</p>
+                <p className="text-sm text-gray-700 font-medium">{feature.text}</p>
               </div>
             ))}
+          </div>
+        </div>
+
+        {/* Earn Credits Alternative */}
+        <div className="mb-12 max-w-2xl mx-auto">
+          <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-2xl p-6">
+            <div className="flex flex-col md:flex-row items-center gap-6">
+              <div className="w-16 h-16 bg-green-100 rounded-2xl flex items-center justify-center flex-shrink-0">
+                <Zap className="w-8 h-8 text-green-600" />
+              </div>
+              <div className="flex-1 text-center md:text-left">
+                <h3 className="text-lg font-bold text-green-900 mb-1">Prefer to earn credits for free?</h3>
+                <p className="text-green-700 mb-4">
+                  Review 3 submissions from others to earn 1 credit. It's a great way to help the community and save money!
+                </p>
+                <Link
+                  href="/feed?earn=true"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:ring-offset-2"
+                >
+                  Start Earning
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -258,17 +293,18 @@ export default function CreditsPage() {
                 <button
                   onClick={() => handlePurchase(pkg)}
                   disabled={purchasing === pkg.id}
-                  className={`w-full py-3 px-4 rounded-lg font-medium transition-colors ${
+                  className={`w-full py-3 px-4 rounded-xl font-semibold transition-all min-h-[48px] focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${
                     pkg.popular
-                      ? 'bg-indigo-600 hover:bg-indigo-700 text-white'
-                      : 'bg-gray-100 hover:bg-gray-200 text-gray-900'
+                      ? 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-lg focus-visible:ring-indigo-500'
+                      : 'bg-gray-100 hover:bg-gray-200 text-gray-900 focus-visible:ring-gray-500'
                   } disabled:opacity-50 disabled:cursor-not-allowed`}
+                  aria-label={purchasing === pkg.id ? 'Processing purchase' : `Purchase ${pkg.credits} credits for $${pkg.price}`}
                 >
                   {purchasing === pkg.id ? (
-                    <div className="flex items-center justify-center">
-                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2" />
+                    <span className="flex items-center justify-center">
+                      <span className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2" aria-hidden="true" />
                       Processing...
-                    </div>
+                    </span>
                   ) : (
                     'Purchase Credits'
                   )}
@@ -278,10 +314,76 @@ export default function CreditsPage() {
           ))}
         </div>
 
+        {/* Credit History - only show for logged in users */}
+        {user && (
+          <div className="mt-12 max-w-3xl mx-auto">
+            <CreditHistory userId={user.id} />
+          </div>
+        )}
+
+        {/* Pricing Clarity Section */}
+        <div className="mt-12 max-w-3xl mx-auto">
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="p-6 border-b border-gray-100">
+              <h3 className="text-lg font-bold text-gray-900 text-center">Clear, Simple Pricing</h3>
+            </div>
+            <div className="p-6 space-y-4">
+              {/* No Hidden Fees */}
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-900">No hidden fees</p>
+                  <p className="text-sm text-gray-600">The price you see is the price you pay. No surprises.</p>
+                </div>
+              </div>
+
+              {/* Credits Never Expire */}
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-900">Credits never expire</p>
+                  <p className="text-sm text-gray-600">Use your credits whenever you want. No time limits.</p>
+                </div>
+              </div>
+
+              {/* Money-Back Guarantee */}
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <RefreshCw className="h-4 w-4 text-green-600" />
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-900">100% money-back guarantee</p>
+                  <p className="text-sm text-gray-600">
+                    Not satisfied? Contact us within 30 days for a full refund on unused credits.{' '}
+                    <Link href="/help#refunds" className="text-indigo-600 hover:text-indigo-700 underline">
+                      Refund policy
+                    </Link>
+                  </p>
+                </div>
+              </div>
+
+              {/* What You Get */}
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <Coins className="h-4 w-4 text-green-600" />
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-900">1 credit = 3 honest feedback reports</p>
+                  <p className="text-sm text-gray-600">Each submission gets reviewed by 3 real people who provide detailed, actionable feedback.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Security Notice */}
-        <div className="mt-12 text-center">
-          <div className="inline-flex items-center px-4 py-3 bg-green-50 rounded-lg">
-            <Shield className="h-5 w-5 text-green-600 mr-2" />
+        <div className="mt-8 text-center">
+          <div className="inline-flex items-center px-5 py-3 bg-green-50 border border-green-200 rounded-xl">
+            <Shield className="h-5 w-5 text-green-600 mr-3" aria-hidden="true" />
             <span className="text-green-800 text-sm font-medium">
               Secure payments powered by Stripe. Your payment information is encrypted and protected.
             </span>

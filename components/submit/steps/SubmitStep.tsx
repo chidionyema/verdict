@@ -85,7 +85,7 @@ export function SubmitStep({
             {onBack && (
               <button
                 onClick={onBack}
-                className="text-sm text-indigo-600 hover:text-indigo-700 font-medium whitespace-nowrap"
+                className="text-sm text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 font-medium whitespace-nowrap px-3 py-2 min-h-[44px] rounded-lg transition focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
               >
                 Edit
               </button>
@@ -116,7 +116,7 @@ export function SubmitStep({
                 role="radio"
                 aria-checked={isSelected}
                 disabled={isSubmitting}
-                className={`w-full p-4 rounded-xl border-2 text-left transition-all ${
+                className={`w-full p-4 min-h-[88px] rounded-xl border-2 text-left transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 active:scale-[0.99] ${
                   isSelected
                     ? 'border-indigo-500 bg-indigo-50'
                     : 'border-gray-200 hover:border-gray-300 bg-white'
@@ -218,7 +218,7 @@ export function SubmitStep({
                   <button
                     onClick={onEarnCredits}
                     disabled={isSubmitting}
-                    className="flex items-center justify-center gap-2 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition disabled:opacity-50"
+                    className="flex items-center justify-center gap-2 px-4 py-3 min-h-[48px] bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:ring-offset-2 active:scale-[0.98]"
                   >
                     <Sparkles className="h-4 w-4" />
                     <span>Earn Free</span>
@@ -226,7 +226,7 @@ export function SubmitStep({
                   <button
                     onClick={onBuyCredits}
                     disabled={isSubmitting}
-                    className="flex items-center justify-center gap-2 px-4 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition disabled:opacity-50"
+                    className="flex items-center justify-center gap-2 px-4 py-3 min-h-[48px] bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 active:scale-[0.98]"
                   >
                     <Zap className="h-4 w-4" />
                     <span>Buy Credits</span>
@@ -248,9 +248,9 @@ export function SubmitStep({
           <button
             onClick={onBack}
             disabled={isSubmitting}
-            className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-900 transition disabled:opacity-50"
+            className="flex items-center gap-2 px-4 py-3 min-h-[48px] text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2"
           >
-            <ChevronLeft className="h-4 w-4" />
+            <ChevronLeft className="h-5 w-5" />
             Back
           </button>
         )}
@@ -258,9 +258,9 @@ export function SubmitStep({
         <button
           onClick={handleSubmit}
           disabled={!hasEnoughCredits || isSubmitting || !isOnline}
-          className={`ml-auto px-8 py-4 rounded-xl font-semibold text-white transition-all flex items-center gap-3 ${
+          className={`ml-auto px-8 py-4 min-h-[56px] rounded-xl font-semibold text-white transition-all flex items-center gap-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:ring-offset-2 ${
             hasEnoughCredits && !isSubmitting && isOnline
-              ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:shadow-lg hover:-translate-y-0.5'
+              ? 'bg-gradient-to-r from-green-600 to-emerald-600 hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98]'
               : 'bg-gray-300 cursor-not-allowed'
           }`}
         >

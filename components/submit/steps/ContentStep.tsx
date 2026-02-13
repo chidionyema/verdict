@@ -182,7 +182,7 @@ export function ContentStep({
               onClick={() => handleTypeChange(type.id)}
               role="radio"
               aria-checked={data.requestType === type.id}
-              className={`relative p-4 rounded-xl border-2 text-left transition-all duration-200 hover:shadow-md ${
+              className={`relative p-4 min-h-[120px] rounded-xl border-2 text-left transition-all duration-200 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 active:scale-[0.98] ${
                 data.requestType === type.id
                   ? 'border-indigo-500 bg-indigo-50 shadow-md'
                   : 'border-gray-200 hover:border-gray-300 bg-white'
@@ -223,7 +223,7 @@ export function ContentStep({
             onClick={() => handleMediaTypeChange('photo')}
             role="radio"
             aria-checked={data.mediaType === 'photo'}
-            className={`flex-1 p-4 rounded-xl border-2 flex items-center gap-3 transition-all ${
+            className={`flex-1 p-4 min-h-[72px] rounded-xl border-2 flex items-center gap-3 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 active:scale-[0.98] ${
               data.mediaType === 'photo'
                 ? 'border-indigo-500 bg-indigo-50'
                 : 'border-gray-200 hover:border-gray-300'
@@ -246,7 +246,7 @@ export function ContentStep({
             onClick={() => handleMediaTypeChange('text')}
             role="radio"
             aria-checked={data.mediaType === 'text'}
-            className={`flex-1 p-4 rounded-xl border-2 flex items-center gap-3 transition-all ${
+            className={`flex-1 p-4 min-h-[72px] rounded-xl border-2 flex items-center gap-3 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 active:scale-[0.98] ${
               data.mediaType === 'text'
                 ? 'border-indigo-500 bg-indigo-50'
                 : 'border-gray-200 hover:border-gray-300'
@@ -291,10 +291,10 @@ export function ContentStep({
                   />
                   <button
                     onClick={() => handleRemoveImage(index)}
-                    className="absolute top-2 right-2 p-1.5 bg-black/50 hover:bg-black/70 rounded-full text-white transition"
+                    className="absolute top-2 right-2 p-2 min-h-[44px] min-w-[44px] bg-black/50 hover:bg-black/70 rounded-full text-white transition flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-white"
                     aria-label={`Remove image ${index + 1}`}
                   >
-                    <X className="h-4 w-4" />
+                    <X className="h-5 w-5" />
                   </button>
                   {data.requestType !== 'standard' && (
                     <div className="absolute bottom-2 left-2 px-2 py-1 bg-black/50 rounded text-white text-sm">
@@ -394,9 +394,9 @@ export function ContentStep({
         <button
           onClick={handleContinue}
           disabled={!hasEnoughContent || !isOnline}
-          className={`px-8 py-3 rounded-xl font-semibold text-white transition-all flex items-center gap-2 ${
+          className={`px-8 py-3 min-h-[48px] rounded-xl font-semibold text-white transition-all flex items-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 ${
             hasEnoughContent && isOnline
-              ? 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:shadow-lg hover:-translate-y-0.5'
+              ? 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98]'
               : 'bg-gray-300 cursor-not-allowed'
           }`}
         >

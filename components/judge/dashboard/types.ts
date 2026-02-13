@@ -63,7 +63,20 @@ export interface JudgeStats {
   best_category: string;
   verdicts_today: number;
   earnings_trend: 'up' | 'down' | 'stable';
+  // Enhanced stats
+  next_payout_date?: string;
+  next_payout_amount?: number;
+  pending_earnings?: number;
+  helpful_votes?: number;
+  weekly_helpful_votes?: number;
+  accuracy_score?: number;
+  speed_percentile?: number;
+  expertise_areas?: string[];
+  longest_streak?: number;
+  streak_at_risk?: boolean;
 }
+
+export type JudgeTabType = 'queue' | 'stats' | 'progression';
 
 export interface JudgeLevel {
   name: string;

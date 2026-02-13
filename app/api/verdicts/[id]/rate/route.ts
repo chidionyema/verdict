@@ -145,6 +145,21 @@ async function POST_Handler(
       notification_priority: overall_rating >= 4 ? 'normal' : 'low'
     });
 
+    // If the verdict was marked as helpful (4+ helpfulness), send special notification
+    if (helpfulness_rating >= 4) {
+      await (supabase.rpc as any)('create_notification', {
+        target_user_id: verdict.judge_id,
+        notification_type: 'verdict_helped',
+        notification_title: 'Your feedback helped someone!',
+        notification_message: `Someone found your verdict really helpful! Keep up the great work helping others make better decisions.`,
+        related_type: 'verdict_response',
+        related_id: id,
+        action_label: 'See Your Impact',
+        action_url: `/judge/performance`,
+        notification_priority: 'high'
+      });
+    }
+
     // If highly rated, notify admins about potential featured content
     if (is_featured_worthy && overall_rating >= 4) {
       const { data: admins } = await supabase

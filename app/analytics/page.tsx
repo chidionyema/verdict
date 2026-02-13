@@ -105,7 +105,14 @@ export default function AnalyticsPage() {
         setInsights(insightsData.insights || []);
       }
     } catch (err) {
-      setError('Failed to load analytics data');
+      const errorMessage = err instanceof Error ? err.message : '';
+      if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
+        setError('Unable to load analytics. Please check your internet connection and try again.');
+      } else if (errorMessage.includes('unauthorized') || errorMessage.includes('401')) {
+        setError('Your session has expired. Please sign in again to view your analytics.');
+      } else {
+        setError('We couldn\'t load your analytics data. Please try again in a moment.');
+      }
       console.error('Analytics error:', err);
     } finally {
       setLoading(false);

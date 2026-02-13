@@ -464,14 +464,15 @@ function JudgeDashboardContent() {
                     <PerformanceMetrics stats={stats} />
                     <StreakRewards
                       currentStreak={stats.streak_days}
-                      longestStreak={stats.streak_days}
+                      longestStreak={stats.longest_streak ?? stats.streak_days}
+                      streakAtRisk={stats.streak_at_risk}
                     />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <VerdictHistoryCard stats={stats} />
-                  <ProTipsCard />
+                  <ProTipsCard qualityScore={stats.average_quality_score} />
                 </div>
 
                 {profile && (

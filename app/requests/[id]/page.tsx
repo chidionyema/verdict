@@ -39,6 +39,14 @@ import { JudgeFeedbackRating } from '@/components/feedback/JudgeFeedbackRating';
 import { JudgeCredibilityBadge } from '@/components/reputation/JudgeCredibilityBadge';
 import ConsensusAnalysis from '@/components/consensus/ConsensusAnalysis';
 import { FirstTimeHint } from '@/components/ui/TerminologyTooltip';
+import { RequestActions } from '@/components/request/RequestActions';
+import {
+  VerdictSummaryCard,
+  MostHelpfulVerdict,
+  CompletionCelebration,
+  VerdictDeliveredCounter,
+  EstimatedCompletion,
+} from '@/components/results';
 
 interface VerdictWithNumber extends VerdictResponse {
   judge_number: number;
@@ -278,7 +286,12 @@ export default function RequestDetailPage({
       fetchRequest();
     } catch (error) {
       console.error('Error submitting judge rating:', error);
-      toast.error('Failed to submit rating. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : '';
+      if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
+        toast.error('Unable to submit rating. Please check your connection and try again.');
+      } else {
+        toast.error('We couldn\'t submit your rating. Please try again in a moment.');
+      }
     }
   };
 
@@ -367,13 +380,13 @@ export default function RequestDetailPage({
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <button
                 onClick={fetchRequest}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium min-h-[44px]"
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium min-h-[48px] focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 active:scale-[0.98]"
               >
                 Try Again
               </button>
               <Link
                 href="/dashboard"
-                className="px-4 py-2 bg-white text-red-600 border border-red-300 rounded-lg hover:bg-red-50 transition font-medium min-h-[44px] flex items-center justify-center"
+                className="px-4 py-2 bg-white text-red-600 border border-red-300 rounded-lg hover:bg-red-50 transition font-medium min-h-[48px] flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2"
               >
                 Back to Dashboard
               </Link>
@@ -397,6 +410,27 @@ export default function RequestDetailPage({
 
   return (
     <div className="min-h-screen bg-gray-50 py-12">
+      {/* Completion Celebration Modal */}
+      {request.status === 'closed' && verdicts.length > 0 && userContext.isSeeker && (
+        <CompletionCelebration
+          isComplete={request.status === 'closed'}
+          verdictCount={verdicts.length}
+          averageRating={averageRating}
+          category={request.category}
+          requestId={request.id}
+          onShare={() => {
+            const shareData = generateShareableData(
+              request.id,
+              request.context || 'My feedback request',
+              request.category,
+              verdicts,
+              false
+            );
+            openShareModal(shareData);
+          }}
+        />
+      )}
+
       <div className="max-w-6xl mx-auto px-4">
         {/* Enhanced Header */}
         <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
@@ -404,7 +438,7 @@ export default function RequestDetailPage({
             {userContext.isSeeker ? (
               <Link
                 href="/my-requests"
-                className="flex items-center text-gray-600 hover:text-gray-900 transition min-h-[44px]"
+                className="flex items-center text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition min-h-[48px] px-3 py-2 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-500"
               >
                 <ArrowLeft className="h-5 w-5 mr-2" />
                 Back to My Requests
@@ -412,7 +446,7 @@ export default function RequestDetailPage({
             ) : userContext.isJudge ? (
               <Link
                 href="/judge/my-verdicts"
-                className="flex items-center text-gray-600 hover:text-gray-900 transition min-h-[44px]"
+                className="flex items-center text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition min-h-[48px] px-3 py-2 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-500"
               >
                 <ArrowLeft className="h-5 w-5 mr-2" />
                 Back to My Verdicts
@@ -420,7 +454,7 @@ export default function RequestDetailPage({
             ) : (
               <Link
                 href="/judge"
-                className="flex items-center text-gray-600 hover:text-gray-900 transition min-h-[44px]"
+                className="flex items-center text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition min-h-[48px] px-3 py-2 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-500"
               >
                 <ArrowLeft className="h-5 w-5 mr-2" />
                 Back to Judge Dashboard
@@ -676,151 +710,39 @@ export default function RequestDetailPage({
               </div>
             </div>
 
-            {/* Expected Time */}
+            {/* Expected Time - Using Enhanced Component */}
             <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
               <p className="text-sm text-gray-500">
                 {request.received_verdict_count === 0
                   ? 'Judges are reviewing your submission. New verdicts will appear here automatically.'
                   : "You're now seeing real feedback from our judges. We'll add more verdicts here as they come in."}
               </p>
-              <span className="text-xs font-medium text-indigo-600 bg-indigo-50 px-2 py-1 rounded-full">
-                ~{request.received_verdict_count > 0 ? '30 min' : '1-2 hrs'} remaining
-              </span>
+              <EstimatedCompletion
+                receivedCount={request.received_verdict_count}
+                targetCount={request.target_verdict_count}
+                createdAt={request.created_at}
+                status={request.status as 'open' | 'in_progress' | 'closed' | 'cancelled'}
+              />
             </div>
           </div>
         )}
 
-        {/* Summary insight + optional analytics */}
+        {/* Verdict Summary Card - New Enhanced Component */}
         {verdicts.length > 0 && (
-          <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-              <div>
-                <p className="text-xs uppercase tracking-wide text-gray-500 mb-1">
-                  Summary insight
-                </p>
-                <p className="text-base text-gray-900">
-                  {averageRating >= 8
-                    ? 'Judges are strongly in favor of what you shared.'
-                    : averageRating >= 6
-                    ? 'Judges see both strengths and areas to improve.'
-                    : 'Judges are cautious and recommend meaningful changes.'}{' '}
-                  <span className="font-semibold">
-                    (Average rating {averageRating.toFixed(1)}/10 from {verdicts.length} verdict
-                    {verdicts.length !== 1 ? 's' : ''})
-                  </span>
-                </p>
-              </div>
-              <button
-                onClick={() => setShowAnalytics(!showAnalytics)}
-                className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition ${
-                  showAnalytics
-                    ? 'bg-purple-100 text-purple-700'
-                    : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
-                }`}
-              >
-                <BarChart3 className="h-4 w-4" />
-                {showAnalytics ? 'Hide detail' : 'Show detail'}
-              </button>
-            </div>
-
-            {showAnalytics && (
-              <div className="mt-4 pt-4 border-t border-gray-100">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
-                  <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl">
-                    <div className="flex items-center justify-center w-12 h-12 bg-blue-600 text-white rounded-full mx-auto mb-2">
-                      <Award className="h-6 w-6" />
-                    </div>
-                    <p className="text-2xl font-bold text-blue-900">{averageRating.toFixed(1)}</p>
-                    <p className="text-blue-700 text-sm">Average Rating</p>
-                    <p className="text-xs text-blue-600 mt-1">
-                      {averageRating >= 8 ? 'Excellent!' : averageRating >= 6 ? 'Good' : 'Needs improvement'}
-                    </p>
-                  </div>
-                  
-                  <div className="text-center p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-xl">
-                    <div className="flex items-center justify-center w-12 h-12 bg-green-600 text-white rounded-full mx-auto mb-2">
-                      <MessageSquare className="h-6 w-6" />
-                    </div>
-                    <p className="text-2xl font-bold text-green-900">{verdicts.length}</p>
-                    <p className="text-green-700 text-sm">Total Verdicts</p>
-                    <p className="text-xs text-green-600 mt-1">
-                      {verdicts.length >= (tierConfig?.verdicts ?? 3) ? 'Complete' : 'Growing'}
-                    </p>
-                  </div>
-                  
-                  <div className="text-center p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl">
-                    <div className="flex items-center justify-center w-12 h-12 bg-purple-600 text-white rounded-full mx-auto mb-2">
-                      <TrendingUp className="h-6 w-6" />
-                    </div>
-                    <p className="text-2xl font-bold text-purple-900">
-                      {Math.max(...verdicts.map(v => v.rating || 0)).toFixed(1)}
-                    </p>
-                    <p className="text-purple-700 text-sm">Highest Rating</p>
-                    <p className="text-xs text-purple-600 mt-1">Peak performance</p>
-                  </div>
-                  
-                  <div className="text-center p-4 bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-xl">
-                    <div className="flex items-center justify-center w-12 h-12 bg-yellow-600 text-white rounded-full mx-auto mb-2">
-                      <Heart className="h-6 w-6" />
-                    </div>
-                    <p className="text-2xl font-bold text-yellow-900">
-                      {verdicts.filter(v => v.tone === 'encouraging').length}
-                    </p>
-                    <p className="text-yellow-700 text-sm">Encouraging</p>
-                    <p className="text-xs text-yellow-600 mt-1">Positive feedback</p>
-                  </div>
-                </div>
-
-                {/* Tone Distribution */}
-                <div className="bg-gray-50 rounded-xl p-4">
-                  <h4 className="font-medium text-gray-900 mb-3">Feedback Tone Distribution</h4>
-                  <div className="space-y-2">
-                    {['encouraging', 'honest', 'constructive'].map(tone => {
-                      const count = verdicts.filter(v => v.tone === tone).length;
-                      const percentage = (count / verdicts.length) * 100;
-                      return (
-                        <div key={tone} className="flex items-center justify-between">
-                          <span className="text-sm capitalize font-medium text-gray-700">{tone}</span>
-                          <div className="flex items-center gap-2">
-                            <div className="w-24 bg-gray-200 rounded-full h-2">
-                              <div
-                                className={`h-2 rounded-full ${
-                                  tone === 'encouraging' ? 'bg-green-500' :
-                                  tone === 'honest' ? 'bg-blue-500' : 'bg-yellow-500'
-                                }`}
-                                style={{ width: `${percentage}%` }}
-                              />
-                            </div>
-                            <span className="text-sm text-gray-600 w-8">{count}</span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+          <VerdictSummaryCard
+            verdicts={verdicts}
+            category={request.category}
+            className="mb-8"
+          />
         )}
 
-        {/* Condensed Summary for non-analytics view */}
-        {!showAnalytics && verdicts.length > 0 && (
-          <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
-            <div className="grid grid-cols-3 gap-4 text-center">
-              <div>
-                <p className="text-2xl font-bold text-indigo-600">{averageRating.toFixed(1)}/10</p>
-                <p className="text-sm text-gray-500">Average Rating</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-gray-900">{verdicts.length}</p>
-                <p className="text-sm text-gray-500">Verdicts Received</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-gray-900 capitalize">{request.category}</p>
-                <p className="text-sm text-gray-500">Category</p>
-              </div>
-            </div>
-          </div>
+        {/* Most Helpful Verdict Highlight */}
+        {verdicts.length >= 2 && userContext.isSeeker && (
+          <MostHelpfulVerdict
+            verdicts={verdicts}
+            verdictInteractions={verdictInteractions}
+            className="mb-8"
+          />
         )}
 
         {/* Smart Next Steps - Based on Rating */}
@@ -1041,6 +963,20 @@ export default function RequestDetailPage({
                   )}
                 </div>
               </div>
+
+              {/* Request Actions (Edit/Cancel) - Only for request owner */}
+              {userContext.isSeeker && (
+                <div className="mt-4">
+                  <RequestActions
+                    requestId={request.id}
+                    status={request.status}
+                    createdAt={request.created_at}
+                    receivedVerdictCount={request.received_verdict_count}
+                    targetVerdictCount={request.target_verdict_count}
+                    onStatusChange={fetchRequest}
+                  />
+                </div>
+              )}
             </div>
           </div>
 
@@ -1496,6 +1432,16 @@ export default function RequestDetailPage({
             onClose={closeShareModal}
           />
         )}
+
+        {/* Social Proof Footer */}
+        <div className="mt-12 pt-8 border-t border-gray-200">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <VerdictDeliveredCounter variant="inline" />
+            <p className="text-sm text-gray-500 text-center sm:text-right">
+              Join thousands getting honest feedback on their decisions
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -138,7 +138,7 @@ export default function DecisionsPage() {
       setShowMoveModal(false);
     } catch (error) {
       console.error('Error moving requests:', error);
-      toast.error('Failed to move requests');
+      toast.error('We couldn\'t move your requests. Please check your connection and try again.');
     }
   };
 

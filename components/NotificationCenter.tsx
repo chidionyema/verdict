@@ -23,13 +23,18 @@ interface NotificationCenterProps {
 
 const NOTIFICATION_ICONS = {
   verdict_received: '⚖️',
+  new_verdict: '⚖️',
   request_completed: '✅',
+  all_verdicts_complete: '🎉',
   new_judge_request: '👨‍⚖️',
   credit_purchase: '💳',
+  earning_credited: '💰',
   moderation_action: '⚠️',
   welcome: '🎉',
   system_announcement: '📢',
   judge_qualified: '🎓',
+  verdict_helped: '❤️',
+  verdict_rated: '⭐',
 };
 
 const PRIORITY_COLORS = {
@@ -51,10 +56,10 @@ export default function NotificationCenter({ className = '' }: NotificationCente
     if (typeof window === 'undefined') return;
 
     fetchNotifications();
-    
+
     try {
       const supabase = createClient();
-      
+
       // Set up real-time subscription for new notifications
       const channel = supabase
         .channel('notifications')
@@ -69,6 +74,20 @@ export default function NotificationCenter({ className = '' }: NotificationCente
             const newNotification = payload.new as Notification;
             setNotifications(prev => [newNotification, ...prev]);
             setUnreadCount(prev => prev + 1);
+
+            // Emit credits-updated event for earning notifications
+            if (newNotification.type === 'earning_credited' || newNotification.type === 'credit_purchase') {
+              window.dispatchEvent(new CustomEvent('credits-updated'));
+            }
+
+            // Show browser notification if permission granted
+            if ('Notification' in window && Notification.permission === 'granted') {
+              new window.Notification(newNotification.title, {
+                body: newNotification.message,
+                icon: `/favicon.ico`,
+                tag: newNotification.id,
+              });
+            }
           }
         )
         .subscribe();

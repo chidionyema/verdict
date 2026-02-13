@@ -30,6 +30,17 @@ export const DEFAULT_STATS: JudgeStats = {
   best_category: 'appearance',
   verdicts_today: 0,
   earnings_trend: 'up',
+  // Enhanced defaults
+  next_payout_date: undefined,
+  next_payout_amount: 0,
+  pending_earnings: 0,
+  helpful_votes: 0,
+  weekly_helpful_votes: 0,
+  accuracy_score: undefined,
+  speed_percentile: undefined,
+  expertise_areas: [],
+  longest_streak: 0,
+  streak_at_risk: false,
 };
 
 export function getJudgeEarningForTier(tier?: string): string {

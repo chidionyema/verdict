@@ -47,7 +47,7 @@ function VerifyEmailContent() {
       }
     } catch (error) {
       setStatus('error');
-      setMessage('Something went wrong. Please try again.');
+      setMessage('We couldn\'t verify your email. This might be a temporary issue. Please try again or request a new verification email.');
     }
   };
 

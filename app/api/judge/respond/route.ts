@@ -266,17 +266,41 @@ const POST_Handler = async (request: NextRequest) => {
     }
 
     // Create notification for the SEEKER about new verdict
+    const receivedCount = updatedRequest.received_verdict_count ?? 0;
+    const targetCount = updatedRequest.target_verdict_count ?? 0;
+    const isComplete = receivedCount >= targetCount && targetCount > 0;
+
     try {
-      await (supabase.rpc as any)('create_notification', {
-        p_user_id: updatedRequest.user_id,
-        p_type: 'new_verdict',
-        p_title: 'New verdict received!',
-        p_message: `You've received a new verdict for your ${updatedRequest.category} request.`,
-        p_metadata: JSON.stringify({
-          request_id: request_id,
-          action_url: `/requests/${request_id}`
-        })
-      });
+      if (isComplete) {
+        // Send celebration notification for completion
+        await (supabase.rpc as any)('create_notification', {
+          p_user_id: updatedRequest.user_id,
+          p_type: 'all_verdicts_complete',
+          p_title: 'All verdicts are in!',
+          p_message: `Great news! All ${targetCount} verdicts for your ${updatedRequest.category} request are ready. View your complete results now!`,
+          p_metadata: JSON.stringify({
+            request_id: request_id,
+            action_url: `/requests/${request_id}`,
+            action_label: 'View Results',
+            priority: 'high',
+            celebration: true
+          })
+        });
+      } else {
+        // Send regular new verdict notification
+        await (supabase.rpc as any)('create_notification', {
+          p_user_id: updatedRequest.user_id,
+          p_type: 'new_verdict',
+          p_title: 'New verdict received!',
+          p_message: `You've received verdict ${receivedCount} of ${targetCount} for your ${updatedRequest.category} request.`,
+          p_metadata: JSON.stringify({
+            request_id: request_id,
+            action_url: `/requests/${request_id}`,
+            action_label: 'View Verdict',
+            priority: 'normal'
+          })
+        });
+      }
     } catch (notifError) {
       log.error('Error creating seeker notification', notifError);
       // Don't fail if notification creation fails

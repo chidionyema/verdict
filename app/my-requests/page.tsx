@@ -29,6 +29,7 @@ import {
 import { getTierConfigByVerdictCount } from '@/lib/validations';
 import { EmptyState } from '@/components/ui/EmptyStates';
 import { RoleIndicator } from '@/components/ui/RoleIndicator';
+import { RequestActions } from '@/components/request/RequestActions';
 
 // Force dynamic rendering to avoid Supabase client issues during build
 export const dynamic = 'force-dynamic';
@@ -593,8 +594,8 @@ export default function MyRequestsPage() {
                   className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 />
               </div>
-              <div className="flex gap-2">
-                {['all', 'open', 'closed'].map((filterOption) => (
+              <div className="flex gap-2 flex-wrap">
+                {['all', 'open', 'closed', 'cancelled'].map((filterOption) => (
                   <button
                     key={filterOption}
                     onClick={() => setFilter(filterOption as any)}
@@ -767,6 +768,18 @@ export default function MyRequestsPage() {
                       >
                         {getPrimaryCtaLabel(request)}
                       </Link>
+                      {/* Edit/Cancel actions for open requests */}
+                      {(request.status === 'open' || request.status === 'in_progress') && request.request_type === 'verdict' && (
+                        <RequestActions
+                          requestId={request.id}
+                          status={request.status}
+                          createdAt={request.created_at}
+                          receivedVerdictCount={request.received_verdict_count || 0}
+                          targetVerdictCount={request.target_verdict_count || 3}
+                          onStatusChange={fetchData}
+                          compact
+                        />
+                      )}
                       {request.status === 'closed' && (
                         <button
                           onClick={async () => {

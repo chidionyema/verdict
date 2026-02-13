@@ -43,10 +43,10 @@ export class ErrorBoundary extends Component<Props, State> {
           <div className="text-center max-w-md">
             <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
             <h2 className="text-xl font-semibold text-gray-900 mb-2">
-              Something went wrong
+              This Section Couldn't Load
             </h2>
             <p className="text-gray-600 mb-6">
-              We've been notified and are working on a fix. Please try refreshing the page.
+              We encountered a problem displaying this content. This might be a temporary issue. Try refreshing the page, and if the problem continues, our team has been notified.
             </p>
             <button
               onClick={() => window.location.reload()}

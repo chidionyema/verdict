@@ -152,13 +152,13 @@ function ErrorFallback({ error, errorId, level = 'component', onRetry, onReload 
       </div>
 
       <h2 className="text-lg font-bold text-gray-900 mb-2">
-        {isPageLevel ? 'Something went wrong' : 'Component Error'}
+        {isPageLevel ? 'We Hit a Snag' : 'Section Unavailable'}
       </h2>
 
       <p className="text-gray-600 mb-4 max-w-md">
-        {isPageLevel 
-          ? 'We encountered an unexpected error. Please try refreshing the page or contact support if the problem persists.'
-          : 'This component encountered an error and couldn\'t be displayed properly.'
+        {isPageLevel
+          ? 'We encountered an unexpected error loading this page. Try refreshing, and if it persists, our team has been notified.'
+          : 'This section couldn\'t load properly. The rest of the page should work normally.'
         }
       </p>
 

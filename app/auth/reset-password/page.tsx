@@ -82,7 +82,7 @@ function ResetPasswordContent() {
         setError(data.error || 'Failed to reset password');
       }
     } catch (err) {
-      setError('Something went wrong. Please try again.');
+      setError('We couldn\'t reset your password. Please check your connection and try again, or request a new reset link if this continues.');
     } finally {
       setIsSubmitting(false);
     }

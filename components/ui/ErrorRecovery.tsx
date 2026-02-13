@@ -383,7 +383,7 @@ export function useTrackableAction() {
 
       showError({
         title: 'Action Failed',
-        message: error.message || 'Something went wrong while performing this action.',
+        message: error.message || 'We couldn\'t complete this action. Please try again or contact support if the problem persists.',
         type: errorType,
         retryable: errorType !== 'validation',
         context: { actionType: actionConfig.type }

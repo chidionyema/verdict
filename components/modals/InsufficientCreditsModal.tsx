@@ -291,9 +291,29 @@ export function InsufficientCreditsModal({
           </button>
 
           {error && (
-            <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6 flex items-center gap-3">
-              <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0" />
-              <p className="text-red-700 text-sm">{error}</p>
+            <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6" role="alert">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" aria-hidden="true" />
+                <div>
+                  <p className="text-red-700 text-sm font-medium">Payment could not be completed</p>
+                  <p className="text-red-600 text-sm mt-1">{error}</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button
+                      onClick={() => setError('')}
+                      className="text-xs font-medium text-red-700 hover:text-red-800 underline focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 rounded"
+                    >
+                      Try again
+                    </button>
+                    <span className="text-red-300">|</span>
+                    <a
+                      href="/help#payment-issues"
+                      className="text-xs font-medium text-red-700 hover:text-red-800 underline focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 rounded"
+                    >
+                      Get help
+                    </a>
+                  </div>
+                </div>
+              </div>
             </div>
           )}
 

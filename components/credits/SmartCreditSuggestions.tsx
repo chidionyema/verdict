@@ -1,28 +1,22 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Heart, 
-  Zap, 
-  TrendingUp, 
-  Clock, 
-  Users, 
-  Star, 
+import { useState, useEffect, useCallback } from 'react';
+import { motion } from 'framer-motion';
+import {
+  Heart,
+  Zap,
+  Clock,
+  Users,
   ArrowRight,
-  CheckCircle,
   Target,
   Award,
-  Sparkles,
-  Calendar,
-  BarChart3,
   X,
-  Coins
+  Coins,
+  LucideIcon
 } from 'lucide-react';
 import Link from 'next/link';
 
 interface SmartCreditSuggestionsProps {
-  userId: string;
   userProfile: {
     credits: number;
     total_submissions: number;
@@ -31,7 +25,6 @@ interface SmartCreditSuggestionsProps {
     signup_date?: string;
   };
   currentPage?: string;
-  onDismiss?: () => void;
 }
 
 interface CreditSuggestion {
@@ -48,59 +41,58 @@ interface CreditSuggestion {
     href?: string;
     onClick?: () => void;
   };
-  icon: any;
+  icon: LucideIcon;
   color: string;
   urgency: 'high' | 'medium' | 'low';
 }
 
-export function SmartCreditSuggestions({ 
-  userId, 
-  userProfile, 
-  currentPage = 'dashboard',
-  onDismiss 
+export function SmartCreditSuggestions({
+  userProfile,
+  currentPage = 'dashboard'
 }: SmartCreditSuggestionsProps) {
-  const [suggestions, setSuggestions] = useState<CreditSuggestion[]>([]);
   const [activeSuggestion, setActiveSuggestion] = useState<CreditSuggestion | null>(null);
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
-    generatePersonalizedSuggestions();
-    loadDismissedSuggestions();
-  }, [userProfile, currentPage]);
+  const isOlderThan = (dateString: string, days: number): boolean => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffDays = (now.getTime() - date.getTime()) / (1000 * 3600 * 24);
+    return diffDays > days;
+  };
 
-  const loadDismissedSuggestions = () => {
+  const loadDismissedSuggestions = useCallback(() => {
     const saved = localStorage.getItem('verdict_dismissed_credit_suggestions');
     if (saved) {
       try {
         setDismissed(new Set(JSON.parse(saved)));
-      } catch (e) {
+      } catch {
         // Ignore errors
       }
     }
-  };
+  }, []);
 
-  const dismissSuggestion = (suggestionId: string) => {
-    const newDismissed = new Set([...dismissed, suggestionId]);
-    setDismissed(newDismissed);
-    localStorage.setItem('verdict_dismissed_credit_suggestions', JSON.stringify(Array.from(newDismissed)));
-    
-    if (activeSuggestion?.id === suggestionId) {
-      setActiveSuggestion(null);
-    }
-  };
+  const dismissSuggestion = useCallback((suggestionId: string) => {
+    setDismissed(prev => {
+      const newDismissed = new Set([...prev, suggestionId]);
+      localStorage.setItem('verdict_dismissed_credit_suggestions', JSON.stringify(Array.from(newDismissed)));
+      return newDismissed;
+    });
 
-  const generatePersonalizedSuggestions = () => {
+    setActiveSuggestion(prev => prev?.id === suggestionId ? null : prev);
+  }, []);
+
+  const generatePersonalizedSuggestions = useCallback((currentDismissed: Set<string>) => {
     const newSuggestions: CreditSuggestion[] = [];
-    const { credits, total_submissions, total_reviews, last_review_date, signup_date } = userProfile;
-    
+    const { credits, total_submissions, total_reviews, last_review_date } = userProfile;
+
     // Low credits - urgent review suggestion
-    if (credits <= 1 && !dismissed.has('urgent_review')) {
+    if (credits <= 1 && !currentDismissed.has('urgent_review')) {
       newSuggestions.push({
         id: 'urgent_review',
         type: 'review',
         title: 'Almost Out of Credits!',
         subtitle: 'Review 3 submissions to earn more',
-        description: 'You\'re running low on credits. Help others and earn credits back quickly.',
+        description: "You're running low on credits. Help others and earn credits back quickly.",
         potentialEarnings: '3-5 credits',
         timeEstimate: '15-20 min',
         difficulty: 'easy',
@@ -115,7 +107,7 @@ export function SmartCreditSuggestions({
     }
 
     // No credits - multiple options
-    if (credits === 0 && !dismissed.has('no_credits_multi')) {
+    if (credits === 0 && !currentDismissed.has('no_credits_multi')) {
       newSuggestions.push({
         id: 'no_credits_multi',
         type: 'review',
@@ -136,7 +128,7 @@ export function SmartCreditSuggestions({
     }
 
     // First time user with submissions but no reviews
-    if (total_submissions > 0 && total_reviews === 0 && !dismissed.has('first_review')) {
+    if (total_submissions > 0 && total_reviews === 0 && !currentDismissed.has('first_review')) {
       newSuggestions.push({
         id: 'first_review',
         type: 'review',
@@ -157,13 +149,13 @@ export function SmartCreditSuggestions({
     }
 
     // Inactive reviewer comeback
-    if (last_review_date && isOlderThan(last_review_date, 7) && !dismissed.has('comeback_reviewer')) {
+    if (last_review_date && isOlderThan(last_review_date, 7) && !currentDismissed.has('comeback_reviewer')) {
       newSuggestions.push({
         id: 'comeback_reviewer',
         type: 'comeback',
         title: 'Welcome Back!',
         subtitle: 'Quick review to get back in the flow',
-        description: 'It\'s been a while since your last review. Jump back in with a quick 5-minute review.',
+        description: "It's been a while since your last review. Jump back in with a quick 5-minute review.",
         potentialEarnings: '1-2 credits',
         timeEstimate: '5 min',
         difficulty: 'easy',
@@ -178,7 +170,7 @@ export function SmartCreditSuggestions({
     }
 
     // Active user - streak building
-    if (total_reviews >= 5 && credits > 2 && !dismissed.has('build_streak')) {
+    if (total_reviews >= 5 && credits > 2 && !currentDismissed.has('build_streak')) {
       newSuggestions.push({
         id: 'build_streak',
         type: 'streak',
@@ -199,7 +191,7 @@ export function SmartCreditSuggestions({
     }
 
     // Referral suggestion for engaged users
-    if (total_submissions >= 3 && total_reviews >= 3 && !dismissed.has('referral_master')) {
+    if (total_submissions >= 3 && total_reviews >= 3 && !currentDismissed.has('referral_master')) {
       newSuggestions.push({
         id: 'referral_master',
         type: 'referral',
@@ -220,13 +212,13 @@ export function SmartCreditSuggestions({
     }
 
     // Purchase suggestion for heavy users with no credits
-    if (total_submissions >= 5 && credits <= 1 && !dismissed.has('power_user_purchase')) {
+    if (total_submissions >= 5 && credits <= 1 && !currentDismissed.has('power_user_purchase')) {
       newSuggestions.push({
         id: 'power_user_purchase',
         type: 'purchase',
         title: 'Power User Deal',
         subtitle: 'Skip the wait with instant credits',
-        description: 'You\'re an active user. Get instant access with our power user discount.',
+        description: "You're an active user. Get instant access with our power user discount.",
         potentialEarnings: '20% off',
         timeEstimate: 'Instant',
         difficulty: 'easy',
@@ -241,7 +233,7 @@ export function SmartCreditSuggestions({
     }
 
     // Context-aware suggestions based on current page
-    if (currentPage === 'create' && credits <= 2 && !dismissed.has('create_page_credits')) {
+    if (currentPage === 'create' && credits <= 2 && !currentDismissed.has('create_page_credits')) {
       newSuggestions.push({
         id: 'create_page_credits',
         type: 'review',
@@ -268,24 +260,23 @@ export function SmartCreditSuggestions({
         return urgencyOrder[b.urgency] - urgencyOrder[a.urgency];
       }
       // Secondary sort by type priority
-      const typeOrder = { review: 4, purchase: 3, comeback: 2, streak: 1, referral: 1 };
+      const typeOrder: Record<CreditSuggestion['type'], number> = { review: 4, purchase: 3, comeback: 2, streak: 1, referral: 1 };
       return typeOrder[b.type] - typeOrder[a.type];
     });
 
-    setSuggestions(prioritized);
-    
     // Set active suggestion to highest priority
-    if (prioritized.length > 0 && !activeSuggestion) {
+    if (prioritized.length > 0) {
       setActiveSuggestion(prioritized[0]);
     }
-  };
+  }, [userProfile, currentPage]);
 
-  const isOlderThan = (dateString: string, days: number): boolean => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffDays = (now.getTime() - date.getTime()) / (1000 * 3600 * 24);
-    return diffDays > days;
-  };
+  useEffect(() => {
+    loadDismissedSuggestions();
+  }, [loadDismissedSuggestions]);
+
+  useEffect(() => {
+    generatePersonalizedSuggestions(dismissed);
+  }, [generatePersonalizedSuggestions, dismissed]);
 
   const handleAction = (suggestion: CreditSuggestion) => {
     // Track engagement
@@ -419,7 +410,7 @@ export function SmartCreditSuggestions({
 }
 
 // Hook for using smart credit suggestions
-export function useSmartCreditSuggestions(userProfile: any) {
+export function useSmartCreditSuggestions(userProfile: { credits?: number } | null) {
   const [shouldShow, setShouldShow] = useState(false);
 
   useEffect(() => {
@@ -430,7 +421,7 @@ export function useSmartCreditSuggestions(userProfile: any) {
     let shouldDisplay = false;
 
     // Show if low credits
-    if (userProfile?.credits <= 1) {
+    if (userProfile?.credits !== undefined && userProfile.credits <= 1) {
       shouldDisplay = true;
     }
     

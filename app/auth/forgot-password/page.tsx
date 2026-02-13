@@ -33,7 +33,7 @@ export default function ForgotPasswordPage() {
           setDemoResetUrl(data.reset_url);
         }
       } else {
-        setError(data.error || 'Something went wrong');
+        setError(data.error || 'We couldn\'t send the reset email. Please check your email address and try again.');
       }
     } catch (err) {
       setError('Failed to send reset email. Please try again.');

@@ -17,7 +17,13 @@ import {
   Play,
   Quote,
 } from 'lucide-react';
-import { OptimizedHero } from './OptimizedHero';
+import { EnhancedHero } from './EnhancedHero';
+import { SocialProofStats } from './SocialProofStats';
+import { Testimonials } from './Testimonials';
+import { UseCases } from './UseCases';
+import { TrustIndicators } from './TrustIndicators';
+import { LiveActivityFeed } from './LiveActivityFeed';
+import { StickyCTA } from './StickyCTA';
 import { useLocalizedPricing } from '@/hooks/use-pricing';
 import { trackABEvent } from '@/lib/ab-testing';
 
@@ -37,19 +43,65 @@ export function StreamlinedLanding({ variant = 'A', experimentId }: StreamlinedL
     }
   };
 
+  const handleUseCaseCTA = () => {
+    router.push('/submit');
+  };
+
   return (
     <div className="min-h-screen bg-white">
-      {/* SECTION 1: Hero */}
-      <OptimizedHero variant={variant} onCTAClick={handleCTAClick} />
+      {/* Live Activity Banner */}
+      <LiveActivityFeed variant="banner" />
 
-      {/* SECTION 2: Social Proof + Demo */}
+      {/* SECTION 1: Enhanced Hero */}
+      <EnhancedHero variant={variant} onCTAClick={handleCTAClick} />
+
+      {/* SECTION 2: Social Proof Stats */}
+      <div className="bg-white py-8">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <SocialProofStats variant="compact" showCategories={false} />
+        </div>
+      </div>
+
+      {/* SECTION 3: How It Works + Demo */}
       <DemoSection />
 
-      {/* SECTION 3: Pricing (Two Paths) */}
+      {/* SECTION 4: Use Cases */}
+      <div className="bg-white">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <UseCases variant="grid" showCTA={false} onCTAClick={handleUseCaseCTA} />
+        </div>
+      </div>
+
+      {/* SECTION 5: Testimonials */}
+      <div className="bg-gray-50">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <Testimonials variant="carousel" />
+        </div>
+      </div>
+
+      {/* SECTION 6: Trust Indicators */}
+      <div className="bg-white">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <TrustIndicators variant="full" />
+        </div>
+      </div>
+
+      {/* SECTION 7: Pricing (Two Paths) */}
       <PricingSection pricing={pricing} />
 
-      {/* SECTION 4: Final CTA */}
+      {/* SECTION 8: Final CTA */}
       <FinalCTASection pricing={pricing} />
+
+      {/* Floating Activity Feed (desktop only) */}
+      <LiveActivityFeed variant="floating" />
+
+      {/* Sticky CTA (mobile only) */}
+      <StickyCTA
+        ctaText="Get 3 Honest Opinions"
+        ctaLink="/submit"
+        secondaryText="Free to start"
+        showTrust={true}
+      />
     </div>
   );
 }
@@ -371,7 +423,7 @@ function PricingSection({ pricing }: { pricing: ReturnType<typeof useLocalizedPr
 
                 <button
                   onClick={path.action}
-                  className={`w-full py-4 rounded-xl font-bold text-lg transition-all duration-300 flex items-center justify-center gap-2 focus:outline-none focus-visible:ring-4 focus-visible:ring-offset-2 ${
+                  className={`w-full py-4 min-h-[56px] rounded-xl font-bold text-lg transition-all duration-300 flex items-center justify-center gap-2 focus:outline-none focus-visible:ring-4 focus-visible:ring-offset-2 active:scale-[0.98] ${
                     path.highlight
                       ? 'bg-purple-600 hover:bg-purple-700 text-white focus-visible:ring-purple-500'
                       : 'bg-green-600 hover:bg-green-700 text-white focus-visible:ring-green-500'
@@ -436,7 +488,7 @@ function FinalCTASection({ pricing }: { pricing: ReturnType<typeof useLocalizedP
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
             <button
               onClick={() => router.push('/submit')}
-              className="group px-8 py-5 bg-white text-indigo-600 text-lg font-bold rounded-2xl shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300 flex items-center justify-center gap-2 focus:outline-none focus-visible:ring-4 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-indigo-600"
+              className="group px-8 py-5 min-h-[60px] bg-white text-indigo-600 text-lg font-bold rounded-2xl shadow-xl hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300 flex items-center justify-center gap-2 focus:outline-none focus-visible:ring-4 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-indigo-600 active:scale-[0.98]"
             >
               Get 3 Honest Opinions
               <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />

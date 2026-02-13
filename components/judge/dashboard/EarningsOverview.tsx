@@ -1,6 +1,7 @@
 'use client';
 
-import { BarChart3, Coins, DollarSign, Activity, ChevronUp, ChevronDown } from 'lucide-react';
+import { BarChart3, Coins, DollarSign, Activity, ChevronUp, ChevronDown, Calendar, Clock, TrendingUp, Sparkles } from 'lucide-react';
+import { motion } from 'framer-motion';
 import type { JudgeStats, EarningsTimeframe } from './types';
 
 interface EarningsOverviewProps {
@@ -9,6 +10,29 @@ interface EarningsOverviewProps {
   onTimeframeChange: (timeframe: EarningsTimeframe) => void;
   earningsData: Array<{ date: string; amount: number }>;
   isLoading?: boolean;
+}
+
+// Helper to format next payout date
+function formatNextPayoutDate(dateString?: string): { display: string; daysUntil: number } {
+  if (!dateString) {
+    // Default to next Monday (weekly payouts)
+    const today = new Date();
+    const daysUntilMonday = (8 - today.getDay()) % 7 || 7;
+    const nextMonday = new Date(today);
+    nextMonday.setDate(today.getDate() + daysUntilMonday);
+    return {
+      display: nextMonday.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
+      daysUntil: daysUntilMonday,
+    };
+  }
+  const date = new Date(dateString);
+  const today = new Date();
+  const diffTime = date.getTime() - today.getTime();
+  const daysUntil = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  return {
+    display: date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
+    daysUntil: Math.max(0, daysUntil),
+  };
 }
 
 export function EarningsOverview({
@@ -57,8 +81,9 @@ export function EarningsOverview({
           </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
+        {/* Stats Cards - Enhanced with 4 columns */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          {/* Total Earnings */}
           <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl p-4 border border-green-200">
             <div className="flex items-center justify-between mb-2">
               <Coins className="h-5 w-5 text-green-600" />
@@ -87,9 +112,11 @@ export function EarningsOverview({
             <p className="text-xs text-gray-600">Total Earnings</p>
           </div>
 
+          {/* Timeframe Earnings */}
           <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-4 border border-blue-200">
             <div className="flex items-center justify-between mb-2">
               <DollarSign className="h-5 w-5 text-blue-600" />
+              <TrendingUp className="h-4 w-4 text-blue-400" />
             </div>
             <p className="text-2xl font-bold text-gray-900">${getTimeframeEarnings().toFixed(2)}</p>
             <p className="text-xs text-gray-600">
@@ -99,16 +126,59 @@ export function EarningsOverview({
             </p>
           </div>
 
+          {/* Ready to Payout */}
           <div className="bg-gradient-to-br from-purple-50 to-violet-50 rounded-2xl p-4 border border-purple-200">
             <div className="flex items-center justify-between mb-2">
               <Activity className="h-5 w-5 text-purple-600" />
+              {stats.available_for_payout >= 10 && (
+                <span className="text-[10px] font-bold text-purple-600 bg-purple-100 px-1.5 py-0.5 rounded-full">
+                  READY
+                </span>
+              )}
             </div>
             <p className="text-2xl font-bold text-gray-900">
               ${stats.available_for_payout.toFixed(2)}
             </p>
             <p className="text-xs text-gray-600">Ready to Payout</p>
           </div>
+
+          {/* Next Payout - NEW */}
+          <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-4 border border-amber-200 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-12 h-12 bg-amber-200 rounded-full mix-blend-multiply filter blur-xl opacity-30" />
+            <div className="relative">
+              <div className="flex items-center justify-between mb-2">
+                <Calendar className="h-5 w-5 text-amber-600" />
+                <span className="text-[10px] font-medium text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded-full flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  {formatNextPayoutDate(stats.next_payout_date).daysUntil}d
+                </span>
+              </div>
+              <p className="text-2xl font-bold text-gray-900">
+                ${(stats.next_payout_amount ?? stats.available_for_payout).toFixed(2)}
+              </p>
+              <p className="text-xs text-amber-700 font-medium">
+                {formatNextPayoutDate(stats.next_payout_date).display}
+              </p>
+            </div>
+          </div>
         </div>
+
+        {/* Pending Earnings Banner - Show when there are pending earnings */}
+        {(stats.pending_earnings ?? 0) > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-4 p-3 bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-xl flex items-center justify-between"
+          >
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-indigo-600" />
+              <span className="text-sm text-indigo-800">
+                <strong>${(stats.pending_earnings ?? 0).toFixed(2)}</strong> pending (7-day maturation)
+              </span>
+            </div>
+            <span className="text-xs text-indigo-600">Clears automatically when ready</span>
+          </motion.div>
+        )}
 
         {/* Earnings Chart */}
         <div className="h-48 flex items-end gap-1" aria-label="Earnings chart" role="img">

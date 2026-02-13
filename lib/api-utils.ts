@@ -93,8 +93,8 @@ export function withErrorHandling(
         return ApiError.forbidden('Insufficient permissions');
       }
 
-      // Default: Don't expose internal errors to client
-      return ApiError.internal('Something went wrong');
+      // Default: Don't expose internal errors to client - provide helpful message
+      return ApiError.internal('We encountered an unexpected error. Please try again or contact support if the problem persists.');
     }
   };
 }

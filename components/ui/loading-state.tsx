@@ -162,8 +162,8 @@ export function SuccessState({ message, submessage }: { message: string; submess
   );
 }
 
-export function ErrorState({ 
-  message = "Something went wrong", 
+export function ErrorState({
+  message = "We encountered an issue. Please try again.",
   submessage,
   actionText,
   onAction

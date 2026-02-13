@@ -495,9 +495,9 @@ export function EmptyState({
       case 'error':
         return {
           icon: AlertTriangle,
-          title: title || 'Something went wrong',
-          description: description || 'We couldn\'t load your content. Please try again.',
-          illustration: '⚠️',
+          title: title || 'Unable to Load Content',
+          description: description || 'We\'re having trouble loading this content. Please try again or check back later.',
+          illustration: '',
           defaultActions: [
             {
               label: 'Try Again',

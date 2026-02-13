@@ -275,7 +275,8 @@ export default function FeedPage() {
         .from('verdict_requests')
         .select('*')
         .eq('visibility', 'public')
-        .in('status', ['open', 'in_progress']);
+        .in('status', ['open', 'in_progress'])
+        .neq('user_id', currentUserId); // Never fetch user's own requests
 
       if (category) {
         query = query.eq('category', category);
@@ -748,15 +749,19 @@ export default function FeedPage() {
               <X className="h-8 w-8 text-red-500" />
             </div>
             <h3 className="text-xl font-bold text-gray-900 mb-2">
-              {feedError === 'timeout' ? 'Taking too long' :
-               feedError === 'network' ? 'Connection issue' :
-               feedError === 'auth' ? 'Session expired' :
-               'Something went wrong'}
+              {feedError === 'timeout' ? 'Taking Too Long' :
+               feedError === 'network' ? 'No Connection' :
+               feedError === 'auth' ? 'Session Expired' :
+               'Unable to Load Feed'}
             </h3>
             <p className="text-gray-600 mb-6">
-              {feedError === 'auth'
-                ? 'Please log in again to continue.'
-                : 'Please check your connection and try again.'}
+              {feedError === 'timeout'
+                ? 'The request is taking longer than expected. This might be due to high traffic.'
+                : feedError === 'network'
+                ? 'Please check your internet connection and try again.'
+                : feedError === 'auth'
+                ? 'Your session has ended for security. Please log in again to continue.'
+                : 'We couldn\'t load the feed. This might be a temporary issue.'}
             </p>
             <div className="flex flex-col gap-3">
               {feedError === 'auth' ? (
@@ -937,8 +942,8 @@ export default function FeedPage() {
       </main>
 
       {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 safe-area-pb z-20" aria-label="Bottom navigation">
-        <div className="max-w-lg mx-auto px-6 py-2">
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-20 fixed-bottom-safe" aria-label="Bottom navigation">
+        <div className="max-w-lg mx-auto px-6 py-2 pb-2">
           <div className="flex items-center justify-around">
             <button
               onClick={() => router.push('/feed')}

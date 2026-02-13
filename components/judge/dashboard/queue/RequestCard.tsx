@@ -15,13 +15,19 @@ import {
   Leaf,
   Flame,
   Star,
+  Crown,
+  Award,
+  Timer,
+  CheckCircle,
 } from 'lucide-react';
+import { motion } from 'framer-motion';
 import type { QueueRequest } from '../types';
 import { getJudgeEarningForTier } from '../constants';
 
 interface RequestCardProps {
   request: QueueRequest;
   isNewJudge?: boolean; // Show "good for beginners" badges
+  userExpertise?: string[]; // User's expertise areas for matching
 }
 
 // Determine difficulty based on context length and type
@@ -52,6 +58,37 @@ function isBeginnerFriendly(request: QueueRequest): boolean {
   return difficulty === 'easy' && isStandard;
 }
 
+// Check if matches user expertise
+function matchesExpertise(request: QueueRequest, userExpertise?: string[]): boolean {
+  if (!userExpertise || userExpertise.length === 0) return false;
+  return userExpertise.some(exp =>
+    exp.toLowerCase() === request.category.toLowerCase() ||
+    (request.subcategory && exp.toLowerCase() === request.subcategory.toLowerCase())
+  );
+}
+
+// Get estimated completion time
+function getEstimatedTime(request: QueueRequest): string {
+  const difficulty = getDifficulty(request);
+  if (request.request_type === 'split_test') return '5-8 min';
+  if (request.request_type === 'comparison') return '4-6 min';
+  if (difficulty === 'easy') return '2-3 min';
+  if (difficulty === 'medium') return '3-5 min';
+  return '5-7 min';
+}
+
+// Get tier badge info
+function getTierInfo(tier?: string): { label: string; color: string; icon: typeof Crown } | null {
+  if (!tier || tier === 'community') return null;
+  if (tier === 'pro' || tier === 'expert') {
+    return { label: 'Premium', color: 'purple', icon: Crown };
+  }
+  if (tier === 'standard') {
+    return { label: 'Standard', color: 'blue', icon: Award };
+  }
+  return null;
+}
+
 const CATEGORY_CONFIGS = {
   appearance: { icon: Eye, color: 'from-pink-500 to-rose-500' },
   profile: { icon: Heart, color: 'from-red-500 to-pink-500' },
@@ -59,12 +96,15 @@ const CATEGORY_CONFIGS = {
   decision: { icon: Target, color: 'from-green-500 to-emerald-500' },
 } as const;
 
-export function RequestCard({ request, isNewJudge = false }: RequestCardProps) {
+export function RequestCard({ request, isNewJudge = false, userExpertise }: RequestCardProps) {
   const router = useRouter();
 
   const difficulty = getDifficulty(request);
   const urgency = getUrgency(request.created_at);
   const beginnerFriendly = isBeginnerFriendly(request);
+  const expertiseMatch = matchesExpertise(request, userExpertise);
+  const estimatedTime = getEstimatedTime(request);
+  const tierInfo = getTierInfo(request.request_tier);
 
   const difficultyConfig = {
     easy: { label: 'Quick', icon: Leaf, color: 'text-green-600 bg-green-50' },
@@ -110,29 +150,54 @@ export function RequestCard({ request, isNewJudge = false }: RequestCardProps) {
   };
 
   return (
-    <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg border border-white/50 p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5 group relative overflow-hidden">
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className={`bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg border border-white/50 p-6 hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5 group relative overflow-hidden ${
+        expertiseMatch ? 'ring-2 ring-indigo-200' : ''
+      }`}
+    >
       <div
         className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${categoryConfig.color} rounded-full mix-blend-multiply filter blur-3xl opacity-5 group-hover:opacity-10 transition-opacity`}
       />
 
-      {/* Beginner-friendly badge */}
-      {isNewJudge && beginnerFriendly && (
-        <div className="absolute top-3 right-3 z-20">
+      {/* Top badges row */}
+      <div className="absolute top-3 right-3 z-20 flex flex-wrap gap-1.5 justify-end max-w-[60%]">
+        {/* Premium tier badge */}
+        {tierInfo && (
+          <span className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold rounded-full border ${
+            tierInfo.color === 'purple'
+              ? 'bg-purple-100 text-purple-700 border-purple-200'
+              : 'bg-blue-100 text-blue-700 border-blue-200'
+          }`}>
+            <tierInfo.icon className="h-3 w-3" />
+            {tierInfo.label}
+          </span>
+        )}
+
+        {/* Expertise match badge */}
+        {expertiseMatch && (
+          <span className="inline-flex items-center gap-1 px-2 py-1 bg-indigo-100 text-indigo-700 text-xs font-medium rounded-full border border-indigo-200">
+            <CheckCircle className="h-3 w-3" />
+            Matches expertise
+          </span>
+        )}
+
+        {/* Beginner-friendly badge */}
+        {isNewJudge && beginnerFriendly && !expertiseMatch && (
           <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full border border-green-200">
             <Star className="h-3 w-3" />
             Great for starters
           </span>
-        </div>
-      )}
+        )}
 
-      {/* Urgency indicator for waiting requests */}
-      {urgency === 'waiting' && (
-        <div className="absolute top-3 right-3 z-20">
+        {/* Urgency indicator for waiting requests */}
+        {urgency === 'waiting' && !tierInfo && !expertiseMatch && !beginnerFriendly && (
           <span className="inline-flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-700 text-xs font-medium rounded-full border border-amber-200 animate-pulse">
             Needs help
           </span>
-        </div>
-      )}
+        )}
+      </div>
 
       <div className="relative z-10">
         <div className="flex items-start gap-4 mb-4">
@@ -183,24 +248,39 @@ export function RequestCard({ request, isNewJudge = false }: RequestCardProps) {
         <p className="text-sm text-gray-700 line-clamp-3 mb-4">{request.context}</p>
 
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <DollarSign className="h-5 w-5 text-green-600" />
-            <span className="text-lg font-bold text-green-700">
-              ${getJudgeEarningForTier(request.request_tier)}
-            </span>
-            <span className="text-xs text-gray-500">~3-5 min</span>
+          <div className="flex items-center gap-3">
+            {/* Earnings - more prominent */}
+            <div className="flex items-center gap-1.5 bg-green-50 px-3 py-1.5 rounded-lg border border-green-200">
+              <DollarSign className="h-5 w-5 text-green-600" />
+              <span className="text-lg font-bold text-green-700">
+                {getJudgeEarningForTier(request.request_tier)}
+              </span>
+            </div>
+            {/* Time estimate */}
+            <div className="flex items-center gap-1 text-gray-500">
+              <Timer className="h-4 w-4" />
+              <span className="text-xs font-medium">{estimatedTime}</span>
+            </div>
           </div>
 
           <button
             onClick={handleClick}
-            className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-5 py-2.5 rounded-xl font-semibold hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5 group/btn focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
+            className={`px-5 py-2.5 rounded-xl font-semibold hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5 group/btn focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${
+              tierInfo?.color === 'purple'
+                ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white focus-visible:ring-purple-500'
+                : expertiseMatch
+                  ? 'bg-gradient-to-r from-indigo-600 to-blue-600 text-white focus-visible:ring-indigo-500'
+                  : 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white focus-visible:ring-indigo-500'
+            }`}
           >
-            {request.request_type === 'comparison' ? 'Compare Options' : 'Start Verdict'}
+            {request.request_type === 'comparison' ? 'Compare Options' :
+             request.request_type === 'split_test' ? 'Evaluate Test' :
+             'Start Verdict'}
             <ArrowRight className="h-4 w-4 inline ml-1.5 group-hover/btn:translate-x-1 transition-transform" />
           </button>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 

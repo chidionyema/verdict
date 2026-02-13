@@ -1,13 +1,22 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Coins, TrendingUp, Gift, History } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Coins, History, AlertTriangle, ArrowRight } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import Link from 'next/link';
 
 interface CreditBalanceProps {
   userId?: string;
   showTransactions?: boolean;
   compact?: boolean;
+  /** Show warning when credits are low */
+  showLowWarning?: boolean;
+  /** Threshold for low credit warning */
+  lowThreshold?: number;
+  /** Link to buy credits */
+  linkToBuy?: boolean;
+  /** Callback when buy credits is clicked */
+  onBuyClick?: () => void;
 }
 
 interface ProfileCredits {
@@ -16,46 +25,25 @@ interface ProfileCredits {
   display_name?: string;
 }
 
-export function CreditBalance({ userId, showTransactions = false, compact = false }: CreditBalanceProps) {
+export function CreditBalance({
+  userId,
+  showTransactions = false,
+  compact = false,
+  showLowWarning = true,
+  lowThreshold = 2,
+  linkToBuy = true,
+  onBuyClick
+}: CreditBalanceProps) {
   const [profile, setProfile] = useState<ProfileCredits | null>(null);
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<{ id: string } | null>(null);
 
   const supabase = createClient();
 
-  useEffect(() => {
-    async function fetchUser() {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
-      if (user?.id) {
-        fetchCredits(user.id);
-      }
-    }
-
-    if (userId) {
-      fetchCredits(userId);
-    } else {
-      fetchUser();
-    }
-  }, [userId]);
-
-  // Listen for credit refresh events
-  useEffect(() => {
-    const handleCreditRefresh = () => {
-      const targetId = userId || user?.id;
-      if (targetId) {
-        fetchCredits(targetId);
-      }
-    };
-
-    window.addEventListener('credits-updated', handleCreditRefresh);
-    return () => window.removeEventListener('credits-updated', handleCreditRefresh);
-  }, [userId, user?.id]);
-
-  async function fetchCredits(targetUserId: string) {
+  const fetchCredits = useCallback(async (targetUserId: string) => {
     try {
       setLoading(true);
-      
+
       // Fetch credits from profiles table (single source of truth)
       const { data: profileData, error } = await supabase
         .from('profiles')
@@ -68,13 +56,44 @@ export function CreditBalance({ userId, showTransactions = false, compact = fals
         return;
       }
 
-      setProfile(profileData);
+      setProfile(profileData as ProfileCredits);
     } catch (error) {
       console.error('Error fetching credits:', error);
     } finally {
       setLoading(false);
     }
-  }
+  }, [supabase]);
+
+  useEffect(() => {
+    async function fetchUser() {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+      if (user?.id) {
+        fetchCredits(user.id);
+      } else {
+        setLoading(false);
+      }
+    }
+
+    if (userId) {
+      fetchCredits(userId);
+    } else {
+      fetchUser();
+    }
+  }, [userId, fetchCredits, supabase]);
+
+  // Listen for credit refresh events
+  useEffect(() => {
+    const handleCreditRefresh = () => {
+      const targetId = userId || user?.id;
+      if (targetId) {
+        fetchCredits(targetId);
+      }
+    };
+
+    window.addEventListener('credits-updated', handleCreditRefresh);
+    return () => window.removeEventListener('credits-updated', handleCreditRefresh);
+  }, [userId, user?.id, fetchCredits]);
 
   if (loading) {
     return (
@@ -89,20 +108,55 @@ export function CreditBalance({ userId, showTransactions = false, compact = fals
   if (!profile) {
     return (
       <div className="flex items-center gap-2 text-gray-500">
-        <Coins className="h-4 w-4" />
+        <Coins className="h-4 w-4" aria-hidden="true" />
         <span>0 credits</span>
       </div>
     );
   }
 
+  const isLow = profile.credits <= lowThreshold;
+  const isEmpty = profile.credits === 0;
+
+  // Compact version with low balance indicator
   if (compact) {
-    return (
-      <div className="flex items-center gap-2">
-        <Coins className="h-4 w-4 text-yellow-600" />
+    const content = (
+      <div
+        className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors ${
+          isEmpty
+            ? 'bg-red-100 text-red-700'
+            : isLow
+            ? 'bg-amber-100 text-amber-700'
+            : 'bg-yellow-50 text-yellow-700'
+        }`}
+        role="status"
+        aria-label={`${profile.credits} credits remaining${isLow ? ', balance is low' : ''}`}
+      >
+        {isEmpty ? (
+          <AlertTriangle className="h-4 w-4" aria-hidden="true" />
+        ) : (
+          <Coins className="h-4 w-4" aria-hidden="true" />
+        )}
         <span className="font-semibold">{profile.credits}</span>
-        <span className="text-sm text-gray-500">credits</span>
+        <span className="text-sm opacity-80">credits</span>
+        {isLow && showLowWarning && linkToBuy && (
+          <ArrowRight className="h-3 w-3 ml-1 opacity-60" aria-hidden="true" />
+        )}
       </div>
     );
+
+    if (linkToBuy && isLow) {
+      return (
+        <Link
+          href="/credits"
+          onClick={onBuyClick}
+          className="hover:opacity-80 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-lg"
+        >
+          {content}
+        </Link>
+      );
+    }
+
+    return content;
   }
 
   return (

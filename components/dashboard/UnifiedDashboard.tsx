@@ -328,7 +328,7 @@ function RequesterContent({
         </p>
         <Link
           href="/submit"
-          className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-medium hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 min-h-[48px]"
+          className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-medium hover:shadow-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 min-h-[48px] active:scale-[0.98] transition-transform"
         >
           <Plus className="h-5 w-5" />
           Create Your First Request
@@ -523,7 +523,7 @@ function RequestPreviewCard({ request }: { request: VerdictRequest }) {
   return (
     <Link
       href={`/requests/${request.id}`}
-      className="block bg-white/80 backdrop-blur-sm border border-gray-200 rounded-2xl p-4 hover:shadow-md hover:-translate-y-0.5 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
+      className="block bg-white/80 backdrop-blur-sm border border-gray-200 rounded-2xl p-4 min-h-[120px] hover:shadow-md hover:-translate-y-0.5 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 active:scale-[0.99]"
     >
       <div className="flex items-start gap-3">
         <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center shrink-0">

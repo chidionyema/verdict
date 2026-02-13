@@ -13,6 +13,6 @@ export { NotReadyToJudge } from './NotReadyToJudge';
 export { VerdictHistoryCard } from './VerdictHistoryCard';
 export { ProTipsCard } from './ProTipsCard';
 export { DashboardStyles } from './DashboardStyles';
-export { JudgeDashboardTabs, type JudgeTabType } from './JudgeDashboardTabs';
+export { JudgeDashboardTabs } from './JudgeDashboardTabs';
 export { CollapsibleStatsSection } from './CollapsibleStatsSection';
 export * from './queue';

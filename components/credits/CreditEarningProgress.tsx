@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { Zap, TrendingUp, Sparkles, Clock, ArrowRight, Gift, Star, Trophy } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
@@ -25,12 +25,31 @@ export function CreditEarningProgress({
   const [showCelebration, setShowCelebration] = useState(false);
   const [currentCredits, setCurrentCredits] = useState(0);
   const [judgmentsCount, setJudgmentsCount] = useState(judgmentsToday);
-  const [avgTimePerJudgment, setAvgTimePerJudgment] = useState(2); // minutes
+  const avgTimePerJudgment = 2; // minutes
+
+  const loadCredits = useCallback(async () => {
+    if (typeof window === 'undefined') return;
+
+    try {
+      const supabase = createClient();
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('credits')
+        .eq('id', userId)
+        .single();
+
+      if (profile && 'credits' in profile) {
+        setCurrentCredits((profile as { credits: number }).credits || 0);
+      }
+    } catch (error) {
+      console.error('Error loading credits:', error);
+    }
+  }, [userId]);
 
   // Load credits on mount
   useEffect(() => {
     loadCredits();
-  }, [userId]);
+  }, [loadCredits]);
 
   useEffect(() => {
     setJudgmentsCount(judgmentsToday);
@@ -48,26 +67,7 @@ export function CreditEarningProgress({
       }
       // Don't auto-hide - let user choose action
     }
-  }, [judgmentsToday, onCreditEarned]);
-
-  async function loadCredits() {
-    if (typeof window === 'undefined') return;
-    
-    try {
-      const supabase = createClient();
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('credits')
-        .eq('id', userId)
-        .single();
-      
-      if (profile && 'credits' in profile) {
-        setCurrentCredits((profile as any).credits || 0);
-      }
-    } catch (error) {
-      console.error('Error loading credits:', error);
-    }
-  }
+  }, [judgmentsToday, onCreditEarned, loadCredits]);
 
   // Calculate progress
   const judgmentsNeeded = CREDIT_ECONOMY_CONFIG.JUDGMENTS_PER_CREDIT;
@@ -141,7 +141,7 @@ export function CreditEarningProgress({
 
                 {/* Encouragement text */}
                 <p className="text-xs text-gray-500 mt-4">
-                  You're making a difference! Every review helps someone.
+                  You&apos;re making a difference! Every review helps someone.
                 </p>
               </div>
             </div>

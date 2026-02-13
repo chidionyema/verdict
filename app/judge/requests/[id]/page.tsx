@@ -227,7 +227,17 @@ export default function JudgeVerdictPage({
       setEarnedAmount(earning);
       setShowCelebration(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong');
+      const errorMessage = err instanceof Error ? err.message : '';
+      // Provide user-friendly error based on what went wrong
+      if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
+        setError('Unable to submit verdict. Please check your connection and try again. Your draft has been saved.');
+      } else if (errorMessage.includes('unauthorized') || errorMessage.includes('401')) {
+        setError('Your session has expired. Please sign in again to submit your verdict.');
+      } else if (errorMessage.includes('already') || errorMessage.includes('duplicate')) {
+        setError('You\'ve already submitted a verdict for this request.');
+      } else {
+        setError('We couldn\'t submit your verdict. Please try again in a moment. Your draft has been saved.');
+      }
       setSubmitting(false);
     }
   };
@@ -300,7 +310,7 @@ export default function JudgeVerdictPage({
           <div className="flex items-center gap-3">
             <Link
               href="/judge"
-              className="flex items-center text-gray-600 hover:text-gray-900"
+              className="flex items-center text-gray-600 hover:text-gray-900 hover:bg-gray-100 px-3 py-2 -ml-3 min-h-[48px] rounded-lg transition focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-500"
             >
               <ArrowLeft className="h-5 w-5 mr-2" />
               Back to queue
@@ -413,14 +423,14 @@ export default function JudgeVerdictPage({
                 <div className="flex flex-col sm:flex-row gap-3 justify-center">
                   <Link
                     href={`/requests/${id}`}
-                    className="inline-flex items-center justify-center px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium"
+                    className="inline-flex items-center justify-center px-6 py-3 min-h-[48px] bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 active:scale-[0.98]"
                   >
                     <CheckCircle className="h-4 w-4 mr-2" />
                     View Your Verdict
                   </Link>
                   <Link
                     href="/judge"
-                    className="inline-flex items-center justify-center px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium"
+                    className="inline-flex items-center justify-center px-6 py-3 min-h-[48px] border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-500 focus-visible:ring-offset-2 active:scale-[0.98]"
                   >
                     <ArrowLeft className="h-4 w-4 mr-2" />
                     Back to Queue
@@ -515,10 +525,10 @@ export default function JudgeVerdictPage({
               <button
                 onClick={handlePreviewSubmit}
                 disabled={feedback.length < 50}
-                className={`w-full py-3 rounded-xl font-medium transition flex items-center justify-center cursor-pointer ${
+                className={`w-full py-3 min-h-[48px] rounded-xl font-medium transition flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 ${
                   feedback.length < 50
                     ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                    : 'bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100'
+                    : 'bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 cursor-pointer active:scale-[0.98]'
                 }`}
               >
                 <Eye className="h-4 w-4 mr-2" />
