@@ -363,16 +363,14 @@ function RequesterContent({
   );
 }
 
-// Judge Content Component
+// Judge Content Component - Queue-first design
 function JudgeContent({
   stats,
   queue,
   queueLoading,
   filter,
-  sort,
   searchQuery,
   onFilterChange,
-  onSortChange,
   onSearchChange,
   onRefresh,
 }: {
@@ -387,90 +385,264 @@ function JudgeContent({
   onSearchChange: (q: string) => void;
   onRefresh: () => void;
 }) {
+  const [showEarnings, setShowEarnings] = useState(false);
+  const featuredRequest = queue[0];
+  const remainingQueue = queue.slice(1, 7);
+
   return (
-    <div className="space-y-6">
-      {/* Earnings Chart */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <RealEarningsChart
-          className="lg:col-span-2"
-          availableForPayout={stats.available_for_payout}
-        />
-
-        {/* Quick Stats */}
-        <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl border border-white/50 p-6 space-y-4">
-          <h3 className="font-semibold text-gray-900">Today's Progress</h3>
-          <div className="space-y-3">
-            <QuickStat label="Verdicts Today" value={stats.verdicts_today} />
-            <QuickStat label="Daily Earnings" value={`$${stats.daily_earnings.toFixed(2)}`} />
-            <QuickStat label="Quality Score" value={stats.average_quality_score?.toFixed(1) || '-'} suffix="/10" />
-            <QuickStat label="Streak" value={`${stats.streak_days} days`} />
+    <div className="space-y-4">
+      {/* Compact Stats Bar - Always visible */}
+      <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-lg border border-white/50 p-4">
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          {/* Key Stats Row */}
+          <div className="flex items-center gap-6 flex-wrap">
+            <div className="flex items-center gap-2">
+              <div className="w-10 h-10 bg-gradient-to-br from-green-100 to-emerald-100 rounded-xl flex items-center justify-center">
+                <Gavel className="h-5 w-5 text-green-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-900 leading-none">{stats.verdicts_today}</p>
+                <p className="text-xs text-gray-500">Today</p>
+              </div>
+            </div>
+            <div className="h-8 w-px bg-gray-200 hidden sm:block" />
+            <div className="flex items-center gap-2">
+              <div className="w-10 h-10 bg-gradient-to-br from-amber-100 to-orange-100 rounded-xl flex items-center justify-center">
+                <Clock className="h-5 w-5 text-amber-600" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-900 leading-none">{stats.streak_days}</p>
+                <p className="text-xs text-gray-500">Day Streak</p>
+              </div>
+            </div>
+            <div className="h-8 w-px bg-gray-200 hidden sm:block" />
+            <div className="flex items-center gap-2">
+              <div className="w-10 h-10 bg-gradient-to-br from-green-100 to-emerald-100 rounded-xl flex items-center justify-center">
+                <span className="text-green-600 font-bold text-sm">$</span>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-900 leading-none">${stats.daily_earnings.toFixed(2)}</p>
+                <p className="text-xs text-gray-500">Earned Today</p>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
 
-      {/* Queue */}
-      <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl border border-white/50 p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-xl font-bold text-gray-900">Available Queue</h3>
+          {/* Earnings Toggle */}
           <button
-            onClick={onRefresh}
-            disabled={queueLoading}
-            aria-label="Refresh queue"
-            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 min-h-[44px] min-w-[44px]"
+            onClick={() => setShowEarnings(!showEarnings)}
+            className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-xl text-sm font-medium text-gray-700 transition-colors"
           >
-            <RefreshCw className={`h-5 w-5 ${queueLoading ? 'animate-spin' : ''}`} />
+            {showEarnings ? 'Hide' : 'View'} Earnings
+            <ArrowRight className={`h-4 w-4 transition-transform ${showEarnings ? 'rotate-90' : ''}`} />
           </button>
         </div>
 
-        {/* Simple inline filter */}
-        <div className="flex items-center gap-3 flex-wrap">
-          <div className="relative flex-1 min-w-[200px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search queue..."
-              value={searchQuery}
-              onChange={(e) => onSearchChange(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-            />
+        {/* Collapsible Earnings Chart */}
+        <AnimatePresence>
+          {showEarnings && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden"
+            >
+              <div className="pt-4 mt-4 border-t border-gray-100">
+                <RealEarningsChart availableForPayout={stats.available_for_payout} />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Queue Hero Section - Primary Focus */}
+      <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl border border-white/50 overflow-hidden">
+        {/* Queue Header */}
+        <div className="p-6 pb-4 border-b border-gray-100">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <h2 className="text-2xl font-bold text-gray-900">Ready to Judge</h2>
+              {queue.length > 0 && (
+                <span className="px-3 py-1 bg-green-100 text-green-700 text-sm font-semibold rounded-full">
+                  {queue.length} available
+                </span>
+              )}
+            </div>
+            <button
+              onClick={onRefresh}
+              disabled={queueLoading}
+              aria-label="Refresh queue"
+              className="p-2.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-xl transition-colors disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+            >
+              <RefreshCw className={`h-5 w-5 ${queueLoading ? 'animate-spin' : ''}`} />
+            </button>
           </div>
-          <select
-            value={filter}
-            onChange={(e) => onFilterChange(e.target.value as QueueFilter)}
-            className="px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          >
-            <option value="all">All Categories</option>
-            <option value="appearance">Appearance</option>
-            <option value="profile">Profile</option>
-            <option value="writing">Writing</option>
-            <option value="decision">Decision</option>
-          </select>
+
+          {/* Filters */}
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="relative flex-1 min-w-[200px] max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search requests..."
+                value={searchQuery}
+                onChange={(e) => onSearchChange(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              />
+            </div>
+            <div className="flex gap-2">
+              {(['all', 'appearance', 'profile', 'writing', 'decision'] as const).map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => onFilterChange(cat)}
+                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                    filter === cat
+                      ? 'bg-indigo-600 text-white shadow-md'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+                >
+                  {cat === 'all' ? 'All' : cat.charAt(0).toUpperCase() + cat.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
-        {queueLoading ? (
-          <QueueLoading />
-        ) : queue.length === 0 ? (
-          <EmptyQueue onRefresh={onRefresh} totalVerdicts={stats.verdicts_given} />
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
-            {queue.slice(0, 6).map((request) => (
-              <RequestCard key={request.id} request={request} />
-            ))}
-          </div>
-        )}
+        {/* Queue Content */}
+        <div className="p-6">
+          {queueLoading ? (
+            <QueueLoading />
+          ) : queue.length === 0 ? (
+            <EmptyQueue onRefresh={onRefresh} totalVerdicts={stats.verdicts_given} />
+          ) : (
+            <div className="space-y-4">
+              {/* Featured Request - First in queue gets prominence */}
+              {featuredRequest && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                >
+                  <FeaturedRequestCard request={featuredRequest} />
+                </motion.div>
+              )}
 
-        {/* Single clear CTA to full judge dashboard */}
-        {queue.length > 6 && (
-          <div className="text-center mt-6">
-            <Link
-              href="/judge"
-              className="inline-flex items-center gap-2 text-indigo-600 font-medium hover:text-indigo-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 rounded-lg px-2 py-1"
-            >
-              View all {queue.length} requests
-              <ArrowRight className="h-4 w-4" />
-            </Link>
+              {/* Remaining Queue Grid */}
+              {remainingQueue.length > 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {remainingQueue.map((request) => (
+                    <RequestCard key={request.id} request={request} />
+                  ))}
+                </div>
+              )}
+
+              {/* View More */}
+              {queue.length > 7 && (
+                <div className="text-center pt-4">
+                  <Link
+                    href="/judge"
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
+                  >
+                    View All {queue.length} Requests
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Community Feed Quick Access */}
+      <Link
+        href="/feed"
+        className="block bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 rounded-2xl p-5 border border-indigo-100 hover:shadow-lg transition-all group"
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-white rounded-xl shadow-sm flex items-center justify-center">
+              <Eye className="h-6 w-6 text-indigo-600" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-gray-900">Community Feed</h3>
+              <p className="text-sm text-gray-600">See what others are getting feedback on</p>
+            </div>
           </div>
-        )}
+          <ArrowRight className="h-5 w-5 text-indigo-600 group-hover:translate-x-1 transition-transform" />
+        </div>
+      </Link>
+    </div>
+  );
+}
+
+// Featured Request Card - Larger, more prominent for first queue item
+function FeaturedRequestCard({ request }: { request: QueueRequest }) {
+  const router = useRouter();
+
+  const handleClick = () => {
+    if (request.request_type === 'comparison') {
+      router.push(`/judge/comparisons/${request.id}`);
+    } else if (request.request_type === 'split_test') {
+      router.push(`/judge/split-tests/${request.id}`);
+    } else {
+      router.push(`/judge/requests/${request.id}`);
+    }
+  };
+
+  const categoryIcons: Record<string, typeof Eye> = {
+    appearance: Eye,
+    profile: Eye,
+    writing: FileText,
+    decision: CheckCircle,
+  };
+  const CategoryIcon = categoryIcons[request.category] || Eye;
+
+  return (
+    <div className="bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 rounded-2xl p-6 border border-indigo-100 relative overflow-hidden">
+      {/* Decorative gradient */}
+      <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-indigo-200/30 to-purple-200/30 rounded-full blur-3xl" />
+
+      <div className="relative z-10">
+        <div className="flex items-start justify-between gap-4 mb-4">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-2xl flex items-center justify-center shadow-lg">
+              <CategoryIcon className="h-7 w-7 text-white" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-xs font-semibold text-indigo-600 uppercase tracking-wide">Up Next</span>
+                {request.request_tier === 'pro' && (
+                  <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs font-semibold rounded-full">Premium</span>
+                )}
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 capitalize">{request.category}</h3>
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="text-2xl font-bold text-green-600">${request.request_tier === 'pro' ? '2.00' : request.request_tier === 'standard' ? '1.20' : '0.60'}</p>
+            <p className="text-xs text-gray-500">Earn</p>
+          </div>
+        </div>
+
+        <p className="text-gray-700 mb-4 line-clamp-2">{request.context}</p>
+
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4 text-sm text-gray-500">
+            <span className="flex items-center gap-1">
+              <Clock className="h-4 w-4" />
+              {new Date(request.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </span>
+            <span className="flex items-center gap-1">
+              {request.received_verdict_count}/{request.target_verdict_count} verdicts
+            </span>
+          </div>
+          <button
+            onClick={handleClick}
+            className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold hover:shadow-xl transition-all hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
+          >
+            Start Judging
+            <ArrowRight className="h-4 w-4 inline ml-2" />
+          </button>
+        </div>
       </div>
     </div>
   );

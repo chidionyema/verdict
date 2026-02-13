@@ -441,7 +441,7 @@ function JudgeDashboardContent() {
                   {!queueLoading && !queueError && filteredQueue.length > 1 && (
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                       {filteredQueue.slice(1).map((request) => (
-                        <RequestCard key={request.id} request={request} isNewJudge={isNewJudge} />
+                        <RequestCard key={request.id} request={request} />
                       ))}
                     </div>
                   )}
