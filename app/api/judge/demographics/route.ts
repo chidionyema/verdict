@@ -51,9 +51,9 @@ async function POST_Handler(request: NextRequest) {
       .single();
 
     if (profileError || !existingProfile) {
-      log.error('CRITICAL: Authenticated user has no profile', { userId: user.id, error: profileError });
+      log.error('Profile not found for authenticated user', { userId: user.id, error: profileError });
       return NextResponse.json(
-        { error: 'Unable to load your profile. Please try refreshing the page.' },
+        { error: 'Profile not found. Please refresh and try again.' },
         { status: 500 }
       );
     }

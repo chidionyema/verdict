@@ -83,7 +83,7 @@ export async function createVerdictRequest(
   const targetCount = targetVerdictCount ?? 3;
   const creditsToUse = creditsToCharge ?? 1;
 
-  // Verify profile exists (profile creation happens in auth callback)
+  // Profile must exist (created during auth callback)
   const profileResult = await getProfile(supabase, userId);
 
   if (!profileResult.success) {
@@ -91,8 +91,7 @@ export async function createVerdictRequest(
   }
 
   if (!profileResult.data) {
-    // This should never happen - profile is created during auth callback
-    throw new Error('Unable to load profile. Please try refreshing the page.');
+    throw new Error('Profile not found. Please refresh and try again.');
   }
 
   // Deduct credits using atomic profile service

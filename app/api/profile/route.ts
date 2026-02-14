@@ -34,10 +34,9 @@ async function GET_Handler(request: NextRequest) {
     }
 
     if (!profileResult.data) {
-      // This should never happen - profile is created during auth callback
-      log.error('CRITICAL: Authenticated user has no profile', { userId: user.id });
+      log.error('Profile not found for authenticated user', { userId: user.id });
       return NextResponse.json(
-        { error: 'Unable to load your profile. Please try refreshing the page.' },
+        { error: 'Profile not found. Please refresh and try again.' },
         { status: 500 }
       );
     }
