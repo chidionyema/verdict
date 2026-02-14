@@ -55,8 +55,31 @@ function getSupabaseServiceKey(): string {
   return key || '';
 }
 
+/**
+ * Check if service key is properly configured (not just present, but valid).
+ */
 export function hasServiceKey(): boolean {
-  return !!process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!key) return false;
+  // Reject placeholder values
+  if (key === 'your-service-role-key' || key.startsWith('placeholder')) return false;
+  // Service keys are JWTs, should be reasonably long
+  if (key.length < 100) return false;
+  return true;
+}
+
+/**
+ * Get service client or throw if not properly configured.
+ * Use this when service client is REQUIRED (e.g., user initialization).
+ */
+export function requireServiceClient(): SupabaseClient<Database> {
+  if (!hasServiceKey()) {
+    throw new Error(
+      '[Supabase] SUPABASE_SERVICE_ROLE_KEY is not properly configured. ' +
+      'User initialization requires a valid service role key to bypass RLS.'
+    );
+  }
+  return createServiceClient();
 }
 
 export async function createClient(): Promise<SupabaseClient<Database>> {

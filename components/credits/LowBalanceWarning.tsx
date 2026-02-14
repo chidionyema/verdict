@@ -183,6 +183,9 @@ export function LowBalanceWarning({
 
 /**
  * Hook to check credit balance and provide warning state
+ *
+ * IMPORTANT: Uses /api/me endpoint instead of direct DB query to ensure
+ * profile is created with initial credits if it doesn't exist yet.
  */
 export function useLowBalanceCheck(threshold: number = 2) {
   const [credits, setCredits] = useState<number | null>(null);
@@ -191,20 +194,23 @@ export function useLowBalanceCheck(threshold: number = 2) {
   useEffect(() => {
     async function fetchCredits() {
       try {
-        const supabase = createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-
-        if (user) {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('credits')
-            .eq('id', user.id)
-            .single();
-
-          setCredits((profile as { credits?: number } | null)?.credits ?? 0);
+        // Use /api/me which calls ensureProfile() - this guarantees
+        // the profile exists and has correct initial credits
+        const response = await fetch('/api/me');
+        if (response.ok) {
+          const data = await response.json();
+          // profile.credits will be correct (3 for new users)
+          setCredits(data.profile?.credits ?? null);
+        } else if (response.status === 401) {
+          // Not authenticated - don't set credits
+          setCredits(null);
+        } else {
+          console.error('Failed to fetch profile:', response.status);
+          setCredits(null);
         }
       } catch (error) {
         console.error('Failed to fetch credits:', error);
+        setCredits(null);
       } finally {
         setLoading(false);
       }

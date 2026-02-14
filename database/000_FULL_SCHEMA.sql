@@ -2632,6 +2632,60 @@ CREATE TRIGGER trigger_check_onboarding_completion
   BEFORE UPDATE ON profiles FOR EACH ROW EXECUTE FUNCTION check_onboarding_completion();
 
 -- ============================================================================
+-- PART 33B: AUTO-CREATE PROFILE ON USER SIGNUP
+-- ============================================================================
+-- This is the SINGLE SOURCE OF TRUTH for new user profile creation.
+-- Every user gets a profile with 3 credits immediately on signup.
+-- No application code needed. No race conditions. No RLS issues.
+-- ============================================================================
+
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  INSERT INTO public.profiles (
+    id,
+    email,
+    display_name,
+    full_name,
+    avatar_url,
+    credits,
+    is_judge,
+    is_admin,
+    created_at,
+    updated_at
+  ) VALUES (
+    NEW.id,
+    NEW.email,
+    COALESCE(
+      NEW.raw_user_meta_data->>'full_name',
+      NEW.raw_user_meta_data->>'name',
+      split_part(NEW.email, '@', 1),
+      'User'
+    ),
+    NEW.raw_user_meta_data->>'full_name',
+    NEW.raw_user_meta_data->>'avatar_url',
+    3,  -- INITIAL CREDITS
+    true,
+    false,
+    NOW(),
+    NOW()
+  )
+  ON CONFLICT (id) DO NOTHING;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW
+  EXECUTE FUNCTION public.handle_new_user();
+
+-- ============================================================================
 -- PART 34: ROW LEVEL SECURITY - ENABLE
 -- ============================================================================
 

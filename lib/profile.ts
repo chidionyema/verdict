@@ -121,16 +121,23 @@ export async function getProfile(
 }
 
 /**
- * Ensure a profile exists for a user.
- * Creates one if missing, returns existing if found.
- * Also grants initial credits if profile exists with 0 credits (fixes edge cases).
- * This is idempotent - safe to call multiple times.
+ * @deprecated LEGACY FALLBACK - DO NOT USE IN NEW CODE
+ *
+ * Profile creation now happens in ONE place: /app/auth/callback/route.ts
+ * via the initializeUser function.
+ *
+ * This function exists only for:
+ * 1. Migration scripts
+ * 2. Manual admin operations
+ *
+ * All application code should use getProfile() and fail gracefully if
+ * profile doesn't exist (telling user to sign out and sign in again).
  */
 export async function ensureProfile(
   supabase: SupabaseClient,
   user: { id: string; email?: string | null; user_metadata?: Record<string, unknown> }
 ): Promise<ProfileResult<Profile>> {
-  // First, try to get existing profile
+  // Profile should already exist (created by database trigger on signup)
   const existing = await getProfile(supabase, user.id);
 
   if (!existing.success) {
@@ -138,32 +145,6 @@ export async function ensureProfile(
   }
 
   if (existing.data) {
-    // Fix for edge case: profile exists but has 0 credits (possibly created by auth hook)
-    // Grant initial credits if user has never had any activity
-    if (
-      existing.data.credits === 0 &&
-      existing.data.total_spent === 0 &&
-      existing.data.total_earned === 0 &&
-      existing.data.total_submissions === 0
-    ) {
-      // This is a new user who somehow got a profile with 0 credits
-      // Grant them the initial credits
-      const { data: updated, error: updateError } = await supabase
-        .from('profiles')
-        .update({
-          credits: INITIAL_CREDITS,
-          updated_at: new Date().toISOString(),
-        } as any)
-        .eq('id', user.id)
-        .eq('credits', 0) // Only update if still 0 (avoid race conditions)
-        .select(PROFILE_SELECT_FIELDS)
-        .single();
-
-      if (!updateError && updated) {
-        return { success: true, data: updated as Profile };
-      }
-      // If update failed, return existing (another process may have updated it)
-    }
     return { success: true, data: existing.data };
   }
 

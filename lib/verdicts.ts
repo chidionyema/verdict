@@ -2,7 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database, VerdictRequest, VerdictResponse } from './database.types';
 import { createClient } from '@/lib/supabase/client';
 import { createServiceClient } from '@/lib/supabase/server';
-import { ensureProfile, deductCredits, addCredits } from '@/lib/profile';
+import { getProfile, deductCredits, addCredits } from '@/lib/profile';
 
 type DbClient = SupabaseClient<Database>;
 
@@ -83,14 +83,16 @@ export async function createVerdictRequest(
   const targetCount = targetVerdictCount ?? 3;
   const creditsToUse = creditsToCharge ?? 1;
 
-  // Ensure profile exists using profile service
-  const profileResult = await ensureProfile(supabase, {
-    id: userId,
-    email: email || undefined,
-  });
+  // Verify profile exists (profile creation happens in auth callback)
+  const profileResult = await getProfile(supabase, userId);
 
   if (!profileResult.success) {
-    throw new Error(`Failed to ensure profile: ${profileResult.error.message}`);
+    throw new Error(`Database error: ${profileResult.error.message}`);
+  }
+
+  if (!profileResult.data) {
+    // This should never happen - profile is created during auth callback
+    throw new Error('Unable to load profile. Please try refreshing the page.');
   }
 
   // Deduct credits using atomic profile service

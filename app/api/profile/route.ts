@@ -3,12 +3,13 @@ import { createClient, createServiceClient, hasServiceKey } from '@/lib/supabase
 import { log } from '@/lib/logger';
 import { AGE_RANGES, GENDERS } from '@/lib/validations';
 import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
-import { ensureProfile } from '@/lib/profile';
+import { getProfile } from '@/lib/profile';
 
 /**
  * GET /api/profile
- * Returns the current user's profile, creating it if it doesn't exist.
- * This ensures users always have a profile with 3 initial credits.
+ *
+ * Returns the current user's profile.
+ * This endpoint ONLY reads profiles. Profile creation happens in auth callback.
  */
 async function GET_Handler(request: NextRequest) {
   try {
@@ -23,16 +24,20 @@ async function GET_Handler(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Use service client for profile operations to ensure it works
+    // Use service client to bypass RLS if available
     const profileClient = hasServiceKey() ? createServiceClient() : supabase;
-
-    // Ensure profile exists with initial credits
-    const profileResult = await ensureProfile(profileClient, user);
+    const profileResult = await getProfile(profileClient, user.id);
 
     if (!profileResult.success) {
-      log.error('Profile ensure failed in GET', profileResult.error);
+      log.error('Profile fetch failed', profileResult.error);
+      return NextResponse.json({ error: 'Database error' }, { status: 500 });
+    }
+
+    if (!profileResult.data) {
+      // This should never happen - profile is created during auth callback
+      log.error('CRITICAL: Authenticated user has no profile', { userId: user.id });
       return NextResponse.json(
-        { error: 'Failed to load profile' },
+        { error: 'Unable to load your profile. Please try refreshing the page.' },
         { status: 500 }
       );
     }

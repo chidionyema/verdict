@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient, createServiceClient, hasServiceKey } from '@/lib/supabase/server';
-import { ensureProfile, getProfile } from '@/lib/profile';
+import { createClient, requireServiceClient } from '@/lib/supabase/server';
+import { initializeUser } from '@/lib/auth/initialize-user';
 
 /**
  * Auth Callback Handler
  *
  * Handles OAuth/magic-link callbacks from Supabase Auth.
- * Uses the profile service to ensure a profile exists for the user.
+ *
+ * SINGLE POINT OF USER INITIALIZATION:
+ * This is the ONLY place where user profiles are created.
+ * All other code assumes the user is already initialized.
  */
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
@@ -47,25 +50,19 @@ export async function GET(request: NextRequest) {
     const user = data.user;
     console.log(`[Auth Callback] User authenticated: ${user.id}`);
 
-    // Step 2: Check if profile exists before ensuring (for welcome detection)
-    // Use service client for profile operations to bypass RLS issues during callback
-    const profileClient = hasServiceKey() ? createServiceClient() : supabase;
+    // SINGLE POINT OF USER INITIALIZATION
+    // This is the ONLY place where profiles are created.
+    // Uses service client to bypass RLS.
+    const serviceClient = requireServiceClient();
+    const initResult = await initializeUser(serviceClient, user);
 
-    const existingResult = await getProfile(profileClient, user.id);
-    const isNewUser = existingResult.success && !existingResult.data;
-
-    // Step 3: Ensure profile exists using profile service
-    // Using service client ensures we can insert even before cookies are fully committed
-    const profileResult = await ensureProfile(profileClient, user);
-
-    if (!profileResult.success) {
-      console.error('[Auth Callback] Profile ensure failed:', profileResult.error);
-      // Critical: profile creation failed - this is a problem
-      // Log details for debugging
-      console.error('[Auth Callback] Error details:', JSON.stringify(profileResult.error));
-    } else {
-      console.log(`[Auth Callback] Profile ready: ${user.id} with ${profileResult.data.credits} credits`);
+    if (!initResult.success) {
+      console.error(`[Auth Callback] Failed to initialize user ${user.id}:`, initResult.error);
+      return NextResponse.redirect(new URL('/auth/login?error=init_failed', requestUrl.origin));
     }
+
+    const isNewUser = initResult.isNewUser;
+    console.log(`[Auth Callback] User ${user.id} initialized: isNew=${isNewUser}, credits=${initResult.profile?.credits}`)
 
     // Step 4: Redirect to destination
     const destination = getSafeRedirect(redirectParam);

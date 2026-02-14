@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient, createServiceClient } from '@/lib/supabase/server';
+import { createClient } from '@/lib/supabase/server';
 import { log } from '@/lib/logger';
 import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
 
@@ -42,52 +42,20 @@ async function POST_Handler(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Make sure profile row exists (some older accounts might not have one yet)
+    // Profile must exist (created during auth callback)
+    // This endpoint does NOT create profiles - only the auth callback does
     const { data: existingProfile, error: profileError } = await supabase
       .from('profiles')
       .select('id')
       .eq('id', user.id)
       .single();
 
-    if (profileError) {
-      if (profileError.code === 'PGRST116') {
-        // Use service role client to bypass RLS for profile creation
-        const serviceClient = createServiceClient();
-        const { error: insertError } = await (serviceClient as any).from('profiles').insert({
-          id: user.id,
-          email: user.email,
-          display_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'New Judge',
-          credits: 3, // Initial credits for new users
-        });
-
-        if (insertError) {
-          log.error('Failed to auto-create profile before demographics', insertError);
-          return NextResponse.json(
-            { error: 'Unable to prepare profile for demographics' },
-            { status: 500 }
-          );
-        }
-      } else {
-        log.error('Profile lookup error', profileError);
-        return NextResponse.json({ error: 'Failed to load profile' }, { status: 500 });
-      }
-    } else if (!existingProfile) {
-      // Use service role client to bypass RLS for profile creation
-      const serviceClient = createServiceClient();
-      const { error: insertError } = await (serviceClient as any).from('profiles').insert({
-        id: user.id,
-        email: user.email,
-        display_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'New Judge',
-        credits: 3, // Initial credits for new users
-      });
-
-      if (insertError) {
-        log.error('Failed to auto-create profile before demographics', insertError);
-        return NextResponse.json(
-          { error: 'Unable to prepare profile for demographics' },
-          { status: 500 }
-        );
-      }
+    if (profileError || !existingProfile) {
+      log.error('CRITICAL: Authenticated user has no profile', { userId: user.id, error: profileError });
+      return NextResponse.json(
+        { error: 'Unable to load your profile. Please try refreshing the page.' },
+        { status: 500 }
+      );
     }
 
     const body = await request.json();
