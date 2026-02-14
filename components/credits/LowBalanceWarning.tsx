@@ -184,8 +184,7 @@ export function LowBalanceWarning({
 /**
  * Hook to check credit balance and provide warning state
  *
- * IMPORTANT: Uses /api/me endpoint instead of direct DB query to ensure
- * profile is created with initial credits if it doesn't exist yet.
+ * Profile is created by database trigger with 3 initial credits.
  */
 export function useLowBalanceCheck(threshold: number = 2) {
   const [credits, setCredits] = useState<number | null>(null);
@@ -194,8 +193,6 @@ export function useLowBalanceCheck(threshold: number = 2) {
   useEffect(() => {
     async function fetchCredits() {
       try {
-        // Use /api/me which calls ensureProfile() - this guarantees
-        // the profile exists and has correct initial credits
         const response = await fetch('/api/me');
         if (response.ok) {
           const data = await response.json();

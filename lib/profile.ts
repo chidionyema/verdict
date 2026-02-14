@@ -1,14 +1,14 @@
 /**
  * Profile Service
  *
- * SINGLE SOURCE OF TRUTH for all profile operations.
- * All profile reads and writes go through this module.
+ * All profile reads and credit operations go through this module.
+ *
+ * IMPORTANT: Profile CREATION is handled by database trigger `on_auth_user_created`.
+ * This module only handles reads and updates - never creates profiles.
  *
  * Design principles:
- * 1. Idempotent creation - calling ensureProfile multiple times is safe
- * 2. Atomic credit operations - no race conditions
- * 3. Consistent field defaults - one place defines new profile shape
- * 4. Clear error handling - typed errors for all failure modes
+ * 1. Atomic credit operations - no race conditions
+ * 2. Clear error handling - typed errors for all failure modes
  */
 
 import type { SupabaseClient, User } from '@supabase/supabase-js';
@@ -56,8 +56,6 @@ export type ProfileResult<T> =
 // =============================================================================
 // CONSTANTS
 // =============================================================================
-
-const INITIAL_CREDITS = 3;
 
 const PROFILE_SELECT_FIELDS = `
   id,
@@ -112,81 +110,6 @@ export async function getProfile(
       error: {
         code: 'DB_ERROR',
         message: error.message,
-        details: error,
-      },
-    };
-  }
-
-  return { success: true, data: data as Profile };
-}
-
-/**
- * @deprecated LEGACY FALLBACK - DO NOT USE IN NEW CODE
- *
- * Profile creation now happens in ONE place: /app/auth/callback/route.ts
- * via the initializeUser function.
- *
- * This function exists only for:
- * 1. Migration scripts
- * 2. Manual admin operations
- *
- * All application code should use getProfile() and fail gracefully if
- * profile doesn't exist (telling user to sign out and sign in again).
- */
-export async function ensureProfile(
-  supabase: SupabaseClient,
-  user: { id: string; email?: string | null; user_metadata?: Record<string, unknown> }
-): Promise<ProfileResult<Profile>> {
-  // Profile should already exist (created by database trigger on signup)
-  const existing = await getProfile(supabase, user.id);
-
-  if (!existing.success) {
-    return existing;
-  }
-
-  if (existing.data) {
-    return { success: true, data: existing.data };
-  }
-
-  // Profile doesn't exist - create it
-  const displayName =
-    (user.user_metadata?.full_name as string) ||
-    (user.user_metadata?.name as string) ||
-    (user.user_metadata?.display_name as string) ||
-    user.email?.split('@')[0] ||
-    'User';
-
-  const newProfile = {
-    id: user.id,
-    email: user.email || null,
-    display_name: displayName,
-    full_name: (user.user_metadata?.full_name as string) || null,
-    avatar_url: (user.user_metadata?.avatar_url as string) || null,
-    credits: INITIAL_CREDITS,
-    is_judge: true, // Everyone can judge by default
-    is_admin: false,
-    onboarding_completed: false,
-  };
-
-  // Use upsert to handle race conditions
-  const { data, error } = await supabase
-    .from('profiles')
-    .upsert(newProfile as any, { onConflict: 'id' })
-    .select(PROFILE_SELECT_FIELDS)
-    .single();
-
-  if (error) {
-    // Upsert failed - try to fetch (another process may have created it)
-    const retry = await getProfile(supabase, user.id);
-    if (retry.success && retry.data) {
-      return { success: true, data: retry.data };
-    }
-
-    return {
-      success: false,
-      error: {
-        code: 'CREATE_FAILED',
-        message: `Failed to create profile: ${error.message}`,
         details: error,
       },
     };

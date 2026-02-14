@@ -102,7 +102,7 @@ export function UnifiedDashboard({ initialTab }: UnifiedDashboardProps) {
         return;
       }
 
-      // Fetch profile via API endpoint (ensures profile exists with initial credits)
+      // Fetch profile and other data
       const [profileRes, requestsRes, notificationsRes] = await Promise.all([
         fetch('/api/profile', { signal }),
         fetch('/api/requests', { signal }),
