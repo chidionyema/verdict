@@ -31,7 +31,6 @@ export interface Profile {
   is_judge: boolean;
   is_admin: boolean;
   is_expert: boolean;
-  pricing_tier: string;
   country: string | null;
   age_range: string | null;
   gender: string | null;
@@ -74,7 +73,6 @@ const PROFILE_SELECT_FIELDS = `
   is_judge,
   is_admin,
   is_expert,
-  pricing_tier,
   country,
   age_range,
   gender,
@@ -186,7 +184,6 @@ export async function ensureProfile(
     credits: INITIAL_CREDITS,
     is_judge: true, // Everyone can judge by default
     is_admin: false,
-    pricing_tier: 'community',
     onboarding_completed: false,
   };
 
