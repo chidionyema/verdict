@@ -191,22 +191,33 @@ export default function JudgeSplitTestPage({
     const timeSpentSeconds = Math.floor((Date.now() - startTime) / 1000);
 
     try {
+      // Map form fields to API expected format
+      // API expects: chosenPhoto (A/B), photo ratings, feedback, strengths/improvements arrays
+      const chosenPhoto = winnerVariant === 'tie' ?
+        (variantAScore >= variantBScore ? 'A' : 'B') : // For tie, pick higher score or A
+        winnerVariant;
+
+      // Convert strengths/weaknesses strings to arrays (split by newlines or commas)
+      const parseToArray = (str: string): string[] =>
+        str.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
+
       const response = await fetch(`/api/split-tests/${id}/verdict`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          winnerVariant,
+          chosenPhoto,
           confidenceScore,
-          reasoning: reasoning.trim(),
-          variantAScore,
-          variantAStrengths: variantAStrengths.trim(),
-          variantAWeaknesses: variantAWeaknesses.trim(),
-          variantBScore,
-          variantBStrengths: variantBStrengths.trim(),
-          variantBWeaknesses: variantBWeaknesses.trim(),
-          hypothesisValidation,
-          additionalInsights: additionalInsights.trim(),
+          reasoning: reasoning.trim() + (winnerVariant === 'tie' ? ' [Note: Judge determined this is a tie]' : ''),
+          photoAFeedback: `Score: ${variantAScore}/10. Hypothesis ${hypothesisValidation || 'not evaluated'}. ${additionalInsights.trim()}`,
+          photoAStrengths: parseToArray(variantAStrengths),
+          photoAImprovements: parseToArray(variantAWeaknesses),
+          photoARating: variantAScore,
+          photoBFeedback: `Score: ${variantBScore}/10. Hypothesis ${hypothesisValidation || 'not evaluated'}.`,
+          photoBStrengths: parseToArray(variantBStrengths),
+          photoBImprovements: parseToArray(variantBWeaknesses),
+          photoBRating: variantBScore,
           timeSpentSeconds,
+          judgeExpertise: [], // Not collected in current form
         }),
       });
 

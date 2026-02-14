@@ -243,7 +243,7 @@ async function getComparisonRequests(supabase: any, userId: string, excludeIds: 
         target_verdict_count,
         received_verdict_count
       `)
-      .in('status', ['pending', 'active'])
+      .in('status', ['open', 'in_progress'])
       .neq('user_id', userId)
       .limit(limit);
 
@@ -298,15 +298,18 @@ async function getSplitTestRequests(supabase: any, userId: string, excludeIds: s
       .select(`
         id,
         created_at,
+        title,
         context,
         photo_a_url,
         photo_b_url,
         status,
+        request_tier,
         target_verdict_count,
         received_verdict_count
       `)
-      .in('status', ['active', 'pending'])
+      .in('status', ['open', 'in_progress'])
       .neq('user_id', userId)
+      .is('deleted_at', null)
       .limit(limit);
 
     // Sanitize IDs to prevent SQL injection
@@ -329,17 +332,18 @@ async function getSplitTestRequests(supabase: any, userId: string, excludeIds: s
     subcategory: 'photo_comparison',
     media_type: 'split_test',
     media_url: req.photo_a_url,
-    text_content: req.context,
-    context: 'Which photo is better?',
+    text_content: req.context || req.title,
+    context: req.title || 'Which photo is better?',
     target_verdict_count: req.target_verdict_count,
     received_verdict_count: req.received_verdict_count,
     status: req.status,
-    request_tier: 'basic',
+    request_tier: req.request_tier || 'community',
     expert_only: false,
     priority_score: 5,
     split_test_data: {
       photo_a_url: req.photo_a_url,
-      photo_b_url: req.photo_b_url
+      photo_b_url: req.photo_b_url,
+      title: req.title
     }
   }));
   } catch (error) {

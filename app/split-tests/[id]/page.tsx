@@ -91,7 +91,7 @@ export default function SplitTestPage() {
       const { data: verdicts, error: verdictsError } = await supabase
         .from('split_test_verdicts')
         .select('*')
-        .eq('split_test_request_id', splitTestId)
+        .eq('split_test_id', splitTestId)
         .order('created_at', { ascending: false });
 
       if (verdictsError) throw verdictsError;
@@ -251,10 +251,15 @@ export default function SplitTestPage() {
                 )}
 
                 {/* Consensus Strength */}
-                {isCompleted && splitTest.consensus_strength && (
+                {isCompleted && splitTest.consensus_strength !== undefined && (
                   <div className="text-center pt-4 border-t border-gray-200">
                     <div className="text-lg font-semibold text-gray-900">Consensus Strength</div>
-                    <div className="text-2xl font-bold text-orange-600">{Math.round(splitTest.consensus_strength * 100)}%</div>
+                    <div className="text-2xl font-bold text-orange-600">
+                      {splitTest.consensus_strength > 1
+                        ? Math.round(splitTest.consensus_strength) // Already stored as 0-100
+                        : Math.round(splitTest.consensus_strength * 100) // Legacy 0-1 format
+                      }%
+                    </div>
                     <div className="text-sm text-gray-500">How much judges agreed</div>
                   </div>
                 )}
@@ -498,7 +503,11 @@ export default function SplitTestPage() {
                   <div className="flex justify-between">
                     <span className="text-gray-600">Consensus:</span>
                     <span className="text-gray-900 font-semibold">
-                      {splitTest.consensus_strength ? `${Math.round(splitTest.consensus_strength * 100)}%` : 'N/A'}
+                      {splitTest.consensus_strength !== undefined
+                        ? `${splitTest.consensus_strength > 1
+                            ? Math.round(splitTest.consensus_strength)
+                            : Math.round(splitTest.consensus_strength * 100)}%`
+                        : 'N/A'}
                     </span>
                   </div>
                   <div className="flex justify-between">
