@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { log } from '@/lib/logger';
 import { validateAndSanitizeInput, validateRequestBody, auditSecurityEvent } from '@/lib/security-validation';
 import {
@@ -487,8 +487,10 @@ const POST_Handler = async (request: NextRequest) => {
         ? requested_tone as 'encouraging' | 'honest' | 'brutally_honest'
         : 'honest';
 
+      // Use service client to bypass RLS for profile read/credit operations
+      const serviceClient = createServiceClient();
       const { request: createdRequest } = await createVerdictRequest(
-        supabase as any,
+        serviceClient as any,
         {
           userId: user.id,
           email: (user.email ?? null) as string | null,
@@ -520,7 +522,7 @@ const POST_Handler = async (request: NextRequest) => {
 
       // Trigger expert routing for appropriate tiers (async, don't block response)
       if (request_tier === 'pro' || request_tier === 'standard') {
-        const expertRouting = new ExpertRoutingService(supabase as any);
+        const expertRouting = new ExpertRoutingService(serviceClient as any);
 
         // Route asynchronously to avoid blocking the response
         // We check the result and log appropriately for visibility
