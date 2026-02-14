@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Shield, Linkedin, CheckCircle, AlertCircle, ExternalLink, Zap, Lock, RefreshCw, HelpCircle, Copy, Clipboard } from 'lucide-react';
+import { Shield, Linkedin, CheckCircle, AlertCircle, Zap, Lock, RefreshCw, HelpCircle, Clipboard } from 'lucide-react';
 import { TouchButton } from '@/components/ui/touch-button';
 import { Badge } from '@/components/ui/badge';
 
@@ -282,6 +282,57 @@ export function StreamlinedLinkedInVerification({
   }
 
   if (verificationStep === 'failed') {
+    // Context-specific error messages and recovery options
+    const errorContent = {
+      not_found: {
+        title: "Profile Not Found",
+        subtitle: "We couldn't find this LinkedIn profile",
+        suggestions: [
+          "Double-check your LinkedIn username is correct",
+          "Make sure your profile URL includes /in/your-name",
+          "Try copying the URL directly from your LinkedIn profile page"
+        ]
+      },
+      private: {
+        title: "Profile is Private",
+        subtitle: "This profile has restricted visibility",
+        suggestions: [
+          "Temporarily set your LinkedIn profile to public",
+          "Go to LinkedIn Settings > Visibility > Edit your public profile",
+          "Try again after updating your settings"
+        ]
+      },
+      network: {
+        title: "Connection Issue",
+        subtitle: "We couldn't reach our verification service",
+        suggestions: [
+          "Check your internet connection",
+          "Wait a moment and try again",
+          "If the problem persists, contact support"
+        ]
+      },
+      validation: {
+        title: "Invalid Format",
+        subtitle: "Please check your LinkedIn URL",
+        suggestions: [
+          "Enter your LinkedIn username (e.g., john-doe)",
+          "Or paste your full profile URL",
+          "Example: linkedin.com/in/your-name"
+        ]
+      },
+      generic: {
+        title: "Verification Issue",
+        subtitle: "Something went wrong",
+        suggestions: [
+          "Double-check your LinkedIn URL is correct",
+          "Try again in a few moments",
+          "Contact support if the issue continues"
+        ]
+      }
+    };
+
+    const content = errorContent[errorState?.type || 'generic'];
+
     return (
       <div className="bg-orange-50 border border-orange-200 rounded-xl p-6">
         <div className="flex items-center gap-3 mb-4">
@@ -289,22 +340,64 @@ export function StreamlinedLinkedInVerification({
             <AlertCircle className="h-5 w-5" />
           </div>
           <div>
-            <h3 className="font-semibold text-orange-900">Verification Not Complete</h3>
-            <p className="text-sm text-orange-700">Unable to verify this profile automatically</p>
+            <h3 className="font-semibold text-orange-900">{content.title}</h3>
+            <p className="text-sm text-orange-700">{content.subtitle}</p>
           </div>
         </div>
-        <p className="text-sm text-orange-700 mb-4">
-          {errorMessage || 'Please ensure your LinkedIn profile URL is correct and includes /in/ followed by your username.'}
-        </p>
-        <button
-          onClick={() => {
-            setVerificationStep('start');
-            setErrorMessage('');
-          }}
-          className="w-full py-2 px-4 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition"
-        >
-          Try Again
-        </button>
+
+        {/* Specific error message if available */}
+        {errorState?.message && errorState.type !== 'validation' && (
+          <p className="text-sm text-orange-700 mb-3 bg-orange-100 rounded-lg px-3 py-2">
+            {errorState.message}
+          </p>
+        )}
+
+        {/* Recovery suggestions */}
+        <div className="mb-4">
+          <p className="text-xs font-medium text-orange-800 mb-2">Try this:</p>
+          <ul className="space-y-1">
+            {content.suggestions.map((suggestion, i) => (
+              <li key={i} className="text-sm text-orange-700 flex items-start gap-2">
+                <span className="text-orange-400 mt-0.5">•</span>
+                {suggestion}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* Recovery actions - multiple pathways */}
+        <div className="space-y-2">
+          <button
+            onClick={() => {
+              setVerificationStep('start');
+              setErrorState(null);
+              setLinkedinInput('');
+              setTimeout(() => inputRef.current?.focus(), 100);
+            }}
+            className="w-full py-3 px-4 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition flex items-center justify-center gap-2 font-medium"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Try Again
+          </button>
+
+          <div className="flex gap-2">
+            <a
+              href="https://linkedin.com/in/me"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 py-2.5 px-4 bg-white border border-orange-200 text-orange-700 rounded-lg hover:bg-orange-50 transition text-sm font-medium text-center"
+            >
+              Open My LinkedIn
+            </a>
+            <a
+              href="mailto:support@verdict.app?subject=LinkedIn Verification Issue"
+              className="flex-1 py-2.5 px-4 bg-white border border-orange-200 text-orange-700 rounded-lg hover:bg-orange-50 transition text-sm font-medium text-center flex items-center justify-center gap-1.5"
+            >
+              <HelpCircle className="h-3.5 w-3.5" />
+              Get Help
+            </a>
+          </div>
+        </div>
       </div>
     );
   }
@@ -342,57 +435,119 @@ export function StreamlinedLinkedInVerification({
       <div className="space-y-4">
         <div>
           <label htmlFor="linkedin-url" className="block text-sm font-medium text-gray-700 mb-2">
-            LinkedIn Profile URL
+            LinkedIn Profile
           </label>
-          <div className="relative">
-            <input
-              type="url"
-              id="linkedin-url"
-              value={linkedinProfile}
-              onChange={(e) => {
-                setLinkedinProfile(e.target.value);
-                if (errorMessage) setErrorMessage(''); // Clear error on input change
-              }}
-              placeholder="https://linkedin.com/in/your-profile"
-              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 ${
-                errorMessage ? 'border-red-300 bg-red-50' : 'border-gray-300'
-              }`}
-            />
-            <ExternalLink className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <div className="relative flex gap-2">
+            {/* Smart input with mobile optimization */}
+            <div className="relative flex-1">
+              <input
+                ref={inputRef}
+                type="url"
+                inputMode="url"
+                autoComplete="url"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck="false"
+                id="linkedin-url"
+                value={linkedinInput}
+                onChange={(e) => setLinkedinInput(e.target.value)}
+                onPaste={handlePaste}
+                placeholder="your-username or full URL"
+                className={`w-full pl-4 pr-10 py-3 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors ${
+                  errorState?.type === 'validation'
+                    ? 'border-red-300 bg-red-50'
+                    : validationState.valid
+                    ? 'border-green-300 bg-green-50/50'
+                    : 'border-gray-300'
+                }`}
+              />
+              {/* Validation indicator */}
+              {linkedinInput && (
+                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                  {validationState.valid ? (
+                    <CheckCircle className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <Linkedin className="h-4 w-4 text-gray-400" />
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Mobile paste button */}
+            <button
+              type="button"
+              onClick={handlePasteButton}
+              className="px-3 py-3 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition flex items-center justify-center min-h-[48px] shrink-0"
+              title="Paste from clipboard"
+            >
+              <Clipboard className="h-4 w-4 text-gray-600" />
+            </button>
           </div>
-          {errorMessage ? (
+
+          {/* Real-time validation hint */}
+          {errorState?.type === 'validation' ? (
             <p className="mt-2 text-sm text-red-600 flex items-center gap-1.5">
               <AlertCircle className="h-4 w-4 flex-shrink-0" />
-              {errorMessage}
+              {errorState.message}
+            </p>
+          ) : validationState.hint ? (
+            <p className={`mt-1.5 text-xs ${validationState.valid ? 'text-green-600' : 'text-gray-500'}`}>
+              {validationState.valid && <CheckCircle className="h-3 w-3 inline mr-1" />}
+              {validationState.hint}
             </p>
           ) : (
-            <p className="mt-1 text-xs text-gray-600">
-              We'll automatically detect your professional expertise from your profile
+            <p className="mt-1 text-xs text-gray-500">
+              Paste your profile URL or just enter your username
             </p>
           )}
         </div>
 
         <TouchButton
           onClick={handleInstantVerification}
-          disabled={!linkedinProfile.trim() || isSubmitting}
-          className="w-full bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-700 hover:to-indigo-700 text-white disabled:opacity-50"
+          disabled={!validationState.valid || isSubmitting}
+          className="w-full bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-700 hover:to-indigo-700 text-white disabled:opacity-50 min-h-[48px]"
         >
           {isSubmitting ? (
             <>
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-              Connecting...
+              Verifying...
             </>
           ) : (
             <>
               <Linkedin className="h-4 w-4 mr-2" />
-              Connect LinkedIn
+              Verify & Unlock +25%
             </>
           )}
         </TouchButton>
 
-        <div className="flex items-center justify-center gap-2 text-xs text-gray-500">
-          <CheckCircle className="h-3 w-3 text-sky-600" />
-          <span>Instant verification • Unlocks +25% earnings</span>
+        {/* Trust & Privacy - Expandable */}
+        <div className="pt-2 border-t border-sky-200/50">
+          <button
+            type="button"
+            onClick={() => setShowPrivacyInfo(!showPrivacyInfo)}
+            className="w-full flex items-center justify-center gap-2 text-xs text-gray-500 hover:text-gray-700 transition py-1"
+          >
+            <Lock className="h-3 w-3" />
+            <span>Your privacy is protected</span>
+            <span className={`transition-transform ${showPrivacyInfo ? 'rotate-180' : ''}`}>▾</span>
+          </button>
+
+          {showPrivacyInfo && (
+            <div className="mt-2 p-3 bg-white/60 rounded-lg text-xs text-gray-600 space-y-2">
+              <p className="flex items-start gap-2">
+                <Shield className="h-3 w-3 text-sky-600 mt-0.5 shrink-0" />
+                <span>We only verify your profile exists and extract your professional title. We don't store your connections, posts, or private data.</span>
+              </p>
+              <p className="flex items-start gap-2">
+                <Lock className="h-3 w-3 text-sky-600 mt-0.5 shrink-0" />
+                <span>Your LinkedIn URL is encrypted and never shared with other users or third parties.</span>
+              </p>
+              <p className="flex items-start gap-2">
+                <CheckCircle className="h-3 w-3 text-sky-600 mt-0.5 shrink-0" />
+                <span>You can disconnect LinkedIn anytime from your account settings.</span>
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>

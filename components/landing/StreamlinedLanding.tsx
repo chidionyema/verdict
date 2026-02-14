@@ -25,25 +25,20 @@ import { TrustIndicators } from './TrustIndicators';
 import { LiveActivityFeed } from './LiveActivityFeed';
 import { StickyCTA } from './StickyCTA';
 import { useLocalizedPricing } from '@/hooks/use-pricing';
-import { trackABEvent } from '@/lib/ab-testing';
+import { useAnalytics } from '@/components/analytics-provider'; // Import useAnalytics hook
 
-interface StreamlinedLandingProps {
-  variant?: 'A' | 'B';
-  experimentId?: string;
-}
-
-export function StreamlinedLanding({ variant = 'A', experimentId }: StreamlinedLandingProps) {
+export function StreamlinedLanding() {
   const router = useRouter();
   const pricing = useLocalizedPricing();
+  const { trackEvent } = useAnalytics(); // Use the analytics hook
 
-  // Track CTA clicks for A/B testing
-  const handleCTAClick = (cta: 'primary' | 'secondary') => {
-    if (experimentId) {
-      trackABEvent(experimentId, variant, cta === 'primary' ? 'cta_click' : 'secondary_cta_click');
-    }
+  // Track CTA clicks
+  const handleCTAClick = (ctaName: string) => {
+    trackEvent('cta_click', { cta_name: ctaName });
   };
 
   const handleUseCaseCTA = () => {
+    trackEvent('use_case_cta_click');
     router.push('/submit');
   };
 
@@ -53,7 +48,7 @@ export function StreamlinedLanding({ variant = 'A', experimentId }: StreamlinedL
       <LiveActivityFeed variant="banner" />
 
       {/* SECTION 1: Enhanced Hero */}
-      <EnhancedHero variant={variant} onCTAClick={handleCTAClick} />
+      <EnhancedHero onCTAClick={() => handleCTAClick('enhanced_hero_primary')} />
 
       {/* SECTION 2: Social Proof Stats */}
       <div className="bg-white py-8">
@@ -63,7 +58,7 @@ export function StreamlinedLanding({ variant = 'A', experimentId }: StreamlinedL
       </div>
 
       {/* SECTION 3: How It Works + Demo */}
-      <DemoSection />
+      <DemoSection trackEvent={trackEvent} />
 
       {/* SECTION 4: Use Cases */}
       <div className="bg-white">
@@ -87,10 +82,10 @@ export function StreamlinedLanding({ variant = 'A', experimentId }: StreamlinedL
       </div>
 
       {/* SECTION 7: Pricing (Two Paths) */}
-      <PricingSection pricing={pricing} />
+      <PricingSection pricing={pricing} trackEvent={trackEvent} />
 
       {/* SECTION 8: Final CTA */}
-      <FinalCTASection pricing={pricing} />
+      <FinalCTASection pricing={pricing} trackEvent={trackEvent} />
 
       {/* Floating Activity Feed (desktop only) */}
       <LiveActivityFeed variant="floating" />
@@ -101,6 +96,7 @@ export function StreamlinedLanding({ variant = 'A', experimentId }: StreamlinedL
         ctaLink="/submit"
         secondaryText="Free to start"
         showTrust={true}
+        onCTAClick={() => handleCTAClick('sticky_cta')}
       />
     </div>
   );
@@ -109,7 +105,7 @@ export function StreamlinedLanding({ variant = 'A', experimentId }: StreamlinedL
 // ============================================
 // SECTION 2: Demo Section
 // ============================================
-function DemoSection() {
+function DemoSection({ trackEvent }: { trackEvent: (eventName: string, properties?: Record<string, unknown>) => void }) {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-100px" });
   const [activeStep, setActiveStep] = useState(0);
@@ -185,11 +181,22 @@ function DemoSection() {
 
   useEffect(() => {
     if (!isInView) return;
+    trackEvent('demo_section_viewed'); // Track when demo section comes into view
+
     const interval = setInterval(() => {
-      setActiveStep((prev) => (prev + 1) % steps.length);
+      setActiveStep((prev) => {
+        const nextStep = (prev + 1) % steps.length;
+        trackEvent('demo_step_changed', { step_number: nextStep + 1, step_title: steps[nextStep].title });
+        return nextStep;
+      });
     }, 3000);
     return () => clearInterval(interval);
-  }, [isInView, steps.length]);
+  }, [isInView, steps.length, trackEvent, steps]);
+
+  const handleStepClick = (index: number) => {
+    setActiveStep(index);
+    trackEvent('demo_step_clicked', { step_number: index + 1, step_title: steps[index].title });
+  };
 
   return (
     <section id="demo-section" ref={ref} className="py-24 bg-gray-50">
@@ -218,7 +225,7 @@ function DemoSection() {
               return (
                 <motion.button
                   key={index}
-                  onClick={() => setActiveStep(index)}
+                  onClick={() => handleStepClick(index)}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: isInView ? 1 : 0, x: isInView ? 0 : -20 }}
                   transition={{ delay: index * 0.1 }}
@@ -229,7 +236,7 @@ function DemoSection() {
                   }`}
                 >
                   <div className="flex items-start gap-4">
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
                       isActive ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600'
                     }`}>
                       <Icon className="h-6 w-6" />
@@ -516,3 +523,4 @@ function FinalCTASection({ pricing }: { pricing: ReturnType<typeof useLocalizedP
 }
 
 export default StreamlinedLanding;
+
