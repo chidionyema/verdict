@@ -24,6 +24,10 @@ export interface Profile {
   full_name: string | null;
   avatar_url: string | null;
   credits: number;
+  total_earned: number;
+  total_spent: number;
+  total_submissions: number;
+  total_reviews: number;
   is_judge: boolean;
   is_admin: boolean;
   is_expert: boolean;
@@ -63,6 +67,10 @@ const PROFILE_SELECT_FIELDS = `
   full_name,
   avatar_url,
   credits,
+  total_earned,
+  total_spent,
+  total_submissions,
+  total_reviews,
   is_judge,
   is_admin,
   is_expert,
@@ -117,6 +125,7 @@ export async function getProfile(
 /**
  * Ensure a profile exists for a user.
  * Creates one if missing, returns existing if found.
+ * Also grants initial credits if profile exists with 0 credits (fixes edge cases).
  * This is idempotent - safe to call multiple times.
  */
 export async function ensureProfile(
@@ -131,6 +140,32 @@ export async function ensureProfile(
   }
 
   if (existing.data) {
+    // Fix for edge case: profile exists but has 0 credits (possibly created by auth hook)
+    // Grant initial credits if user has never had any activity
+    if (
+      existing.data.credits === 0 &&
+      existing.data.total_spent === 0 &&
+      existing.data.total_earned === 0 &&
+      existing.data.total_submissions === 0
+    ) {
+      // This is a new user who somehow got a profile with 0 credits
+      // Grant them the initial credits
+      const { data: updated, error: updateError } = await supabase
+        .from('profiles')
+        .update({
+          credits: INITIAL_CREDITS,
+          updated_at: new Date().toISOString(),
+        } as any)
+        .eq('id', user.id)
+        .eq('credits', 0) // Only update if still 0 (avoid race conditions)
+        .select(PROFILE_SELECT_FIELDS)
+        .single();
+
+      if (!updateError && updated) {
+        return { success: true, data: updated as Profile };
+      }
+      // If update failed, return existing (another process may have updated it)
+    }
     return { success: true, data: existing.data };
   }
 

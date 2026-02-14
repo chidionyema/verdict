@@ -57,6 +57,7 @@ async function POST_Handler(request: NextRequest) {
           id: user.id,
           email: user.email,
           display_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'New Judge',
+          credits: 3, // Initial credits for new users
         });
 
         if (insertError) {
@@ -77,6 +78,7 @@ async function POST_Handler(request: NextRequest) {
         id: user.id,
         email: user.email,
         display_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'New Judge',
+        credits: 3, // Initial credits for new users
       });
 
       if (insertError) {
