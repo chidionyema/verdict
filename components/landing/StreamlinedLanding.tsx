@@ -312,7 +312,7 @@ function DemoSection({ trackEvent }: { trackEvent: (eventName: string, propertie
 // ============================================
 // SECTION 3: Pricing
 // ============================================
-function PricingSection({ pricing }: { pricing: ReturnType<typeof useLocalizedPricing> }) {
+function PricingSection({ pricing, trackEvent }: { pricing: ReturnType<typeof useLocalizedPricing>; trackEvent?: (eventName: string, properties?: Record<string, unknown>) => void }) {
   const router = useRouter();
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-100px" });
@@ -466,7 +466,7 @@ function PricingSection({ pricing }: { pricing: ReturnType<typeof useLocalizedPr
 // ============================================
 // SECTION 4: Final CTA
 // ============================================
-function FinalCTASection({ pricing }: { pricing: ReturnType<typeof useLocalizedPricing> }) {
+function FinalCTASection({ pricing, trackEvent }: { pricing: ReturnType<typeof useLocalizedPricing>; trackEvent?: (eventName: string, properties?: Record<string, unknown>) => void }) {
   const router = useRouter();
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-100px" });
