@@ -137,7 +137,8 @@ export function UnifiedNavigation() {
   const handleSignOut = async () => {
     const supabase = createClient();
     await supabase.auth.signOut();
-    router.push('/');
+    // Hard refresh to clear all client state
+    window.location.href = '/';
   };
 
   // Handle keyboard navigation for dropdowns

@@ -184,7 +184,8 @@ export default function Navigation() {
     try {
       const supabase = createClient();
       await supabase.auth.signOut();
-      router.push('/');
+      // Hard refresh to clear all client state
+      window.location.href = '/';
     } catch (error) {
       console.error('Error signing out:', error);
     }

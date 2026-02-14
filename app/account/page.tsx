@@ -134,8 +134,8 @@ function AccountContent() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    router.push('/');
-    router.refresh();
+    // Hard refresh to clear all client state
+    window.location.href = '/';
   };
 
   if (loading) {
