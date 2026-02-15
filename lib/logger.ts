@@ -35,8 +35,10 @@ class Logger {
     if (logtail) {
       logtail.info(message, context);
     }
-    if (this.isDev) {
-      console.log(`[INFO]`, message, context || '');
+    // Always log to console for visibility in Vercel logs
+    // TRACE logs are critical for debugging production issues
+    if (this.isDev || message.includes('[TRACE:') || message.includes('[API:') || message.includes('[PROFILE:')) {
+      console.log(`[INFO]`, message, context ? JSON.stringify(context) : '');
     }
   }
 

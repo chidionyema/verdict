@@ -12,6 +12,7 @@
  */
 
 import type { SupabaseClient, User } from '@supabase/supabase-js';
+import { log } from '@/lib/logger';
 
 // =============================================================================
 // TYPES
@@ -95,16 +96,65 @@ export async function getProfile(
   supabase: SupabaseClient,
   userId: string
 ): Promise<ProfileResult<Profile | null>> {
-  const { data, error } = await supabase
-    .from('profiles')
-    .select(PROFILE_SELECT_FIELDS)
-    .eq('id', userId)
-    .single();
+  const startTime = Date.now();
+
+  log.info('[PROFILE:getProfile] Starting profile fetch', {
+    userId: userId.substring(0, 8) + '...',
+  });
+
+  let data: any = null;
+  let error: any = null;
+
+  try {
+    const result = await supabase
+      .from('profiles')
+      .select(PROFILE_SELECT_FIELDS)
+      .eq('id', userId)
+      .single();
+
+    data = result.data;
+    error = result.error;
+  } catch (exception: any) {
+    log.error('[PROFILE:getProfile] Query threw exception', {
+      userId: userId.substring(0, 8) + '...',
+      errorMessage: exception?.message,
+      errorCode: exception?.code,
+      elapsed: Date.now() - startTime,
+    });
+    return {
+      success: false,
+      error: {
+        code: 'DB_ERROR',
+        message: `Query exception: ${exception?.message}`,
+        details: exception,
+      },
+    };
+  }
+
+  log.info('[PROFILE:getProfile] Query completed', {
+    userId: userId.substring(0, 8) + '...',
+    hasData: !!data,
+    hasError: !!error,
+    errorCode: error?.code || null,
+    errorMessage: error?.message || null,
+    credits: data?.credits ?? 'N/A',
+    elapsed: Date.now() - startTime,
+  });
 
   if (error) {
     if (error.code === 'PGRST116') {
+      log.info('[PROFILE:getProfile] Profile not found (PGRST116)', {
+        userId: userId.substring(0, 8) + '...',
+      });
       return { success: true, data: null };
     }
+    log.error('[PROFILE:getProfile] Database error', {
+      userId: userId.substring(0, 8) + '...',
+      errorCode: error.code,
+      errorMessage: error.message,
+      errorHint: error.hint,
+      errorDetails: error.details,
+    });
     return {
       success: false,
       error: {
@@ -128,7 +178,16 @@ export async function deductCredits(
   amount: number,
   description?: string
 ): Promise<ProfileResult<{ newBalance: number; previousBalance: number }>> {
+  const startTime = Date.now();
+
+  log.info('[PROFILE:deductCredits] Starting credit deduction', {
+    userId: userId.substring(0, 8) + '...',
+    amount,
+    description: description || 'N/A',
+  });
+
   if (amount <= 0) {
+    log.warn('[PROFILE:deductCredits] Invalid amount', { amount });
     return {
       success: false,
       error: {
@@ -139,13 +198,55 @@ export async function deductCredits(
   }
 
   // First, get current balance
-  const { data: profile, error: fetchError } = await supabase
-    .from('profiles')
-    .select('credits')
-    .eq('id', userId)
-    .single();
+  log.info('[PROFILE:deductCredits] Fetching current balance', {
+    userId: userId.substring(0, 8) + '...',
+  });
+
+  let profile: any = null;
+  let fetchError: any = null;
+
+  try {
+    const result = await supabase
+      .from('profiles')
+      .select('credits')
+      .eq('id', userId)
+      .single();
+
+    profile = result.data;
+    fetchError = result.error;
+  } catch (exception: any) {
+    log.error('[PROFILE:deductCredits] Fetch threw exception', {
+      userId: userId.substring(0, 8) + '...',
+      errorMessage: exception?.message,
+      errorCode: exception?.code,
+      elapsed: Date.now() - startTime,
+    });
+    return {
+      success: false,
+      error: {
+        code: 'DB_ERROR',
+        message: `Fetch exception: ${exception?.message}`,
+        details: exception,
+      },
+    };
+  }
+
+  log.info('[PROFILE:deductCredits] Fetch result', {
+    userId: userId.substring(0, 8) + '...',
+    hasProfile: !!profile,
+    hasError: !!fetchError,
+    currentCredits: profile?.credits ?? 'N/A',
+    errorCode: fetchError?.code || null,
+    errorMessage: fetchError?.message || null,
+  });
 
   if (fetchError || !profile) {
+    log.error('[PROFILE:deductCredits] Profile fetch failed', {
+      userId: userId.substring(0, 8) + '...',
+      errorCode: fetchError?.code,
+      errorMessage: fetchError?.message,
+      errorHint: fetchError?.hint,
+    });
     return {
       success: false,
       error: {
@@ -159,6 +260,11 @@ export async function deductCredits(
   const previousBalance = profile.credits;
 
   if (previousBalance < amount) {
+    log.warn('[PROFILE:deductCredits] Insufficient credits', {
+      userId: userId.substring(0, 8) + '...',
+      currentCredits: previousBalance,
+      requestedAmount: amount,
+    });
     return {
       success: false,
       error: {
@@ -169,26 +275,73 @@ export async function deductCredits(
   }
 
   // Atomic update with WHERE clause to prevent race conditions
-  // This UPDATE will only succeed if credits >= amount at execution time
-  const { data: updated, error: updateError } = await supabase
-    .from('profiles')
-    .update({
-      credits: previousBalance - amount,
-      updated_at: new Date().toISOString(),
-    } as any)
-    .eq('id', userId)
-    .gte('credits', amount) // Atomic check
-    .select('credits')
-    .single();
+  log.info('[PROFILE:deductCredits] Executing atomic update', {
+    userId: userId.substring(0, 8) + '...',
+    previousBalance,
+    newBalance: previousBalance - amount,
+  });
+
+  let updated: any = null;
+  let updateError: any = null;
+
+  try {
+    const result = await supabase
+      .from('profiles')
+      .update({
+        credits: previousBalance - amount,
+        updated_at: new Date().toISOString(),
+      } as any)
+      .eq('id', userId)
+      .gte('credits', amount) // Atomic check
+      .select('credits')
+      .single();
+
+    updated = result.data;
+    updateError = result.error;
+  } catch (exception: any) {
+    log.error('[PROFILE:deductCredits] Update threw exception', {
+      userId: userId.substring(0, 8) + '...',
+      errorMessage: exception?.message,
+      errorCode: exception?.code,
+      elapsed: Date.now() - startTime,
+    });
+    return {
+      success: false,
+      error: {
+        code: 'DB_ERROR',
+        message: `Update exception: ${exception?.message}`,
+        details: exception,
+      },
+    };
+  }
+
+  log.info('[PROFILE:deductCredits] Update result', {
+    userId: userId.substring(0, 8) + '...',
+    success: !!updated && !updateError,
+    newCredits: updated?.credits ?? 'N/A',
+    errorCode: updateError?.code || null,
+    errorMessage: updateError?.message || null,
+    elapsed: Date.now() - startTime,
+  });
 
   if (updateError || !updated) {
     // Race condition: balance changed between select and update
-    // Re-fetch to get accurate balance for error message
+    log.warn('[PROFILE:deductCredits] Update failed, checking for race condition', {
+      userId: userId.substring(0, 8) + '...',
+      errorCode: updateError?.code,
+      errorMessage: updateError?.message,
+    });
+
     const { data: current } = await supabase
       .from('profiles')
       .select('credits')
       .eq('id', userId)
       .single();
+
+    log.info('[PROFILE:deductCredits] Re-fetched balance after failure', {
+      userId: userId.substring(0, 8) + '...',
+      currentCredits: current?.credits ?? 0,
+    });
 
     return {
       success: false,
@@ -198,6 +351,14 @@ export async function deductCredits(
       },
     };
   }
+
+  log.info('[PROFILE:deductCredits] SUCCESS', {
+    userId: userId.substring(0, 8) + '...',
+    previousBalance,
+    newBalance: updated.credits,
+    deducted: amount,
+    elapsed: Date.now() - startTime,
+  });
 
   return {
     success: true,

@@ -3,6 +3,7 @@ import type { Database, VerdictRequest, VerdictResponse } from './database.types
 import { createClient } from '@/lib/supabase/client';
 import { createServiceClient } from '@/lib/supabase/server';
 import { getProfile, deductCredits, addCredits } from '@/lib/profile';
+import { log } from '@/lib/logger';
 
 type DbClient = SupabaseClient<Database>;
 
@@ -63,6 +64,9 @@ export async function createVerdictRequest(
   supabase: DbClient,
   input: CreateRequestInput
 ): Promise<CreateRequestResult> {
+  const traceId = `vr_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const startTime = Date.now();
+
   const {
     userId,
     email,
@@ -83,59 +87,209 @@ export async function createVerdictRequest(
   const targetCount = targetVerdictCount ?? 3;
   const creditsToUse = creditsToCharge ?? 1;
 
-  // Profile must exist (created during auth callback)
-  const profileResult = await getProfile(supabase, userId);
+  log.info(`[TRACE:${traceId}] createVerdictRequest START`, {
+    step: '0_init',
+    userId: userId.substring(0, 8) + '...',
+    category,
+    media_type,
+    requestTier,
+    creditsToUse,
+    targetCount,
+    hasMediaUrl: !!media_url,
+    hasTextContent: !!text_content,
+    contextLength: context?.length || 0,
+  });
+
+  // STEP 1: Profile lookup
+  log.info(`[TRACE:${traceId}] Step 1: Fetching profile`, { step: '1_profile_start' });
+  const profileStartTime = Date.now();
+
+  let profileResult;
+  try {
+    profileResult = await getProfile(supabase, userId);
+  } catch (profileError: any) {
+    log.error(`[TRACE:${traceId}] Step 1 EXCEPTION: getProfile threw`, {
+      step: '1_profile_exception',
+      errorMessage: profileError?.message,
+      errorCode: profileError?.code,
+      errorStack: profileError?.stack?.split('\n').slice(0, 3),
+      elapsed: Date.now() - profileStartTime,
+    });
+    throw new Error(`Profile lookup exception: ${profileError?.message}`);
+  }
+
+  log.info(`[TRACE:${traceId}] Step 1: getProfile result`, {
+    step: '1_profile_result',
+    success: profileResult.success,
+    hasData: !!profileResult.data,
+    credits: profileResult.success && profileResult.data ? (profileResult.data as any).credits : 'N/A',
+    errorCode: !profileResult.success ? profileResult.error.code : null,
+    errorMessage: !profileResult.success ? profileResult.error.message : null,
+    elapsed: Date.now() - profileStartTime,
+  });
 
   if (!profileResult.success) {
+    log.error(`[TRACE:${traceId}] Step 1 FAILED: Database error`, {
+      step: '1_profile_db_error',
+      errorCode: profileResult.error.code,
+      errorMessage: profileResult.error.message,
+      errorDetails: profileResult.error.details,
+    });
     throw new Error(`Database error: ${profileResult.error.message}`);
   }
 
   if (!profileResult.data) {
+    log.error(`[TRACE:${traceId}] Step 1 FAILED: Profile not found`, {
+      step: '1_profile_not_found',
+      userId: userId.substring(0, 8) + '...',
+    });
     throw new Error('Profile not found. Please refresh and try again.');
   }
 
-  // Deduct credits using atomic profile service
-  const deductResult = await deductCredits(supabase, userId, creditsToUse);
+  // STEP 2: Credit deduction
+  log.info(`[TRACE:${traceId}] Step 2: Deducting credits`, {
+    step: '2_deduct_start',
+    currentCredits: (profileResult.data as any).credits,
+    creditsToDeduct: creditsToUse,
+  });
+  const deductStartTime = Date.now();
+
+  let deductResult;
+  try {
+    deductResult = await deductCredits(supabase, userId, creditsToUse);
+  } catch (deductError: any) {
+    log.error(`[TRACE:${traceId}] Step 2 EXCEPTION: deductCredits threw`, {
+      step: '2_deduct_exception',
+      errorMessage: deductError?.message,
+      errorCode: deductError?.code,
+      errorStack: deductError?.stack?.split('\n').slice(0, 3),
+      elapsed: Date.now() - deductStartTime,
+    });
+    throw new Error(`Credit deduction exception: ${deductError?.message}`);
+  }
+
+  log.info(`[TRACE:${traceId}] Step 2: deductCredits result`, {
+    step: '2_deduct_result',
+    success: deductResult.success,
+    newBalance: deductResult.success ? deductResult.data.newBalance : 'N/A',
+    previousBalance: deductResult.success ? deductResult.data.previousBalance : 'N/A',
+    errorCode: !deductResult.success ? deductResult.error.code : null,
+    errorMessage: !deductResult.success ? deductResult.error.message : null,
+    elapsed: Date.now() - deductStartTime,
+  });
 
   if (!deductResult.success) {
     if (deductResult.error.code === 'INSUFFICIENT_CREDITS') {
+      log.warn(`[TRACE:${traceId}] Step 2 FAILED: Insufficient credits`, {
+        step: '2_deduct_insufficient',
+        errorMessage: deductResult.error.message,
+      });
       const err = new Error(deductResult.error.message);
       // @ts-expect-error augment error
       err.code = 'INSUFFICIENT_CREDITS';
       throw err;
     }
+    log.error(`[TRACE:${traceId}] Step 2 FAILED: Deduction error`, {
+      step: '2_deduct_error',
+      errorCode: deductResult.error.code,
+      errorMessage: deductResult.error.message,
+      errorDetails: deductResult.error.details,
+    });
     throw new Error(`Failed to deduct credits: ${deductResult.error.message}`);
   }
 
   const creditsAfterDeduction = deductResult.data.newBalance;
 
-  // Create the request (only include columns that exist in the database schema)
-  const { data: newRequest, error: createRequestError } = await (supabase as any)
-    .from('verdict_requests')
-    .insert({
-      user_id: userId,
-      category,
-      subcategory: subcategory || null,
-      media_type,
-      media_url: media_type === 'photo' || media_type === 'audio' ? media_url || null : null,
-      text_content: media_type === 'text' ? text_content || null : null,
-      context,
-      requested_tone: requestedTone || 'honest',
-      status: 'open',
-      target_verdict_count: targetCount,
-      received_verdict_count: 0,
-      request_tier: requestTier || 'community',
-      visibility: visibility || 'public',  // Default to public so judges can see it
-    })
-    .select()
-    .single();
+  // STEP 3: Create the request
+  log.info(`[TRACE:${traceId}] Step 3: Inserting verdict_request`, {
+    step: '3_insert_start',
+    category,
+    media_type,
+    requestTier: requestTier || 'community',
+    targetCount,
+  });
+  const insertStartTime = Date.now();
+
+  const insertPayload = {
+    user_id: userId,
+    category,
+    subcategory: subcategory || null,
+    media_type,
+    media_url: media_type === 'photo' || media_type === 'audio' ? media_url || null : null,
+    text_content: media_type === 'text' ? text_content || null : null,
+    context,
+    requested_tone: requestedTone || 'honest',
+    status: 'open',
+    target_verdict_count: targetCount,
+    received_verdict_count: 0,
+    request_tier: requestTier || 'community',
+    visibility: visibility || 'public',
+  };
+
+  let createRequestError: any = null;
+  let newRequest: any = null;
+
+  try {
+    const result = await (supabase as any)
+      .from('verdict_requests')
+      .insert(insertPayload)
+      .select()
+      .single();
+
+    newRequest = result.data;
+    createRequestError = result.error;
+  } catch (insertException: any) {
+    log.error(`[TRACE:${traceId}] Step 3 EXCEPTION: Insert threw`, {
+      step: '3_insert_exception',
+      errorMessage: insertException?.message,
+      errorCode: insertException?.code,
+      errorStack: insertException?.stack?.split('\n').slice(0, 3),
+      elapsed: Date.now() - insertStartTime,
+    });
+
+    // Refund credits
+    log.info(`[TRACE:${traceId}] Refunding credits after exception`, { step: '3_refund' });
+    await addCredits(supabase, userId, creditsToUse, 'Refund: request creation exception');
+
+    throw new Error(`Insert exception: ${insertException?.message}`);
+  }
+
+  log.info(`[TRACE:${traceId}] Step 3: Insert result`, {
+    step: '3_insert_result',
+    success: !createRequestError && !!newRequest,
+    hasData: !!newRequest,
+    requestId: newRequest?.id?.substring(0, 8) || null,
+    errorMessage: createRequestError?.message || null,
+    errorCode: createRequestError?.code || null,
+    errorHint: createRequestError?.hint || null,
+    errorDetails: createRequestError?.details || null,
+    elapsed: Date.now() - insertStartTime,
+  });
 
   if (createRequestError || !newRequest) {
-    // Refund credits on failure using profile service
+    log.error(`[TRACE:${traceId}] Step 3 FAILED: Insert failed`, {
+      step: '3_insert_failed',
+      errorMessage: createRequestError?.message,
+      errorCode: createRequestError?.code,
+      errorHint: createRequestError?.hint,
+      errorDetails: createRequestError?.details,
+    });
+
+    // Refund credits on failure
+    log.info(`[TRACE:${traceId}] Refunding credits after insert failure`, { step: '3_refund' });
     await addCredits(supabase, userId, creditsToUse, 'Refund: request creation failed');
 
     throw new Error(`Failed to create request: ${createRequestError?.message}`);
   }
+
+  const totalElapsed = Date.now() - startTime;
+  log.info(`[TRACE:${traceId}] createVerdictRequest SUCCESS`, {
+    step: '4_complete',
+    requestId: newRequest.id,
+    totalElapsed,
+    creditsDeducted: creditsToUse,
+    newBalance: creditsAfterDeduction,
+  });
 
   return { request: newRequest };
 }

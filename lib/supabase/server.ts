@@ -119,9 +119,29 @@ export async function createClient(): Promise<SupabaseClient<Database>> {
 
 // Service role client for admin operations (bypasses RLS)
 export function createServiceClient(): SupabaseClient<Database> {
+  const url = getSupabaseUrl();
+  const serviceKey = getSupabaseServiceKey();
+
+  // Detailed logging for debugging
+  console.log('[SUPABASE:createServiceClient] Creating service client', {
+    hasUrl: !!url,
+    urlStart: url?.substring(0, 30) || 'MISSING',
+    hasServiceKey: !!serviceKey,
+    serviceKeyLength: serviceKey?.length || 0,
+    serviceKeyStart: serviceKey?.substring(0, 15) || 'MISSING',
+    isPlaceholder: serviceKey === 'your-service-role-key',
+    startsWithEyJ: serviceKey?.startsWith('eyJ') || false,
+  });
+
+  if (!serviceKey || serviceKey.length < 50) {
+    console.error('[SUPABASE:createServiceClient] CRITICAL: Service key is missing or too short', {
+      keyLength: serviceKey?.length || 0,
+    });
+  }
+
   return createServerClient<Database>(
-    getSupabaseUrl(),
-    getSupabaseServiceKey(),
+    url,
+    serviceKey,
     {
       cookies: {
         getAll() {

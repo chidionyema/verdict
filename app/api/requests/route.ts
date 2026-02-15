@@ -303,13 +303,31 @@ export const GET = withRateLimit(GET_Handler, rateLimitPresets.standard);
 
 // POST /api/requests - Create a new verdict request
 const POST_Handler = async (request: NextRequest) => {
+  const traceId = `api_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const startTime = Date.now();
+
+  log.info(`[API:${traceId}] POST /api/requests START`, {
+    step: 'api_start',
+    timestamp: new Date().toISOString(),
+  });
+
   try {
+    log.info(`[API:${traceId}] Creating supabase client`, { step: 'api_create_client' });
     const supabase = await createClient();
 
+    log.info(`[API:${traceId}] Authenticating user`, { step: 'api_auth' });
     const {
       data: { user },
       error: authError,
     } = await supabase.auth.getUser();
+
+    log.info(`[API:${traceId}] Auth result`, {
+      step: 'api_auth_result',
+      hasUser: !!user,
+      userId: user?.id?.substring(0, 8) || null,
+      hasAuthError: !!authError,
+      authErrorMessage: authError?.message || null,
+    });
 
     if (authError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -494,21 +512,61 @@ const POST_Handler = async (request: NextRequest) => {
     try {
       // Validate and normalize requested tone
       const validTones = ['encouraging', 'honest', 'brutally_honest'];
-      const normalizedTone = requested_tone && validTones.includes(requested_tone) 
+      const normalizedTone = requested_tone && validTones.includes(requested_tone)
         ? requested_tone as 'encouraging' | 'honest' | 'brutally_honest'
         : 'honest';
 
       // Use service client to bypass RLS for profile read/credit operations
       // FAIL FAST: Check if service key is properly configured
       const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+      log.info(`[API:${traceId}] Checking service key configuration`, {
+        step: 'api_service_key_check',
+        hasServiceKey: !!serviceKey,
+        serviceKeyLength: serviceKey?.length || 0,
+        isPlaceholder: serviceKey === 'your-service-role-key',
+        startsWithEyJ: serviceKey?.startsWith('eyJ') || false,
+      });
+
       if (!serviceKey || serviceKey === 'your-service-role-key' || serviceKey.length < 100) {
-        log.error('CONFIGURATION ERROR: SUPABASE_SERVICE_ROLE_KEY not properly configured');
+        log.error(`[API:${traceId}] CONFIGURATION ERROR: Service key invalid`, {
+          step: 'api_service_key_invalid',
+          hasKey: !!serviceKey,
+          keyLength: serviceKey?.length || 0,
+          isPlaceholder: serviceKey === 'your-service-role-key',
+        });
         return NextResponse.json({
           error: 'Server configuration error. Please contact support.',
           details: 'Service role key not configured'
         }, { status: 500 });
       }
-      const serviceClient = createServiceClient();
+
+      log.info(`[API:${traceId}] Creating service client`, { step: 'api_create_service_client' });
+      let serviceClient;
+      try {
+        serviceClient = createServiceClient();
+        log.info(`[API:${traceId}] Service client created successfully`, { step: 'api_service_client_created' });
+      } catch (serviceClientError: any) {
+        log.error(`[API:${traceId}] Failed to create service client`, {
+          step: 'api_service_client_error',
+          errorMessage: serviceClientError?.message,
+          errorStack: serviceClientError?.stack?.split('\n').slice(0, 3),
+        });
+        return NextResponse.json({
+          error: 'Server configuration error. Please contact support.',
+          details: 'Service client creation failed'
+        }, { status: 500 });
+      }
+
+      log.info(`[API:${traceId}] Calling createVerdictRequest`, {
+        step: 'api_create_request_start',
+        userId: user.id.substring(0, 8) + '...',
+        category,
+        tier: request_tier || 'community',
+        creditsToCharge: tierConfig.credits,
+        targetVerdictCount: tierConfig.verdicts,
+      });
+
       const { request: createdRequest } = await createVerdictRequest(
         serviceClient as any,
         {
@@ -578,9 +636,27 @@ const POST_Handler = async (request: NextRequest) => {
         });
       }
 
+      log.info(`[API:${traceId}] createVerdictRequest SUCCESS`, {
+        step: 'api_create_request_success',
+        requestId: createdRequest.id,
+        elapsed: Date.now() - startTime,
+      });
+
       return NextResponse.json({ request: createdRequest }, { status: 201 });
     } catch (err: any) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+
+      log.error(`[API:${traceId}] createVerdictRequest FAILED`, {
+        step: 'api_create_request_error',
+        errorMessage,
+        errorCode: err?.code,
+        errorDetails: err?.details || err?.hint,
+        errorStack: err?.stack?.split('\n').slice(0, 5),
+        elapsed: Date.now() - startTime,
+      });
+
       if (err?.code === 'INSUFFICIENT_CREDITS') {
+        log.info(`[API:${traceId}] Returning 402 Insufficient Credits`, { step: 'api_402_response' });
         return NextResponse.json(
           {
             error: 'Insufficient credits. Please purchase more.',
@@ -591,14 +667,13 @@ const POST_Handler = async (request: NextRequest) => {
       }
 
       // Log detailed error for debugging
-      const errorMessage = err instanceof Error ? err.message : String(err);
-      log.error('Failed to create verdict request', err, {
-        userId: user.id,
+      log.error(`[API:${traceId}] Returning 500 error`, {
+        step: 'api_500_response',
+        userId: user.id.substring(0, 8) + '...',
         category,
         tier: request_tier || tier,
         errorMessage,
         errorCode: err?.code,
-        errorDetails: err?.details || err?.hint,
       });
 
       return NextResponse.json(
@@ -610,8 +685,13 @@ const POST_Handler = async (request: NextRequest) => {
         { status: 500 }
       );
     }
-  } catch (error) {
-    log.error('Requests POST endpoint error', error);
+  } catch (error: any) {
+    log.error(`[API:${traceId}] Outer catch - fatal error`, {
+      step: 'api_fatal_error',
+      errorMessage: error?.message,
+      errorStack: error?.stack?.split('\n').slice(0, 5),
+      elapsed: Date.now() - startTime,
+    });
     return NextResponse.json(
       {
         error: 'Internal server error',
