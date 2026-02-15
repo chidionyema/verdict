@@ -51,7 +51,9 @@
       "Bash(fi:*)",
       "Bash(wc:*)",
       "WebSearch",
-      "Bash(lsof:*)"
+      "Bash(lsof:*)",
+      "Bash(git push:*)",
+      "Bash(gh run list:*)"
     ],
     "deny": [],
     "ask": []

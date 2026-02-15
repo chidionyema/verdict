@@ -84,8 +84,8 @@ export async function createVerdictRequest(
     requestTier,
   } = input;
 
-  const targetCount = targetVerdictCount ?? 3;
-  const creditsToUse = creditsToCharge ?? 1;
+  const targetCount = targetVerdictCount || 3;
+  const creditsToUse = creditsToCharge || 1;
 
   log.info(`[TRACE:${traceId}] createVerdictRequest START`, {
     step: '0_init',
