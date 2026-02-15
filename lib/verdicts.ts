@@ -210,6 +210,8 @@ export async function createVerdictRequest(
   });
   const insertStartTime = Date.now();
 
+  // NOTE: verdict_requests table does NOT have a visibility column
+  // (unlike comparison_requests which does)
   const insertPayload = {
     user_id: userId,
     category,
@@ -223,7 +225,6 @@ export async function createVerdictRequest(
     target_verdict_count: targetCount,
     received_verdict_count: 0,
     request_tier: requestTier || 'community',
-    visibility: visibility || 'public',
   };
 
   let createRequestError: any = null;
