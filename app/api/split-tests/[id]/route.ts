@@ -109,7 +109,7 @@ async function GET_Handler(
       const { data: existingVerdict } = await supabase
         .from('split_test_verdicts')
         .select('id')
-        .eq('split_test_request_id', splitTestId)
+        .eq('split_test_id', splitTestId)
         .eq('judge_id', user.id)
         .single();
 
