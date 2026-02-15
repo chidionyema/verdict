@@ -50,7 +50,8 @@
       "Bash(else)",
       "Bash(fi:*)",
       "Bash(wc:*)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(lsof:*)"
     ],
     "deny": [],
     "ask": []

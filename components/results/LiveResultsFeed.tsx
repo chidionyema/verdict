@@ -74,7 +74,8 @@ export function LiveResultsFeed({
       try {
         // Fetch updated split test with winner
         const supabase = createClient();
-        const { data } = await supabase
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data } = await (supabase as any)
           .from('split_test_requests')
           .select('winning_photo, consensus_strength')
           .eq('id', splitTestId)

@@ -125,7 +125,7 @@ export function JudgeDemographicsForm({
   const [step, setStep] = useState(0);
 
   const steps = compact
-    ? [{ fields: ['age_range', 'gender', 'location'] as const }]
+    ? [{ title: 'Basic Info', fields: ['age_range', 'gender', 'location'] as const, icon: User }]
     : [
         { title: 'Basic Info', fields: ['age_range', 'gender'] as const, icon: User },
         { title: 'Background', fields: ['location', 'education_level', 'profession'] as const, icon: Briefcase },

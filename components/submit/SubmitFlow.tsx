@@ -266,6 +266,18 @@ export function SubmitFlow({ initialStep, returnFrom }: SubmitFlowProps) {
           return;
         }
 
+        // Handle validation errors
+        if (response.status === 400) {
+          const errorMsg = result.error || 'Invalid request';
+          const details = result.details ? ` ${result.details}` : '';
+          throw new Error(`${errorMsg}${details}`);
+        }
+
+        // Handle auth errors
+        if (response.status === 401) {
+          throw new Error('session expired');
+        }
+
         throw new Error(result.error || 'Failed to submit request');
       }
 
@@ -285,6 +297,13 @@ export function SubmitFlow({ initialStep, returnFrom }: SubmitFlowProps) {
         toast.error('Your session has expired. Please sign in again to submit your request.');
       } else if (errorMessage.includes('upload') || errorMessage.includes('file')) {
         toast.error('Failed to upload your content. Please try again or use a different file.');
+      } else if (errorMessage.includes('Invalid pricing tier')) {
+        toast.error('There was an issue with the selected tier. Please try a different tier.');
+      } else if (errorMessage.includes('community guidelines') || errorMessage.includes('moderation')) {
+        toast.error('Your content doesn\'t meet our guidelines. Please review and try again.');
+      } else if (errorMessage) {
+        // Show the actual error message from the server
+        toast.error(errorMessage);
       } else {
         toast.error('We couldn\'t submit your request. Please try again. Your draft has been saved.');
       }
