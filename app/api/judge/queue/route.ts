@@ -290,9 +290,16 @@ async function getComparisonRequests(supabase: any, userId: string, excludeIds: 
   }
 }
 
-// Fetch split test requests
+// Fetch split test requests with demographic targeting support
 async function getSplitTestRequests(supabase: any, userId: string, excludeIds: string[], limit: number) {
   try {
+    // Get judge demographics for matching
+    const { data: judgeDemographics } = await supabase
+      .from('judge_demographics')
+      .select('age_range, gender, location')
+      .eq('judge_id', userId)
+      .single();
+
     let query = supabase
       .from('split_test_requests')
       .select(`
@@ -310,7 +317,7 @@ async function getSplitTestRequests(supabase: any, userId: string, excludeIds: s
       .in('status', ['open', 'in_progress'])
       .neq('user_id', userId)
       .is('deleted_at', null)
-      .limit(limit);
+      .limit(limit * 2); // Fetch more to filter by demographics
 
     // Sanitize IDs to prevent SQL injection
     const safeExcludeIds = sanitizeUUIDs(excludeIds);
@@ -323,29 +330,95 @@ async function getSplitTestRequests(supabase: any, userId: string, excludeIds: s
       console.log('Split test requests table not found, returning empty array');
       return [];
     }
-  
-  // Normalize split test request format to match verdict requests
-  return (data || []).map((req: any) => ({
-    id: req.id,
-    created_at: req.created_at,
-    category: 'split_test',
-    subcategory: 'photo_comparison',
-    media_type: 'split_test',
-    media_url: req.photo_a_url,
-    text_content: req.context || req.title,
-    context: req.title || 'Which photo is better?',
-    target_verdict_count: req.target_verdict_count,
-    received_verdict_count: req.received_verdict_count,
-    status: req.status,
-    request_tier: req.request_tier || 'community',
-    expert_only: false,
-    priority_score: 5,
-    split_test_data: {
-      photo_a_url: req.photo_a_url,
-      photo_b_url: req.photo_b_url,
-      title: req.title
-    }
-  }));
+
+    // Check for demographic-targeted segments
+    const splitTestsWithSegments = await Promise.all(
+      (data || []).map(async (req: any) => {
+        // Check if this split test has segments
+        const { data: segments } = await supabase
+          .from('test_segments')
+          .select('id, demographic_filters, target_count, completed_count')
+          .eq('split_test_id', req.id)
+          .lt('completed_count', supabase.raw('target_count'));
+
+        let matchingSegmentId = null;
+        let hasTargetedSegments = false;
+
+        if (segments && segments.length > 0) {
+          hasTargetedSegments = true;
+
+          // Find a segment that matches judge demographics
+          for (const segment of segments) {
+            const filters = segment.demographic_filters || {};
+            let matches = true;
+
+            // Check age_range filter
+            if (filters.age_range?.length > 0 && judgeDemographics) {
+              if (!filters.age_range.includes(judgeDemographics.age_range)) {
+                matches = false;
+              }
+            }
+
+            // Check gender filter
+            if (filters.gender?.length > 0 && judgeDemographics) {
+              if (!filters.gender.includes(judgeDemographics.gender)) {
+                matches = false;
+              }
+            }
+
+            // Check location filter
+            if (filters.location?.length > 0 && judgeDemographics) {
+              if (!filters.location.includes(judgeDemographics.location)) {
+                matches = false;
+              }
+            }
+
+            // If no filters set, any judge matches
+            if (Object.keys(filters).length === 0 ||
+                (!filters.age_range?.length && !filters.gender?.length && !filters.location?.length)) {
+              matches = true;
+            }
+
+            if (matches && segment.completed_count < segment.target_count) {
+              matchingSegmentId = segment.id;
+              break;
+            }
+          }
+
+          // If targeted segments exist but judge doesn't match any, skip this test
+          if (hasTargetedSegments && !matchingSegmentId && judgeDemographics) {
+            return null;
+          }
+        }
+
+        return {
+          id: req.id,
+          created_at: req.created_at,
+          category: 'split_test',
+          subcategory: 'photo_comparison',
+          media_type: 'split_test',
+          media_url: req.photo_a_url,
+          text_content: req.context || req.title,
+          context: req.title || 'Which photo is better?',
+          target_verdict_count: req.target_verdict_count,
+          received_verdict_count: req.received_verdict_count,
+          status: req.status,
+          request_tier: req.request_tier || 'community',
+          expert_only: false,
+          priority_score: hasTargetedSegments ? 8 : 5, // Boost targeted tests
+          split_test_data: {
+            photo_a_url: req.photo_a_url,
+            photo_b_url: req.photo_b_url,
+            title: req.title,
+            matching_segment_id: matchingSegmentId,
+            has_targeted_segments: hasTargetedSegments,
+          }
+        };
+      })
+    );
+
+    // Filter out nulls (tests where judge doesn't match any segment) and limit
+    return splitTestsWithSegments.filter(Boolean).slice(0, limit);
   } catch (error) {
     console.log('Error fetching split test requests:', error);
     return [];

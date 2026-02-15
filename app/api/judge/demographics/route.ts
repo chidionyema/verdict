@@ -3,6 +3,30 @@ import { createClient } from '@/lib/supabase/server';
 import { log } from '@/lib/logger';
 import { withRateLimit, rateLimitPresets } from '@/lib/api/with-rate-limit';
 
+// Calculate how complete the demographics profile is
+function calculateCompletionPercentage(demographics: any): number {
+  if (!demographics) return 0;
+
+  const fields = [
+    'age_range',
+    'gender',
+    'location',
+    'education_level',
+    'profession',
+    'relationship_status',
+    'income_range',
+  ];
+
+  const hasInterests = demographics.interest_areas?.length > 0;
+  const filledFields = fields.filter(f => demographics[f]).length;
+
+  // Weight: basic fields are 10% each (70%), interests are 30%
+  const basicScore = (filledFields / fields.length) * 70;
+  const interestScore = hasInterests ? 30 : 0;
+
+  return Math.round(basicScore + interestScore);
+}
+
 // GET /api/judge/demographics - Get judge demographics
 async function GET_Handler(request: NextRequest) {
   try {
@@ -24,7 +48,14 @@ async function GET_Handler(request: NextRequest) {
       return NextResponse.json({ error: 'Database error' }, { status: 500 });
     }
 
-    return NextResponse.json({ demographics });
+    // Check if core demographics are complete
+    const isComplete = Boolean(demographics?.age_range && demographics?.gender);
+
+    return NextResponse.json({
+      demographics,
+      isComplete,
+      completionPercentage: calculateCompletionPercentage(demographics),
+    });
   } catch (error) {
     log.error('GET /api/judge/demographics error', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
