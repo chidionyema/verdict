@@ -424,8 +424,8 @@ const POST_Handler = async (request: NextRequest) => {
 
       if (pricingTier) {
         tierConfig = {
-          credits: (pricingTier as any).credits_required ?? 1,
-          verdicts: (pricingTier as any).verdict_count ?? 3
+          credits: (pricingTier as any).credits_required || 1,
+          verdicts: (pricingTier as any).verdict_count || 3
         };
       } else {
         // Fall back to hardcoded tier pricing
