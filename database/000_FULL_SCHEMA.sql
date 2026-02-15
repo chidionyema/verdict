@@ -3019,6 +3019,80 @@ DROP POLICY IF EXISTS "Admins can view moderation logs" ON content_moderation_lo
 CREATE POLICY "Admins can view moderation logs" ON content_moderation_logs
   FOR SELECT USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND is_admin = TRUE));
 
+-- Split test request policies
+DROP POLICY IF EXISTS "Users can view own split tests" ON split_test_requests;
+CREATE POLICY "Users can view own split tests" ON split_test_requests
+  FOR SELECT USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can create split tests" ON split_test_requests;
+CREATE POLICY "Users can create split tests" ON split_test_requests
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can update own split tests" ON split_test_requests;
+CREATE POLICY "Users can update own split tests" ON split_test_requests
+  FOR UPDATE USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Judges can view open split tests" ON split_test_requests;
+CREATE POLICY "Judges can view open split tests" ON split_test_requests
+  FOR SELECT USING (status IN ('open', 'in_progress') AND visibility = 'public');
+
+DROP POLICY IF EXISTS "Service role full access split tests" ON split_test_requests;
+CREATE POLICY "Service role full access split tests" ON split_test_requests
+  FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+-- Split test verdict policies
+DROP POLICY IF EXISTS "Judges can create split test verdicts" ON split_test_verdicts;
+CREATE POLICY "Judges can create split test verdicts" ON split_test_verdicts
+  FOR INSERT WITH CHECK (auth.uid() = judge_id);
+
+DROP POLICY IF EXISTS "Users can view verdicts on own split tests" ON split_test_verdicts;
+CREATE POLICY "Users can view verdicts on own split tests" ON split_test_verdicts
+  FOR SELECT USING (
+    auth.uid() = judge_id OR
+    auth.uid() = (SELECT user_id FROM split_test_requests WHERE id = split_test_id)
+  );
+
+DROP POLICY IF EXISTS "Service role full access split test verdicts" ON split_test_verdicts;
+CREATE POLICY "Service role full access split test verdicts" ON split_test_verdicts
+  FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+-- Comparison request policies
+DROP POLICY IF EXISTS "Users can view own comparison requests" ON comparison_requests;
+CREATE POLICY "Users can view own comparison requests" ON comparison_requests
+  FOR SELECT USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can create comparison requests" ON comparison_requests;
+CREATE POLICY "Users can create comparison requests" ON comparison_requests
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can update own comparison requests" ON comparison_requests;
+CREATE POLICY "Users can update own comparison requests" ON comparison_requests
+  FOR UPDATE USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Judges can view open comparison requests" ON comparison_requests;
+CREATE POLICY "Judges can view open comparison requests" ON comparison_requests
+  FOR SELECT USING (status IN ('open', 'in_review') AND visibility = 'public');
+
+DROP POLICY IF EXISTS "Service role full access comparison requests" ON comparison_requests;
+CREATE POLICY "Service role full access comparison requests" ON comparison_requests
+  FOR ALL TO service_role USING (true) WITH CHECK (true);
+
+-- Comparison verdict policies
+DROP POLICY IF EXISTS "Judges can create comparison verdicts" ON comparison_verdicts;
+CREATE POLICY "Judges can create comparison verdicts" ON comparison_verdicts
+  FOR INSERT WITH CHECK (auth.uid() = reviewer_id);
+
+DROP POLICY IF EXISTS "Users can view verdicts on own comparisons" ON comparison_verdicts;
+CREATE POLICY "Users can view verdicts on own comparisons" ON comparison_verdicts
+  FOR SELECT USING (
+    auth.uid() = reviewer_id OR
+    auth.uid() = (SELECT user_id FROM comparison_requests WHERE id = comparison_id)
+  );
+
+DROP POLICY IF EXISTS "Service role full access comparison verdicts" ON comparison_verdicts;
+CREATE POLICY "Service role full access comparison verdicts" ON comparison_verdicts
+  FOR ALL TO service_role USING (true) WITH CHECK (true);
+
 -- ============================================================================
 -- PART 36: STORAGE POLICIES
 -- ============================================================================
@@ -3099,7 +3173,676 @@ GRANT UPDATE ON payouts TO service_role;
 GRANT SELECT, INSERT ON request_status_transitions TO authenticated, service_role;
 
 -- ============================================================================
--- PART 39: VERIFICATION
+-- PART 39: SPLIT TEST WINNER DETERMINATION & CREATION
+-- ============================================================================
+
+-- Update constraint to allow 'tie' as a value
+ALTER TABLE split_test_requests DROP CONSTRAINT IF EXISTS split_test_requests_winning_photo_check;
+ALTER TABLE split_test_requests ADD CONSTRAINT split_test_requests_winning_photo_check
+  CHECK (winning_photo IN ('A', 'B', 'tie', NULL));
+
+-- Helper function to manually recalculate winners for existing closed tests
+CREATE OR REPLACE FUNCTION recalculate_split_test_winner(p_split_test_id UUID)
+RETURNS split_test_requests AS $$
+DECLARE
+  updated_row split_test_requests;
+  vote_a_count INTEGER;
+  vote_b_count INTEGER;
+  total_votes INTEGER;
+  calculated_winner TEXT;
+  calculated_consensus INTEGER;
+BEGIN
+  -- Count votes
+  SELECT
+    COUNT(*) FILTER (WHERE chosen_photo = 'A'),
+    COUNT(*) FILTER (WHERE chosen_photo = 'B'),
+    COUNT(*)
+  INTO vote_a_count, vote_b_count, total_votes
+  FROM split_test_verdicts
+  WHERE split_test_id = p_split_test_id;
+
+  IF total_votes = 0 THEN
+    RAISE EXCEPTION 'No verdicts found for split test %', p_split_test_id;
+  END IF;
+
+  -- Determine winner
+  IF vote_a_count > vote_b_count THEN
+    calculated_winner := 'A';
+    calculated_consensus := ROUND((vote_a_count::NUMERIC / total_votes) * 100);
+  ELSIF vote_b_count > vote_a_count THEN
+    calculated_winner := 'B';
+    calculated_consensus := ROUND((vote_b_count::NUMERIC / total_votes) * 100);
+  ELSE
+    calculated_winner := 'tie';
+    calculated_consensus := 50;
+  END IF;
+
+  -- Update
+  UPDATE split_test_requests
+  SET winning_photo = calculated_winner,
+      consensus_strength = calculated_consensus,
+      updated_at = NOW()
+  WHERE id = p_split_test_id
+  RETURNING * INTO updated_row;
+
+  RETURN updated_row;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+GRANT EXECUTE ON FUNCTION recalculate_split_test_winner(UUID) TO authenticated;
+
+-- Add completed_at column if it doesn't exist
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'split_test_requests' AND column_name = 'completed_at'
+  ) THEN
+    ALTER TABLE split_test_requests ADD COLUMN completed_at TIMESTAMP WITH TIME ZONE;
+  END IF;
+END $$;
+
+-- Add request_tier column if it doesn't exist
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'split_test_requests' AND column_name = 'request_tier'
+  ) THEN
+    ALTER TABLE split_test_requests ADD COLUMN request_tier TEXT DEFAULT 'community';
+  END IF;
+END $$;
+
+-- Create the split test creation function
+CREATE OR REPLACE FUNCTION create_split_test(
+  p_user_id UUID,
+  p_category TEXT,
+  p_question TEXT,
+  p_context TEXT,
+  p_photo_a_url TEXT,
+  p_photo_a_filename TEXT,
+  p_photo_b_url TEXT,
+  p_photo_b_filename TEXT,
+  p_visibility TEXT DEFAULT 'public',
+  p_target_verdicts INTEGER DEFAULT 3
+)
+RETURNS UUID AS $$
+DECLARE
+  new_split_test_id UUID;
+BEGIN
+  INSERT INTO split_test_requests (
+    user_id,
+    category,
+    title,
+    context,
+    photo_a_url,
+    photo_b_url,
+    options,
+    status,
+    target_verdict_count,
+    received_verdict_count,
+    request_tier,
+    credits_cost,
+    created_at,
+    updated_at
+  ) VALUES (
+    p_user_id,
+    'split_test',
+    p_question,
+    p_context,
+    p_photo_a_url,
+    p_photo_b_url,
+    jsonb_build_array(
+      jsonb_build_object('id', 'A', 'url', p_photo_a_url, 'label', COALESCE(p_photo_a_filename, 'Photo A')),
+      jsonb_build_object('id', 'B', 'url', p_photo_b_url, 'label', COALESCE(p_photo_b_filename, 'Photo B'))
+    ),
+    'open',
+    p_target_verdicts,
+    0,
+    'community',
+    1,
+    NOW(),
+    NOW()
+  )
+  RETURNING id INTO new_split_test_id;
+
+  -- Update user's submission count
+  UPDATE profiles
+  SET total_submissions = COALESCE(total_submissions, 0) + 1,
+      updated_at = NOW()
+  WHERE id = p_user_id;
+
+  RETURN new_split_test_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+GRANT EXECUTE ON FUNCTION create_split_test(UUID, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, INTEGER) TO authenticated;
+
+-- ============================================================================
+-- PART 40: TEST SEGMENTS TABLE (for demographic-targeted split testing)
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS test_segments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  split_test_id UUID NOT NULL REFERENCES split_test_requests(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  description TEXT,
+  demographic_filters JSONB DEFAULT '{}',
+  psychographic_filters JSONB DEFAULT '{}',
+  target_count INTEGER NOT NULL DEFAULT 5,
+  completed_count INTEGER DEFAULT 0,
+  winner TEXT CHECK (winner IN ('A', 'B', 'tie', NULL)),
+  consensus_strength INTEGER,
+  avg_rating_a NUMERIC(3,1),
+  avg_rating_b NUMERIC(3,1),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_test_segments_split_test ON test_segments(split_test_id);
+CREATE INDEX IF NOT EXISTS idx_test_segments_completed ON test_segments(split_test_id, completed_count, target_count);
+
+-- Add segment_id to split_test_verdicts
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'split_test_verdicts' AND column_name = 'segment_id'
+  ) THEN
+    ALTER TABLE split_test_verdicts ADD COLUMN segment_id UUID REFERENCES test_segments(id) ON DELETE SET NULL;
+  END IF;
+END $$;
+
+-- Function to find matching segment for a judge
+CREATE OR REPLACE FUNCTION find_matching_segment(
+  p_split_test_id UUID,
+  p_judge_id UUID
+)
+RETURNS UUID AS $$
+DECLARE
+  segment_record RECORD;
+  judge_demo RECORD;
+  matching_segment_id UUID := NULL;
+  min_completion_ratio NUMERIC := 999;
+BEGIN
+  SELECT * INTO judge_demo FROM judge_demographics WHERE judge_id = p_judge_id;
+
+  IF judge_demo IS NULL THEN
+    RETURN NULL;
+  END IF;
+
+  FOR segment_record IN
+    SELECT * FROM test_segments
+    WHERE split_test_id = p_split_test_id
+      AND completed_count < target_count
+    ORDER BY (completed_count::NUMERIC / target_count) ASC
+  LOOP
+    IF segment_record.demographic_filters ? 'age_range' THEN
+      IF NOT (judge_demo.age_range = ANY(
+        SELECT jsonb_array_elements_text(segment_record.demographic_filters->'age_range')
+      )) THEN
+        CONTINUE;
+      END IF;
+    END IF;
+
+    IF segment_record.demographic_filters ? 'gender' THEN
+      IF NOT (judge_demo.gender = ANY(
+        SELECT jsonb_array_elements_text(segment_record.demographic_filters->'gender')
+      )) THEN
+        CONTINUE;
+      END IF;
+    END IF;
+
+    IF segment_record.demographic_filters ? 'location' THEN
+      IF NOT (judge_demo.location = ANY(
+        SELECT jsonb_array_elements_text(segment_record.demographic_filters->'location')
+      )) THEN
+        CONTINUE;
+      END IF;
+    END IF;
+
+    IF (segment_record.completed_count::NUMERIC / segment_record.target_count) < min_completion_ratio THEN
+      min_completion_ratio := segment_record.completed_count::NUMERIC / segment_record.target_count;
+      matching_segment_id := segment_record.id;
+    END IF;
+  END LOOP;
+
+  RETURN matching_segment_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+GRANT EXECUTE ON FUNCTION find_matching_segment(UUID, UUID) TO authenticated;
+
+-- Function to update segment stats after verdict
+CREATE OR REPLACE FUNCTION update_segment_after_verdict()
+RETURNS TRIGGER AS $$
+DECLARE
+  seg_stats RECORD;
+BEGIN
+  IF NEW.segment_id IS NOT NULL THEN
+    UPDATE test_segments
+    SET completed_count = completed_count + 1,
+        updated_at = NOW()
+    WHERE id = NEW.segment_id;
+
+    SELECT
+      COUNT(*) FILTER (WHERE chosen_photo = 'A') as votes_a,
+      COUNT(*) FILTER (WHERE chosen_photo = 'B') as votes_b,
+      AVG(photo_a_rating) as avg_a,
+      AVG(photo_b_rating) as avg_b,
+      ts.target_count
+    INTO seg_stats
+    FROM split_test_verdicts stv
+    JOIN test_segments ts ON ts.id = stv.segment_id
+    WHERE stv.segment_id = NEW.segment_id
+    GROUP BY ts.target_count;
+
+    IF seg_stats.votes_a + seg_stats.votes_b >= seg_stats.target_count THEN
+      UPDATE test_segments
+      SET winner = CASE
+            WHEN seg_stats.votes_a > seg_stats.votes_b THEN 'A'
+            WHEN seg_stats.votes_b > seg_stats.votes_a THEN 'B'
+            ELSE 'tie'
+          END,
+          consensus_strength = CASE
+            WHEN seg_stats.votes_a > seg_stats.votes_b THEN
+              ROUND((seg_stats.votes_a::NUMERIC / (seg_stats.votes_a + seg_stats.votes_b)) * 100)
+            WHEN seg_stats.votes_b > seg_stats.votes_a THEN
+              ROUND((seg_stats.votes_b::NUMERIC / (seg_stats.votes_a + seg_stats.votes_b)) * 100)
+            ELSE 50
+          END,
+          avg_rating_a = seg_stats.avg_a,
+          avg_rating_b = seg_stats.avg_b,
+          updated_at = NOW()
+      WHERE id = NEW.segment_id;
+    END IF;
+  END IF;
+
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trigger_update_segment_after_verdict ON split_test_verdicts;
+CREATE TRIGGER trigger_update_segment_after_verdict
+  AFTER INSERT ON split_test_verdicts
+  FOR EACH ROW
+  EXECUTE FUNCTION update_segment_after_verdict();
+
+-- ============================================================================
+-- PART 41: JUDGE QUALITY SCORING
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS judge_scores (
+  judge_id UUID PRIMARY KEY REFERENCES profiles(id) ON DELETE CASCADE,
+  consistency_score INTEGER DEFAULT 50,
+  reasoning_quality_score INTEGER DEFAULT 50,
+  completion_rate_score INTEGER DEFAULT 100,
+  response_time_score INTEGER DEFAULT 50,
+  creator_feedback_score INTEGER DEFAULT 50,
+  overall_score NUMERIC(4,2) DEFAULT 50.00,
+  tier TEXT DEFAULT 'novice' CHECK (tier IN ('novice', 'verified', 'expert', 'master')),
+  total_verdicts INTEGER DEFAULT 0,
+  consensus_matches INTEGER DEFAULT 0,
+  avg_response_minutes NUMERIC(6,2),
+  helpful_ratings INTEGER DEFAULT 0,
+  unhelpful_ratings INTEGER DEFAULT 0,
+  last_verdict_at TIMESTAMP WITH TIME ZONE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE OR REPLACE FUNCTION calculate_judge_tier(p_score NUMERIC, p_verdicts INTEGER)
+RETURNS TEXT AS $$
+BEGIN
+  IF p_verdicts >= 200 AND p_score >= 48 THEN
+    RETURN 'master';
+  ELSIF p_verdicts >= 50 AND p_score >= 45 THEN
+    RETURN 'expert';
+  ELSIF p_verdicts >= 10 AND p_score >= 40 THEN
+    RETURN 'verified';
+  ELSE
+    RETURN 'novice';
+  END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION get_judge_earning_multiplier(p_judge_id UUID)
+RETURNS NUMERIC AS $$
+DECLARE
+  judge_tier TEXT;
+BEGIN
+  SELECT tier INTO judge_tier FROM judge_scores WHERE judge_id = p_judge_id;
+
+  RETURN CASE judge_tier
+    WHEN 'master' THEN 1.5
+    WHEN 'expert' THEN 1.25
+    WHEN 'verified' THEN 1.1
+    ELSE 1.0
+  END;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+GRANT EXECUTE ON FUNCTION get_judge_earning_multiplier(UUID) TO authenticated;
+
+-- RLS for test_segments and judge_scores
+ALTER TABLE test_segments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE judge_scores ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can view segments for their split tests" ON test_segments;
+CREATE POLICY "Users can view segments for their split tests"
+  ON test_segments FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM split_test_requests
+      WHERE split_test_requests.id = test_segments.split_test_id
+        AND split_test_requests.user_id = auth.uid()
+    )
+  );
+
+DROP POLICY IF EXISTS "Judges can view segments for matching" ON test_segments;
+CREATE POLICY "Judges can view segments for matching"
+  ON test_segments FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM profiles
+      WHERE profiles.id = auth.uid()
+        AND profiles.is_judge = true
+    )
+  );
+
+DROP POLICY IF EXISTS "Users can view all judge scores" ON judge_scores;
+CREATE POLICY "Users can view all judge scores"
+  ON judge_scores FOR SELECT
+  USING (true);
+
+DROP POLICY IF EXISTS "System can update judge scores" ON judge_scores;
+CREATE POLICY "System can update judge scores"
+  ON judge_scores FOR ALL
+  USING (auth.uid() = judge_id);
+
+-- ============================================================================
+-- PART 42: FINANCIAL SECURITY FIXES
+-- ============================================================================
+
+-- Refund credit deduction function
+CREATE OR REPLACE FUNCTION deduct_credits_for_refund(
+  p_user_id UUID,
+  p_credits INTEGER,
+  p_charge_id TEXT,
+  p_reason TEXT DEFAULT 'Refund processed'
+)
+RETURNS TABLE(success BOOLEAN, new_balance INTEGER, message TEXT)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_current_balance INTEGER;
+  v_new_balance INTEGER;
+  v_already_processed BOOLEAN;
+BEGIN
+  SELECT EXISTS(
+    SELECT 1 FROM credit_audit_log
+    WHERE user_id = p_user_id
+    AND operation = 'refund_deduct'
+    AND metadata->>'charge_id' = p_charge_id
+  ) INTO v_already_processed;
+
+  IF v_already_processed THEN
+    SELECT credits INTO v_current_balance FROM profiles WHERE id = p_user_id;
+    RETURN QUERY SELECT TRUE, v_current_balance, 'Already processed (idempotent)'::TEXT;
+    RETURN;
+  END IF;
+
+  SELECT credits INTO v_current_balance
+  FROM profiles
+  WHERE id = p_user_id
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RETURN QUERY SELECT FALSE, 0, 'User not found'::TEXT;
+    RETURN;
+  END IF;
+
+  v_new_balance := GREATEST(0, v_current_balance - p_credits);
+
+  UPDATE profiles
+  SET credits = v_new_balance,
+      updated_at = NOW()
+  WHERE id = p_user_id;
+
+  INSERT INTO credit_audit_log (
+    user_id,
+    operation,
+    credits_amount,
+    before_balance,
+    after_balance,
+    success,
+    metadata,
+    created_at
+  ) VALUES (
+    p_user_id,
+    'refund_deduct',
+    p_credits,
+    v_current_balance,
+    v_new_balance,
+    TRUE,
+    jsonb_build_object(
+      'charge_id', p_charge_id,
+      'reason', p_reason,
+      'requested_deduction', p_credits,
+      'actual_deduction', v_current_balance - v_new_balance
+    ),
+    NOW()
+  );
+
+  RETURN QUERY SELECT TRUE, v_new_balance, 'Credits deducted for refund'::TEXT;
+END;
+$$;
+
+-- Check constraint: Prevent negative credits
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+    WHERE conname = 'check_credits_non_negative'
+    AND conrelid = 'profiles'::regclass
+  ) THEN
+    ALTER TABLE profiles
+    ADD CONSTRAINT check_credits_non_negative
+    CHECK (credits >= 0);
+  END IF;
+END $$;
+
+-- Unique constraint: Prevent duplicate transactions
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_indexes
+    WHERE indexname = 'idx_transactions_stripe_session_unique'
+  ) THEN
+    CREATE UNIQUE INDEX idx_transactions_stripe_session_unique
+    ON transactions(stripe_session_id)
+    WHERE stripe_session_id IS NOT NULL;
+  END IF;
+END $$;
+
+-- Add refund tracking columns to transactions
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'transactions' AND column_name = 'refunded_at'
+  ) THEN
+    ALTER TABLE transactions ADD COLUMN refunded_at TIMESTAMPTZ;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'transactions' AND column_name = 'refund_amount_cents'
+  ) THEN
+    ALTER TABLE transactions ADD COLUMN refund_amount_cents INTEGER DEFAULT 0;
+  END IF;
+
+  BEGIN
+    ALTER TYPE transaction_status ADD VALUE IF NOT EXISTS 'refunded';
+  EXCEPTION WHEN duplicate_object THEN
+    NULL;
+  END;
+END $$;
+
+-- Add dispute tracking to profiles
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'profiles' AND column_name = 'has_pending_dispute'
+  ) THEN
+    ALTER TABLE profiles ADD COLUMN has_pending_dispute BOOLEAN DEFAULT FALSE;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'profiles' AND column_name = 'dispute_flagged_at'
+  ) THEN
+    ALTER TABLE profiles ADD COLUMN dispute_flagged_at TIMESTAMPTZ;
+  END IF;
+END $$;
+
+-- Admin alerts table for security events
+CREATE TABLE IF NOT EXISTS admin_alerts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  type TEXT NOT NULL,
+  severity TEXT NOT NULL CHECK (severity IN ('low', 'medium', 'high', 'critical')),
+  user_id UUID REFERENCES profiles(id),
+  details JSONB DEFAULT '{}',
+  resolved BOOLEAN DEFAULT FALSE,
+  resolved_at TIMESTAMPTZ,
+  resolved_by UUID REFERENCES profiles(id),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_admin_alerts_unresolved
+ON admin_alerts(severity, created_at)
+WHERE resolved = FALSE;
+
+-- Add metadata column to credit_audit_log if it doesn't exist
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'credit_audit_log' AND column_name = 'metadata'
+  ) THEN
+    ALTER TABLE credit_audit_log ADD COLUMN metadata JSONB DEFAULT '{}';
+  END IF;
+END $$;
+
+-- Credit idempotency table
+CREATE TABLE IF NOT EXISTS credit_idempotency (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  idempotency_key TEXT NOT NULL UNIQUE,
+  user_id UUID NOT NULL REFERENCES profiles(id),
+  operation TEXT NOT NULL CHECK (operation IN ('deduct', 'refund', 'add', 'purchase')),
+  credits_amount INTEGER NOT NULL,
+  result_balance INTEGER NOT NULL,
+  request_id TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  expires_at TIMESTAMPTZ DEFAULT NOW() + INTERVAL '24 hours'
+);
+
+CREATE INDEX IF NOT EXISTS idx_credit_idempotency_key ON credit_idempotency(idempotency_key);
+CREATE INDEX IF NOT EXISTS idx_credit_idempotency_user ON credit_idempotency(user_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_credit_idempotency_expires ON credit_idempotency(expires_at) WHERE expires_at < NOW();
+
+-- Function to clean up expired idempotency records
+CREATE OR REPLACE FUNCTION cleanup_expired_idempotency()
+RETURNS INTEGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  deleted_count INTEGER;
+BEGIN
+  DELETE FROM credit_idempotency
+  WHERE expires_at < NOW();
+
+  GET DIAGNOSTICS deleted_count = ROW_COUNT;
+  RETURN deleted_count;
+END;
+$$;
+
+-- Enhanced deduct_credits with idempotency
+CREATE OR REPLACE FUNCTION deduct_credits_with_idempotency(
+  p_user_id UUID,
+  p_credits INTEGER,
+  p_idempotency_key TEXT
+)
+RETURNS TABLE(success BOOLEAN, new_balance INTEGER, message TEXT, already_processed BOOLEAN)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_current_balance INTEGER;
+  v_new_balance INTEGER;
+  v_existing_result INTEGER;
+BEGIN
+  SELECT result_balance INTO v_existing_result
+  FROM credit_idempotency
+  WHERE idempotency_key = p_idempotency_key;
+
+  IF FOUND THEN
+    RETURN QUERY SELECT TRUE, v_existing_result, 'Already processed'::TEXT, TRUE;
+    RETURN;
+  END IF;
+
+  SELECT credits INTO v_current_balance
+  FROM profiles
+  WHERE id = p_user_id
+  FOR UPDATE;
+
+  IF NOT FOUND THEN
+    RETURN QUERY SELECT FALSE, 0, 'User not found'::TEXT, FALSE;
+    RETURN;
+  END IF;
+
+  IF v_current_balance < p_credits THEN
+    RETURN QUERY SELECT FALSE, v_current_balance, 'Insufficient credits'::TEXT, FALSE;
+    RETURN;
+  END IF;
+
+  v_new_balance := v_current_balance - p_credits;
+
+  UPDATE profiles
+  SET credits = v_new_balance,
+      updated_at = NOW()
+  WHERE id = p_user_id;
+
+  INSERT INTO credit_idempotency (
+    idempotency_key,
+    user_id,
+    operation,
+    credits_amount,
+    result_balance
+  ) VALUES (
+    p_idempotency_key,
+    p_user_id,
+    'deduct',
+    p_credits,
+    v_new_balance
+  );
+
+  RETURN QUERY SELECT TRUE, v_new_balance, 'Credits deducted'::TEXT, FALSE;
+END;
+$$;
+
+-- Grant permissions for financial functions
+GRANT EXECUTE ON FUNCTION deduct_credits_for_refund TO service_role;
+GRANT EXECUTE ON FUNCTION deduct_credits_with_idempotency TO service_role;
+GRANT EXECUTE ON FUNCTION cleanup_expired_idempotency TO service_role;
+GRANT SELECT, INSERT ON admin_alerts TO service_role;
+GRANT SELECT, INSERT, DELETE ON credit_idempotency TO service_role;
+
+-- ============================================================================
+-- PART 43: VERIFICATION
 -- ============================================================================
 
 DO $$
@@ -3127,7 +3870,11 @@ BEGIN
   RAISE NOTICE '  - Content Moderation';
   RAISE NOTICE '  - Admin & Audit logs';
   RAISE NOTICE '===========================================';
-  RAISE NOTICE 'Consolidated: 2026-02-13';
-  RAISE NOTICE 'Merged migrations: 002, 003, 004, 005';
+  RAISE NOTICE 'Consolidated: 2026-02-15';
+  RAISE NOTICE 'Merged migrations: 001, 002, 003, 004';
+  RAISE NOTICE '  - 001: Auto-create profile trigger';
+  RAISE NOTICE '  - 002: Split test winner determination';
+  RAISE NOTICE '  - 003: Financial security fixes';
+  RAISE NOTICE '  - 004: Split test RLS policies';
   RAISE NOTICE 'Ready for production deployment!';
 END $$;

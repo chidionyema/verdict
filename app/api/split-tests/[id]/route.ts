@@ -80,9 +80,17 @@ async function GET_Handler(
         completed_at
       `)
       .eq('id', splitTestId)
-      .single();
+      .maybeSingle();
 
-    if (splitTestError || !splitTest) {
+    if (splitTestError) {
+      console.error('Split test query error:', splitTestError);
+      return NextResponse.json(
+        { error: 'Failed to fetch split test' },
+        { status: 500 }
+      );
+    }
+
+    if (!splitTest) {
       return NextResponse.json(
         { error: 'Split test not found' },
         { status: 404 }
@@ -111,7 +119,7 @@ async function GET_Handler(
         .select('id')
         .eq('split_test_id', splitTestId)
         .eq('judge_id', user.id)
-        .single();
+        .maybeSingle();
 
       if (existingVerdict) {
         return NextResponse.json(

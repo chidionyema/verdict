@@ -83,9 +83,10 @@ export default function SplitTestPage() {
         .from('split_test_requests')
         .select('*')
         .eq('id', splitTestId)
-        .single();
+        .maybeSingle();
 
       if (splitTestError) throw splitTestError;
+      if (!splitTestData) throw new Error('Split test not found');
 
       // Fetch verdicts
       const { data: verdicts, error: verdictsError } = await supabase
