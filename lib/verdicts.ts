@@ -121,7 +121,7 @@ export async function createVerdictRequest(
   log.info(`[TRACE:${traceId}] Step 1: getProfile result`, {
     step: '1_profile_result',
     success: profileResult.success,
-    hasData: !!profileResult.data,
+    hasData: profileResult.success ? !!profileResult.data : false,
     credits: profileResult.success && profileResult.data ? (profileResult.data as any).credits : 'N/A',
     errorCode: !profileResult.success ? profileResult.error.code : null,
     errorMessage: !profileResult.success ? profileResult.error.message : null,
