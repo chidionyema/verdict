@@ -3,18 +3,18 @@
 import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Mail, AlertCircle, Loader2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import type { Profile } from '@/lib/database.types';
 import JudgeProgression from '@/components/judge/JudgeProgression';
 import { CrossRolePrompt } from '@/components/ui/CrossRolePrompt';
-import { EmailVerificationGuard } from '@/components/auth/EmailVerificationGuard';
 import { NewJudgeWelcomeTour, useWelcomeTour } from '@/components/judge/NewJudgeWelcomeTour';
 import { MilestoneCelebration, useMilestoneCheck } from '@/components/judge/MilestoneCelebration';
 import { TierProgressIndicator } from '@/components/judge/TierProgressIndicator';
 import { StreakRewards } from '@/components/judge/StreakRewards';
 import { ContextualVerificationPrompt } from '@/components/judge/ContextualVerificationPrompt';
 import { PageErrorBoundary as ErrorBoundary } from '@/components/ui/error-boundary';
+import { JudgeOnboardingWizard, JudgeJourneyProgress } from '@/components/judge/onboarding';
 
 import {
   LoadingState,
@@ -79,6 +79,34 @@ function JudgeDashboardContent() {
   const [showQueueInfo, setShowQueueInfo] = useState(false);
   const [activeTab, setActiveTab] = useState<JudgeTabType>('queue');
   const [verificationTierIndex, setVerificationTierIndex] = useState(0);
+  const [sendingVerification, setSendingVerification] = useState(false);
+  const [verificationSent, setVerificationSent] = useState(false);
+  const [verificationError, setVerificationError] = useState<string | null>(null);
+
+  // Handle email verification resend
+  const resendVerificationEmail = async () => {
+    setSendingVerification(true);
+    setVerificationError(null);
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: profile?.email || '',
+      });
+      if (error) throw error;
+      setVerificationSent(true);
+    } catch (err) {
+      setVerificationError(err instanceof Error ? err.message : 'Failed to send verification email');
+    } finally {
+      setSendingVerification(false);
+    }
+  };
+
+  // Handle onboarding completion
+  const handleOnboardingComplete = () => {
+    // Refresh the page data to get updated is_judge status
+    fetchData();
+  };
 
   // Check for submission success param
   useEffect(() => {
@@ -302,16 +330,81 @@ function JudgeDashboardContent() {
   if (loading) return <LoadingState />;
   if (!profile) return <NotAuthenticatedScreen redirectPath={judgeRedirectPath} />;
 
-  // Require email verification for judges
-  if (!(profile as any).email_verified) {
+  // Check if user needs email verification OR judge qualification
+  const needsEmailVerification = !(profile as any).email_verified;
+  const needsQualification = !profile.is_judge;
+
+  // Show inline onboarding if not qualified (email verification is handled inside)
+  if (needsQualification) {
     return (
-      <EmailVerificationGuard redirectTo="/judge" featureName="become a judge">
-        <div />
-      </EmailVerificationGuard>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/50 to-purple-50/50">
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          {/* Navigation back */}
+          <div className="mb-8">
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-gray-700"
+            >
+              <ArrowRight className="h-3 w-3 rotate-180" />
+              Back to dashboard
+            </Link>
+          </div>
+
+          {/* Email verification prompt if needed */}
+          {needsEmailVerification && (
+            <div className="max-w-2xl mx-auto mb-8">
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-6">
+                <div className="flex items-start gap-4">
+                  <div className="p-3 bg-amber-100 rounded-full">
+                    <Mail className="h-6 w-6 text-amber-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-amber-900 mb-1">
+                      Verify your email first
+                    </h3>
+                    <p className="text-amber-800 text-sm mb-4">
+                      Check your inbox for a verification link. This helps us ensure quality judges.
+                    </p>
+                    {verificationSent ? (
+                      <p className="text-green-700 text-sm font-medium">
+                        Verification email sent! Check your inbox.
+                      </p>
+                    ) : (
+                      <button
+                        onClick={resendVerificationEmail}
+                        disabled={sendingVerification}
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 text-white text-sm font-medium rounded-lg hover:bg-amber-700 disabled:opacity-50"
+                      >
+                        {sendingVerification ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Sending...
+                          </>
+                        ) : (
+                          'Resend verification email'
+                        )}
+                      </button>
+                    )}
+                    {verificationError && (
+                      <p className="text-red-600 text-sm mt-2 flex items-center gap-1">
+                        <AlertCircle className="h-4 w-4" />
+                        {verificationError}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Inline onboarding wizard */}
+          {!needsEmailVerification && (
+            <JudgeOnboardingWizard onComplete={handleOnboardingComplete} />
+          )}
+        </div>
+      </div>
     );
   }
-
-  if (!profile.is_judge) return <NotQualifiedScreen />;
 
   const judgeLevel = getJudgeLevel(stats);
   const achievements = getAchievements(stats);
@@ -531,6 +624,18 @@ function JudgeDashboardContent() {
             {/* PROGRESSION TAB - Level & Achievements */}
             {activeTab === 'progression' && (
               <div className="space-y-6">
+                {/* Journey Progress - Clear path to Expert */}
+                <JudgeJourneyProgress
+                  currentTier={verificationTierIndex}
+                  isEmailVerified={!!(profile as any).email_verified}
+                  isProfileComplete={verificationTierIndex >= 2}
+                  isLinkedInConnected={verificationTierIndex >= 3}
+                  isLinkedInVerified={verificationTierIndex >= 4}
+                  isExpertVerified={verificationTierIndex >= 5}
+                  totalVerdicts={stats.verdicts_given}
+                  weeklyEarnings={stats.weekly_earnings}
+                />
+
                 <JudgeProgression
                   userId={profile?.id || ''}
                   currentStats={{

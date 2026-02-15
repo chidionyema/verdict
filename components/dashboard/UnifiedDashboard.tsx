@@ -19,6 +19,9 @@ import {
   ArrowRight,
   Gavel,
   RefreshCw,
+  Mail,
+  AlertCircle,
+  Loader2,
 } from 'lucide-react';
 
 import { UnifiedHeader } from './UnifiedHeader';
@@ -26,6 +29,7 @@ import { RoleAwareTabs } from './RoleAwareTabs';
 import { InsightsSection } from './InsightsSection';
 import { RealEarningsChart } from './RealEarningsChart';
 import { useRoleDetection } from '@/hooks/useRoleDetection';
+import { JudgeOnboardingWizard, JudgeJourneyProgress } from '@/components/judge/onboarding';
 
 // Import judge dashboard components
 import {
@@ -273,18 +277,31 @@ export function UnifiedDashboard({ initialTab }: UnifiedDashboardProps) {
               exit={{ opacity: 0 }}
               transition={{ duration: 0.15 }}
             >
-              <JudgeContent
-                stats={judgeStats}
-                queue={filteredQueue}
-                queueLoading={queueLoading}
-                filter={queueFilter}
-                sort={queueSort}
-                searchQuery={searchQuery}
-                onFilterChange={setQueueFilter}
-                onSortChange={setQueueSort}
-                onSearchChange={setSearchQuery}
-                onRefresh={fetchJudgeData}
-              />
+              {!profile?.is_judge ? (
+                <JudgeOnboardingSection
+                  profile={profile}
+                  onComplete={() => {
+                    // Refresh data after becoming a judge
+                    const controller = new AbortController();
+                    fetchRequesterData(controller.signal).then(() =>
+                      fetchJudgeData(controller.signal)
+                    );
+                  }}
+                />
+              ) : (
+                <JudgeContent
+                  stats={judgeStats}
+                  queue={filteredQueue}
+                  queueLoading={queueLoading}
+                  filter={queueFilter}
+                  sort={queueSort}
+                  searchQuery={searchQuery}
+                  onFilterChange={setQueueFilter}
+                  onSortChange={setQueueSort}
+                  onSearchChange={setSearchQuery}
+                  onRefresh={fetchJudgeData}
+                />
+              )}
             </motion.div>
           )}
         </AnimatePresence>
@@ -763,6 +780,96 @@ function DashboardSkeleton() {
           ))}
         </div>
       </div>
+    </div>
+  );
+}
+
+// Judge Onboarding Section - Inline wizard for becoming a judge
+function JudgeOnboardingSection({
+  profile,
+  onComplete,
+}: {
+  profile: Profile | null;
+  onComplete: () => void;
+}) {
+  const [sendingVerification, setSendingVerification] = useState(false);
+  const [verificationSent, setVerificationSent] = useState(false);
+  const [verificationError, setVerificationError] = useState<string | null>(null);
+
+  const needsEmailVerification = !(profile as any)?.email_verified;
+
+  const resendVerificationEmail = async () => {
+    if (!profile?.email) return;
+    setSendingVerification(true);
+    setVerificationError(null);
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: profile.email,
+      });
+      if (error) throw error;
+      setVerificationSent(true);
+    } catch (err) {
+      setVerificationError(err instanceof Error ? err.message : 'Failed to send verification email');
+    } finally {
+      setSendingVerification(false);
+    }
+  };
+
+  return (
+    <div className="bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl border border-white/50 p-8">
+      {/* Email verification prompt if needed */}
+      {needsEmailVerification && (
+        <div className="mb-8">
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-6">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-amber-100 rounded-full">
+                <Mail className="h-6 w-6 text-amber-600" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-amber-900 mb-1">
+                  Verify your email first
+                </h3>
+                <p className="text-amber-800 text-sm mb-4">
+                  Check your inbox for a verification link. This helps us ensure quality judges.
+                </p>
+                {verificationSent ? (
+                  <p className="text-green-700 text-sm font-medium">
+                    Verification email sent! Check your inbox.
+                  </p>
+                ) : (
+                  <button
+                    onClick={resendVerificationEmail}
+                    disabled={sendingVerification}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 text-white text-sm font-medium rounded-lg hover:bg-amber-700 disabled:opacity-50"
+                  >
+                    {sendingVerification ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Sending...
+                      </>
+                    ) : (
+                      'Resend verification email'
+                    )}
+                  </button>
+                )}
+                {verificationError && (
+                  <p className="text-red-600 text-sm mt-2 flex items-center gap-1">
+                    <AlertCircle className="h-4 w-4" />
+                    {verificationError}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Inline onboarding wizard */}
+      {!needsEmailVerification && (
+        <JudgeOnboardingWizard onComplete={onComplete} />
+      )}
     </div>
   );
 }

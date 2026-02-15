@@ -1,5 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import type { PostgrestError } from '@supabase/supabase-js';
+
+interface SplitTestRow {
+  user_id: string;
+  status?: string;
+}
+
+interface SegmentRow {
+  id: string;
+  name: string;
+  demographic_filters: Record<string, unknown> | null;
+  psychographic_filters: Record<string, unknown> | null;
+  target_count: number;
+  completed_count: number;
+  winner: 'A' | 'B' | 'tie' | null;
+  consensus_strength: number | null;
+}
+
+interface VerdictRow {
+  chosen_photo: 'A' | 'B';
+  photo_a_rating: number | null;
+  photo_b_rating: number | null;
+}
+
+interface SegmentInsert {
+  split_test_id: string;
+  name: string;
+  demographic_filters: Record<string, unknown>;
+  psychographic_filters: Record<string, unknown>;
+  target_count: number;
+  completed_count: number;
+}
 
 // GET /api/split-tests/[id]/segments - Get segments for a split test
 export async function GET(
@@ -20,7 +52,7 @@ export async function GET(
       .from('split_test_requests')
       .select('user_id')
       .eq('id', splitTestId)
-      .single();
+      .single() as { data: SplitTestRow | null; error: PostgrestError | null };
 
     if (splitTestError || !splitTest) {
       return NextResponse.json({ error: 'Split test not found' }, { status: 404 });
@@ -35,7 +67,7 @@ export async function GET(
       .from('test_segments')
       .select('*')
       .eq('split_test_id', splitTestId)
-      .order('created_at', { ascending: true });
+      .order('created_at', { ascending: true }) as { data: SegmentRow[] | null; error: PostgrestError | null };
 
     if (segmentsError) {
       console.error('Error fetching segments:', segmentsError);
@@ -44,21 +76,21 @@ export async function GET(
 
     // Get vote counts per segment
     const segmentsWithStats = await Promise.all(
-      (segments || []).map(async (segment) => {
+      (segments || []).map(async (segment: SegmentRow) => {
         const { data: verdicts } = await supabase
           .from('split_test_verdicts')
           .select('chosen_photo, photo_a_rating, photo_b_rating')
-          .eq('segment_id', segment.id);
+          .eq('segment_id', segment.id) as { data: VerdictRow[] | null; error: unknown };
 
-        const votesA = verdicts?.filter((v) => v.chosen_photo === 'A').length || 0;
-        const votesB = verdicts?.filter((v) => v.chosen_photo === 'B').length || 0;
+        const votesA = verdicts?.filter((v: VerdictRow) => v.chosen_photo === 'A').length || 0;
+        const votesB = verdicts?.filter((v: VerdictRow) => v.chosen_photo === 'B').length || 0;
         const avgRatingA =
           verdicts && verdicts.length > 0
-            ? verdicts.reduce((sum, v) => sum + (v.photo_a_rating || 0), 0) / verdicts.length
+            ? verdicts.reduce((sum: number, v: VerdictRow) => sum + (v.photo_a_rating || 0), 0) / verdicts.length
             : null;
         const avgRatingB =
           verdicts && verdicts.length > 0
-            ? verdicts.reduce((sum, v) => sum + (v.photo_b_rating || 0), 0) / verdicts.length
+            ? verdicts.reduce((sum: number, v: VerdictRow) => sum + (v.photo_b_rating || 0), 0) / verdicts.length
             : null;
 
         return {
@@ -104,7 +136,7 @@ export async function POST(
       .from('split_test_requests')
       .select('user_id, status')
       .eq('id', splitTestId)
-      .single();
+      .single() as { data: SplitTestRow | null; error: PostgrestError | null };
 
     if (splitTestError || !splitTest) {
       return NextResponse.json({ error: 'Split test not found' }, { status: 404 });
@@ -144,7 +176,7 @@ export async function POST(
       .eq('split_test_id', splitTestId);
 
     // Insert new segments
-    const segmentRecords = segments.map((s: any) => ({
+    const segmentRecords: SegmentInsert[] = segments.map((s: any) => ({
       split_test_id: splitTestId,
       name: s.name,
       demographic_filters: s.demographicFilters || {},
@@ -153,7 +185,8 @@ export async function POST(
       completed_count: 0,
     }));
 
-    const { data: insertedSegments, error: insertError } = await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: insertedSegments, error: insertError } = await (supabase as any)
       .from('test_segments')
       .insert(segmentRecords)
       .select();
@@ -172,7 +205,8 @@ export async function POST(
       0
     );
 
-    await supabase
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await (supabase as any)
       .from('split_test_requests')
       .update({ target_verdict_count: totalTargetCount })
       .eq('id', splitTestId);
