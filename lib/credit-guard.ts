@@ -48,6 +48,17 @@ interface CreditOperation {
   requestId: string;
   credits: number;
   operation: 'deduct' | 'refund';
+  idempotencyKey?: string;
+}
+
+/**
+ * Generate a cryptographically secure idempotency key
+ */
+export function generateIdempotencyKey(userId: string, operation: string, context?: string): string {
+  const timestamp = Date.now();
+  const random = Math.random().toString(36).substring(2, 15);
+  const contextHash = context ? Buffer.from(context).toString('base64').substring(0, 8) : '';
+  return `idem_${operation}_${userId.substring(0, 8)}_${timestamp}_${random}${contextHash}`;
 }
 
 // Track locks held by this process for cleanup
@@ -57,13 +68,46 @@ const heldLocks = new Set<number>();
 
 /**
  * Safe credit deduction with multiple protection layers
+ * @param userId - User ID to deduct credits from
+ * @param credits - Number of credits to deduct
+ * @param requestId - Associated request ID
+ * @param idempotencyKey - Optional idempotency key to prevent duplicate operations
  */
-export async function safeDeductCredits(userId: string, credits: number, requestId: string): Promise<{
+export async function safeDeductCredits(
+  userId: string,
+  credits: number,
+  requestId: string,
+  idempotencyKey?: string
+): Promise<{
   success: boolean;
   newBalance: number;
   message: string;
+  alreadyProcessed?: boolean;
 }> {
   const supabase = await createClient();
+
+  // Layer 0: Idempotency check - prevent duplicate operations
+  if (idempotencyKey) {
+    const { data: existingOp, error: idempotencyError } = await (supabase as any)
+      .from('credit_idempotency')
+      .select('id, result_balance, created_at')
+      .eq('idempotency_key', idempotencyKey)
+      .single();
+
+    if (existingOp && !idempotencyError) {
+      log.info('Idempotent credit operation - returning cached result', {
+        idempotencyKey,
+        userId,
+        cachedBalance: existingOp.result_balance,
+      });
+      return {
+        success: true,
+        newBalance: existingOp.result_balance,
+        message: 'Operation already processed (idempotent)',
+        alreadyProcessed: true,
+      };
+    }
+  }
 
   // Layer 1: Database-level operation locking (PostgreSQL advisory locks)
   const lockId = hashText(`${userId}-credit-deduct`);
@@ -185,10 +229,29 @@ export async function safeDeductCredits(userId: string, credits: number, request
         log.warn('Audit log failed', auditError);
       });
 
+    // Layer 6: Store idempotency record for future duplicate detection
+    if (idempotencyKey && deductionResult.success) {
+      await (supabase as any)
+        .from('credit_idempotency')
+        .insert({
+          idempotency_key: idempotencyKey,
+          user_id: userId,
+          operation: 'deduct',
+          credits_amount: credits,
+          result_balance: deductionResult.new_balance,
+          request_id: requestId,
+        })
+        .catch((idempotencyError: any) => {
+          // Non-blocking - idempotency is best-effort
+          log.warn('Idempotency record insert failed', idempotencyError);
+        });
+    }
+
     return {
       success: deductionResult.success,
       newBalance: deductionResult.new_balance,
-      message: deductionResult.message
+      message: deductionResult.message,
+      alreadyProcessed: false,
     };
 
   } catch (error) {

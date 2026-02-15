@@ -142,6 +142,15 @@ async function processWebhookEvent(event: any, supabase: any) {
         await handleTransferUpdated(event.data.object as Stripe.Transfer, supabase);
         break;
 
+      // CRITICAL: Handle refunds to prevent fraud (refund + keep credits)
+      case 'charge.refunded':
+        await handleChargeRefunded(event.data.object as Stripe.Charge, supabase);
+        break;
+
+      case 'charge.dispute.created':
+        await handleDisputeCreated(event.data.object as Stripe.Dispute, supabase);
+        break;
+
       default:
         log.info('Unhandled webhook event type', { eventType: event.type });
     }
@@ -563,4 +572,185 @@ async function handleTransferUpdated(transfer: Stripe.Transfer, supabase: any) {
       failure_reason: failureReason,
     })
     .eq('stripe_transfer_id', transfer.id);
+}
+
+/**
+ * CRITICAL: Handle charge refunds to deduct credits
+ * Prevents fraud where user gets refund but keeps credits
+ */
+async function handleChargeRefunded(
+  charge: Stripe.Charge,
+  supabase: any
+) {
+  const metadata = charge.metadata;
+  const userId = metadata?.user_id;
+  const creditsStr = metadata?.credits;
+  const sessionId = metadata?.session_id || charge.payment_intent;
+
+  if (!userId || !creditsStr) {
+    log.warn('Refund received but missing metadata', {
+      chargeId: charge.id,
+      hasUserId: !!userId,
+      hasCredits: !!creditsStr,
+    });
+    return;
+  }
+
+  const credits = parseInt(creditsStr, 10);
+  if (isNaN(credits) || credits <= 0) {
+    log.error('Invalid credits in refund metadata', {
+      chargeId: charge.id,
+      creditsStr,
+    });
+    return;
+  }
+
+  // Calculate refund proportion (partial refunds should deduct proportional credits)
+  const refundedAmount = charge.amount_refunded;
+  const totalAmount = charge.amount;
+  const refundProportion = totalAmount > 0 ? refundedAmount / totalAmount : 1;
+  const creditsToDeduct = Math.ceil(credits * refundProportion);
+
+  log.info('Processing refund - deducting credits', {
+    chargeId: charge.id,
+    userId,
+    originalCredits: credits,
+    creditsToDeduct,
+    refundProportion,
+    refundedAmount,
+    totalAmount,
+  });
+
+  // Deduct credits using atomic RPC
+  const { data: result, error } = await supabase.rpc('deduct_credits_for_refund', {
+    p_user_id: userId,
+    p_credits: creditsToDeduct,
+    p_charge_id: charge.id,
+    p_reason: `Refund processed for charge ${charge.id}`,
+  });
+
+  if (error) {
+    log.error('CRITICAL: Failed to deduct credits for refund', error, {
+      chargeId: charge.id,
+      userId,
+      creditsToDeduct,
+    });
+    // Don't throw - we don't want Stripe to retry, this needs manual review
+    // But log as critical for monitoring
+    return;
+  }
+
+  // Update transaction record to reflect refund
+  await supabase
+    .from('transactions')
+    .update({
+      status: 'refunded',
+      refunded_at: new Date().toISOString(),
+      refund_amount_cents: refundedAmount,
+    })
+    .or(`stripe_session_id.eq.${sessionId},stripe_payment_intent_id.eq.${charge.payment_intent}`);
+
+  // Create notification for user
+  await supabase.from('notifications').insert({
+    user_id: userId,
+    type: 'refund_processed',
+    title: 'Refund Processed',
+    message: `Your refund has been processed. ${creditsToDeduct} credit${creditsToDeduct !== 1 ? 's' : ''} have been deducted from your account.`,
+  });
+
+  log.info('Refund credits deducted successfully', {
+    chargeId: charge.id,
+    userId,
+    creditsDeducted: creditsToDeduct,
+    newBalance: result?.new_balance,
+  });
+}
+
+/**
+ * Handle charge disputes - freeze credits immediately
+ * User may have initiated chargeback while still having credits
+ */
+async function handleDisputeCreated(
+  dispute: Stripe.Dispute,
+  supabase: any
+) {
+  const charge = dispute.charge as string;
+
+  log.warn('SECURITY: Dispute created', {
+    disputeId: dispute.id,
+    chargeId: charge,
+    amount: dispute.amount,
+    reason: dispute.reason,
+  });
+
+  // Fetch the original charge to get user info
+  try {
+    const stripe = getStripe();
+    const chargeDetails = await stripe.charges.retrieve(charge);
+    const userId = chargeDetails.metadata?.user_id;
+    const credits = parseInt(chargeDetails.metadata?.credits || '0', 10);
+
+    if (!userId) {
+      log.error('Dispute charge has no user_id in metadata', {
+        disputeId: dispute.id,
+        chargeId: charge,
+      });
+      return;
+    }
+
+    // Flag the user's account for review
+    await supabase
+      .from('profiles')
+      .update({
+        has_pending_dispute: true,
+        dispute_flagged_at: new Date().toISOString(),
+      })
+      .eq('id', userId);
+
+    // If we have credit info, deduct them immediately
+    if (credits > 0) {
+      const { error } = await supabase.rpc('deduct_credits_for_refund', {
+        p_user_id: userId,
+        p_credits: credits,
+        p_charge_id: charge,
+        p_reason: `Dispute opened: ${dispute.reason}`,
+      });
+
+      if (error) {
+        log.error('Failed to deduct credits for dispute', error, {
+          disputeId: dispute.id,
+          userId,
+          credits,
+        });
+      }
+    }
+
+    // Create admin notification
+    await supabase.from('notifications').insert({
+      user_id: userId,
+      type: 'dispute_opened',
+      title: 'Payment Dispute Opened',
+      message: 'A dispute has been opened on your recent payment. Please contact support.',
+    });
+
+    // Log for admin review
+    await supabase.from('admin_alerts').insert({
+      type: 'dispute',
+      severity: 'high',
+      user_id: userId,
+      details: {
+        dispute_id: dispute.id,
+        charge_id: charge,
+        amount: dispute.amount,
+        reason: dispute.reason,
+        credits_affected: credits,
+      },
+    });
+
+  } catch (err) {
+    log.error('Failed to process dispute', err, {
+      disputeId: dispute.id,
+      chargeId: charge,
+    });
+  }
 }

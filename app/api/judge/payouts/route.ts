@@ -127,10 +127,86 @@ async function POST_Handler(request: NextRequest) {
       return NextResponse.json({ error: 'Access denied. Judge account required.' }, { status: 403 });
     }
 
+    // SECURITY: Check judge quality metrics before allowing payout
+    // Prevents paying judges with low consensus rates who may be gaming the system
+    const { data: qualityMetrics, error: metricsError } = await (supabase as any)
+      .from('judge_reputation')
+      .select('consensus_rate, total_verdicts, quality_score')
+      .eq('judge_id', user.id)
+      .single();
+
+    // Quality thresholds for payout eligibility
+    const MIN_CONSENSUS_RATE = 0.50; // Must match consensus at least 50% of the time
+    const MIN_VERDICTS_FOR_PAYOUT = 10; // Minimum verdicts before first payout
+    const MIN_QUALITY_SCORE = 3.0; // Minimum quality rating (out of 5)
+
+    if (qualityMetrics) {
+      const { consensus_rate, total_verdicts, quality_score } = qualityMetrics;
+
+      // Check minimum verdicts
+      if (total_verdicts < MIN_VERDICTS_FOR_PAYOUT) {
+        return NextResponse.json({
+          error: 'Minimum verdict threshold not met',
+          message: `You need at least ${MIN_VERDICTS_FOR_PAYOUT} verdicts before requesting a payout. Current: ${total_verdicts}`,
+          code: 'INSUFFICIENT_VERDICTS',
+          current_verdicts: total_verdicts,
+          required_verdicts: MIN_VERDICTS_FOR_PAYOUT,
+        }, { status: 400 });
+      }
+
+      // Check consensus rate
+      if (consensus_rate !== null && consensus_rate < MIN_CONSENSUS_RATE) {
+        log.warn('Payout blocked due to low consensus rate', {
+          userId: user.id,
+          consensusRate: consensus_rate,
+          threshold: MIN_CONSENSUS_RATE,
+        });
+        return NextResponse.json({
+          error: 'Quality threshold not met',
+          message: `Your consensus rate (${Math.round(consensus_rate * 100)}%) is below the required ${Math.round(MIN_CONSENSUS_RATE * 100)}%. Please improve your verdict quality to become eligible for payouts.`,
+          code: 'LOW_CONSENSUS_RATE',
+          current_rate: consensus_rate,
+          required_rate: MIN_CONSENSUS_RATE,
+        }, { status: 400 });
+      }
+
+      // Check quality score
+      if (quality_score !== null && quality_score < MIN_QUALITY_SCORE) {
+        log.warn('Payout blocked due to low quality score', {
+          userId: user.id,
+          qualityScore: quality_score,
+          threshold: MIN_QUALITY_SCORE,
+        });
+        return NextResponse.json({
+          error: 'Quality threshold not met',
+          message: `Your quality score (${quality_score.toFixed(1)}/5) is below the required ${MIN_QUALITY_SCORE}/5. Please improve your feedback quality to become eligible for payouts.`,
+          code: 'LOW_QUALITY_SCORE',
+          current_score: quality_score,
+          required_score: MIN_QUALITY_SCORE,
+        }, { status: 400 });
+      }
+    }
+
+    // SECURITY: Check for pending disputes on the account
+    const { data: disputeCheck } = await (supabase as any)
+      .from('profiles')
+      .select('has_pending_dispute')
+      .eq('id', user.id)
+      .single();
+
+    if (disputeCheck?.has_pending_dispute) {
+      log.warn('Payout blocked due to pending dispute', { userId: user.id });
+      return NextResponse.json({
+        error: 'Payouts suspended',
+        message: 'Your account has a pending dispute. Please contact support.',
+        code: 'ACCOUNT_SUSPENDED',
+      }, { status: 403 });
+    }
+
     const body = await request.json();
     const validated = createPayoutSchema.parse(body);
 
-    // Check available amount
+    // Check available amount (only counts consensus-matching earnings)
     const { data: availableAmount } = await (supabase.rpc as any)('get_available_payout_amount', {
       target_judge_id: user.id,
     });
@@ -237,6 +313,7 @@ async function POST_Handler(request: NextRequest) {
       // Update earnings to mark as paid
       // Note: earnings are created with 'pending' status and must be 7+ days old
       // to be eligible for payout (maturation period)
+      // SECURITY: Only pay for verdicts that matched consensus
       const maturationDate = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
       const { data: updatedEarnings, error: updateError } = await (supabase as any)
         .from('judge_earnings')
@@ -249,6 +326,7 @@ async function POST_Handler(request: NextRequest) {
         .eq('payout_status', 'pending')  // Earnings are created with 'pending' status
         .is('payout_id', null)  // Not already assigned to a payout
         .lte('created_at', maturationDate)  // 7+ days old (maturation period)
+        .or('consensus_match.is.null,consensus_match.eq.true')  // SECURITY: Only pay for consensus-matching or not-yet-determined verdicts
         .select('id');
 
       const earningsCount = updatedEarnings?.length || 0;

@@ -393,21 +393,32 @@ const POST_Handler = async (request: NextRequest) => {
     let tierConfig;
     if (request_tier) {
       // New pricing tier system
-      const { data: pricingTier } = await supabase
+      const { data: pricingTier, error: tierError } = await supabase
         .from('pricing_tiers')
         .select('*')
         .eq('tier', request_tier)
         .eq('active', true)
         .single();
-      
-      if (!pricingTier) {
-        return NextResponse.json({ error: 'Invalid pricing tier' }, { status: 400 });
+
+      if (tierError) {
+        log.error('Pricing tier query failed', tierError, { request_tier });
       }
-      
-      tierConfig = {
-        credits: (pricingTier as any).credits_required,
-        verdicts: (pricingTier as any).verdict_count
-      };
+
+      if (pricingTier) {
+        tierConfig = {
+          credits: (pricingTier as any).credits_required ?? 1,
+          verdicts: (pricingTier as any).verdict_count ?? 3
+        };
+      } else {
+        // Fall back to hardcoded tier pricing
+        const FALLBACK_TIERS: Record<string, { credits: number; verdicts: number }> = {
+          community: { credits: 1, verdicts: 3 },
+          standard: { credits: 2, verdicts: 5 },
+          pro: { credits: 4, verdicts: 10 },
+        };
+        tierConfig = FALLBACK_TIERS[request_tier] || FALLBACK_TIERS.community;
+        log.warn('Using fallback tier pricing', { request_tier, tierConfig });
+      }
     } else {
       // Legacy tier system (fallback)
       const normalizedTier =
@@ -488,6 +499,15 @@ const POST_Handler = async (request: NextRequest) => {
         : 'honest';
 
       // Use service client to bypass RLS for profile read/credit operations
+      // FAIL FAST: Check if service key is properly configured
+      const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      if (!serviceKey || serviceKey === 'your-service-role-key' || serviceKey.length < 100) {
+        log.error('CONFIGURATION ERROR: SUPABASE_SERVICE_ROLE_KEY not properly configured');
+        return NextResponse.json({
+          error: 'Server configuration error. Please contact support.',
+          details: 'Service role key not configured'
+        }, { status: 500 });
+      }
       const serviceClient = createServiceClient();
       const { request: createdRequest } = await createVerdictRequest(
         serviceClient as any,
@@ -570,9 +590,23 @@ const POST_Handler = async (request: NextRequest) => {
         );
       }
 
-      log.error('Failed to create verdict request', err);
+      // Log detailed error for debugging
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      log.error('Failed to create verdict request', err, {
+        userId: user.id,
+        category,
+        tier: request_tier || tier,
+        errorMessage,
+        errorCode: err?.code,
+        errorDetails: err?.details || err?.hint,
+      });
+
       return NextResponse.json(
-        { error: 'Failed to create request. Please try again.' },
+        {
+          error: 'Failed to create request. Please try again.',
+          // Include error message in development for debugging
+          ...(process.env.NODE_ENV === 'development' && { debug: errorMessage })
+        },
         { status: 500 }
       );
     }
