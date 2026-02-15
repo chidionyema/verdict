@@ -18,28 +18,21 @@ import { log } from '@/lib/logger';
 // TYPES
 // =============================================================================
 
+// Profile interface matching actual database schema
+// See database.types.ts for authoritative type
 export interface Profile {
   id: string;
   email: string | null;
   display_name: string | null;
-  full_name: string | null;
   avatar_url: string | null;
   credits: number;
-  total_earned: number;
-  total_spent: number;
-  total_submissions: number;
-  total_reviews: number;
   is_judge: boolean;
   is_admin: boolean;
-  is_expert: boolean;
   country: string | null;
   age_range: string | null;
   gender: string | null;
-  bio: string | null;
   onboarding_completed: boolean;
-  profile_completed: boolean;
   judge_training_completed: boolean;
-  notification_preferences: Record<string, unknown>;
   created_at: string;
   updated_at: string;
 }
@@ -58,28 +51,21 @@ export type ProfileResult<T> =
 // CONSTANTS
 // =============================================================================
 
+// Only select columns that actually exist in the profiles table
+// See database.types.ts for the authoritative schema
 const PROFILE_SELECT_FIELDS = `
   id,
   email,
   display_name,
-  full_name,
   avatar_url,
   credits,
-  total_earned,
-  total_spent,
-  total_submissions,
-  total_reviews,
   is_judge,
   is_admin,
-  is_expert,
   country,
   age_range,
   gender,
-  bio,
   onboarding_completed,
-  profile_completed,
   judge_training_completed,
-  notification_preferences,
   created_at,
   updated_at
 `;
